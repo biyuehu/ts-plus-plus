@@ -1,0 +1,9 @@
+"use strict";
+var a1 = 10;
+class c1 {
+    p1;
+}
+var instance1 = new c1();
+function f1() {
+    return instance1;
+}

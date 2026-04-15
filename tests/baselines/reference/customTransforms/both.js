@@ -1,0 +1,14 @@
+// [source.js]
+"use strict";
+/*@before*/
+function f1() { }
+class c {
+}
+() => { };
+//@after
+var e;
+(function (e) {
+})(e || (e = {}));
+// leading
+/*@before*/
+function f2() { } // trailing

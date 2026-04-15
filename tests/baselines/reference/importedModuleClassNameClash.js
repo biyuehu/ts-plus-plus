@@ -1,0 +1,17 @@
+//// [tests/cases/compiler/importedModuleClassNameClash.ts] ////
+
+//// [importedModuleClassNameClash.ts]
+import foo = m1;
+ 
+export namespace m1 { }
+ 
+class foo { }
+
+
+//// [importedModuleClassNameClash.js]
+define(["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    class foo {
+    }
+});

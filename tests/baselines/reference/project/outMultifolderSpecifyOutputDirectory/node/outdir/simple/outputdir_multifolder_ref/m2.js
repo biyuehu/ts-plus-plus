@@ -1,0 +1,9 @@
+"use strict";
+var m2_a1 = 10;
+class m2_c1 {
+    m2_c1_p1;
+}
+var m2_instance1 = new m2_c1();
+function m2_f1() {
+    return m2_instance1;
+}
