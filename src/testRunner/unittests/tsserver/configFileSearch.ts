@@ -10,6 +10,25 @@ import {
 } from "../helpers/virtualFileSystemWithWatch.js";
 
 describe("unittests:: tsserver:: configFileSearch:: searching for config file", () => {
+  it("discovers tsppconfig.json for .tspp files", () => {
+    const file = {
+      path: "/home/src/workspaces/project/index.tspp",
+      content: "type Identity: Type1 = (A: Type0) -> A;",
+    };
+    const configFile = {
+      path: "/home/src/workspaces/project/tsppconfig.json",
+      content: '{ "compilerOptions": { "dependentTypes": true } }',
+    };
+    const host = TestServerHost.createServerHost([file, configFile]);
+    const session = new TestSession(host);
+    openFilesForSession([file], session);
+
+    const projects = [...session.getProjectService().configuredProjects.values()];
+    assert.lengthOf(projects, 1);
+    assert.strictEqual(projects[0].getConfigFilePath(), configFile.path);
+    assert.isTrue(projects[0].getCompilationSettings().dependentTypes);
+  });
+
   it("should stop at projectRootPath if given", () => {
     const f1 = {
       path: "/home/src/project/project/a/file1.ts",

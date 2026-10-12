@@ -114,5 +114,10 @@ export type Shadowing: Type1 =
 // `(A: Type0) -> A` 位于 Type1，却被错误地声明为 Type0。
 // export type WrongUniverse: Type0 = (A: Type0) -> A;
 
-// 当前 MLTT 子语言还不接受 string；诊断会明确指出不支持的语法。
-// export type UnsupportedBuiltin: Type1 = (A: Type0) -> string;
+// 普通 TypeScript 类型也可以嵌在依赖函数里；它们仍由原有 checker 检查。
+export type BuiltinResult: Type1 = (A: Type0) -> string;
+export type UnionResult: Type1 = (A: Type0) -> A | string;
+export type IntersectionResult: Type1 = (A: Type0) -> A & object;
+export type KeysOf: Type1 = (A: Type0) -> keyof A;
+export type PropertyResult: Type1 = (A: Type0) -> { value: A }["value"];
+export type ReadonlyShape: Type1 = (A: Type0) -> { readonly [K in keyof A]: A[K] };

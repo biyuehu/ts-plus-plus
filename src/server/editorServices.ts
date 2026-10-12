@@ -285,7 +285,7 @@ export interface ProjectInfoTelemetryEventData {
   readonly compileOnSave: boolean;
   readonly typeAcquisition: ProjectInfoTypeAcquisitionData;
 
-  readonly configFileName: "tsconfig.json" | "jsconfig.json" | "other";
+  readonly configFileName: "tsppconfig.json" | "tsconfig.json" | "jsconfig.json" | "other";
   readonly projectType: "external" | "configured";
   readonly languageServiceEnabled: boolean;
   /** TypeScript version used by the server. */
@@ -2597,15 +2597,24 @@ export class ProjectService {
     // If projectRootPath doesn't contain info.path, then do normal search for config file
     const anySearchPathOk = !projectRootPath || !isSearchPathInProjectRoot();
 
+    const shouldSearchTsppconfig = endsWith(info.fileName, ".tspp");
+    let searchTsppconfig = shouldSearchTsppconfig;
     let searchTsconfig = true;
     let searchJsconfig = true;
     if (isAncestorConfigFileInfo(info)) {
       // For ancestor of config file always ignore itself
-      if (endsWith(info.fileName, "tsconfig.json")) searchTsconfig = false;
-      else searchTsconfig = searchJsconfig = false;
+      if (endsWith(info.fileName, "tsppconfig.json")) searchTsppconfig = false;
+      else if (endsWith(info.fileName, "tsconfig.json")) searchTsconfig = false;
+      else searchTsppconfig = searchTsconfig = searchJsconfig = false;
     }
     do {
       const canonicalSearchPath = normalizedPathToPath(searchPath, this.currentDirectory, this.toCanonicalFileName);
+      if (searchTsppconfig) {
+        const tsppconfigFileName = asNormalizedPath(combinePaths(searchPath, "tsppconfig.json"));
+        const result = action(combinePaths(canonicalSearchPath, "tsppconfig.json") as NormalizedPath, tsppconfigFileName);
+        if (result) return tsppconfigFileName;
+      }
+
       if (searchTsconfig) {
         const tsconfigFileName = asNormalizedPath(combinePaths(searchPath, "tsconfig.json"));
         const result = action(combinePaths(canonicalSearchPath, "tsconfig.json") as NormalizedPath, tsconfigFileName);
@@ -2628,6 +2637,7 @@ export class ProjectService {
       const parentPath = asNormalizedPath(getDirectoryPath(searchPath));
       if (parentPath === searchPath) break;
       searchPath = parentPath;
+      searchTsppconfig = shouldSearchTsppconfig;
       searchTsconfig = searchJsconfig = true;
     }
     while (anySearchPathOk || isSearchPathInProjectRoot());

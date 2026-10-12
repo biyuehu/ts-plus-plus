@@ -7504,6 +7504,8 @@ export interface CompilerOptions {
   customConditions?: string[];
   declaration?: boolean;
   declarationMap?: boolean;
+  /** Enables TS++ dependent function types in .tspp and .d.tspp files. */
+  dependentTypes?: boolean;
   emitDeclarationOnly?: boolean;
   declarationDir?: string;
   /** @internal */ diagnostics?: boolean;
