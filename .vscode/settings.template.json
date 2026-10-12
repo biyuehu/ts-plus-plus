@@ -42,6 +42,5 @@
   "typescript.tsc.autoDetect": "off",
   "npm.autoDetect": "off",
   "grunt.autoDetect": "off",
-  "jake.autoDetect": "off",
-  "gulp.autoDetect": "off"
+  "jake.autoDetect": "off"
 }

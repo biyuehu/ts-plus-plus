@@ -2,6 +2,8 @@
 
 **English** | [简体中文](README.zh.md)
 
+> The design proposal in [issue #1](https://github.com/biyuehu/ts-plus-plus/issues/1) is for demonstration only. It is not a plan, not a TODO, and not a commitment. Treat it as a preview of a possible direction rather than a roadmap.
+
 ts-plus-plus is an experimental programming language inspired by TypeScript.
 
 It aims to keep the parts of TypeScript that make typed application development approachable—familiar syntax, gradual adoption, and practical tooling—while leaving room to explore a different language design.

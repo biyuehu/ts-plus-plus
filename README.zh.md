@@ -2,6 +2,8 @@
 
 [English](README.md) | **简体中文**
 
+> [issue #1](https://github.com/biyuehu/ts-plus-plus/issues/1) 中的设计提案仅用于演示，并非计划，也不是 TODO，更不构成承诺。可以把它看作一种可能方向的预览，而非路线图。
+
 ts-plus-plus 是一门受 TypeScript 启发的实验性编程语言。
 
 它希望保留 TypeScript 中适合类型化应用开发的体验，例如熟悉的语法、渐进式的使用方式和实用的工具支持，同时为不同的语言设计留下空间。
