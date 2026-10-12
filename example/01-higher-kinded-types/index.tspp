@@ -1,0 +1,23 @@
+interface Functor<F: Type => Type> {
+    map<A, B>(fa: F<A>, fn: (value: A) => B): F<B>;
+}
+
+type Apply<F: Type => Type, A> = F<A>;
+type StringArray = Apply<Array, string>;
+
+const arrayFunctor: Functor<Array> = {
+    map: (values, fn) => values.map(fn),
+};
+
+const labels = arrayFunctor.map([1, 2, 3], value => `item-${value}`);
+const firstClassTypeConstructor: StringArray = labels;
+
+labels.push("item-4");
+
+// Hover `labels`: it is inferred as string[].
+// Uncomment either line to see the TS++ language service report a kind/type error.
+// labels.push(4);
+// type Invalid = Functor<string>;
+
+export { arrayFunctor, firstClassTypeConstructor, labels };
+export type { Apply, Functor, StringArray };

@@ -19,6 +19,18 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // Builds TS++ and opens the first example in an Extension Development Host.
+      "name": "TS++: Run HKT Example",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
+        "${workspaceFolder}/example/01-higher-kinded-types"
+      ],
+      "preLaunchTask": "npm: build:compiler"
+    },
+    {
       "type": "node",
       "request": "launch",
       "name": "Mocha Tests (currently opened test)",

@@ -1,0 +1,22 @@
+{
+  "name": "tspp-development",
+  "displayName": "TypeScript++ Development",
+  "description": "Development host support for the TypeScript++ compiler in this repository.",
+  "version": "0.0.1",
+  "publisher": "tspp-local",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tspp.openHigherKindedTypesExample",
+        "title": "TS++: Open Higher-Kinded Types Example"
+      }
+    ]
+  }
+}
