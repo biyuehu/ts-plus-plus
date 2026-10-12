@@ -12,6 +12,13 @@
   "activationEvents": ["onStartupFinished"],
   "main": "./extension.js",
   "contributes": {
+    "grammars": [
+      {
+        "scopeName": "tspp.kind-operators",
+        "path": "./syntaxes/tspp-kind-operators.tmLanguage.json",
+        "injectTo": ["source.ts"]
+      }
+    ],
     "commands": [
       {
         "command": "tspp.openHigherKindedTypesExample",

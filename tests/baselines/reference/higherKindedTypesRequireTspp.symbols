@@ -12,3 +12,10 @@ export interface InvalidInTypeScript<F: Type => Type> {
 >F : Symbol(F, Decl(higherKindedTypesRequireTspp.ts, 0, 37))
 }
 
+export type InvalidAliasInTypeScript: Type => Type = Array;
+>InvalidAliasInTypeScript : Symbol(InvalidAliasInTypeScript, Decl(higherKindedTypesRequireTspp.ts, 2, 1))
+> : Symbol(unknown)
+>Type : Symbol(Type, Decl(higherKindedTypesRequireTspp.ts, 4, 37))
+>Type : Symbol(Type, Decl(higherKindedTypesRequireTspp.ts, 4, 37))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+

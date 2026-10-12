@@ -1,0 +1,161 @@
+//// [tests/cases/compiler/higherKindedTypeUniverses.ts] ////
+
+=== higherKindedTypeUniverses.tspp ===
+export interface LevelZeroBox<A: Type0> {
+>LevelZeroBox : Symbol(LevelZeroBox, Decl(higherKindedTypeUniverses.tspp, 0, 0))
+>A : Symbol(A, Decl(higherKindedTypeUniverses.tspp, 0, 30))
+
+    value: A;
+>value : Symbol(LevelZeroBox.value, Decl(higherKindedTypeUniverses.tspp, 0, 41))
+>A : Symbol(A, Decl(higherKindedTypeUniverses.tspp, 0, 30))
+}
+
+export interface LevelOneBox<K: Type1> {
+>LevelOneBox : Symbol(LevelOneBox, Decl(higherKindedTypeUniverses.tspp, 2, 1))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 4, 29))
+
+    readonly kind?: never;
+>kind : Symbol(LevelOneBox.kind, Decl(higherKindedTypeUniverses.tspp, 4, 40))
+}
+
+export interface AcceptsLevelOneConstructor<F: Type1 => Type0> {
+>AcceptsLevelOneConstructor : Symbol(AcceptsLevelOneConstructor, Decl(higherKindedTypeUniverses.tspp, 6, 1))
+>F : Symbol(F, Decl(higherKindedTypeUniverses.tspp, 8, 44))
+
+    readonly value?: never;
+>value : Symbol(AcceptsLevelOneConstructor.value, Decl(higherKindedTypeUniverses.tspp, 8, 64))
+}
+
+export type LegacyIdentity<A: Type> = A;
+>LegacyIdentity : Symbol(LegacyIdentity, Decl(higherKindedTypeUniverses.tspp, 10, 1))
+>A : Symbol(A, Decl(higherKindedTypeUniverses.tspp, 12, 27))
+>A : Symbol(A, Decl(higherKindedTypeUniverses.tspp, 12, 27))
+
+export type LevelZeroIdentity<A: Type0>: Type0 = A;
+>LevelZeroIdentity : Symbol(LevelZeroIdentity, Decl(higherKindedTypeUniverses.tspp, 12, 40))
+>A : Symbol(A, Decl(higherKindedTypeUniverses.tspp, 13, 30))
+>A : Symbol(A, Decl(higherKindedTypeUniverses.tspp, 13, 30))
+
+export type LevelOneIdentity<K: Type1>: Type1 = K;
+>LevelOneIdentity : Symbol(LevelOneIdentity, Decl(higherKindedTypeUniverses.tspp, 13, 51))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 14, 29))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 14, 29))
+
+export type LevelTwoIdentity<K: Type2>: Type2 = K;
+>LevelTwoIdentity : Symbol(LevelTwoIdentity, Decl(higherKindedTypeUniverses.tspp, 14, 50))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 15, 29))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 15, 29))
+
+export type UniverseZero: Type1 = Type0;
+>UniverseZero : Symbol(UniverseZero, Decl(higherKindedTypeUniverses.tspp, 15, 50))
+>Type0 : Symbol(Type0)
+
+export type UniverseOne: Type2 = Type1;
+>UniverseOne : Symbol(UniverseOne, Decl(higherKindedTypeUniverses.tspp, 16, 40))
+>Type1 : Symbol(Type1)
+
+export type ArrayThroughUniverseAlias: UniverseZero => UniverseZero = Array;
+>ArrayThroughUniverseAlias : Symbol(ArrayThroughUniverseAlias, Decl(higherKindedTypeUniverses.tspp, 17, 39))
+>UniverseZero : Symbol(UniverseZero, Decl(higherKindedTypeUniverses.tspp, 15, 50))
+>UniverseZero : Symbol(UniverseZero, Decl(higherKindedTypeUniverses.tspp, 15, 50))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+export type StringArrayThroughUniverseAlias = ArrayThroughUniverseAlias<string>;
+>StringArrayThroughUniverseAlias : Symbol(StringArrayThroughUniverseAlias, Decl(higherKindedTypeUniverses.tspp, 18, 76))
+>ArrayThroughUniverseAlias : Symbol(ArrayThroughUniverseAlias, Decl(higherKindedTypeUniverses.tspp, 17, 39))
+
+export type ConstantAtOne<K: Type1> = string;
+>ConstantAtOne : Symbol(ConstantAtOne, Decl(higherKindedTypeUniverses.tspp, 19, 80))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 21, 26))
+
+export type ApplyAtOne<F: Type1 => Type0, K: Type1> = F<K>;
+>ApplyAtOne : Symbol(ApplyAtOne, Decl(higherKindedTypeUniverses.tspp, 21, 45))
+>F : Symbol(F, Decl(higherKindedTypeUniverses.tspp, 22, 23))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 22, 41))
+>F : Symbol(F, Decl(higherKindedTypeUniverses.tspp, 22, 23))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 22, 41))
+
+export type AppliedConstant<K: Type1> = ApplyAtOne<ConstantAtOne, K>;
+>AppliedConstant : Symbol(AppliedConstant, Decl(higherKindedTypeUniverses.tspp, 22, 59))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 23, 28))
+>ApplyAtOne : Symbol(ApplyAtOne, Decl(higherKindedTypeUniverses.tspp, 21, 45))
+>ConstantAtOne : Symbol(ConstantAtOne, Decl(higherKindedTypeUniverses.tspp, 19, 80))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 23, 28))
+
+export type PreserveOne<K: Type1> = LevelOneBox<LevelOneIdentity<K>>;
+>PreserveOne : Symbol(PreserveOne, Decl(higherKindedTypeUniverses.tspp, 23, 69))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 25, 24))
+>LevelOneBox : Symbol(LevelOneBox, Decl(higherKindedTypeUniverses.tspp, 2, 1))
+>LevelOneIdentity : Symbol(LevelOneIdentity, Decl(higherKindedTypeUniverses.tspp, 13, 51))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 25, 24))
+
+export type PreserveTwo<K: Type2>: Type2 = LevelTwoIdentity<K>;
+>PreserveTwo : Symbol(PreserveTwo, Decl(higherKindedTypeUniverses.tspp, 25, 69))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 26, 24))
+>LevelTwoIdentity : Symbol(LevelTwoIdentity, Decl(higherKindedTypeUniverses.tspp, 14, 50))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 26, 24))
+
+export type HugeIdentity<K: Type10000000000000000000000000000000000000000>: Type10000000000000000000000000000000000000000 = K;
+>HugeIdentity : Symbol(HugeIdentity, Decl(higherKindedTypeUniverses.tspp, 26, 63))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 27, 25))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 27, 25))
+
+export type PreserveHuge<K: Type10000000000000000000000000000000000000000>: Type10000000000000000000000000000000000000000 = HugeIdentity<K>;
+>PreserveHuge : Symbol(PreserveHuge, Decl(higherKindedTypeUniverses.tspp, 27, 126))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 28, 25))
+>HugeIdentity : Symbol(HugeIdentity, Decl(higherKindedTypeUniverses.tspp, 26, 63))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 28, 25))
+
+export type HugeUniverse: Type10000000000000000000000000000000000000001 = Type10000000000000000000000000000000000000000;
+>HugeUniverse : Symbol(HugeUniverse, Decl(higherKindedTypeUniverses.tspp, 28, 140))
+>Type10000000000000000000000000000000000000000 : Symbol(Type10000000000000000000000000000000000000000)
+
+export type BoxedUniverseZero = LevelOneBox<Type0>;
+>BoxedUniverseZero : Symbol(BoxedUniverseZero, Decl(higherKindedTypeUniverses.tspp, 29, 120))
+>LevelOneBox : Symbol(LevelOneBox, Decl(higherKindedTypeUniverses.tspp, 2, 1))
+>Type0 : Symbol(Type0)
+
+export type LegacyString = LegacyIdentity<string>;
+>LegacyString : Symbol(LegacyString, Decl(higherKindedTypeUniverses.tspp, 30, 51))
+>LegacyIdentity : Symbol(LegacyIdentity, Decl(higherKindedTypeUniverses.tspp, 10, 1))
+
+export type LevelZeroString = LevelZeroIdentity<string>;
+>LevelZeroString : Symbol(LevelZeroString, Decl(higherKindedTypeUniverses.tspp, 32, 50))
+>LevelZeroIdentity : Symbol(LevelZeroIdentity, Decl(higherKindedTypeUniverses.tspp, 12, 40))
+
+export type RejectStringAtOne = LevelOneBox<string>;
+>RejectStringAtOne : Symbol(RejectStringAtOne, Decl(higherKindedTypeUniverses.tspp, 33, 56))
+>LevelOneBox : Symbol(LevelOneBox, Decl(higherKindedTypeUniverses.tspp, 2, 1))
+
+export type RejectOneAtZero<K: Type1> = LevelZeroBox<K>;
+>RejectOneAtZero : Symbol(RejectOneAtZero, Decl(higherKindedTypeUniverses.tspp, 35, 52))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 36, 28))
+>LevelZeroBox : Symbol(LevelZeroBox, Decl(higherKindedTypeUniverses.tspp, 0, 0))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 36, 28))
+
+export type RejectZeroAtOne<K: Type0> = LevelOneBox<K>;
+>RejectZeroAtOne : Symbol(RejectZeroAtOne, Decl(higherKindedTypeUniverses.tspp, 36, 56))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 37, 28))
+>LevelOneBox : Symbol(LevelOneBox, Decl(higherKindedTypeUniverses.tspp, 2, 1))
+>K : Symbol(K, Decl(higherKindedTypeUniverses.tspp, 37, 28))
+
+export type RejectWrongConstructor<F: Type0 => Type0> = AcceptsLevelOneConstructor<F>;
+>RejectWrongConstructor : Symbol(RejectWrongConstructor, Decl(higherKindedTypeUniverses.tspp, 37, 55))
+>F : Symbol(F, Decl(higherKindedTypeUniverses.tspp, 38, 35))
+>AcceptsLevelOneConstructor : Symbol(AcceptsLevelOneConstructor, Decl(higherKindedTypeUniverses.tspp, 6, 1))
+>F : Symbol(F, Decl(higherKindedTypeUniverses.tspp, 38, 35))
+
+export type RejectUniverseAtZero = LevelZeroBox<Type0>;
+>RejectUniverseAtZero : Symbol(RejectUniverseAtZero, Decl(higherKindedTypeUniverses.tspp, 38, 86))
+>LevelZeroBox : Symbol(LevelZeroBox, Decl(higherKindedTypeUniverses.tspp, 0, 0))
+>Type0 : Symbol(Type0)
+
+export type NotAUniverse = string;
+>NotAUniverse : Symbol(NotAUniverse, Decl(higherKindedTypeUniverses.tspp, 39, 55))
+
+export type RejectOrdinaryKindAlias: NotAUniverse => NotAUniverse = Array;
+>RejectOrdinaryKindAlias : Symbol(RejectOrdinaryKindAlias, Decl(higherKindedTypeUniverses.tspp, 40, 34))
+>NotAUniverse : Symbol(NotAUniverse, Decl(higherKindedTypeUniverses.tspp, 39, 55))
+>NotAUniverse : Symbol(NotAUniverse, Decl(higherKindedTypeUniverses.tspp, 39, 55))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+

@@ -1,0 +1,11 @@
+{
+  "name": "TypeScript++ Kind Operators",
+  "scopeName": "tspp.kind-operators",
+  "injectionSelector": "L:source.ts -comment -string",
+  "patterns": [
+    {
+      "name": "storage.type.function.arrow.ts",
+      "match": "=>"
+    }
+  ]
+}

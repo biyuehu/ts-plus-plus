@@ -1,0 +1,125 @@
+//// [tests/cases/compiler/higherKindedTypeUniverses.ts] ////
+
+=== higherKindedTypeUniverses.tspp ===
+export interface LevelZeroBox<A: Type0> {
+    value: A;
+>value : A
+>      : ^
+}
+
+export interface LevelOneBox<K: Type1> {
+    readonly kind?: never;
+>kind : undefined
+>     : ^^^^^^^^^
+}
+
+export interface AcceptsLevelOneConstructor<F: Type1 => Type0> {
+    readonly value?: never;
+>value : undefined
+>      : ^^^^^^^^^
+}
+
+export type LegacyIdentity<A: Type> = A;
+>LegacyIdentity : A
+>               : ^
+
+export type LevelZeroIdentity<A: Type0>: Type0 = A;
+>LevelZeroIdentity : A
+>                  : ^
+
+export type LevelOneIdentity<K: Type1>: Type1 = K;
+>LevelOneIdentity : K
+>                 : ^
+
+export type LevelTwoIdentity<K: Type2>: Type2 = K;
+>LevelTwoIdentity : K
+>                 : ^
+
+export type UniverseZero: Type1 = Type0;
+>UniverseZero : Type0
+>             : ^^^^^
+
+export type UniverseOne: Type2 = Type1;
+>UniverseOne : Type1
+>            : ^^^^^
+
+export type ArrayThroughUniverseAlias: UniverseZero => UniverseZero = Array;
+>ArrayThroughUniverseAlias : Array
+>                          : ^^^^^
+
+export type StringArrayThroughUniverseAlias = ArrayThroughUniverseAlias<string>;
+>StringArrayThroughUniverseAlias : string[]
+>                                : ^^^^^^^^
+
+export type ConstantAtOne<K: Type1> = string;
+>ConstantAtOne : string
+>              : ^^^^^^
+
+export type ApplyAtOne<F: Type1 => Type0, K: Type1> = F<K>;
+>ApplyAtOne : F<K>
+>           : ^^^^
+
+export type AppliedConstant<K: Type1> = ApplyAtOne<ConstantAtOne, K>;
+>AppliedConstant : string
+>                : ^^^^^^
+
+export type PreserveOne<K: Type1> = LevelOneBox<LevelOneIdentity<K>>;
+>PreserveOne : PreserveOne<K>
+>            : ^^^^^^^^^^^^^^
+
+export type PreserveTwo<K: Type2>: Type2 = LevelTwoIdentity<K>;
+>PreserveTwo : K
+>            : ^
+
+export type HugeIdentity<K: Type10000000000000000000000000000000000000000>: Type10000000000000000000000000000000000000000 = K;
+>HugeIdentity : K
+>             : ^
+
+export type PreserveHuge<K: Type10000000000000000000000000000000000000000>: Type10000000000000000000000000000000000000000 = HugeIdentity<K>;
+>PreserveHuge : K
+>             : ^
+
+export type HugeUniverse: Type10000000000000000000000000000000000000001 = Type10000000000000000000000000000000000000000;
+>HugeUniverse : Type10000000000000000000000000000000000000000
+>             : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+export type BoxedUniverseZero = LevelOneBox<Type0>;
+>BoxedUniverseZero : BoxedUniverseZero
+>                  : ^^^^^^^^^^^^^^^^^
+
+export type LegacyString = LegacyIdentity<string>;
+>LegacyString : string
+>             : ^^^^^^
+
+export type LevelZeroString = LevelZeroIdentity<string>;
+>LevelZeroString : string
+>                : ^^^^^^
+
+export type RejectStringAtOne = LevelOneBox<string>;
+>RejectStringAtOne : RejectStringAtOne
+>                  : ^^^^^^^^^^^^^^^^^
+
+export type RejectOneAtZero<K: Type1> = LevelZeroBox<K>;
+>RejectOneAtZero : RejectOneAtZero<K>
+>                : ^^^^^^^^^^^^^^^^^^
+
+export type RejectZeroAtOne<K: Type0> = LevelOneBox<K>;
+>RejectZeroAtOne : RejectZeroAtOne<K>
+>                : ^^^^^^^^^^^^^^^^^^
+
+export type RejectWrongConstructor<F: Type0 => Type0> = AcceptsLevelOneConstructor<F>;
+>RejectWrongConstructor : RejectWrongConstructor<F>
+>                       : ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+export type RejectUniverseAtZero = LevelZeroBox<Type0>;
+>RejectUniverseAtZero : RejectUniverseAtZero
+>                     : ^^^^^^^^^^^^^^^^^^^^
+
+export type NotAUniverse = string;
+>NotAUniverse : string
+>             : ^^^^^^
+
+export type RejectOrdinaryKindAlias: NotAUniverse => NotAUniverse = Array;
+>RejectOrdinaryKindAlias : Array
+>                        : ^^^^^
+
