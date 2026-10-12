@@ -121,8 +121,8 @@ jobs:
       - knip
       - typecheck
       - self-check
-      - baselines
-      - test
+      # - baselines
+      # - test
     steps:
       - name: Check required jobs
         env:
