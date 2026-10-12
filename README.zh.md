@@ -2,7 +2,7 @@
 
 [English](README.md) | **简体中文**
 
-> [issue #1](https://github.com/biyuehu/ts-plus-plus/issues/1) 中的设计提案仅用于演示，并非计划，也不是 TODO，更不构成承诺。可以把它看作一种可能方向的预览，而非路线图。
+> [#](https://github.com/biyuehu/ts-plus-plus/issues/2) 中的设计提案仅用于演示，并非计划，也不是 TODO，更不构成承诺。可以把它看作一种可能方向的预览，而非路线图。
 
 ts-plus-plus 是一门受 TypeScript 启发的实验性编程语言。
 
@@ -22,3 +22,7 @@ ts-plus-plus 与 TypeScript 相似，但不以成为 TypeScript 的超集为目�
 - 在语言逐渐成形的过程中保留实验空间。
 
 项目目前仍处于早期阶段。这个仓库用于探索上述方向，不代表兼容性承诺，也不是已经定稿的语言规范。
+
+## 协议
+
+Apache 许可证 2.0。tsplusplus 派生自 Microsoft 的 TypeScript；原始许可证、版权声明和 NOTICE 保持不变，修改过的文件将被标记为已修改。“TypeScript”是 Microsoft Corporation 的商标。

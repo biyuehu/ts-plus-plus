@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh.md)
 
-> The design proposal in [issue #1](https://github.com/biyuehu/ts-plus-plus/issues/1) is for demonstration only. It is not a plan, not a TODO, and not a commitment. Treat it as a preview of a possible direction rather than a roadmap.
+> The design proposal in [#](https://github.com/biyuehu/ts-plus-plus/issues/2) is for demonstration only. It is not a plan, not a TODO, and not a commitment. Treat it as a preview of a possible direction rather than a roadmap.
 
 ts-plus-plus is an experimental programming language inspired by TypeScript.
 
@@ -22,3 +22,7 @@ The language also does not promise that types are always erased or that compilat
 - Keep experimentation possible while the language takes shape.
 
 The project is still at an early stage. This repository is an exploration of that direction, not a compatibility guarantee or a finalized specification.
+
+## License
+
+Apache License 2.0. tsplusplus is derived from Microsoft's TypeScript; the original license, copyright notices and `NOTICE` remain in place, and modified files will be marked as modified. "TypeScript" is a trademark of Microsoft Corporation.
