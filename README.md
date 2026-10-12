@@ -1,5 +1,7 @@
 # tsplus
 
+**English** | [简体中文](README.zh.md)
+
 > A superset of TypeScript 6.0 that extends the **type system** — higher-kinded types, nominal types, GADTs, compile-time types — and erases back to plain JavaScript.
 
 **Status: design phase.** The compiler is a fork of TypeScript 6.0 and nothing described below is implemented yet. This README is the design draft we want to build against. Every feature carries a label:
