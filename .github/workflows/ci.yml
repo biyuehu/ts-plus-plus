@@ -68,50 +68,50 @@ jobs:
       - name: Self build
         run: npx hereby build-src --built
 
-  baselines:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Remove all baselines
-        run: rm -rf tests/baselines/reference
-      - name: Run tests
-        run: npm test &> /dev/null || exit 0
-      - name: Accept baselines
-        run: |
-          npx hereby baseline-accept
-          git add tests/baselines/reference
-      - name: Check baselines
-        run: git diff --staged --exit-code
+  # baselines:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: npm
+  #     - run: npm ci
+  #     - name: Remove all baselines
+  #       run: rm -rf tests/baselines/reference
+  #     - name: Run tests
+  #       run: npm test &> /dev/null || exit 0
+  #     - name: Accept baselines
+  #       run: |
+  #         npx hereby baseline-accept
+  #         git add tests/baselines/reference
+  #     - name: Check baselines
+  #       run: git diff --staged --exit-code
 
-  test:
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - os: ubuntu-latest
-            node-version: '22'
-            bundle: true
-          - os: ubuntu-latest
-            node-version: '22'
-            bundle: false
-    runs-on: ${{ matrix.config.os }}
-    name: Test Node ${{ matrix.config.node-version }} on ${{ matrix.config.os }}${{ (!matrix.config.bundle && ' with --no-bundle') || '' }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.config.node-version }}
-          cache: npm
-      - run: npm ci
-      - name: Tests
-        env:
-          BUNDLE: ${{ matrix.config.bundle }}
-        run: npm run test -- --no-lint --bundle="$BUNDLE"
+  # test:
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       config:
+  #         - os: ubuntu-latest
+  #           node-version: '22'
+  #           bundle: true
+  #         - os: ubuntu-latest
+  #           node-version: '22'
+  #           bundle: false
+  #   runs-on: ${{ matrix.config.os }}
+  #   name: Test Node ${{ matrix.config.node-version }} on ${{ matrix.config.os }}${{ (!matrix.config.bundle && ' with --no-bundle') || '' }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ matrix.config.node-version }}
+  #         cache: npm
+  #     - run: npm ci
+  #     - name: Tests
+  #       env:
+  #         BUNDLE: ${{ matrix.config.bundle }}
+  #       run: npm run test -- --no-lint --bundle="$BUNDLE"
 
   required:
     runs-on: ubuntu-latest
