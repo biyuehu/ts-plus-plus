@@ -24,7 +24,7 @@ const dep_tspp_1 = require("./dep.js");
 exports.doubled = dep_1.answer + dep_tspp_1.answer;
 
 
-//// [dep.d.ts]
+//// [dep.d.tspp]
 export declare const answer: number;
-//// [main.d.ts]
+//// [main.d.tspp]
 export declare const doubled: number;

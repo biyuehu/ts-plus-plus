@@ -1,0 +1,50 @@
+//// [tests/cases/compiler/higherKindedDeclarationResolution.ts] ////
+
+=== /library.d.tspp ===
+export interface Apply<F: Type => Type, A> {
+    value: F<A>;
+>value : "/library".Apply.F<A>
+>      : ^^^^^^^^^^^^^^^^^^^^^
+}
+
+=== /consumer.tspp ===
+import type { Apply } from "./library.d.tspp";
+>Apply : Apply<F, A>
+>      : ^^^^^^^^^^^
+
+declare const applied: Apply<Array, string>;
+>applied : Apply<Array, string>
+>        : ^^^^^^^^^^^^^^^^^^^^
+
+applied.value.push("ok");
+>applied.value.push("ok") : number
+>                         : ^^^^^^
+>applied.value.push : (...items: string[]) => number
+>                   : ^^^^     ^^^^^^^^^^^^^^^      
+>applied.value : string[]
+>              : ^^^^^^^^
+>applied : Apply<Array, string>
+>        : ^^^^^^^^^^^^^^^^^^^^
+>value : string[]
+>      : ^^^^^^^^
+>push : (...items: string[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>"ok" : "ok"
+>     : ^^^^
+
+applied.value.push(1);
+>applied.value.push(1) : number
+>                      : ^^^^^^
+>applied.value.push : (...items: string[]) => number
+>                   : ^^^^     ^^^^^^^^^^^^^^^      
+>applied.value : string[]
+>              : ^^^^^^^^
+>applied : Apply<Array, string>
+>        : ^^^^^^^^^^^^^^^^^^^^
+>value : string[]
+>      : ^^^^^^^^
+>push : (...items: string[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>1 : 1
+>  : ^
+

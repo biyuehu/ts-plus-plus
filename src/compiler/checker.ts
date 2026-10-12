@@ -854,6 +854,9 @@ import {
   JsxSpreadAttribute,
   JsxTagNameExpression,
   KeywordTypeNode,
+  Kind,
+  KindFlags,
+  KindNode,
   LabeledStatement,
   LanguageFeatureMinimumTarget,
   last,
@@ -1524,6 +1527,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   var emptySymbols = createSymbolTable();
   var arrayVariances = [VarianceFlags.Covariant];
+  var ordinaryTypeKind: Kind = { flags: KindFlags.Type };
+  var typeConstructorTypes = new Map<Symbol, Type>();
 
   var compilerOptions = host.getCompilerOptions();
   var languageVersion = getEmitScriptTarget(compilerOptions);
@@ -5569,6 +5574,94 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return createTypeWithSymbol(TypeFlags.TypeParameter, symbol!) as TypeParameter;
   }
 
+  function getKindFromNode(node: KindNode | undefined): Kind {
+    if (!node || node.kind === SyntaxKind.TypeKind) {
+      return ordinaryTypeKind;
+    }
+    return {
+      flags: KindFlags.Function,
+      parameters: node.parameters.map(getKindFromNode),
+      returnKind: getKindFromNode(node.returnKind),
+    };
+  }
+
+  function getKindOfType(type: Type): Kind {
+    return type.typeKind || ordinaryTypeKind;
+  }
+
+  function kindsAreIdentical(left: Kind, right: Kind): boolean {
+    if (left.flags === KindFlags.Type || right.flags === KindFlags.Type) return left.flags === right.flags;
+    const leftFunction = left;
+    const rightFunction = right;
+    return leftFunction.parameters.length === rightFunction.parameters.length &&
+      every(leftFunction.parameters, (parameter, index) => kindsAreIdentical(parameter, rightFunction.parameters[index])) &&
+      kindsAreIdentical(leftFunction.returnKind, rightFunction.returnKind);
+  }
+
+  function kindToString(kind: Kind): string {
+    if (kind.flags === KindFlags.Type) return "Type";
+    const functionKind = kind;
+    const parameters = functionKind.parameters.map(parameter => {
+      const text = kindToString(parameter);
+      return parameter.flags === KindFlags.Function ? `(${text})` : text;
+    });
+    return `${parameters.length === 1 ? parameters[0] : `(${parameters.join(", ")})`} => ${kindToString(functionKind.returnKind)}`;
+  }
+
+  function kindToKindNode(kind: Kind): KindNode {
+    if (kind.flags === KindFlags.Type) return factory.createTypeKindNode();
+    const functionKind = kind;
+    return factory.createFunctionKindNode(functionKind.parameters.map(kindToKindNode), kindToKindNode(functionKind.returnKind));
+  }
+
+  function getTypeParametersOfTypeConstructor(symbol: Symbol): readonly TypeParameter[] | undefined {
+    symbol = getMergedSymbol(symbol);
+    if (symbol.flags & (SymbolFlags.Class | SymbolFlags.Interface)) {
+      return (getDeclaredTypeOfSymbol(symbol) as InterfaceType).localTypeParameters;
+    }
+    if (symbol.flags & SymbolFlags.TypeAlias) {
+      getDeclaredTypeOfSymbol(symbol);
+      return getSymbolLinks(symbol).typeParameters;
+    }
+    return undefined;
+  }
+
+  function getTypeConstructorType(symbol: Symbol): Type | undefined {
+    symbol = getMergedSymbol(symbol);
+    const cached = typeConstructorTypes.get(symbol);
+    if (cached) return cached;
+
+    const typeParameters = getTypeParametersOfTypeConstructor(symbol);
+    if (!typeParameters?.length) return undefined;
+
+    const type = createTypeWithSymbol(TypeFlags.TypeParameter, symbol);
+    type.higherKindedSymbol = symbol;
+    type.typeKind = {
+      flags: KindFlags.Function,
+      parameters: typeParameters.map(getKindOfType),
+      returnKind: ordinaryTypeKind,
+    };
+    typeConstructorTypes.set(symbol, type);
+    return type;
+  }
+
+  function isTypeConstructorType(type: Type): boolean {
+    return !!type.higherKindedSymbol;
+  }
+
+  function isHigherKindedApplicationType(type: Type): boolean {
+    return !!type.higherKindedTarget;
+  }
+
+  function checkTypeKind(type: Type, expectedKind: Kind, node: Node): Type {
+    const actualKind = getKindOfType(type);
+    if (!kindsAreIdentical(actualKind, expectedKind)) {
+      error(node, Diagnostics.Type_0_has_kind_1_but_kind_2_was_expected, typeToString(type), kindToString(actualKind), kindToString(expectedKind));
+      return errorType;
+    }
+    return type;
+  }
+
   // A reserved member name starts with two underscores, but the third character cannot be an underscore,
   // @, or #. A third underscore indicates an escaped form of an identifier that started
   // with at least two underscores. The @ character indicates that the name is denoted by a well known ES
@@ -6786,6 +6879,16 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
       if (!(context.flags & NodeBuilderFlags.NoTypeReduction)) {
         type = getReducedType(type);
+      }
+
+      if (isHigherKindedApplicationType(type)) {
+        return factory.createTypeReferenceNode(
+          symbolToEntityNameNode(type.higherKindedTarget!.symbol),
+          mapToTypeNodes(type.higherKindedTypeArguments, context),
+        );
+      }
+      if (isTypeConstructorType(type)) {
+        return factory.createTypeReferenceNode(symbolToEntityNameNode(type.higherKindedSymbol!), /*typeArguments*/ undefined);
       }
 
       if (type.flags & TypeFlags.Any) {
@@ -8346,7 +8449,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const defaultParameter = getDefaultFromTypeParameter(type);
       const defaultParameterNode = defaultParameter && typeToTypeNodeHelper(defaultParameter, context);
       restoreFlags();
-      return factory.createTypeParameterDeclaration(modifiers, name, constraintNode, defaultParameterNode);
+      const kind = getKindOfType(type);
+      return factory.createTypeParameterDeclaration(modifiers, name, constraintNode, defaultParameterNode, kind.flags === KindFlags.Function ? kindToKindNode(kind) : undefined);
     }
 
     function typeToTypeNodeHelperWithPossibleReusableTypeNode(type: Type, typeNode: TypeNode | undefined, context: NodeBuilderContext) {
@@ -13600,7 +13704,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function getDeclaredTypeOfTypeParameter(symbol: Symbol): TypeParameter {
     const links = getSymbolLinks(symbol);
-    return links.declaredType || (links.declaredType = createTypeParameter(symbol));
+    if (!links.declaredType) {
+      const type = createTypeParameter(symbol);
+      const declaration = symbol.declarations?.find(isTypeParameterDeclaration);
+      type.typeKind = getKindFromNode(declaration?.kindType);
+      links.declaredType = type;
+    }
+    return links.declaredType as TypeParameter;
   }
 
   function getDeclaredTypeOfAlias(symbol: Symbol): Type {
@@ -16988,6 +17098,69 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   /**
    * Get type from type-reference that reference to class or interface
    */
+  function getTypeArgumentFromNodeForKind(node: TypeNode, expectedKind: Kind | undefined): Type {
+    if (expectedKind?.flags === KindFlags.Function && isTypeReferenceNode(node) && !node.typeArguments) {
+      let symbol = resolveTypeReferenceName(node, SymbolFlags.Type);
+      if (symbol.flags & SymbolFlags.Alias) symbol = resolveAlias(symbol);
+      const declaredType = tryGetDeclaredTypeOfSymbol(symbol);
+      const candidate = declaredType && declaredType.flags & TypeFlags.TypeParameter && getKindOfType(declaredType).flags === KindFlags.Function ?
+        declaredType :
+        getTypeConstructorType(symbol);
+      if (candidate) {
+        return checkTypeKind(candidate, expectedKind, node);
+      }
+    }
+
+    const type = getTypeFromTypeNode(node);
+    return expectedKind ? checkTypeKind(type, expectedKind, node) : type;
+  }
+
+  function getTypeArgumentFromNode(node: TypeNode, typeParameter: TypeParameter | undefined): Type {
+    return getTypeArgumentFromNodeForKind(node, typeParameter && getKindOfType(typeParameter));
+  }
+
+  function getTypeArgumentsFromNodesWithKinds(nodes: readonly TypeNode[] | undefined, typeParameters: readonly TypeParameter[] | undefined): Type[] | undefined {
+    return nodes && nodes.map((node, index) => getTypeArgumentFromNode(node, typeParameters?.[index]));
+  }
+
+  function getTypeArgumentsFromNodesForKinds(nodes: readonly TypeNode[], kinds: readonly Kind[]): Type[] {
+    return nodes.map((node, index) => getTypeArgumentFromNodeForKind(node, kinds[index]));
+  }
+
+  function applyHigherKindedType(target: Type, typeArguments: readonly Type[], node: Node): Type {
+    const kind = getKindOfType(target);
+    if (kind.flags !== KindFlags.Function) {
+      return checkTypeKind(target, { flags: KindFlags.Function, parameters: typeArguments.map(() => ordinaryTypeKind), returnKind: ordinaryTypeKind }, node);
+    }
+
+    const functionKind = kind;
+    if (typeArguments.length !== functionKind.parameters.length) {
+      error(node, Diagnostics.Type_constructor_0_must_be_applied_to_1_type_argument_s, typeToString(target), functionKind.parameters.length);
+      return errorType;
+    }
+    for (let i = 0; i < typeArguments.length; i++) {
+      if (!kindsAreIdentical(getKindOfType(typeArguments[i]), functionKind.parameters[i])) {
+        return checkTypeKind(typeArguments[i], functionKind.parameters[i], node);
+      }
+    }
+
+    if (target.higherKindedSymbol) {
+      const symbol = target.higherKindedSymbol;
+      if (symbol.flags & (SymbolFlags.Class | SymbolFlags.Interface)) {
+        return createTypeReference(getDeclaredTypeOfSymbol(symbol) as GenericType, typeArguments);
+      }
+      if (symbol.flags & SymbolFlags.TypeAlias) {
+        return getTypeAliasInstantiation(symbol, typeArguments);
+      }
+    }
+
+    const application = createTypeWithSymbol(TypeFlags.TypeParameter, target.symbol);
+    application.higherKindedTarget = target;
+    application.higherKindedTypeArguments = typeArguments;
+    application.typeKind = functionKind.returnKind;
+    return application;
+  }
+
   function getTypeFromClassOrInterfaceReference(node: NodeWithTypeArguments, symbol: Symbol): Type {
     const type = getDeclaredTypeOfSymbol(getMergedSymbol(symbol)) as InterfaceType;
     const typeParameters = type.localTypeParameters;
@@ -17019,7 +17192,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       // In a type reference, the outer type parameters of the referenced class or interface are automatically
       // supplied as type arguments and the type reference only specifies arguments for the local type parameters
       // of the class or interface.
-      const typeArguments = concatenate(type.outerTypeParameters, fillMissingTypeArguments(typeArgumentsFromTypeReferenceNode(node), typeParameters, minTypeArgumentCount, isJs));
+      const typeArguments = concatenate(type.outerTypeParameters, fillMissingTypeArguments(getTypeArgumentsFromNodesWithKinds(node.typeArguments, typeParameters), typeParameters, minTypeArgumentCount, isJs));
       return createTypeReference(type as GenericType, typeArguments);
     }
     return checkNoTypeArguments(node, symbol) ? type : errorType;
@@ -17100,7 +17273,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           }
         }
       }
-      return getTypeAliasInstantiation(symbol, typeArgumentsFromTypeReferenceNode(node), newAliasSymbol, aliasTypeArguments);
+      return getTypeAliasInstantiation(symbol, getTypeArgumentsFromNodesWithKinds(node.typeArguments, typeParameters), newAliasSymbol, aliasTypeArguments);
     }
     return checkNoTypeArguments(node, symbol) ? type : errorType;
   }
@@ -17173,9 +17346,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (symbol.flags & SymbolFlags.TypeAlias) {
       return getTypeFromTypeAliasReference(node, symbol);
     }
-    // Get type from reference to named type that cannot be generic (enum or type parameter)
+    // Higher-kinded type parameters can be applied like declared generic types.
     const res = tryGetDeclaredTypeOfSymbol(symbol);
     if (res) {
+      const kind = getKindOfType(res);
+      if (res.flags & TypeFlags.TypeParameter && kind.flags === KindFlags.Function) {
+        if (node.typeArguments) {
+          return applyHigherKindedType(res, getTypeArgumentsFromNodesForKinds(node.typeArguments, kind.parameters), node);
+        }
+        error(node, Diagnostics.Type_constructor_0_must_be_applied_to_1_type_argument_s, symbolToString(symbol), kind.parameters.length);
+        return errorType;
+      }
+      // Get type from reference to a named type that cannot be generic (enum or ordinary type parameter).
       return checkNoTypeArguments(node, symbol) ? getRegularTypeOfLiteralType(res) : errorType;
     }
     if (symbol.flags & SymbolFlags.Value && isJSDocTypeReference(node)) {
@@ -20665,14 +20847,20 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getRestrictiveTypeParameter(tp: TypeParameter) {
-    return !tp.constraint && !getConstraintDeclaration(tp) || tp.constraint === noConstraintType ? tp : tp.restrictiveInstantiation || (
-      tp.restrictiveInstantiation = createTypeParameter(tp.symbol), (tp.restrictiveInstantiation as TypeParameter).constraint = noConstraintType, tp.restrictiveInstantiation
-    );
+    if (!tp.constraint && !getConstraintDeclaration(tp) || tp.constraint === noConstraintType) return tp;
+    if (!tp.restrictiveInstantiation) {
+      const restrictive = createTypeParameter(tp.symbol);
+      restrictive.constraint = noConstraintType;
+      restrictive.typeKind = tp.typeKind;
+      tp.restrictiveInstantiation = restrictive;
+    }
+    return tp.restrictiveInstantiation;
   }
 
   function cloneTypeParameter(typeParameter: TypeParameter): TypeParameter {
     const result = createTypeParameter(typeParameter.symbol);
     result.target = typeParameter;
+    result.typeKind = typeParameter.typeKind;
     return result;
   }
 
@@ -20807,9 +20995,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return type;
   }
 
-  function maybeTypeParameterReference(node: Node) {
-    return !(node.parent.kind === SyntaxKind.TypeReference && (node.parent as TypeReferenceNode).typeArguments && node === (node.parent as TypeReferenceNode).typeName ||
-      node.parent.kind === SyntaxKind.ImportType && (node.parent as ImportTypeNode).typeArguments && node === (node.parent as ImportTypeNode).qualifier);
+  function maybeTypeParameterReference(node: Node, typeParameter: TypeParameter) {
+    return getKindOfType(typeParameter).flags === KindFlags.Function ||
+      !(node.parent.kind === SyntaxKind.TypeReference && (node.parent as TypeReferenceNode).typeArguments && node === (node.parent as TypeReferenceNode).typeName ||
+        node.parent.kind === SyntaxKind.ImportType && (node.parent as ImportTypeNode).typeArguments && node === (node.parent as ImportTypeNode).qualifier);
   }
 
   function isTypeParameterPossiblyReferenced(tp: TypeParameter, node: Node) {
@@ -20832,7 +21021,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         case SyntaxKind.ThisType:
           return !!tp.isThisType;
         case SyntaxKind.Identifier:
-          return !tp.isThisType && isPartOfTypeNode(node) && maybeTypeParameterReference(node) &&
+          return !tp.isThisType && isPartOfTypeNode(node) && maybeTypeParameterReference(node, tp) &&
             getTypeFromTypeNodeWorker(node as TypeNode) === tp; // use worker because we're looking for === equality
         case SyntaxKind.TypeQuery:
           const entityName = (node as TypeQueryNode).exprName;
@@ -21056,6 +21245,15 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function instantiateTypeWorker(type: Type, mapper: TypeMapper, aliasSymbol: Symbol | undefined, aliasTypeArguments: readonly Type[] | undefined): Type {
     const flags = type.flags;
+    if (isHigherKindedApplicationType(type)) {
+      const target = instantiateType(type.higherKindedTarget!, mapper);
+      const typeArguments = instantiateTypes(type.higherKindedTypeArguments!, mapper);
+      if (target === type.higherKindedTarget && typeArguments === type.higherKindedTypeArguments) return type;
+      return applyHigherKindedType(target, typeArguments, Debug.checkDefined(currentNode || target.symbol?.declarations?.[0]));
+    }
+    if (isTypeConstructorType(type)) {
+      return type;
+    }
     if (flags & TypeFlags.TypeParameter) {
       return getMappedType(type, mapper);
     }
@@ -35986,7 +36184,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function checkTypeArguments(signature: Signature, typeArgumentNodes: readonly TypeNode[], reportErrors: boolean, headMessage?: DiagnosticMessage): Type[] | undefined {
     const isJavascript = isInJSFile(signature.declaration);
     const typeParameters = signature.typeParameters!;
-    const typeArgumentTypes = fillMissingTypeArguments(map(typeArgumentNodes, getTypeFromTypeNode), typeParameters, getMinTypeArgumentCount(typeParameters), isJavascript);
+    const typeArgumentTypes = fillMissingTypeArguments(typeArgumentNodes.map((node, index) => getTypeArgumentFromNode(node, typeParameters[index])), typeParameters, getMinTypeArgumentCount(typeParameters), isJavascript);
     let mapper: TypeMapper | undefined;
     for (let i = 0; i < typeArgumentNodes.length; i++) {
       Debug.assert(typeParameters[i] !== undefined, "Should not call checkTypeArguments with too many type arguments");
@@ -36581,7 +36779,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
       // We already perform checking on the type arguments on the class declaration itself.
       if (isTaggedTemplate || isJsxOpeningOrSelfClosingElement || (node as CallExpression).expression.kind !== SyntaxKind.SuperKeyword) {
-        forEach(typeArguments, checkSourceElement);
+        forEach(typeArguments, (typeArgument, index) => {
+          const higherKindedParameter = forEach(signatures, signature => {
+            const parameter = signature.typeParameters?.[index];
+            return parameter && getKindOfType(parameter).flags === KindFlags.Function ? parameter : undefined;
+          });
+          if (higherKindedParameter) {
+            getTypeArgumentFromNode(typeArgument, higherKindedParameter);
+          }
+          else {
+            checkSourceElement(typeArgument);
+          }
+        });
       }
     }
 
@@ -36968,7 +37177,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getTypeArgumentsFromNodes(typeArgumentNodes: readonly TypeNode[], typeParameters: readonly TypeParameter[], isJs: boolean): readonly Type[] {
-    const typeArguments = typeArgumentNodes.map(getTypeOfNode);
+    const typeArguments = typeArgumentNodes.map((node, index) => getTypeArgumentFromNode(node, typeParameters[index]));
     while (typeArguments.length > typeParameters.length) {
       typeArguments.pop();
     }
@@ -42669,13 +42878,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function getEffectiveTypeArgumentAtIndex(node: TypeReferenceNode | ExpressionWithTypeArguments, typeParameters: readonly TypeParameter[], index: number): Type {
     if (node.typeArguments && index < node.typeArguments.length) {
-      return getTypeFromTypeNode(node.typeArguments[index]);
+      return getTypeArgumentFromNode(node.typeArguments[index], typeParameters[index]);
     }
     return getEffectiveTypeArguments(node, typeParameters)[index];
   }
 
   function getEffectiveTypeArguments(node: TypeReferenceNode | ExpressionWithTypeArguments | NodeWithTypeArguments, typeParameters: readonly TypeParameter[]): Type[] {
-    return fillMissingTypeArguments(map(node.typeArguments!, getTypeFromTypeNode), typeParameters, getMinTypeArgumentCount(typeParameters), isInJSFile(node));
+    return fillMissingTypeArguments(getTypeArgumentsFromNodesWithKinds(node.typeArguments, typeParameters) || emptyArray, typeParameters, getMinTypeArgumentCount(typeParameters), isInJSFile(node));
   }
 
   function checkTypeArgumentConstraints(node: TypeReferenceNode | ExpressionWithTypeArguments | NodeWithTypeArguments, typeParameters: readonly TypeParameter[]): boolean {
@@ -42773,7 +42982,15 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         grammarErrorAtPos(node, skipTrivia(sourceFile.text, node.typeName.end), 1, Diagnostics.JSDoc_types_can_only_be_used_inside_documentation_comments);
       }
     }
-    forEach(node.typeArguments, checkSourceElement);
+    const typeParameters = node.typeArguments && getTypeParametersForTypeReferenceOrImport(node);
+    forEach(node.typeArguments, (typeArgument, index) => {
+      if (typeParameters?.[index] && getKindOfType(typeParameters[index]).flags === KindFlags.Function) {
+        getTypeArgumentFromNode(typeArgument, typeParameters[index]);
+      }
+      else {
+        checkSourceElement(typeArgument);
+      }
+    });
     checkTypeReferenceOrImport(node);
   }
 
@@ -47000,6 +47217,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         // If the type parameter node does not have the same as the resolved type
         // parameter at this position, we report an error.
         if (source.name.escapedText !== target.symbol.escapedName) {
+          return false;
+        }
+
+        if (!kindsAreIdentical(getKindFromNode(source.kindType), getKindOfType(target))) {
           return false;
         }
 

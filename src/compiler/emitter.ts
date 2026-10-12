@@ -282,6 +282,7 @@ import {
   JsxSpreadAttribute,
   JsxTagNameExpression,
   JsxText,
+  KindNode,
   LabeledStatement,
   last,
   lastOrUndefined,
@@ -1595,6 +1596,9 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
         // Signature elements
         case SyntaxKind.TypeParameter:
           return emitTypeParameter(node as TypeParameterDeclaration);
+        case SyntaxKind.TypeKind:
+        case SyntaxKind.FunctionKind:
+          return emitKind(node as KindNode);
         case SyntaxKind.Parameter:
           return emitParameter(node as ParameterDeclaration);
         case SyntaxKind.Decorator:
@@ -2204,6 +2208,11 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
   function emitTypeParameter(node: TypeParameterDeclaration) {
     emitModifierList(node, node.modifiers);
     emit(node.name);
+    if (node.kindType && (!currentSourceFile || fileExtensionIs(currentSourceFile.fileName, Extension.Tspp) || fileExtensionIs(currentSourceFile.fileName, Extension.Dtspp))) {
+      writePunctuation(":");
+      writeSpace();
+      emitKind(node.kindType);
+    }
     if (node.constraint) {
       writeSpace();
       writeKeyword("extends");
@@ -2216,6 +2225,23 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
       writeSpace();
       emit(node.default);
     }
+  }
+
+  function emitKind(node: KindNode) {
+    if (node.kind === SyntaxKind.TypeKind) {
+      write("Type");
+      return;
+    }
+
+    const functionKind = node;
+    const needsParentheses = functionKind.parameters.length !== 1 || functionKind.parameters[0].kind === SyntaxKind.FunctionKind;
+    if (needsParentheses) writePunctuation("(");
+    emitList(functionKind, functionKind.parameters, ListFormat.CommaListElements);
+    if (needsParentheses) writePunctuation(")");
+    writeSpace();
+    writeOperator("=>");
+    writeSpace();
+    emitKind(functionKind.returnKind);
   }
 
   function emitParameter(node: ParameterDeclaration) {

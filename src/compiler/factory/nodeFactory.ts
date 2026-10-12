@@ -100,6 +100,7 @@ import {
   ForStatement,
   FunctionDeclaration,
   FunctionExpression,
+  FunctionKindNode,
   FunctionTypeNode,
   GeneratedIdentifier,
   GeneratedIdentifierFlags,
@@ -286,6 +287,7 @@ import {
   KeywordToken,
   KeywordTypeNode,
   KeywordTypeSyntaxKind,
+  KindNode,
   LabeledStatement,
   LanguageVariant,
   lastOrUndefined,
@@ -438,6 +440,7 @@ import {
   TypeAliasDeclaration,
   TypeAssertion,
   TypeElement,
+  TypeKindNode,
   TypeLiteralNode,
   TypeNode,
   TypeOfExpression,
@@ -548,6 +551,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateComputedPropertyName,
     createTypeParameterDeclaration,
     updateTypeParameterDeclaration,
+    createTypeKindNode,
+    createFunctionKindNode,
+    updateFunctionKindNode,
     createParameterDeclaration,
     updateParameterDeclaration,
     createDecorator,
@@ -1618,10 +1624,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   //
 
   // @api
-  function createTypeParameterDeclaration(modifiers: readonly Modifier[] | undefined, name: string | Identifier, constraint?: TypeNode, defaultType?: TypeNode): TypeParameterDeclaration {
+  function createTypeParameterDeclaration(modifiers: readonly Modifier[] | undefined, name: string | Identifier, constraint?: TypeNode, defaultType?: TypeNode, kindType?: KindNode): TypeParameterDeclaration {
     const node = createBaseDeclaration<TypeParameterDeclaration>(SyntaxKind.TypeParameter);
     node.modifiers = asNodeArray(modifiers);
     node.name = asName(name);
+    node.kindType = kindType;
     node.constraint = constraint;
     node.default = defaultType;
     node.transformFlags = TransformFlags.ContainsTypeScript;
@@ -1632,12 +1639,36 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function updateTypeParameterDeclaration(node: TypeParameterDeclaration, modifiers: readonly Modifier[] | undefined, name: Identifier, constraint: TypeNode | undefined, defaultType: TypeNode | undefined): TypeParameterDeclaration {
+  function updateTypeParameterDeclaration(node: TypeParameterDeclaration, modifiers: readonly Modifier[] | undefined, name: Identifier, constraint: TypeNode | undefined, defaultType: TypeNode | undefined, kindType?: KindNode): TypeParameterDeclaration {
+    // Preserve kinds for callers compiled against the pre-HKT factory signature.
+    if (arguments.length < 6) kindType = node.kindType;
     return node.modifiers !== modifiers
         || node.name !== name
+        || node.kindType !== kindType
         || node.constraint !== constraint
         || node.default !== defaultType
-      ? update(createTypeParameterDeclaration(modifiers, name, constraint, defaultType), node)
+      ? update(createTypeParameterDeclaration(modifiers, name, constraint, defaultType, kindType), node)
+      : node;
+  }
+
+  // @api
+  function createTypeKindNode(): TypeKindNode {
+    return createBaseNode<TypeKindNode>(SyntaxKind.TypeKind);
+  }
+
+  // @api
+  function createFunctionKindNode(parameters: readonly KindNode[], returnKind: KindNode): FunctionKindNode {
+    const node = createBaseNode<FunctionKindNode>(SyntaxKind.FunctionKind);
+    node.parameters = createNodeArray(parameters);
+    node.returnKind = returnKind;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+    return node;
+  }
+
+  // @api
+  function updateFunctionKindNode(node: FunctionKindNode, parameters: NodeArray<KindNode>, returnKind: KindNode): FunctionKindNode {
+    return node.parameters !== parameters || node.returnKind !== returnKind
+      ? update(createFunctionKindNode(parameters, returnKind), node)
       : node;
   }
 

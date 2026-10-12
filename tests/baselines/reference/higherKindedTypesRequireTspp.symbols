@@ -1,0 +1,14 @@
+//// [tests/cases/compiler/higherKindedTypesRequireTspp.ts] ////
+
+=== higherKindedTypesRequireTspp.ts ===
+export interface InvalidInTypeScript<F: Type => Type> {
+>InvalidInTypeScript : Symbol(InvalidInTypeScript, Decl(higherKindedTypesRequireTspp.ts, 0, 0))
+>F : Symbol(F, Decl(higherKindedTypesRequireTspp.ts, 0, 37))
+>Type : Symbol(Type, Decl(higherKindedTypesRequireTspp.ts, 0, 39), Decl(higherKindedTypesRequireTspp.ts, 0, 47))
+>Type : Symbol(Type, Decl(higherKindedTypesRequireTspp.ts, 0, 39), Decl(higherKindedTypesRequireTspp.ts, 0, 47))
+
+    value: F<string>;
+>value : Symbol(InvalidInTypeScript.value, Decl(higherKindedTypesRequireTspp.ts, 0, 55))
+>F : Symbol(F, Decl(higherKindedTypesRequireTspp.ts, 0, 37))
+}
+

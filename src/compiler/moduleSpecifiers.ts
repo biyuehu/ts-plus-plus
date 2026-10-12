@@ -1431,6 +1431,7 @@ export function tryGetJSExtensionForFile(fileName: string, options: CompilerOpti
   switch (ext) {
     case Extension.Ts:
     case Extension.Tspp:
+    case Extension.Dtspp:
     case Extension.Dts:
       return Extension.Js;
     case Extension.Tsx:

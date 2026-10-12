@@ -1,0 +1,10 @@
+//// [tests/cases/compiler/higherKindedTypesRequireTspp.ts] ////
+
+//// [higherKindedTypesRequireTspp.ts]
+export interface InvalidInTypeScript<F: Type => Type> {
+    value: F<string>;
+}
+
+
+//// [higherKindedTypesRequireTspp.js]
+export {};

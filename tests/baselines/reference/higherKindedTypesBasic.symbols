@@ -1,0 +1,168 @@
+//// [tests/cases/compiler/higherKindedTypesBasic.ts] ////
+
+=== higherKindedTypesBasic.tspp ===
+export interface Apply<F: Type => Type, A> {
+>Apply : Symbol(Apply, Decl(higherKindedTypesBasic.tspp, 0, 0))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 0, 23))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 0, 39))
+
+    value: F<A>;
+>value : Symbol(Apply.value, Decl(higherKindedTypesBasic.tspp, 0, 44))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 0, 23))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 0, 39))
+}
+
+export interface Apply2<F: (Type, Type) => Type, A, B> {
+>Apply2 : Symbol(Apply2, Decl(higherKindedTypesBasic.tspp, 2, 1))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 4, 24))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 4, 48))
+>B : Symbol(B, Decl(higherKindedTypesBasic.tspp, 4, 51))
+
+    value: F<A, B>;
+>value : Symbol(Apply2.value, Decl(higherKindedTypesBasic.tspp, 4, 56))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 4, 24))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 4, 48))
+>B : Symbol(B, Decl(higherKindedTypesBasic.tspp, 4, 51))
+}
+
+export type Pair<A, B> = [A, B];
+>Pair : Symbol(Pair, Decl(higherKindedTypesBasic.tspp, 6, 1))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 8, 17))
+>B : Symbol(B, Decl(higherKindedTypesBasic.tspp, 8, 19))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 8, 17))
+>B : Symbol(B, Decl(higherKindedTypesBasic.tspp, 8, 19))
+
+export type AliasApply<F: Type => Type, A> = F<A>;
+>AliasApply : Symbol(AliasApply, Decl(higherKindedTypesBasic.tspp, 8, 32))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 9, 23))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 9, 39))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 9, 23))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 9, 39))
+
+export interface Functor<F: Type => Type> {
+>Functor : Symbol(Functor, Decl(higherKindedTypesBasic.tspp, 9, 50))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 11, 25))
+
+    map<A, B>(fa: F<A>, fn: (value: A) => B): F<B>;
+>map : Symbol(Functor.map, Decl(higherKindedTypesBasic.tspp, 11, 43))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 12, 8))
+>B : Symbol(B, Decl(higherKindedTypesBasic.tspp, 12, 10))
+>fa : Symbol(fa, Decl(higherKindedTypesBasic.tspp, 12, 14))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 11, 25))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 12, 8))
+>fn : Symbol(fn, Decl(higherKindedTypesBasic.tspp, 12, 23))
+>value : Symbol(value, Decl(higherKindedTypesBasic.tspp, 12, 29))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 12, 8))
+>B : Symbol(B, Decl(higherKindedTypesBasic.tspp, 12, 10))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 11, 25))
+>B : Symbol(B, Decl(higherKindedTypesBasic.tspp, 12, 10))
+}
+
+export type ArrayOfString = Apply<Array, string>;
+>ArrayOfString : Symbol(ArrayOfString, Decl(higherKindedTypesBasic.tspp, 13, 1))
+>Apply : Symbol(Apply, Decl(higherKindedTypesBasic.tspp, 0, 0))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+export type AliasArrayOfString = AliasApply<Array, string>;
+>AliasArrayOfString : Symbol(AliasArrayOfString, Decl(higherKindedTypesBasic.tspp, 15, 49))
+>AliasApply : Symbol(AliasApply, Decl(higherKindedTypesBasic.tspp, 8, 32))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+export type PairOfStringAndNumber = Apply2<Pair, string, number>;
+>PairOfStringAndNumber : Symbol(PairOfStringAndNumber, Decl(higherKindedTypesBasic.tspp, 16, 59))
+>Apply2 : Symbol(Apply2, Decl(higherKindedTypesBasic.tspp, 2, 1))
+>Pair : Symbol(Pair, Decl(higherKindedTypesBasic.tspp, 6, 1))
+
+declare const applied: Apply<Array, string>;
+>applied : Symbol(applied, Decl(higherKindedTypesBasic.tspp, 19, 13))
+>Apply : Symbol(Apply, Decl(higherKindedTypesBasic.tspp, 0, 0))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+applied.value.push("ok");
+>applied.value.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>applied.value : Symbol(Apply.value, Decl(higherKindedTypesBasic.tspp, 0, 44))
+>applied : Symbol(applied, Decl(higherKindedTypesBasic.tspp, 19, 13))
+>value : Symbol(Apply.value, Decl(higherKindedTypesBasic.tspp, 0, 44))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+applied.value.push(1);
+>applied.value.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>applied.value : Symbol(Apply.value, Decl(higherKindedTypesBasic.tspp, 0, 44))
+>applied : Symbol(applied, Decl(higherKindedTypesBasic.tspp, 19, 13))
+>value : Symbol(Apply.value, Decl(higherKindedTypesBasic.tspp, 0, 44))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+declare const pair: Apply2<Pair, string, number>;
+>pair : Symbol(pair, Decl(higherKindedTypesBasic.tspp, 23, 13))
+>Apply2 : Symbol(Apply2, Decl(higherKindedTypesBasic.tspp, 2, 1))
+>Pair : Symbol(Pair, Decl(higherKindedTypesBasic.tspp, 6, 1))
+
+pair.value[0].toUpperCase();
+>pair.value[0].toUpperCase : Symbol(String.toUpperCase, Decl(lib.es5.d.ts, --, --))
+>pair.value : Symbol(Apply2.value, Decl(higherKindedTypesBasic.tspp, 4, 56))
+>pair : Symbol(pair, Decl(higherKindedTypesBasic.tspp, 23, 13))
+>value : Symbol(Apply2.value, Decl(higherKindedTypesBasic.tspp, 4, 56))
+>0 : Symbol(0)
+>toUpperCase : Symbol(String.toUpperCase, Decl(lib.es5.d.ts, --, --))
+
+pair.value[1].toFixed();
+>pair.value[1].toFixed : Symbol(Number.toFixed, Decl(lib.es5.d.ts, --, --))
+>pair.value : Symbol(Apply2.value, Decl(higherKindedTypesBasic.tspp, 4, 56))
+>pair : Symbol(pair, Decl(higherKindedTypesBasic.tspp, 23, 13))
+>value : Symbol(Apply2.value, Decl(higherKindedTypesBasic.tspp, 4, 56))
+>1 : Symbol(1)
+>toFixed : Symbol(Number.toFixed, Decl(lib.es5.d.ts, --, --))
+
+declare const arrayFunctor: Functor<Array>;
+>arrayFunctor : Symbol(arrayFunctor, Decl(higherKindedTypesBasic.tspp, 27, 13))
+>Functor : Symbol(Functor, Decl(higherKindedTypesBasic.tspp, 9, 50))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+const mapped = arrayFunctor.map([1, 2, 3], value => value.toString());
+>mapped : Symbol(mapped, Decl(higherKindedTypesBasic.tspp, 28, 5))
+>arrayFunctor.map : Symbol(Functor.map, Decl(higherKindedTypesBasic.tspp, 11, 43))
+>arrayFunctor : Symbol(arrayFunctor, Decl(higherKindedTypesBasic.tspp, 27, 13))
+>map : Symbol(Functor.map, Decl(higherKindedTypesBasic.tspp, 11, 43))
+>value : Symbol(value, Decl(higherKindedTypesBasic.tspp, 28, 42))
+>value.toString : Symbol(Number.toString, Decl(lib.es5.d.ts, --, --))
+>value : Symbol(value, Decl(higherKindedTypesBasic.tspp, 28, 42))
+>toString : Symbol(Number.toString, Decl(lib.es5.d.ts, --, --))
+
+mapped.push("ok");
+>mapped.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>mapped : Symbol(mapped, Decl(higherKindedTypesBasic.tspp, 28, 5))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+mapped.push(1);
+>mapped.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>mapped : Symbol(mapped, Decl(higherKindedTypesBasic.tspp, 28, 5))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+declare function unwrap<F: Type => Type, A>(value: F<A>): A;
+>unwrap : Symbol(unwrap, Decl(higherKindedTypesBasic.tspp, 30, 15))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 32, 24))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 32, 40))
+>value : Symbol(value, Decl(higherKindedTypesBasic.tspp, 32, 44))
+>F : Symbol(F, Decl(higherKindedTypesBasic.tspp, 32, 24))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 32, 40))
+>A : Symbol(A, Decl(higherKindedTypesBasic.tspp, 32, 40))
+
+const unwrapped = unwrap<Array, string>(["value"]);
+>unwrapped : Symbol(unwrapped, Decl(higherKindedTypesBasic.tspp, 33, 5))
+>unwrap : Symbol(unwrap, Decl(higherKindedTypesBasic.tspp, 30, 15))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+unwrapped.toUpperCase();
+>unwrapped.toUpperCase : Symbol(String.toUpperCase, Decl(lib.es5.d.ts, --, --))
+>unwrapped : Symbol(unwrapped, Decl(higherKindedTypesBasic.tspp, 33, 5))
+>toUpperCase : Symbol(String.toUpperCase, Decl(lib.es5.d.ts, --, --))
+
+export type Invalid = Apply<string, string>;
+>Invalid : Symbol(Invalid, Decl(higherKindedTypesBasic.tspp, 34, 24))
+>Apply : Symbol(Apply, Decl(higherKindedTypesBasic.tspp, 0, 0))
+
+export type WrongArity = Apply<Pair, string>;
+>WrongArity : Symbol(WrongArity, Decl(higherKindedTypesBasic.tspp, 36, 44))
+>Apply : Symbol(Apply, Decl(higherKindedTypesBasic.tspp, 0, 0))
+>Pair : Symbol(Pair, Decl(higherKindedTypesBasic.tspp, 6, 1))
+

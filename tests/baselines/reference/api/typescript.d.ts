@@ -4043,7 +4043,9 @@ declare namespace ts {
         PartiallyEmittedExpression = 356,
         CommaListExpression = 357,
         SyntheticReferenceExpression = 358,
-        Count = 359,
+        TypeKind = 359,
+        FunctionKind = 360,
+        Count = 361,
         FirstAssignment = 64,
         LastAssignment = 79,
         FirstCompoundAssignment = 65,
@@ -4517,6 +4519,8 @@ declare namespace ts {
         readonly parent: DeclarationWithTypeParameterChildren | InferTypeNode;
         readonly modifiers?: NodeArray<Modifier>;
         readonly name: Identifier;
+        /** The explicitly declared kind of this type parameter. Omitted parameters have kind `Type`. */
+        readonly kindType?: KindNode;
         /** Note: Consider calling `getEffectiveConstraintOfTypeParameter` */
         readonly constraint?: TypeNode;
         readonly default?: TypeNode;
@@ -4702,6 +4706,18 @@ declare namespace ts {
     }
     interface TypeNode extends Node {
         _typeNodeBrand: any;
+    }
+    /** A kind classifies a type or type constructor. */
+    type KindNode = TypeKindNode | FunctionKindNode;
+    /** The kind inhabited by ordinary types. */
+    interface TypeKindNode extends Node {
+        readonly kind: SyntaxKind.TypeKind;
+    }
+    /** The kind of a type constructor. */
+    interface FunctionKindNode extends Node {
+        readonly kind: SyntaxKind.FunctionKind;
+        readonly parameters: NodeArray<KindNode>;
+        readonly returnKind: KindNode;
     }
     interface KeywordTypeNode<TKind extends KeywordTypeSyntaxKind = KeywordTypeSyntaxKind> extends KeywordToken<TKind>, TypeNode {
         readonly kind: TKind;
@@ -6675,6 +6691,19 @@ declare namespace ts {
         isClass(): this is InterfaceType;
         isIndexType(): this is IndexType;
     }
+    enum KindFlags {
+        Type = 0,
+        Function = 1,
+    }
+    interface TypeKind {
+        readonly flags: KindFlags.Type;
+    }
+    interface FunctionKind {
+        readonly flags: KindFlags.Function;
+        readonly parameters: readonly Kind[];
+        readonly returnKind: Kind;
+    }
+    type Kind = TypeKind | FunctionKind;
     interface FreshableType extends Type {
         freshType: FreshableType;
         regularType: FreshableType;
@@ -7333,6 +7362,7 @@ declare namespace ts {
         Tspp = ".tspp",
         Tsx = ".tsx",
         Dts = ".d.ts",
+        Dtspp = ".d.tspp",
         Js = ".js",
         Jsx = ".jsx",
         Json = ".json",
@@ -7531,8 +7561,11 @@ declare namespace ts {
         updateQualifiedName(node: QualifiedName, left: EntityName, right: Identifier): QualifiedName;
         createComputedPropertyName(expression: Expression): ComputedPropertyName;
         updateComputedPropertyName(node: ComputedPropertyName, expression: Expression): ComputedPropertyName;
-        createTypeParameterDeclaration(modifiers: readonly Modifier[] | undefined, name: string | Identifier, constraint?: TypeNode, defaultType?: TypeNode): TypeParameterDeclaration;
-        updateTypeParameterDeclaration(node: TypeParameterDeclaration, modifiers: readonly Modifier[] | undefined, name: Identifier, constraint: TypeNode | undefined, defaultType: TypeNode | undefined): TypeParameterDeclaration;
+        createTypeParameterDeclaration(modifiers: readonly Modifier[] | undefined, name: string | Identifier, constraint?: TypeNode, defaultType?: TypeNode, kindType?: KindNode): TypeParameterDeclaration;
+        updateTypeParameterDeclaration(node: TypeParameterDeclaration, modifiers: readonly Modifier[] | undefined, name: Identifier, constraint: TypeNode | undefined, defaultType: TypeNode | undefined, kindType?: KindNode): TypeParameterDeclaration;
+        createTypeKindNode(): TypeKindNode;
+        createFunctionKindNode(parameters: readonly KindNode[], returnKind: KindNode): FunctionKindNode;
+        updateFunctionKindNode(node: FunctionKindNode, parameters: NodeArray<KindNode>, returnKind: KindNode): FunctionKindNode;
         createParameterDeclaration(modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken?: QuestionToken, type?: TypeNode, initializer?: Expression): ParameterDeclaration;
         updateParameterDeclaration(node: ParameterDeclaration, modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken: QuestionToken | undefined, type: TypeNode | undefined, initializer: Expression | undefined): ParameterDeclaration;
         createDecorator(expression: Expression): Decorator;
@@ -8987,6 +9020,7 @@ declare namespace ts {
     function isQualifiedName(node: Node): node is QualifiedName;
     function isComputedPropertyName(node: Node): node is ComputedPropertyName;
     function isTypeParameterDeclaration(node: Node): node is TypeParameterDeclaration;
+    function isKindNode(node: Node): node is KindNode;
     function isParameter(node: Node): node is ParameterDeclaration;
     function isDecorator(node: Node): node is Decorator;
     function isPropertySignature(node: Node): node is PropertySignature;

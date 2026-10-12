@@ -452,6 +452,10 @@ export const enum SyntaxKind {
   CommaListExpression,
   SyntheticReferenceExpression,
 
+  // Kinds
+  TypeKind,
+  FunctionKind,
+
   // Enum value count
   Count,
 
@@ -1062,6 +1066,7 @@ export type HasChildren =
   | QualifiedName
   | ComputedPropertyName
   | TypeParameterDeclaration
+  | FunctionKindNode
   | ParameterDeclaration
   | Decorator
   | PropertySignature
@@ -1829,6 +1834,8 @@ export interface TypeParameterDeclaration extends NamedDeclaration, JSDocContain
   readonly parent: DeclarationWithTypeParameterChildren | InferTypeNode;
   readonly modifiers?: NodeArray<Modifier>;
   readonly name: Identifier;
+  /** The explicitly declared kind of this type parameter. Omitted parameters have kind `Type`. */
+  readonly kindType?: KindNode;
   /** Note: Consider calling `getEffectiveConstraintOfTypeParameter` */
   readonly constraint?: TypeNode;
   readonly default?: TypeNode;
@@ -2183,6 +2190,21 @@ export interface ClassStaticBlockDeclaration extends ClassElement, JSDocContaine
 
 export interface TypeNode extends Node {
   _typeNodeBrand: any;
+}
+
+/** A kind classifies a type or type constructor. */
+export type KindNode = TypeKindNode | FunctionKindNode;
+
+/** The kind inhabited by ordinary types. */
+export interface TypeKindNode extends Node {
+  readonly kind: SyntaxKind.TypeKind;
+}
+
+/** The kind of a type constructor. */
+export interface FunctionKindNode extends Node {
+  readonly kind: SyntaxKind.FunctionKind;
+  readonly parameters: NodeArray<KindNode>;
+  readonly returnKind: KindNode;
 }
 
 /** @internal */
@@ -6452,7 +6474,28 @@ export interface Type {
     immediateBaseConstraint?: Type;  // Immediate base constraint cache
     /** @internal */
     widened?: Type; // Cached widened form of the type
+    /** @internal */ typeKind?: Kind;
+    /** @internal */ higherKindedSymbol?: Symbol;
+    /** @internal */ higherKindedTarget?: Type;
+    /** @internal */ higherKindedTypeArguments?: readonly Type[];
 }
+
+export const enum KindFlags {
+  Type = 0,
+  Function = 1,
+}
+
+export interface TypeKind {
+  readonly flags: KindFlags.Type;
+}
+
+export interface FunctionKind {
+  readonly flags: KindFlags.Function;
+  readonly parameters: readonly Kind[];
+  readonly returnKind: Kind;
+}
+
+export type Kind = TypeKind | FunctionKind;
 
 /** @internal */
 // Intrinsic types (TypeFlags.Intrinsic)
@@ -8070,6 +8113,7 @@ export const enum Extension {
   Tspp = ".tspp",
   Tsx = ".tsx",
   Dts = ".d.ts",
+  Dtspp = ".d.tspp",
   Js = ".js",
   Jsx = ".jsx",
   Json = ".json",
@@ -8836,8 +8880,11 @@ export interface NodeFactory {
   // Signature elements
   //
 
-  createTypeParameterDeclaration(modifiers: readonly Modifier[] | undefined, name: string | Identifier, constraint?: TypeNode, defaultType?: TypeNode): TypeParameterDeclaration;
-  updateTypeParameterDeclaration(node: TypeParameterDeclaration, modifiers: readonly Modifier[] | undefined, name: Identifier, constraint: TypeNode | undefined, defaultType: TypeNode | undefined): TypeParameterDeclaration;
+  createTypeParameterDeclaration(modifiers: readonly Modifier[] | undefined, name: string | Identifier, constraint?: TypeNode, defaultType?: TypeNode, kindType?: KindNode): TypeParameterDeclaration;
+  updateTypeParameterDeclaration(node: TypeParameterDeclaration, modifiers: readonly Modifier[] | undefined, name: Identifier, constraint: TypeNode | undefined, defaultType: TypeNode | undefined, kindType?: KindNode): TypeParameterDeclaration;
+  createTypeKindNode(): TypeKindNode;
+  createFunctionKindNode(parameters: readonly KindNode[], returnKind: KindNode): FunctionKindNode;
+  updateFunctionKindNode(node: FunctionKindNode, parameters: NodeArray<KindNode>, returnKind: KindNode): FunctionKindNode;
   createParameterDeclaration(modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken?: QuestionToken, type?: TypeNode, initializer?: Expression): ParameterDeclaration;
   updateParameterDeclaration(node: ParameterDeclaration, modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken: QuestionToken | undefined, type: TypeNode | undefined, initializer: Expression | undefined): ParameterDeclaration;
   createDecorator(expression: Expression): Decorator;

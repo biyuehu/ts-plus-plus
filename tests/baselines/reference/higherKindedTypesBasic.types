@@ -1,0 +1,219 @@
+//// [tests/cases/compiler/higherKindedTypesBasic.ts] ////
+
+=== higherKindedTypesBasic.tspp ===
+export interface Apply<F: Type => Type, A> {
+    value: F<A>;
+>value : "higherKindedTypesBasic".Apply.F<A>
+>      : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+}
+
+export interface Apply2<F: (Type, Type) => Type, A, B> {
+    value: F<A, B>;
+>value : "higherKindedTypesBasic".Apply2.F<A, B>
+>      : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+}
+
+export type Pair<A, B> = [A, B];
+>Pair : Pair<A, B>
+>     : ^^^^^^^^^^
+
+export type AliasApply<F: Type => Type, A> = F<A>;
+>AliasApply : F<A>
+>           : ^^^^
+
+export interface Functor<F: Type => Type> {
+    map<A, B>(fa: F<A>, fn: (value: A) => B): F<B>;
+>map : <A, B>(fa: F<A>, fn: (value: A) => B) => F<B>
+>    : ^ ^^ ^^  ^^    ^^  ^^               ^^^^^    
+>fa : "higherKindedTypesBasic".Functor.F<A>
+>   : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>fn : (value: A) => B
+>   : ^     ^^ ^^^^^ 
+>value : A
+>      : ^
+}
+
+export type ArrayOfString = Apply<Array, string>;
+>ArrayOfString : ArrayOfString
+>              : ^^^^^^^^^^^^^
+
+export type AliasArrayOfString = AliasApply<Array, string>;
+>AliasArrayOfString : string[]
+>                   : ^^^^^^^^
+
+export type PairOfStringAndNumber = Apply2<Pair, string, number>;
+>PairOfStringAndNumber : PairOfStringAndNumber
+>                      : ^^^^^^^^^^^^^^^^^^^^^
+
+declare const applied: Apply<Array, string>;
+>applied : Apply<Array, string>
+>        : ^^^^^^^^^^^^^^^^^^^^
+
+applied.value.push("ok");
+>applied.value.push("ok") : number
+>                         : ^^^^^^
+>applied.value.push : (...items: string[]) => number
+>                   : ^^^^     ^^^^^^^^^^^^^^^      
+>applied.value : string[]
+>              : ^^^^^^^^
+>applied : Apply<Array, string>
+>        : ^^^^^^^^^^^^^^^^^^^^
+>value : string[]
+>      : ^^^^^^^^
+>push : (...items: string[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>"ok" : "ok"
+>     : ^^^^
+
+applied.value.push(1);
+>applied.value.push(1) : number
+>                      : ^^^^^^
+>applied.value.push : (...items: string[]) => number
+>                   : ^^^^     ^^^^^^^^^^^^^^^      
+>applied.value : string[]
+>              : ^^^^^^^^
+>applied : Apply<Array, string>
+>        : ^^^^^^^^^^^^^^^^^^^^
+>value : string[]
+>      : ^^^^^^^^
+>push : (...items: string[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>1 : 1
+>  : ^
+
+declare const pair: Apply2<Pair, string, number>;
+>pair : Apply2<"higherKindedTypesBasic".Pair, string, number>
+>     : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+pair.value[0].toUpperCase();
+>pair.value[0].toUpperCase() : string
+>                            : ^^^^^^
+>pair.value[0].toUpperCase : () => string
+>                          : ^^^^^^      
+>pair.value[0] : string
+>              : ^^^^^^
+>pair.value : Pair<string, number>
+>           : ^^^^^^^^^^^^^^^^^^^^
+>pair : Apply2<"higherKindedTypesBasic".Pair, string, number>
+>     : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>value : Pair<string, number>
+>      : ^^^^^^^^^^^^^^^^^^^^
+>0 : 0
+>  : ^
+>toUpperCase : () => string
+>            : ^^^^^^      
+
+pair.value[1].toFixed();
+>pair.value[1].toFixed() : string
+>                        : ^^^^^^
+>pair.value[1].toFixed : (fractionDigits?: number) => string
+>                      : ^              ^^^      ^^^^^      
+>pair.value[1] : number
+>              : ^^^^^^
+>pair.value : Pair<string, number>
+>           : ^^^^^^^^^^^^^^^^^^^^
+>pair : Apply2<"higherKindedTypesBasic".Pair, string, number>
+>     : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>value : Pair<string, number>
+>      : ^^^^^^^^^^^^^^^^^^^^
+>1 : 1
+>  : ^
+>toFixed : (fractionDigits?: number) => string
+>        : ^              ^^^      ^^^^^      
+
+declare const arrayFunctor: Functor<Array>;
+>arrayFunctor : Functor<Array>
+>             : ^^^^^^^^^^^^^^
+
+const mapped = arrayFunctor.map([1, 2, 3], value => value.toString());
+>mapped : string[]
+>       : ^^^^^^^^
+>arrayFunctor.map([1, 2, 3], value => value.toString()) : string[]
+>                                                       : ^^^^^^^^
+>arrayFunctor.map : <A, B>(fa: A[], fn: (value: A) => B) => B[]
+>                 : ^ ^^ ^^  ^^^^^^^  ^^^     ^^^^^^^^^^^^^^^^^
+>arrayFunctor : Functor<Array>
+>             : ^^^^^^^^^^^^^^
+>map : <A, B>(fa: A[], fn: (value: A) => B) => B[]
+>    : ^ ^^ ^^  ^^^^^^^  ^^^     ^^^^^^^^^^^^^^^^^
+>[1, 2, 3] : number[]
+>          : ^^^^^^^^
+>1 : 1
+>  : ^
+>2 : 2
+>  : ^
+>3 : 3
+>  : ^
+>value => value.toString() : (value: number) => string
+>                          : ^     ^^^^^^^^^^^^^^^^^^^
+>value : number
+>      : ^^^^^^
+>value.toString() : string
+>                 : ^^^^^^
+>value.toString : (radix?: number) => string
+>               : ^     ^^^      ^^^^^      
+>value : number
+>      : ^^^^^^
+>toString : (radix?: number) => string
+>         : ^     ^^^      ^^^^^      
+
+mapped.push("ok");
+>mapped.push("ok") : number
+>                  : ^^^^^^
+>mapped.push : (...items: string[]) => number
+>            : ^^^^     ^^^^^^^^^^^^^^^      
+>mapped : string[]
+>       : ^^^^^^^^
+>push : (...items: string[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>"ok" : "ok"
+>     : ^^^^
+
+mapped.push(1);
+>mapped.push(1) : number
+>               : ^^^^^^
+>mapped.push : (...items: string[]) => number
+>            : ^^^^     ^^^^^^^^^^^^^^^      
+>mapped : string[]
+>       : ^^^^^^^^
+>push : (...items: string[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>1 : 1
+>  : ^
+
+declare function unwrap<F: Type => Type, A>(value: F<A>): A;
+>unwrap : <F: Type => Type, A>(value: F<A>) => A
+>       : ^ ^^^^^^^^^^^^^^^^ ^^     ^^    ^^^^^ 
+>value : F<A>
+>      : ^^^^
+
+const unwrapped = unwrap<Array, string>(["value"]);
+>unwrapped : string
+>          : ^^^^^^
+>unwrap<Array, string>(["value"]) : string
+>                                 : ^^^^^^
+>unwrap : <F: Type => Type, A>(value: F<A>) => A
+>       : ^ ^^^^^^^^^^^^^^^^ ^^     ^^    ^^^^^ 
+>["value"] : string[]
+>          : ^^^^^^^^
+>"value" : "value"
+>        : ^^^^^^^
+
+unwrapped.toUpperCase();
+>unwrapped.toUpperCase() : string
+>                        : ^^^^^^
+>unwrapped.toUpperCase : () => string
+>                      : ^^^^^^      
+>unwrapped : string
+>          : ^^^^^^
+>toUpperCase : () => string
+>            : ^^^^^^      
+
+export type Invalid = Apply<string, string>;
+>Invalid : Invalid
+>        : ^^^^^^^
+
+export type WrongArity = Apply<Pair, string>;
+>WrongArity : WrongArity
+>           : ^^^^^^^^^^
+

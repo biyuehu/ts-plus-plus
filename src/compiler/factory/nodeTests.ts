@@ -136,6 +136,7 @@ import {
   JsxSelfClosingElement,
   JsxSpreadAttribute,
   JsxText,
+  KindNode,
   LabeledStatement,
   LiteralTypeNode,
   MappedTypeNode,
@@ -402,6 +403,10 @@ export function isComputedPropertyName(node: Node): node is ComputedPropertyName
 
 export function isTypeParameterDeclaration(node: Node): node is TypeParameterDeclaration {
   return node.kind === SyntaxKind.TypeParameter;
+}
+
+export function isKindNode(node: Node): node is KindNode {
+  return node.kind === SyntaxKind.TypeKind || node.kind === SyntaxKind.FunctionKind;
 }
 
 // TODO(rbuckton): Rename to 'isParameterDeclaration'

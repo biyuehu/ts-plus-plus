@@ -1,0 +1,17 @@
+/consumer.tspp(5,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+
+
+==== /library.d.tspp (0 errors) ====
+    export interface Apply<F: Type => Type, A> {
+        value: F<A>;
+    }
+    
+==== /consumer.tspp (1 errors) ====
+    import type { Apply } from "./library.d.tspp";
+    
+    declare const applied: Apply<Array, string>;
+    applied.value.push("ok");
+    applied.value.push(1);
+                       ~
+!!! error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+    

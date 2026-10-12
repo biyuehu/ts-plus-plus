@@ -6567,8 +6567,9 @@ export function getDeclarationEmitOutputFilePathWorker(fileName: string, options
 }
 
 /** @internal */
-export function getDeclarationEmitExtensionForPath(path: string): Extension.Dts | Extension.Dmts | Extension.Dcts | ".d.json.ts" {
-  return fileExtensionIsOneOf(path, [Extension.Mjs, Extension.Mts]) ? Extension.Dmts :
+export function getDeclarationEmitExtensionForPath(path: string): Extension.Dts | Extension.Dtspp | Extension.Dmts | Extension.Dcts | ".d.json.ts" {
+  return fileExtensionIs(path, Extension.Tspp) ? Extension.Dtspp :
+    fileExtensionIsOneOf(path, [Extension.Mjs, Extension.Mts]) ? Extension.Dmts :
     fileExtensionIsOneOf(path, [Extension.Cjs, Extension.Cts]) ? Extension.Dcts :
     fileExtensionIsOneOf(path, [Extension.Json]) ? `.d.json.ts` : // Drive-by redefinition of json declaration file output name so if it's ever enabled, it behaves well
     Extension.Dts;
@@ -6580,7 +6581,8 @@ export function getDeclarationEmitExtensionForPath(path: string): Extension.Dts 
  * @internal
  */
 export function getPossibleOriginalInputExtensionForExtension(path: string): Extension[] {
-  return fileExtensionIsOneOf(path, [Extension.Dmts, Extension.Mjs, Extension.Mts]) ? [Extension.Mts, Extension.Mjs] :
+  return fileExtensionIs(path, Extension.Dtspp) ? [Extension.Tspp] :
+    fileExtensionIsOneOf(path, [Extension.Dmts, Extension.Mjs, Extension.Mts]) ? [Extension.Mts, Extension.Mjs] :
     fileExtensionIsOneOf(path, [Extension.Dcts, Extension.Cjs, Extension.Cts]) ? [Extension.Cts, Extension.Cjs] :
     fileExtensionIsOneOf(path, [`.d.json.ts`]) ? [Extension.Json] :
     [Extension.Tspp, Extension.Tsx, Extension.Ts, Extension.Jsx, Extension.Js];
@@ -9968,19 +9970,19 @@ export function getScriptKindFromFileName(fileName: string): ScriptKind {
 /**
  *  Groups of supported extensions in order of file resolution precedence. (eg, TS > TSX > DTS and seperately, CTS > DCTS)
  */
-const supportedTSExtensions: readonly Extension[][] = [[Extension.Tspp, Extension.Ts, Extension.Tsx, Extension.Dts], [Extension.Cts, Extension.Dcts], [Extension.Mts, Extension.Dmts]];
+const supportedTSExtensions: readonly Extension[][] = [[Extension.Tspp, Extension.Dtspp, Extension.Ts, Extension.Tsx, Extension.Dts], [Extension.Cts, Extension.Dcts], [Extension.Mts, Extension.Dmts]];
 /** @internal */
 export const supportedTSExtensionsFlat: readonly Extension[] = flatten(supportedTSExtensions);
 const supportedTSExtensionsWithJson: readonly Extension[][] = [...supportedTSExtensions, [Extension.Json]];
 /** Must have ".d.ts" first because if ".ts" goes first, that will be detected as the extension instead of ".d.ts". */
-const supportedTSExtensionsForExtractExtension: readonly Extension[] = [Extension.Dts, Extension.Dcts, Extension.Dmts, Extension.Tspp, Extension.Cts, Extension.Mts, Extension.Ts, Extension.Tsx];
+const supportedTSExtensionsForExtractExtension: readonly Extension[] = [Extension.Dtspp, Extension.Dts, Extension.Dcts, Extension.Dmts, Extension.Tspp, Extension.Cts, Extension.Mts, Extension.Ts, Extension.Tsx];
 const supportedJSExtensions: readonly Extension[][] = [[Extension.Js, Extension.Jsx], [Extension.Mjs], [Extension.Cjs]];
 /** @internal */
 export const supportedJSExtensionsFlat: readonly Extension[] = flatten(supportedJSExtensions);
-const allSupportedExtensions: readonly Extension[][] = [[Extension.Tspp, Extension.Ts, Extension.Tsx, Extension.Dts, Extension.Js, Extension.Jsx], [Extension.Cts, Extension.Dcts, Extension.Cjs], [Extension.Mts, Extension.Dmts, Extension.Mjs]];
+const allSupportedExtensions: readonly Extension[][] = [[Extension.Tspp, Extension.Dtspp, Extension.Ts, Extension.Tsx, Extension.Dts, Extension.Js, Extension.Jsx], [Extension.Cts, Extension.Dcts, Extension.Cjs], [Extension.Mts, Extension.Dmts, Extension.Mjs]];
 const allSupportedExtensionsWithJson: readonly Extension[][] = [...allSupportedExtensions, [Extension.Json]];
 /** @internal */
-export const supportedDeclarationExtensions: readonly Extension[] = [Extension.Dts, Extension.Dcts, Extension.Dmts];
+export const supportedDeclarationExtensions: readonly Extension[] = [Extension.Dtspp, Extension.Dts, Extension.Dcts, Extension.Dmts];
 /** @internal */
 export const supportedTSImplementationExtensions: readonly Extension[] = [Extension.Tspp, Extension.Ts, Extension.Cts, Extension.Mts, Extension.Tsx];
 /** @internal */
@@ -10168,7 +10170,7 @@ export function compareNumberOfDirectorySeparators(path1: string, path2: string)
   );
 }
 
-const extensionsToRemove = [Extension.Dts, Extension.Dmts, Extension.Dcts, Extension.Tspp, Extension.Mjs, Extension.Mts, Extension.Cjs, Extension.Cts, Extension.Ts, Extension.Js, Extension.Tsx, Extension.Jsx, Extension.Json];
+const extensionsToRemove = [Extension.Dtspp, Extension.Dts, Extension.Dmts, Extension.Dcts, Extension.Tspp, Extension.Mjs, Extension.Mts, Extension.Cjs, Extension.Cts, Extension.Ts, Extension.Js, Extension.Tsx, Extension.Jsx, Extension.Json];
 /** @internal */
 export function removeFileExtension(path: string): string {
   for (const ext of extensionsToRemove) {
@@ -10275,7 +10277,7 @@ export function positionIsSynthesized(pos: number): boolean {
  * @internal
  */
 export function extensionIsTS(ext: string): boolean {
-  return ext === Extension.Tspp || ext === Extension.Ts || ext === Extension.Tsx || ext === Extension.Dts || ext === Extension.Cts || ext === Extension.Mts || ext === Extension.Dmts || ext === Extension.Dcts || (startsWith(ext, ".d.") && endsWith(ext, ".ts"));
+  return ext === Extension.Tspp || ext === Extension.Dtspp || ext === Extension.Ts || ext === Extension.Tsx || ext === Extension.Dts || ext === Extension.Cts || ext === Extension.Mts || ext === Extension.Dmts || ext === Extension.Dcts || (startsWith(ext, ".d.") && endsWith(ext, ".ts"));
 }
 
 /** @internal */

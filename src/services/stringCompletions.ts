@@ -355,6 +355,7 @@ function convertPathCompletions(pathCompletions: readonly PathCompletion[]): Com
 function kindModifiersFromExtension(extension: Extension | undefined): ScriptElementKindModifier {
   switch (extension) {
     case Extension.Dts:
+    case Extension.Dtspp:
       return ScriptElementKindModifier.dtsModifier;
     case Extension.Js:
       return ScriptElementKindModifier.jsModifier;

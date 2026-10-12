@@ -1,0 +1,37 @@
+//// [tests/cases/compiler/higherKindedDeclarationResolution.ts] ////
+
+=== /library.d.tspp ===
+export interface Apply<F: Type => Type, A> {
+>Apply : Symbol(Apply, Decl(library.d.tspp, --, --))
+>F : Symbol(F, Decl(library.d.tspp, --, --))
+>A : Symbol(A, Decl(library.d.tspp, --, --))
+
+    value: F<A>;
+>value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
+>F : Symbol(F, Decl(library.d.tspp, --, --))
+>A : Symbol(A, Decl(library.d.tspp, --, --))
+}
+
+=== /consumer.tspp ===
+import type { Apply } from "./library.d.tspp";
+>Apply : Symbol(Apply, Decl(consumer.tspp, 0, 13))
+
+declare const applied: Apply<Array, string>;
+>applied : Symbol(applied, Decl(consumer.tspp, 2, 13))
+>Apply : Symbol(Apply, Decl(consumer.tspp, 0, 13))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+applied.value.push("ok");
+>applied.value.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>applied.value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
+>applied : Symbol(applied, Decl(consumer.tspp, 2, 13))
+>value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+applied.value.push(1);
+>applied.value.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>applied.value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
+>applied : Symbol(applied, Decl(consumer.tspp, 2, 13))
+>value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
