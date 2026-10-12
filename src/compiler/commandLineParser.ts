@@ -1685,6 +1685,16 @@ const commandOptionsWithoutBuild: CommandLineOption[] = [
     type: "string",
     defaultValueDescription: undefined,
   },
+  {
+    name: "dependentTypes",
+    type: "boolean",
+    affectsSemanticDiagnostics: true,
+    affectsBuildInfo: true,
+    isTSConfigOnly: true,
+    category: Diagnostics.Language_and_Environment,
+    description: Diagnostics.Enable_TS_dependent_function_types_in_tspp_files,
+    defaultValueDescription: false,
+  },
 ];
 
 // Do not delete this without updating the website's tsconfig generation.

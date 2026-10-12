@@ -118,9 +118,20 @@ kind 检查、别名传播、类型打印和关系判断
 - `(A: Type0) -> ...` 依赖函数；
 - 对已绑定名称的引用；
 - `F<A>` 形式的类型应用；
+- 由原 TypeScript checker 检查的 primitive、union/intersection、普通泛型引用、`keyof`、indexed access、mapped type 和 conditional type；
 - alpha/beta 定义相等和 universe/kind 检查。
 
-它还不是所有 TypeScript 类型语法的替代品。例如，在依赖函数内部直接使用 `string`、union 或 mapped type 会得到明确的“不支持”诊断。原生依赖语法目前只在 `.tspp` 和 `.d.tspp` 文件中启用，普通 `.ts` 文件的 `=>` 函数类型不受影响。
+项目使用独立的 `tsppconfig.json` 开启这项实验能力：
+
+```json
+{
+  "compilerOptions": {
+    "dependentTypes": true
+  }
+}
+```
+
+两个条件缺一不可：文件必须是 `.tspp`/`.d.tspp`，并且 `tsppconfig.json` 必须显式开启 `dependentTypes`。普通 `.ts` 文件永远不会启用依赖语法，即使同一项目打开了该选项；其中原有的 `=>` 函数类型也不受影响。
 
 另外，这里的代码是在**描述类型**，还没有提供对应的运行时函数实现语法。
 
@@ -148,4 +159,4 @@ npm run emit-declarations
 
 第二条命令会在 `dist/index.d.tspp` 中生成声明。依赖函数会保持 `(A: Type0) -> ...`，不会退化成 `unknown`。
 
-阅读完正常示例后，可以取消 `index.tspp` 最后几条错误案例中的任意一条注释，再运行 `npm run check`，观察未绑定变量、错误 universe 和不支持语法的诊断。
+阅读完正常示例后，可以取消 `index.tspp` 最后几条错误案例中的任意一条注释，再运行 `npm run check`，观察未绑定变量和错误 universe 的诊断。

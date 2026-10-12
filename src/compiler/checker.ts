@@ -1160,6 +1160,7 @@ import {
   areMlttTermsDefinitionallyEqual,
   inferMlttType,
   mlttApplication,
+  mlttExternal,
   mlttPi,
   MlttTerm,
   MlttTypeError,
@@ -1535,6 +1536,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   var instantiationDepth = 0;
   var inlineLevel = 0;
   var currentNode: Node | undefined;
+  var currentMlttTypeBindings: readonly MlttTypeBinding[] | undefined;
+  var nextMlttPlaceholderId = 0;
   var varianceTypeParameter: TypeParameter | undefined;
   var isInferencePartiallyBlocked = false;
   var withinUnreachableCode = false;
@@ -17645,6 +17648,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getTypeFromTypeReference(node: TypeReferenceType): Type {
+    if (currentMlttTypeBindings && node.kind === SyntaxKind.TypeReference && isIdentifier((node as TypeReferenceNode).typeName) && !node.typeArguments?.length) {
+      const name = idText((node as TypeReferenceNode).typeName as Identifier);
+      const binding = currentMlttTypeBindings.find(binding => binding.name === name);
+      if (binding) return binding.compilerType;
+    }
     const links = getNodeLinks(node);
     if (!links.resolvedType) {
       // handle LS queries on the `const` in `x as const` by resolving to the type of `x`
@@ -20710,6 +20718,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const links = getNodeLinks(node);
     if (links.resolvedType) return links.resolvedType;
 
+    if (!dependentTypesAreEnabled()) {
+      error(node, Diagnostics.Dependent_function_types_require_dependentTypes_to_be_enabled_in_tsppconfig_json);
+      return links.resolvedType = errorType;
+    }
+
     const term = getMlttTermFromTypeNode(node, emptyArray);
     if (!term) return links.resolvedType = errorType;
 
@@ -20734,7 +20747,27 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
   }
 
-  function getMlttTermFromTypeNode(node: TypeNode, scope: readonly string[]): MlttTerm | undefined {
+  interface MlttTypeBinding {
+    readonly name: string;
+    readonly placeholderName: string;
+    readonly compilerType: TypeParameter;
+  }
+
+  function dependentTypesAreEnabled(): boolean {
+    if (!compilerOptions.dependentTypes) return false;
+    const configFilePath = compilerOptions.configFilePath?.replace(/\\/g, "/").toLowerCase();
+    return !configFilePath || configFilePath.endsWith("/tsppconfig.json") || configFilePath === "tsppconfig.json";
+  }
+
+  function createMlttTypeBinding(name: string): MlttTypeBinding {
+    const placeholderName = `__mltt_placeholder_${nextMlttPlaceholderId++}__`;
+    const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(placeholderName));
+    const compilerType = createTypeParameter(symbol);
+    compilerType.typeKind = ordinaryTypeKind;
+    return { name, placeholderName, compilerType };
+  }
+
+  function getMlttTermFromTypeNode(node: TypeNode, scope: readonly MlttTypeBinding[]): MlttTerm | undefined {
     if (node.kind === SyntaxKind.ParenthesizedType) {
       return getMlttTermFromTypeNode((node as ParenthesizedTypeNode).type, scope);
     }
@@ -20742,7 +20775,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (node.kind === SyntaxKind.DependentFunctionType) {
       const dependent = node as DependentFunctionTypeNode;
       const domain = getMlttTermFromTypeNode(dependent.parameterType, scope);
-      const codomain = getMlttTermFromTypeNode(dependent.returnType, [idText(dependent.parameterName), ...scope]);
+      const binding = createMlttTypeBinding(idText(dependent.parameterName));
+      const codomain = getMlttTermFromTypeNode(dependent.returnType, [binding, ...scope]);
       return domain && codomain ? mlttPi(idText(dependent.parameterName), domain, codomain) : undefined;
     }
 
@@ -20765,10 +20799,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         term = mlttUniverse(level);
       }
       else {
-        const index = scope.indexOf(name);
+        const index = scope.findIndex(binding => binding.name === name);
         if (index < 0) {
-          error(node, Diagnostics.Unbound_MLTT_type_variable_0, name);
-          return undefined;
+          if (resolveTypeReferenceName(reference, SymbolFlags.Type, /*ignoreErrors*/ true) === unknownSymbol) {
+            error(node, Diagnostics.Unbound_MLTT_type_variable_0, name);
+            return undefined;
+          }
+          return getExternalMlttTerm(node, scope);
         }
         term = mlttVariable(index);
       }
@@ -20781,8 +20818,32 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       return term;
     }
 
-    error(node, Diagnostics.Type_syntax_0_is_not_supported_in_an_MLTT_dependent_function_type, getTextOfNode(node));
-    return undefined;
+    return getExternalMlttTerm(node, scope);
+  }
+
+  function getExternalMlttTerm(node: TypeNode, scope: readonly MlttTypeBinding[]): MlttTerm | undefined {
+    const savedBindings = currentMlttTypeBindings;
+    currentMlttTypeBindings = scope;
+    let type: Type;
+    let key: string;
+    try {
+      type = getTypeFromTypeNode(node);
+      if (type === errorType) return undefined;
+      key = typeToString(type, node, TypeFormatFlags.NoTruncation);
+    }
+    finally {
+      currentMlttTypeBindings = savedBindings;
+    }
+
+    const arguments_: MlttTerm[] = [];
+    for (let index = 0; index < scope.length; index++) {
+      const binding = scope[index];
+      if (!key.includes(binding.placeholderName)) continue;
+      const argumentIndex = arguments_.length;
+      key = key.split(binding.placeholderName).join(`$${argumentIndex}`);
+      arguments_.push(mlttVariable(index));
+    }
+    return mlttExternal(key, getTextOfNode(node), arguments_, mlttUniverse(0));
   }
 
   function getTypeFromTypeNode(node: TypeNode): Type {

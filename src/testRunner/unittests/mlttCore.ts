@@ -52,6 +52,15 @@ describe("unittests:: MLTT core", () => {
     assert.deepEqual(mltt.normalizeMlttTerm(betaRedex), reduced);
   });
 
+  it("substitutes MLTT binders captured by external TypeScript types", () => {
+    const stringType = mltt.mlttExternal("string", "string", [], type0);
+    const dependentUnion = mltt.mlttExternal("$0 | string", "A | string", [mltt.mlttVariable(0)], type0);
+    const applied = mltt.mlttApplication(mltt.mlttLambda("A", dependentUnion), stringType);
+    const expected = mltt.mlttExternal("$0 | string", "A | string", [stringType], type0);
+
+    assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(applied, expected));
+  });
+
   it("substitutes a dependent codomain after application", () => {
     const identityOverType1 = mltt.mlttAnnotation(
       polymorphicIdentity,

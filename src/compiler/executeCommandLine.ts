@@ -607,7 +607,8 @@ function executeCommandLineWorker(
 
     const fileOrDirectory = normalizePath(commandLine.options.project);
     if (!fileOrDirectory /* current directory "." */ || sys.directoryExists(fileOrDirectory)) {
-      configFileName = combinePaths(fileOrDirectory, "tsconfig.json");
+      const tsppConfigFileName = combinePaths(fileOrDirectory, "tsppconfig.json");
+      configFileName = sys.fileExists(tsppConfigFileName) ? tsppConfigFileName : combinePaths(fileOrDirectory, "tsconfig.json");
       if (!sys.fileExists(configFileName)) {
         reportDiagnostic(createCompilerDiagnostic(Diagnostics.Cannot_find_a_tsconfig_json_file_at_the_specified_directory_Colon_0, commandLine.options.project));
         return sys.exit(ExitStatus.DiagnosticsPresent_OutputsSkipped);
@@ -623,7 +624,8 @@ function executeCommandLineWorker(
   }
   else if (!commandLine.options.ignoreConfig || commandLine.fileNames.length === 0) {
     const searchPath = normalizePath(sys.getCurrentDirectory());
-    configFileName = findConfigFile(searchPath, fileName => sys.fileExists(fileName));
+    configFileName = findConfigFile(searchPath, fileName => sys.fileExists(fileName), "tsppconfig.json") ||
+      findConfigFile(searchPath, fileName => sys.fileExists(fileName));
     // if (!commandLine.options.ignoreConfig) {
     if (commandLine.fileNames.length !== 0) {
       if (configFileName) {

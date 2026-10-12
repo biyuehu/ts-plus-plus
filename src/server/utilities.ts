@@ -78,7 +78,7 @@ export class GcTimer {
 }
 
 /** @internal */
-export function getBaseConfigFileName(configFilePath: NormalizedPath): "tsconfig.json" | "jsconfig.json" | undefined {
+export function getBaseConfigFileName(configFilePath: NormalizedPath): "tsppconfig.json" | "tsconfig.json" | "jsconfig.json" | undefined {
   const base = getBaseFileName(configFilePath);
-  return base === "tsconfig.json" || base === "jsconfig.json" ? base : undefined;
+  return base === "tsppconfig.json" || base === "tsconfig.json" || base === "jsconfig.json" ? base : undefined;
 }

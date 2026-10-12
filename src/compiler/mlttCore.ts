@@ -9,7 +9,7 @@
  * @internal
  */
 
-export type MlttTerm = MlttUniverse | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation;
+export type MlttTerm = MlttUniverse | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
 
 export interface MlttUniverse {
   readonly kind: "universe";
@@ -46,6 +46,18 @@ export interface MlttApplication {
 export interface MlttAnnotation {
   readonly kind: "annotation";
   readonly term: MlttTerm;
+  readonly type: MlttTerm;
+}
+
+/**
+ * A TypeScript type checked by the host checker and embedded in the MLTT term.
+ * `arguments` records references to MLTT binders so substitution still works.
+ */
+export interface MlttExternal {
+  readonly kind: "external";
+  readonly key: string;
+  readonly displayName: string;
+  readonly arguments: readonly MlttTerm[];
   readonly type: MlttTerm;
 }
 
@@ -92,6 +104,10 @@ export function mlttAnnotation(term: MlttTerm, type: MlttTerm): MlttAnnotation {
   return { kind: "annotation", term, type };
 }
 
+export function mlttExternal(key: string, displayName: string, arguments_: readonly MlttTerm[], type: MlttTerm): MlttExternal {
+  return { kind: "external", key, displayName, arguments: arguments_, type };
+}
+
 /** Infer the type of a core term. Lambdas require an expected type or an annotation. */
 export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTerm {
   switch (term.kind) {
@@ -128,6 +144,9 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
     case "annotation":
       inferMlttUniverseLevel(term.type, context);
       checkMlttType(term.term, term.type, context);
+      return term.type;
+
+    case "external":
       return term.type;
   }
 }
@@ -183,6 +202,8 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
     case "annotation":
       // weakHeadNormalizeMltt always removes an outer annotation.
       return normalizeMlttTerm(head.term);
+    case "external":
+      return mlttExternal(head.key, head.displayName, head.arguments.map(normalizeMlttTerm), normalizeMlttTerm(head.type));
   }
 }
 
@@ -221,6 +242,13 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
       return mlttApplication(shiftMlttTerm(term.functionTerm, amount, cutoff), shiftMlttTerm(term.argument, amount, cutoff));
     case "annotation":
       return mlttAnnotation(shiftMlttTerm(term.term, amount, cutoff), shiftMlttTerm(term.type, amount, cutoff));
+    case "external":
+      return mlttExternal(
+        term.key,
+        term.displayName,
+        term.arguments.map(argument => shiftMlttTerm(argument, amount, cutoff)),
+        shiftMlttTerm(term.type, amount, cutoff),
+      );
   }
 }
 
@@ -246,6 +274,13 @@ function substituteMltt(term: MlttTerm, variableIndex: number, replacement: Mltt
     case "annotation":
       return mlttAnnotation(
         substituteMltt(term.term, variableIndex, replacement, binderDepth),
+        substituteMltt(term.type, variableIndex, replacement, binderDepth),
+      );
+    case "external":
+      return mlttExternal(
+        term.key,
+        term.displayName,
+        term.arguments.map(argument => substituteMltt(argument, variableIndex, replacement, binderDepth)),
         substituteMltt(term.type, variableIndex, replacement, binderDepth),
       );
   }
@@ -276,6 +311,12 @@ function structurallyEqualMlttTerms(left: MlttTerm, right: MlttTerm): boolean {
       const rightAnnotation = right as MlttAnnotation;
       return structurallyEqualMlttTerms(left.term, rightAnnotation.term) && structurallyEqualMlttTerms(left.type, rightAnnotation.type);
     }
+    case "external": {
+      const rightExternal = right as MlttExternal;
+      return left.key === rightExternal.key && left.arguments.length === rightExternal.arguments.length &&
+        left.arguments.every((argument, index) => structurallyEqualMlttTerms(argument, rightExternal.arguments[index])) &&
+        structurallyEqualMlttTerms(left.type, rightExternal.type);
+    }
   }
 }
 
@@ -297,6 +338,8 @@ function printMlttTermWorker(term: MlttTerm, names: readonly string[]): string {
       return `(${printMlttTermWorker(term.functionTerm, names)} ${printMlttTermWorker(term.argument, names)})`;
     case "annotation":
       return `(${printMlttTermWorker(term.term, names)} : ${printMlttTermWorker(term.type, names)})`;
+    case "external":
+      return term.displayName;
   }
 }
 

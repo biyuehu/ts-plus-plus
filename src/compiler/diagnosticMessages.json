@@ -8579,5 +8579,13 @@
   "Invalid MLTT type: {0}": {
     "category": "Error",
     "code": 18067
+  },
+  "Enable TS++ dependent function types in .tspp files.": {
+    "category": "Message",
+    "code": 18068
+  },
+  "Dependent function types require 'dependentTypes' to be enabled in 'tsppconfig.json'.": {
+    "category": "Error",
+    "code": 18069
   }
 }

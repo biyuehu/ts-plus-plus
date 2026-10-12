@@ -1,41 +1,87 @@
 //// [tests/cases/compiler/dependentFunctionTypes.ts] ////
 
 === dependentFunctionTypes.tspp ===
+type Box<T> = { value: T };
+>Box : Symbol(Box, Decl(dependentFunctionTypes.tspp, 0, 0))
+>T : Symbol(T, Decl(dependentFunctionTypes.tspp, 0, 9))
+>value : Symbol(value, Decl(dependentFunctionTypes.tspp, 0, 15))
+>T : Symbol(T, Decl(dependentFunctionTypes.tspp, 0, 9))
+
 export type PolymorphicIdentity: Type1 = (A: Type0) -> (value: A) -> A;
->PolymorphicIdentity : Symbol(PolymorphicIdentity, Decl(dependentFunctionTypes.tspp, 0, 0))
+>PolymorphicIdentity : Symbol(PolymorphicIdentity, Decl(dependentFunctionTypes.tspp, 0, 27))
 >Type0 : Symbol(Type0)
 >A : Symbol(A)
 >A : Symbol(A)
 
 export type ConstantType: Type1 = (A: Type0) -> (B: Type0) -> A;
->ConstantType : Symbol(ConstantType, Decl(dependentFunctionTypes.tspp, 0, 71))
+>ConstantType : Symbol(ConstantType, Decl(dependentFunctionTypes.tspp, 2, 71))
 >Type0 : Symbol(Type0)
 >Type0 : Symbol(Type0)
 >A : Symbol(A)
 
 export type Shadowing: Type1 = (A: Type0) -> (A: Type0) -> A;
->Shadowing : Symbol(Shadowing, Decl(dependentFunctionTypes.tspp, 1, 64))
+>Shadowing : Symbol(Shadowing, Decl(dependentFunctionTypes.tspp, 3, 64))
 >Type0 : Symbol(Type0)
 >Type0 : Symbol(Type0)
 >A : Symbol(A)
 
 export type IdentityAlias: Type1 = PolymorphicIdentity;
->IdentityAlias : Symbol(IdentityAlias, Decl(dependentFunctionTypes.tspp, 2, 61))
->PolymorphicIdentity : Symbol(PolymorphicIdentity, Decl(dependentFunctionTypes.tspp, 0, 0))
+>IdentityAlias : Symbol(IdentityAlias, Decl(dependentFunctionTypes.tspp, 4, 61))
+>PolymorphicIdentity : Symbol(PolymorphicIdentity, Decl(dependentFunctionTypes.tspp, 0, 27))
 
 export type WrongExpectedKind: Type0 = (A: Type0) -> A;
->WrongExpectedKind : Symbol(WrongExpectedKind, Decl(dependentFunctionTypes.tspp, 3, 55))
+>WrongExpectedKind : Symbol(WrongExpectedKind, Decl(dependentFunctionTypes.tspp, 5, 55))
 >Type0 : Symbol(Type0)
 >A : Symbol(A)
 
 export type UnboundName: Type1 = (A: Type0) -> Missing;
->UnboundName : Symbol(UnboundName, Decl(dependentFunctionTypes.tspp, 5, 55))
+>UnboundName : Symbol(UnboundName, Decl(dependentFunctionTypes.tspp, 7, 55))
 >Type0 : Symbol(Type0)
 >Missing : Symbol(Missing)
 
-export type UnsupportedType: Type1 = (A: Type0) -> string;
->UnsupportedType : Symbol(UnsupportedType, Decl(dependentFunctionTypes.tspp, 6, 55))
+export type BuiltinType: Type1 = (A: Type0) -> string;
+>BuiltinType : Symbol(BuiltinType, Decl(dependentFunctionTypes.tspp, 8, 55))
 >Type0 : Symbol(Type0)
+
+export type UnionType: Type1 = (A: Type0) -> A | string;
+>UnionType : Symbol(UnionType, Decl(dependentFunctionTypes.tspp, 9, 54))
+>Type0 : Symbol(Type0)
+>A : Symbol(A)
+
+export type IntersectionType: Type1 = (A: Type0) -> A & object;
+>IntersectionType : Symbol(IntersectionType, Decl(dependentFunctionTypes.tspp, 10, 56))
+>Type0 : Symbol(Type0)
+>A : Symbol(A)
+
+export type GenericReferenceType: Type1 = (A: Type0) -> Box<A>;
+>GenericReferenceType : Symbol(GenericReferenceType, Decl(dependentFunctionTypes.tspp, 11, 63))
+>Type0 : Symbol(Type0)
+>Box : Symbol(Box, Decl(dependentFunctionTypes.tspp, 0, 0))
+>A : Symbol(A)
+
+export type KeyofType: Type1 = (A: Type0) -> keyof A;
+>KeyofType : Symbol(KeyofType, Decl(dependentFunctionTypes.tspp, 12, 63))
+>Type0 : Symbol(Type0)
+>A : Symbol(A)
+
+export type IndexedType: Type1 = (A: Type0) -> { value: A }["value"];
+>IndexedType : Symbol(IndexedType, Decl(dependentFunctionTypes.tspp, 13, 53))
+>Type0 : Symbol(Type0)
+>value : Symbol(value, Decl(dependentFunctionTypes.tspp, 14, 48))
+>A : Symbol(A)
+
+export type ConditionalType: Type1 = (A: Type0) -> A extends string ? number : boolean;
+>ConditionalType : Symbol(ConditionalType, Decl(dependentFunctionTypes.tspp, 14, 69))
+>Type0 : Symbol(Type0)
+>A : Symbol(A)
+
+export type MappedType: Type1 = (A: Type0) -> { [K in keyof A]: A[K] };
+>MappedType : Symbol(MappedType, Decl(dependentFunctionTypes.tspp, 15, 87))
+>Type0 : Symbol(Type0)
+>K : Symbol(K, Decl(dependentFunctionTypes.tspp, 16, 49))
+>A : Symbol(A)
+>A : Symbol(A)
+>K : Symbol(K, Decl(dependentFunctionTypes.tspp, 16, 49))
 
 === ordinary.ts ===
 export type OrdinaryFunction = (value: string) => string;
