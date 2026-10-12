@@ -1,4 +1,4 @@
-# tsplus
+# ts-plus-plus
 
 **English** | [简体中文](README.zh.md)
 
@@ -10,7 +10,7 @@
 - `[draft]` — proposed syntax or semantics, open for review
 - `[exploring]` — an idea we want to investigate, may change or disappear
 
-*`tsplus` is a working title. See [Relationship to other projects](#relationship-to-other-projects).*
+_`ts-plus-plus` is a working title. See [Relationship to other projects](#relationship-to-other-projects)._
 
 ---
 
@@ -18,12 +18,12 @@
 
 TypeScript's type system is remarkable, but there are things it cannot express, and the workarounds are well known:
 
-| You want | In TypeScript today | In tsplus |
-| --- | --- | --- |
-| Abstract over `Option`, `Array`, `Promise` (a `Functor`) | URI-keyed lookup tables, `interface HKT { ... }` encodings | `F: Type => Type` |
-| Two `string` IDs that must never be mixed up | "Brand" intersections: `string & { __brand: "UserId" }` | `newtype UserId = string` |
-| A type that depends on which constructor you matched | Overloads and casts | GADTs with real type refinement in `match` |
-| Type-level programming | Conditional types, `infer`, recursion tricks | Ordinary functions over types, evaluated at compile time |
+| You want                                                 | In TypeScript today                                        | In ts-plus-plus                                          |
+| -------------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------- |
+| Abstract over `Option`, `Array`, `Promise` (a `Functor`) | URI-keyed lookup tables, `interface HKT { ... }` encodings | `F: Type => Type`                                        |
+| Two `string` IDs that must never be mixed up             | "Brand" intersections: `string & { __brand: "UserId" }`    | `newtype UserId = string`                                |
+| A type that depends on which constructor you matched     | Overloads and casts                                        | GADTs with real type refinement in `match`               |
+| Type-level programming                                   | Conditional types, `infer`, recursion tricks               | Ordinary functions over types, evaluated at compile time |
 
 The goal is not new syntax for its own sake. The goal is **type-level power that cannot be reproduced in TypeScript with a comparable amount of code**.
 
@@ -32,7 +32,7 @@ The goal is not new syntax for its own sake. The goal is **type-level power that
 ## Principles (Stage 1)
 
 1. **Superset of TypeScript 6.0** `[decided]`
-   Any program that `tsc` 6.0 compiles, tsplus compiles with the same meaning. Later TypeScript versions are out of scope. We intend to enforce this in CI by running the upstream test suite: its baselines must not change.
+   Any program that `tsc` 6.0 compiles, ts-plus-plus compiles with the same meaning. Later TypeScript versions are out of scope. We intend to enforce this in CI by running the upstream test suite: its baselines must not change.
 
 2. **We extend types, and types are erased** `[decided]`
    After compilation the output is plain JavaScript, run by any JavaScript runtime. No runtime library is required.
@@ -40,11 +40,11 @@ The goal is not new syntax for its own sake. The goal is **type-level power that
 3. **Emit tiers** `[draft]`
    Not every feature is a pure type-level extension, so we classify them honestly:
 
-   | Tier | What it means | Examples |
-   | --- | --- | --- |
-   | **A** | Types only. Deleting the types yields valid JS. | kinds / HKT, nominal checking, GADT refinement, compile-time types |
-   | **B** | New value-level syntax whose lowering depends **only on syntax**, never on type information. | `data` constructors, `match` |
-   | **C** | Emit depends on type information. | trait instance resolution, dot-call of trait methods |
+   | Tier  | What it means                                                                                | Examples                                                           |
+   | ----- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+   | **A** | Types only. Deleting the types yields valid JS.                                              | kinds / HKT, nominal checking, GADT refinement, compile-time types |
+   | **B** | New value-level syntax whose lowering depends **only on syntax**, never on type information. | `data` constructors, `match`                                       |
+   | **C** | Emit depends on type information.                                                            | trait instance resolution, dot-call of trait methods               |
 
    Tier C is an explicit exception to the erasure principle and needs its own RFC. The guardrail we propose: **a file must be compilable knowing only the declaration outputs of the modules it imports** (no whole-program inference), so per-file parallel builds stay possible.
 
@@ -54,8 +54,8 @@ The goal is not new syntax for its own sake. The goal is **type-level power that
 5. **New syntax is contextual** `[draft]`
    `data`, `match`, `newtype`, `trait`, `impl` and friends are contextual keywords. Identifiers with those names keep working in existing code.
 
-6. **A new file extension for tsplus syntax** `[exploring]`
-   `.ts` keeps strict TypeScript 6.0 semantics, so existing tools (ESLint, Prettier, editors) are unaffected by us. tsplus-only syntax would live in a new extension; the compiler accepts both. The name is undecided (not `.tsp`, which TypeSpec uses).
+6. **A new file extension for ts-plus-plus syntax** `[exploring]`
+   `.ts` keeps strict TypeScript 6.0 semantics, so existing tools (ESLint, Prettier, editors) are unaffected by us. ts-plus-plus-only syntax would live in a new extension; the compiler accepts both. The name is undecided (not `.tsp`, which TypeSpec uses).
 
 ---
 
@@ -76,7 +76,7 @@ const s: string = u         // allowed: a newtype converts to its underlying typ
 
 A `newtype` has exactly one underlying type and **no runtime representation**. Because of that, two newtypes over the same underlying type cannot be told apart at runtime, so `match` over `UserId | OrderId` is a compile error.
 
-### Algebraic data types: `data` `[decided: nominal,`_tag`representation]`
+### Algebraic data types: `data` `[decided: nominal,`\_tag`representation]`
 
 ```ts
 data Option<A> = None | Some(value: A)
@@ -166,7 +166,7 @@ function contains<A>(xs: A[], x: A): boolean where Eq<A> {
 
 Instance resolution inserts dictionary arguments into the emitted code, which makes this a **Tier C** feature (see Principles).
 
-### Higher-kinded types `[decided:`Type` kinds, no `_`placeholder]`
+### Higher-kinded types `[decided:`Type`kinds, no`\_`placeholder]`
 
 ```ts
 trait Functor<F: Type => Type> {
@@ -238,14 +238,14 @@ Existing `type`, conditional types, `infer` and mapped types stay as they are an
 
 **Stage 1 — add, never break.** Everything is additive. Gate for every milestone: the upstream TypeScript 6.0 test baselines do not change.
 
-| Milestone | Scope |
-| --- | --- |
-| M0 | Repository bootstrap, naming, conformance gate in CI, contributor docs |
-| M1 | Nominal types: `newtype`, `data`; `match` with exhaustiveness checking |
-| M2 | Higher-kinded types: kind system, type application, inference |
-| M3 | Inherent `impl`; traits with the orphan rule; dot-call of trait methods (Tier C RFC) |
-| M4 | GADTs |
-| M5 | First-class (compile-time) types |
+| Milestone | Scope                                                                                |
+| --------- | ------------------------------------------------------------------------------------ |
+| M0        | Repository bootstrap, naming, conformance gate in CI, contributor docs               |
+| M1        | Nominal types: `newtype`, `data`; `match` with exhaustiveness checking               |
+| M2        | Higher-kinded types: kind system, type application, inference                        |
+| M3        | Inherent `impl`; traits with the orphan rule; dot-call of trait methods (Tier C RFC) |
+| M4        | GADTs                                                                                |
+| M5        | First-class (compile-time) types                                                     |
 
 **Stage 2 — clean up, behind an edition flag.** Once Stage 1 is stable, a separate opt-in edition (never a flag day) starts dropping historical baggage: legacy `var`, `with`, `arguments`, the quirks of `enum` and `namespace`, loose equality, implicit `any`, the `null`/`undefined` split, and the older type-level syntax in favour of the new primitives. Old projects keep compiling as they are today.
 
@@ -255,8 +255,8 @@ Existing `type`, conditional types, `infer` and mapped types stay as they are an
 
 We would rather list these than hide them:
 
-- **Name.** `tsplus` collides with an existing project (see below).
-- **File extension** for tsplus-only syntax.
+- **Name.** `ts-plus-plus` collides with an existing project (see below).
+- **File extension** for ts-plus-plus-only syntax.
 - **Declaration output for plain TypeScript consumers.** Nominal types cannot be expressed in a plain `.d.ts` without loss; a branded-structural fallback is one option.
 - **Nominal identity across duplicate packages.** Two copies of one package in `node_modules` must not turn into "same name, incompatible types".
 - **Tooling.** Anything that depends on type information at emit time is hard for per-file transpilers. Tier C is where this bites.
@@ -284,7 +284,7 @@ Some of it is, and we say so (the Tier B features). The reason to exist is the T
 ## Relationship to other projects
 
 - **TypeScript** — we are a fork of the 6.0 release line. We are not affiliated with or endorsed by Microsoft.
-- **TS+ (Effect)** — an earlier, unrelated experimental TypeScript fork from the Effect team, published as `@tsplus/*`, which they later abandoned and wrote up in [a post-mortem](https://effect.website/blog/ts-plus-postmortem). Its main lessons — emit that depends on type information and a replacement `tsc` clash with modern per-file build tools, and changing the meaning of `.ts` files is a bad idea — shaped the principles above. Our name currently overlaps with theirs; we intend to resolve that before any public release.
+- **TS+ (Effect)** — an earlier, unrelated experimental TypeScript fork from the Effect team, published as `@ts-plus-plus/*`, which they later abandoned and wrote up in [a post-mortem](https://effect.website/blog/ts-plus-postmortem). Its main lessons — emit that depends on type information and a replacement `tsc` clash with modern per-file build tools, and changing the meaning of `.ts` files is a bad idea — shaped the principles above. Our name currently overlaps with theirs; we intend to resolve that before any public release.
 - **Inspirations** — Haskell and Scala (type classes, HKT), Rust (orphan rule, inherent `impl`), Zig (`comptime`), Gleam and Koka (`use` / `with`), OCaml and F# (ADTs, pattern matching).
 
 ---
@@ -297,10 +297,10 @@ The project is young, so the most valuable contributions right now are about **d
 - Build a corpus of test programs: things TypeScript cannot express today, and TypeScript 6.0 programs that must keep their meaning.
 - Help with the compiler work for M0 and M1: parser support for the new contextual keywords, binder and checker rules for nominal types, the decision-tree lowering for `match`.
 
-Build instructions are inherited from upstream TypeScript 6.0 (`npm ci`, then the `hereby` tasks in `Herebyfile.mjs`); a tsplus-specific guide will arrive with M0. See `CONTRIBUTING.md` once it exists.
+Build instructions are inherited from upstream TypeScript 6.0 (`npm ci`, then the `hereby` tasks in `Herebyfile.mjs`); a ts-plus-plus-specific guide will arrive with M0. See `CONTRIBUTING.md` once it exists.
 
 ---
 
 ## License
 
-Apache License 2.0. tsplus is derived from Microsoft's TypeScript; the original license, copyright notices and `NOTICE` remain in place, and modified files will be marked as modified. "TypeScript" is a trademark of Microsoft Corporation.
+Apache License 2.0. ts-plus-plus is derived from Microsoft's TypeScript; the original license, copyright notices and `NOTICE` remain in place, and modified files will be marked as modified. "TypeScript" is a trademark of Microsoft Corporation.
