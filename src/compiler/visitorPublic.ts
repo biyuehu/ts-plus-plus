@@ -54,6 +54,7 @@ import {
   isJsxOpeningElement,
   isJsxOpeningFragment,
   isJsxTagNameExpression,
+  isKindNode,
   isLiteralTypeLiteral,
   isMemberName,
   isModifier,
@@ -644,6 +645,15 @@ const visitEachChildTable: VisitEachChildTable = {
       Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
       nodeVisitor(node.constraint, visitor, isTypeNode),
       nodeVisitor(node.default, visitor, isTypeNode),
+      nodeVisitor(node.kindType, visitor, isKindNode),
+    );
+  },
+
+  [SyntaxKind.FunctionKind]: function visitEachChildOfFunctionKindNode(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateFunctionKindNode(
+      node,
+      Debug.checkDefined(nodesVisitor(node.parameters, visitor, isKindNode)),
+      Debug.checkDefined(nodeVisitor(node.returnKind, visitor, isKindNode)),
     );
   },
 

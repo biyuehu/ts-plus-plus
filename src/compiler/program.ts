@@ -1353,7 +1353,7 @@ export function getImpliedNodeFormatForFileWorker(
     || pathContainsNodeModules(fileName);
   return fileExtensionIsOneOf(fileName, [Extension.Dmts, Extension.Mts, Extension.Mjs]) ? ModuleKind.ESNext :
     fileExtensionIsOneOf(fileName, [Extension.Dcts, Extension.Cts, Extension.Cjs]) ? ModuleKind.CommonJS :
-    shouldLookupFromPackageJson && fileExtensionIsOneOf(fileName, [Extension.Dts, Extension.Tspp, Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx]) ? lookupFromPackageJson() :
+    shouldLookupFromPackageJson && fileExtensionIsOneOf(fileName, [Extension.Dtspp, Extension.Dts, Extension.Tspp, Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx]) ? lookupFromPackageJson() :
     undefined; // other extensions, like `json` or `tsbuildinfo`, are set as `undefined` here but they should never be fed through the transformer pipeline
 
   function lookupFromPackageJson(): Partial<CreateSourceFileOptions> {
@@ -5141,6 +5141,7 @@ export function getResolutionDiagnostic(options: CompilerOptions, { extension }:
   switch (extension) {
     case Extension.Ts:
     case Extension.Tspp:
+    case Extension.Dtspp:
     case Extension.Dts:
     case Extension.Mts:
     case Extension.Dmts:

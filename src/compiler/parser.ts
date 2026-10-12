@@ -96,6 +96,7 @@ import {
   ForStatement,
   FunctionDeclaration,
   FunctionExpression,
+  FunctionKindNode,
   FunctionOrConstructorTypeNode,
   FunctionTypeNode,
   GetAccessorDeclaration,
@@ -236,6 +237,7 @@ import {
   JsxTagNameExpression,
   JsxText,
   JsxTokenSyntaxKind,
+  KindNode,
   LabeledStatement,
   LanguageVariant,
   lastOrUndefined,
@@ -510,9 +512,14 @@ const forEachChildTable: ForEachChildTable = {
   [SyntaxKind.TypeParameter]: function forEachChildInTypeParameter<T>(node: TypeParameterDeclaration, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
       visitNode(cbNode, node.name) ||
+      visitNode(cbNode, node.kindType) ||
       visitNode(cbNode, node.constraint) ||
       visitNode(cbNode, node.default) ||
       visitNode(cbNode, node.expression);
+  },
+  [SyntaxKind.FunctionKind]: function forEachChildInFunctionKind<T>(node: FunctionKindNode, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNodes(cbNode, cbNodes, node.parameters) ||
+      visitNode(cbNode, node.returnKind);
   },
   [SyntaxKind.ShorthandPropertyAssignment]: function forEachChildInShorthandPropertyAssignment<T>(node: ShorthandPropertyAssignment, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
@@ -3952,10 +3959,52 @@ namespace Parser {
     return finishNode(factory.createTypeQueryNode(entityName, typeArguments), pos);
   }
 
+  function parseKind(): KindNode {
+    const pos = getNodePos();
+    let parameterKinds: KindNode[];
+
+    if (parseOptional(SyntaxKind.OpenParenToken)) {
+      const listPos = getNodePos();
+      parameterKinds = [];
+      while (token() !== SyntaxKind.CloseParenToken && token() !== SyntaxKind.EndOfFileToken) {
+        parameterKinds.push(parseKind());
+        if (!parseOptional(SyntaxKind.CommaToken)) break;
+      }
+      parseExpected(SyntaxKind.CloseParenToken);
+
+      if (parseOptional(SyntaxKind.EqualsGreaterThanToken)) {
+        return finishNode(factory.createFunctionKindNode(createNodeArray(parameterKinds, listPos), parseKind()), pos);
+      }
+
+      if (parameterKinds.length === 1) {
+        return parameterKinds[0];
+      }
+
+      parseErrorAtCurrentToken(Diagnostics.Type_expected);
+      return finishNode(factory.createTypeKindNode(), pos);
+    }
+
+    if (token() !== SyntaxKind.Identifier || scanner.getTokenValue() !== "Type") {
+      parseErrorAtCurrentToken(Diagnostics.Type_expected);
+      if (token() === SyntaxKind.Identifier) nextToken();
+    }
+    else {
+      nextToken();
+    }
+
+    const typeKind = finishNode(factory.createTypeKindNode(), pos);
+    if (parseOptional(SyntaxKind.EqualsGreaterThanToken)) {
+      return finishNode(factory.createFunctionKindNode([typeKind], parseKind()), pos);
+    }
+    return typeKind;
+  }
+
   function parseTypeParameter(): TypeParameterDeclaration {
     const pos = getNodePos();
     const modifiers = parseModifiers(/*allowDecorators*/ false, /*permitConstAsModifier*/ true);
     const name = parseIdentifier();
+    const isTspp = fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp);
+    const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseKind() : undefined;
     let constraint: TypeNode | undefined;
     let expression: Expression | undefined;
     if (parseOptional(SyntaxKind.ExtendsKeyword)) {
@@ -3979,7 +4028,7 @@ namespace Parser {
     }
 
     const defaultType = parseOptional(SyntaxKind.EqualsToken) ? parseType() : undefined;
-    const node = factory.createTypeParameterDeclaration(modifiers, name, constraint, defaultType);
+    const node = factory.createTypeParameterDeclaration(modifiers, name, constraint, defaultType, kindType);
     node.expression = expression;
     return finishNode(node, pos);
   }

@@ -8555,5 +8555,13 @@
   "'{0}' is not a valid meta-property for keyword 'import'. Did you mean 'meta' or 'defer'?": {
     "category": "Error",
     "code": 18061
+  },
+  "Type '{0}' has kind '{1}', but kind '{2}' was expected.": {
+    "category": "Error",
+    "code": 18062
+  },
+  "Type constructor '{0}' must be applied to {1} type argument(s).": {
+    "category": "Error",
+    "code": 18063
   }
 }

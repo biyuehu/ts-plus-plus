@@ -1,0 +1,19 @@
+higherKindedTypesRequireTspp.ts(1,39): error TS1005: ',' expected.
+higherKindedTypesRequireTspp.ts(1,46): error TS1005: ',' expected.
+higherKindedTypesRequireTspp.ts(1,49): error TS2300: Duplicate identifier 'Type'.
+higherKindedTypesRequireTspp.ts(2,12): error TS2315: Type 'F' is not generic.
+
+
+==== higherKindedTypesRequireTspp.ts (4 errors) ====
+    export interface InvalidInTypeScript<F: Type => Type> {
+                                          ~
+!!! error TS1005: ',' expected.
+                                                 ~~
+!!! error TS1005: ',' expected.
+                                                    ~~~~
+!!! error TS2300: Duplicate identifier 'Type'.
+        value: F<string>;
+               ~~~~~~~~~
+!!! error TS2315: Type 'F' is not generic.
+    }
+    

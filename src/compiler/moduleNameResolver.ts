@@ -2167,7 +2167,11 @@ function tryAddingExtensions(candidate: string, extensions: Extensions, original
         || undefined;
     case Extension.Tspp:
       return extensions & Extensions.TypeScript && tryExtension(Extension.Tspp, /*resolvedUsingTsExtension*/ true)
+        || extensions & Extensions.Declaration && tryExtension(Extension.Dtspp)
         || extensions & Extensions.Declaration && tryExtension(Extension.Dts)
+        || undefined;
+    case Extension.Dtspp:
+      return extensions & Extensions.Declaration && tryExtension(Extension.Dtspp)
         || undefined;
     case Extension.Ts:
     case Extension.Dts:
@@ -2559,7 +2563,7 @@ function loadNodeModuleFromDirectoryWorker(extensions: Extensions, candidate: st
 function extensionIsOk(extensions: Extensions, extension: string): boolean {
   return extensions & Extensions.JavaScript && (extension === Extension.Js || extension === Extension.Jsx || extension === Extension.Mjs || extension === Extension.Cjs)
     || extensions & Extensions.TypeScript && (extension === Extension.Tspp || extension === Extension.Ts || extension === Extension.Tsx || extension === Extension.Mts || extension === Extension.Cts)
-    || extensions & Extensions.Declaration && (extension === Extension.Dts || extension === Extension.Dmts || extension === Extension.Dcts)
+    || extensions & Extensions.Declaration && (extension === Extension.Dtspp || extension === Extension.Dts || extension === Extension.Dmts || extension === Extension.Dcts)
     || extensions & Extensions.Json && extension === Extension.Json
     || false;
 }

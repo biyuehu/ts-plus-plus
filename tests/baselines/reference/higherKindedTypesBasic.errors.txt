@@ -1,0 +1,54 @@
+higherKindedTypesBasic.tspp(22,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+higherKindedTypesBasic.tspp(31,13): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+higherKindedTypesBasic.tspp(37,29): error TS18062: Type 'string' has kind 'Type', but kind 'Type => Type' was expected.
+higherKindedTypesBasic.tspp(38,32): error TS18062: Type '"higherKindedTypesBasic".Pair' has kind '(Type, Type) => Type', but kind 'Type => Type' was expected.
+
+
+==== higherKindedTypesBasic.tspp (4 errors) ====
+    export interface Apply<F: Type => Type, A> {
+        value: F<A>;
+    }
+    
+    export interface Apply2<F: (Type, Type) => Type, A, B> {
+        value: F<A, B>;
+    }
+    
+    export type Pair<A, B> = [A, B];
+    export type AliasApply<F: Type => Type, A> = F<A>;
+    
+    export interface Functor<F: Type => Type> {
+        map<A, B>(fa: F<A>, fn: (value: A) => B): F<B>;
+    }
+    
+    export type ArrayOfString = Apply<Array, string>;
+    export type AliasArrayOfString = AliasApply<Array, string>;
+    export type PairOfStringAndNumber = Apply2<Pair, string, number>;
+    
+    declare const applied: Apply<Array, string>;
+    applied.value.push("ok");
+    applied.value.push(1);
+                       ~
+!!! error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+    
+    declare const pair: Apply2<Pair, string, number>;
+    pair.value[0].toUpperCase();
+    pair.value[1].toFixed();
+    
+    declare const arrayFunctor: Functor<Array>;
+    const mapped = arrayFunctor.map([1, 2, 3], value => value.toString());
+    mapped.push("ok");
+    mapped.push(1);
+                ~
+!!! error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+    
+    declare function unwrap<F: Type => Type, A>(value: F<A>): A;
+    const unwrapped = unwrap<Array, string>(["value"]);
+    unwrapped.toUpperCase();
+    
+    export type Invalid = Apply<string, string>;
+                                ~~~~~~
+!!! error TS18062: Type 'string' has kind 'Type', but kind 'Type => Type' was expected.
+    export type WrongArity = Apply<Pair, string>;
+                                   ~~~~
+!!! error TS18062: Type '"higherKindedTypesBasic".Pair' has kind '(Type, Type) => Type', but kind 'Type => Type' was expected.
+    
