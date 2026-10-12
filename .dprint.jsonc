@@ -38,6 +38,7 @@
   "excludes": [
     "**/.git",
     "**/node_modules",
+    "**/*.tspp",
     "**/*-lock.json",
     "coverage/**",
     "lib/**",
