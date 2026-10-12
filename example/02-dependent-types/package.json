@@ -1,0 +1,9 @@
+{
+  "name": "tspp-example-02-dependent-types",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "check": "node ../../built/local/tsc.js --project tsconfig.json",
+    "emit-declarations": "node ../../built/local/tsc.js --project tsconfig.json --noEmit false --declaration --emitDeclarationOnly --outDir dist"
+  }
+}

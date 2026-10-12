@@ -483,6 +483,7 @@ export function createParenthesizerRules(factory: NodeFactory): ParenthesizerRul
   function parenthesizeCheckTypeOfConditionalType(checkType: TypeNode): TypeNode {
     switch (checkType.kind) {
       case SyntaxKind.FunctionType:
+      case SyntaxKind.DependentFunctionType:
       case SyntaxKind.ConstructorType:
       case SyntaxKind.ConditionalType:
         return factory.createParenthesizedType(checkType);

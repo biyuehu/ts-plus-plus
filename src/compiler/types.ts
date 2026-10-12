@@ -17,6 +17,7 @@ import {
   SymlinkCache,
   ThisContainer,
 } from "./_namespaces/ts.js";
+import type { MlttTerm } from "./mlttCore.js";
 
 // branded string type used to store absolute, normalized and canonicalized paths
 // arbitrary file name can be converted to Path via toPath function
@@ -455,6 +456,7 @@ export const enum SyntaxKind {
   // Kinds
   TypeKind,
   FunctionKind,
+  DependentFunctionType,
 
   // Enum value count
   Count,
@@ -738,7 +740,8 @@ export type TypeNodeSyntaxKind =
   | SyntaxKind.JSDocVariadicType
   | SyntaxKind.JSDocNamepathType
   | SyntaxKind.JSDocSignature
-  | SyntaxKind.JSDocTypeLiteral;
+  | SyntaxKind.JSDocTypeLiteral
+  | SyntaxKind.DependentFunctionType;
 
 export type TokenSyntaxKind =
   | SyntaxKind.Unknown
@@ -1067,6 +1070,7 @@ export type HasChildren =
   | ComputedPropertyName
   | TypeParameterDeclaration
   | FunctionKindNode
+  | DependentFunctionTypeNode
   | ParameterDeclaration
   | Decorator
   | PropertySignature
@@ -2212,6 +2216,14 @@ export interface FunctionKindNode extends Node {
 /** @internal */
 export interface TypeNode extends Node {
   readonly kind: TypeNodeSyntaxKind;
+}
+
+/** A dependent function type `(name: domain) -> codomain`. Available in TS++ source files. */
+export interface DependentFunctionTypeNode extends TypeNode {
+  readonly kind: SyntaxKind.DependentFunctionType;
+  readonly parameterName: Identifier;
+  readonly parameterType: TypeNode;
+  readonly returnType: TypeNode;
 }
 
 export interface KeywordTypeNode<TKind extends KeywordTypeSyntaxKind = KeywordTypeSyntaxKind> extends KeywordToken<TKind>, TypeNode {
@@ -6387,8 +6399,7 @@ export const enum TypeFlags {
     Reserved1       = 1 << 29,  // Used by union/intersection type construction
     /** @internal */
     Reserved2       = 1 << 30,  // Used by union/intersection type construction
-    /** @internal */
-    Reserved3       = 1 << 31,
+    DependentFunction = 1 << 31, // MLTT dependent function type
     /** @internal */
     AnyOrUnknown = Any | Unknown,
     /** @internal */
@@ -6514,6 +6525,13 @@ export interface IntrinsicType extends Type {
   intrinsicName: string; // Name of intrinsic type
   debugIntrinsicName: string | undefined;
   objectFlags: ObjectFlags;
+}
+
+/** A compiler type backed by an elaborated MLTT dependent function term. */
+export interface DependentFunctionType extends Type {
+  flags: TypeFlags.DependentFunction;
+  /** @internal */ mlttTerm: MlttTerm;
+  /** @internal */ node: DependentFunctionTypeNode;
 }
 
 /** @internal */
@@ -8896,6 +8914,8 @@ export interface NodeFactory {
   createTypeKindNode(level?: string): TypeKindNode;
   createFunctionKindNode(parameters: readonly KindNode[], returnKind: KindNode): FunctionKindNode;
   updateFunctionKindNode(node: FunctionKindNode, parameters: NodeArray<KindNode>, returnKind: KindNode): FunctionKindNode;
+  createDependentFunctionTypeNode(parameterName: string | Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode;
+  updateDependentFunctionTypeNode(node: DependentFunctionTypeNode, parameterName: Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode;
   createParameterDeclaration(modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken?: QuestionToken, type?: TypeNode, initializer?: Expression): ParameterDeclaration;
   updateParameterDeclaration(node: ParameterDeclaration, modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken: QuestionToken | undefined, type: TypeNode | undefined, initializer: Expression | undefined): ParameterDeclaration;
   createDecorator(expression: Expression): Decorator;

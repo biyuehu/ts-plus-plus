@@ -21,8 +21,20 @@
     ],
     "commands": [
       {
+        "command": "tspp.pickExample",
+        "title": "TS++: Choose Example"
+      },
+      {
+        "command": "tspp.openAllExamples",
+        "title": "TS++: Open All Examples"
+      },
+      {
         "command": "tspp.openHigherKindedTypesExample",
         "title": "TS++: Open Higher-Kinded Types Example"
+      },
+      {
+        "command": "tspp.openDependentTypesExample",
+        "title": "TS++: Open Dependent Types Example"
       }
     ]
   }

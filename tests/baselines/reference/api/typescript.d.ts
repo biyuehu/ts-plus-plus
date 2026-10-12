@@ -4045,7 +4045,8 @@ declare namespace ts {
         SyntheticReferenceExpression = 358,
         TypeKind = 359,
         FunctionKind = 360,
-        Count = 361,
+        DependentFunctionType = 361,
+        Count = 362,
         FirstAssignment = 64,
         LastAssignment = 79,
         FirstCompoundAssignment = 65,
@@ -4708,7 +4709,7 @@ declare namespace ts {
         _typeNodeBrand: any;
     }
     /** A kind classifies a type or type constructor. */
-    type KindNode = TypeKindNode | FunctionKindNode;
+    type KindNode = TypeKindNode | FunctionKindNode | TypeReferenceNode;
     /** A universe kind. The legacy spelling `Type` denotes `Type0`. */
     interface TypeKindNode extends Node {
         readonly kind: SyntaxKind.TypeKind;
@@ -4720,6 +4721,13 @@ declare namespace ts {
         readonly kind: SyntaxKind.FunctionKind;
         readonly parameters: NodeArray<KindNode>;
         readonly returnKind: KindNode;
+    }
+    /** A dependent function type `(name: domain) -> codomain`. Available in TS++ source files. */
+    interface DependentFunctionTypeNode extends TypeNode {
+        readonly kind: SyntaxKind.DependentFunctionType;
+        readonly parameterName: Identifier;
+        readonly parameterType: TypeNode;
+        readonly returnType: TypeNode;
     }
     interface KeywordTypeNode<TKind extends KeywordTypeSyntaxKind = KeywordTypeSyntaxKind> extends KeywordToken<TKind>, TypeNode {
         readonly kind: TKind;
@@ -6641,6 +6649,7 @@ declare namespace ts {
         Conditional = 67108864,
         Union = 134217728,
         Intersection = 268435456,
+        DependentFunction = -2147483648,
         Literal = 15360,
         Unit = 97292,
         Freshable = 80896,
@@ -6714,6 +6723,10 @@ declare namespace ts {
         readonly universeLevel: string;
     }
     type Kind = TypeKind | FunctionKind;
+    /** A compiler type backed by an elaborated MLTT dependent function term. */
+    interface DependentFunctionType extends Type {
+        flags: TypeFlags.DependentFunction;
+    }
     interface FreshableType extends Type {
         freshType: FreshableType;
         regularType: FreshableType;
@@ -7576,6 +7589,8 @@ declare namespace ts {
         createTypeKindNode(level?: string): TypeKindNode;
         createFunctionKindNode(parameters: readonly KindNode[], returnKind: KindNode): FunctionKindNode;
         updateFunctionKindNode(node: FunctionKindNode, parameters: NodeArray<KindNode>, returnKind: KindNode): FunctionKindNode;
+        createDependentFunctionTypeNode(parameterName: string | Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode;
+        updateDependentFunctionTypeNode(node: DependentFunctionTypeNode, parameterName: Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode;
         createParameterDeclaration(modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken?: QuestionToken, type?: TypeNode, initializer?: Expression): ParameterDeclaration;
         updateParameterDeclaration(node: ParameterDeclaration, modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken: QuestionToken | undefined, type: TypeNode | undefined, initializer: Expression | undefined): ParameterDeclaration;
         createDecorator(expression: Expression): Decorator;

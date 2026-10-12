@@ -66,6 +66,7 @@ import {
   Decorator,
   DefaultClause,
   DeleteExpression,
+  DependentFunctionTypeNode,
   DoStatement,
   DotDotDotToken,
   ElementAccessChain,
@@ -554,6 +555,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     createTypeKindNode,
     createFunctionKindNode,
     updateFunctionKindNode,
+    createDependentFunctionTypeNode,
+    updateDependentFunctionTypeNode,
     createParameterDeclaration,
     updateParameterDeclaration,
     createDecorator,
@@ -1671,6 +1674,23 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   function updateFunctionKindNode(node: FunctionKindNode, parameters: NodeArray<KindNode>, returnKind: KindNode): FunctionKindNode {
     return node.parameters !== parameters || node.returnKind !== returnKind
       ? update(createFunctionKindNode(parameters, returnKind), node)
+      : node;
+  }
+
+  // @api
+  function createDependentFunctionTypeNode(parameterName: string | Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode {
+    const node = createBaseNode<DependentFunctionTypeNode>(SyntaxKind.DependentFunctionType);
+    node.parameterName = asName(parameterName);
+    node.parameterType = parameterType;
+    node.returnType = returnType;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+    return node;
+  }
+
+  // @api
+  function updateDependentFunctionTypeNode(node: DependentFunctionTypeNode, parameterName: Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode {
+    return node.parameterName !== parameterName || node.parameterType !== parameterType || node.returnType !== returnType
+      ? update(createDependentFunctionTypeNode(parameterName, parameterType, returnType), node)
       : node;
   }
 
@@ -7356,7 +7376,7 @@ function aggregateChildrenFlags(children: MutableNodeArray<Node>) {
  * Gets the transform flags to exclude when unioning the transform flags of a subtree.
  */
 function getTransformFlagsSubtreeExclusions(kind: SyntaxKind) {
-  if (kind >= SyntaxKind.FirstTypeNode && kind <= SyntaxKind.LastTypeNode) {
+  if (kind >= SyntaxKind.FirstTypeNode && kind <= SyntaxKind.LastTypeNode || kind === SyntaxKind.DependentFunctionType) {
     return TransformFlags.TypeExcludes;
   }
 
