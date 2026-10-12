@@ -363,6 +363,7 @@ function kindModifiersFromExtension(extension: Extension | undefined): ScriptEle
     case Extension.Jsx:
       return ScriptElementKindModifier.jsxModifier;
     case Extension.Ts:
+    case Extension.Tspp:
       return ScriptElementKindModifier.tsModifier;
     case Extension.Tsx:
       return ScriptElementKindModifier.tsxModifier;
@@ -895,7 +896,7 @@ function getFilenameWithExtensionOption(name: string, program: Program, extensio
   if (
     !isExportsOrImportsWildcard &&
     (allowedEndings[0] === ModuleSpecifierEnding.Minimal || allowedEndings[0] === ModuleSpecifierEnding.Index) &&
-    fileExtensionIsOneOf(name, [Extension.Js, Extension.Jsx, Extension.Ts, Extension.Tsx, Extension.Dts])
+    fileExtensionIsOneOf(name, [Extension.Js, Extension.Jsx, Extension.Tspp, Extension.Ts, Extension.Tsx, Extension.Dts])
   ) {
     return { name: removeFileExtension(name), extension: tryGetExtensionFromPath(name) };
   }

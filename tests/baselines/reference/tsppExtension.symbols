@@ -1,0 +1,19 @@
+//// [tests/cases/conformance/moduleResolution/tsppExtension.ts] ////
+
+=== /dep.tspp ===
+export const answer: number = 42;
+>answer : Symbol(answer, Decl(dep.tspp, 0, 12))
+
+=== /main.tspp ===
+import { answer } from "./dep";
+>answer : Symbol(answer, Decl(main.tspp, 0, 8))
+
+import { answer as explicitAnswer } from "./dep.tspp";
+>answer : Symbol(answer, Decl(dep.tspp, 0, 12))
+>explicitAnswer : Symbol(explicitAnswer, Decl(main.tspp, 1, 8))
+
+export const doubled = answer + explicitAnswer;
+>doubled : Symbol(doubled, Decl(main.tspp, 3, 12))
+>answer : Symbol(answer, Decl(main.tspp, 0, 8))
+>explicitAnswer : Symbol(explicitAnswer, Decl(main.tspp, 1, 8))
+

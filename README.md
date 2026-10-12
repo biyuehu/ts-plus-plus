@@ -4,13 +4,13 @@
 
 > A superset of TypeScript 6.0 that extends the **type system** — higher-kinded types, nominal types, GADTs, compile-time types — and erases back to plain JavaScript.
 
-**Status: design phase.** The compiler is a fork of TypeScript 6.0 and nothing described below is implemented yet. This README is the design draft we want to build against. Every feature carries a label:
+**Status: design phase.** The compiler is a fork of TypeScript 6.0. Repository bootstrap and `.tspp` source-file recognition have begun; the language features described below are not implemented yet. This README is the design draft we want to build against. Every feature carries a label:
 
 - `[decided]` — settled, we are building it this way
 - `[draft]` — proposed syntax or semantics, open for review
 - `[exploring]` — an idea we want to investigate, may change or disappear
 
-_`ts-plus-plus` is a working title. See [Relationship to other projects](#relationship-to-other-projects)._
+The npm package is `ts-plus-plus`; its compiler command is `tspp` so it can coexist with TypeScript's `tsc` in the same project.
 
 ---
 
@@ -54,8 +54,8 @@ The goal is not new syntax for its own sake. The goal is **type-level power that
 5. **New syntax is contextual** `[draft]`
    `data`, `match`, `newtype`, `trait`, `impl` and friends are contextual keywords. Identifiers with those names keep working in existing code.
 
-6. **A new file extension for ts-plus-plus syntax** `[exploring]`
-   `.ts` keeps strict TypeScript 6.0 semantics, so existing tools (ESLint, Prettier, editors) are unaffected by us. ts-plus-plus-only syntax would live in a new extension; the compiler accepts both. The name is undecided (not `.tsp`, which TypeSpec uses).
+6. **The `.tspp` file extension for ts-plus-plus syntax** `[decided]`
+   `.ts` keeps strict TypeScript 6.0 semantics, so existing tools (ESLint, Prettier, editors) are unaffected by us. ts-plus-plus-only syntax lives in `.tspp` files; the compiler accepts both `.ts` and `.tspp`.
 
 ---
 
@@ -255,8 +255,6 @@ Existing `type`, conditional types, `infer` and mapped types stay as they are an
 
 We would rather list these than hide them:
 
-- **Name.** `ts-plus-plus` collides with an existing project (see below).
-- **File extension** for ts-plus-plus-only syntax.
 - **Declaration output for plain TypeScript consumers.** Nominal types cannot be expressed in a plain `.d.ts` without loss; a branded-structural fallback is one option.
 - **Nominal identity across duplicate packages.** Two copies of one package in `node_modules` must not turn into "same name, incompatible types".
 - **Tooling.** Anything that depends on type information at emit time is hard for per-file transpilers. Tier C is where this bites.
@@ -284,7 +282,7 @@ Some of it is, and we say so (the Tier B features). The reason to exist is the T
 ## Relationship to other projects
 
 - **TypeScript** — we are a fork of the 6.0 release line. We are not affiliated with or endorsed by Microsoft.
-- **TS+ (Effect)** — an earlier, unrelated experimental TypeScript fork from the Effect team, published as `@ts-plus-plus/*`, which they later abandoned and wrote up in [a post-mortem](https://effect.website/blog/ts-plus-postmortem). Its main lessons — emit that depends on type information and a replacement `tsc` clash with modern per-file build tools, and changing the meaning of `.ts` files is a bad idea — shaped the principles above. Our name currently overlaps with theirs; we intend to resolve that before any public release.
+- **TS+ (Effect)** — an earlier, unrelated experimental TypeScript fork from the Effect team, published as `@tsplus/*`, which they later abandoned and wrote up in [a post-mortem](https://effect.website/blog/ts-plus-postmortem). Its main lessons — emit that depends on type information and a replacement `tsc` clash with modern per-file build tools, and changing the meaning of `.ts` files is a bad idea — shaped the principles above. The projects have similar names but use different npm package names; our compiler command is `tspp`, not `tsc`, so both compilers can coexist in one project.
 - **Inspirations** — Haskell and Scala (type classes, HKT), Rust (orphan rule, inherent `impl`), Zig (`comptime`), Gleam and Koka (`use` / `with`), OCaml and F# (ADTs, pattern matching).
 
 ---
@@ -297,7 +295,7 @@ The project is young, so the most valuable contributions right now are about **d
 - Build a corpus of test programs: things TypeScript cannot express today, and TypeScript 6.0 programs that must keep their meaning.
 - Help with the compiler work for M0 and M1: parser support for the new contextual keywords, binder and checker rules for nominal types, the decision-tree lowering for `match`.
 
-Build instructions are inherited from upstream TypeScript 6.0 (`npm ci`, then the `hereby` tasks in `Herebyfile.mjs`); a ts-plus-plus-specific guide will arrive with M0. See `CONTRIBUTING.md` once it exists.
+Build instructions are inherited from upstream TypeScript 6.0 (`npm ci`, then the `hereby` tasks in `Herebyfile.mjs`); a ts-plus-plus-specific guide will arrive with M0. After installing the package, invoke the compiler with `npx tspp`. See `CONTRIBUTING.md` once it exists.
 
 ---
 

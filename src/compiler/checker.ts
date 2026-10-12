@@ -2395,6 +2395,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   // e.g. if we want to import file `foo.mts`, we should write `import {} from "./foo.mjs".
   var suggestedExtensions: [string, string][] = [
     [".mts", ".mjs"],
+    [".tspp", ".js"],
     [".ts", ".js"],
     [".cts", ".cjs"],
     [".mjs", ".mjs"],
