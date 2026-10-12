@@ -8567,5 +8567,17 @@
   "Type '{0}' cannot be used as a kind because it does not resolve to a universe.": {
     "category": "Error",
     "code": 18064
+  },
+  "Unbound MLTT type variable '{0}'.": {
+    "category": "Error",
+    "code": 18065
+  },
+  "Type syntax '{0}' is not supported in an MLTT dependent function type.": {
+    "category": "Error",
+    "code": 18066
+  },
+  "Invalid MLTT type: {0}": {
+    "category": "Error",
+    "code": 18067
   }
 }

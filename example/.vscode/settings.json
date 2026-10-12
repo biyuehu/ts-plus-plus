@@ -1,0 +1,9 @@
+{
+  "files.associations": {
+    "*.tspp": "typescript"
+  },
+  "typescript.tsdk": "../built/local",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "js/ts.tsdk.path": "../built/local",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true
+}

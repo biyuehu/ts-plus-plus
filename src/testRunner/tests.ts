@@ -41,6 +41,8 @@ export * from "./unittests/factory.js";
 export * from "./unittests/incrementalParser.js";
 export * from "./unittests/jsDocParsing.js";
 export * from "./unittests/jsonParserRecovery.js";
+export * from "./unittests/mlttCompilerType.js";
+export * from "./unittests/mlttCore.js";
 export * from "./unittests/moduleResolution.js";
 export * from "./unittests/parsePseudoBigInt.js";
 export * from "./unittests/paths.js";

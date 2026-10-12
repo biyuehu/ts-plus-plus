@@ -19,14 +19,38 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // Builds TS++ and opens both examples in an Extension Development Host.
+      "name": "TS++: Run All Examples",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
+        "${workspaceFolder}/example"
+      ],
+      "preLaunchTask": "npm: build:compiler"
+    },
+    {
       // Builds TS++ and opens the first example in an Extension Development Host.
-      "name": "TS++: Run HKT Example",
+      "name": "TS++: Run Example 01 — Higher-Kinded Types",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
         "${workspaceFolder}/example/01-higher-kinded-types"
+      ],
+      "preLaunchTask": "npm: build:compiler"
+    },
+    {
+      // Builds TS++ and opens the dependent-types tutorial.
+      "name": "TS++: Run Example 02 — Dependent Types",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
+        "${workspaceFolder}/example/02-dependent-types"
       ],
       "preLaunchTask": "npm: build:compiler"
     },

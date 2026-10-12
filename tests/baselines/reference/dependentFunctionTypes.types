@@ -1,0 +1,38 @@
+//// [tests/cases/compiler/dependentFunctionTypes.ts] ////
+
+=== dependentFunctionTypes.tspp ===
+export type PolymorphicIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+>PolymorphicIdentity : (A: Type0) -> (value: A) -> A
+>                    :                              
+
+export type ConstantType: Type1 = (A: Type0) -> (B: Type0) -> A;
+>ConstantType : (A: Type0) -> (B: Type0) -> A
+>             :                              
+
+export type Shadowing: Type1 = (A: Type0) -> (A: Type0) -> A;
+>Shadowing : (A: Type0) -> (A: Type0) -> A
+>          :                              
+
+export type IdentityAlias: Type1 = PolymorphicIdentity;
+>IdentityAlias : (A: Type0) -> (value: A) -> A
+>              :                              
+
+export type WrongExpectedKind: Type0 = (A: Type0) -> A;
+>WrongExpectedKind : any
+>                  : ^^^
+
+export type UnboundName: Type1 = (A: Type0) -> Missing;
+>UnboundName : any
+>            : ^^^
+
+export type UnsupportedType: Type1 = (A: Type0) -> string;
+>UnsupportedType : any
+>                : ^^^
+
+=== ordinary.ts ===
+export type OrdinaryFunction = (value: string) => string;
+>OrdinaryFunction : OrdinaryFunction
+>                 : ^^^^^^^^^^^^^^^^
+>value : string
+>      : ^^^^^^
+

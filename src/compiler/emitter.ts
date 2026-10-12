@@ -60,6 +60,7 @@ import {
   Decorator,
   DefaultClause,
   DeleteExpression,
+  DependentFunctionTypeNode,
   directorySeparator,
   DoStatement,
   DotToken,
@@ -1634,6 +1635,8 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitTypeReference(node as TypeReferenceNode);
         case SyntaxKind.FunctionType:
           return emitFunctionType(node as FunctionTypeNode);
+        case SyntaxKind.DependentFunctionType:
+          return emitDependentFunctionType(node as DependentFunctionTypeNode);
         case SyntaxKind.ConstructorType:
           return emitConstructorType(node as ConstructorTypeNode);
         case SyntaxKind.TypeQuery:
@@ -2378,6 +2381,19 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
 
   function emitFunctionType(node: FunctionTypeNode) {
     emitSignatureAndBody(node, emitFunctionTypeHead, emitFunctionTypeBody);
+  }
+
+  function emitDependentFunctionType(node: DependentFunctionTypeNode) {
+    writePunctuation("(");
+    emit(node.parameterName);
+    writePunctuation(":");
+    writeSpace();
+    emit(node.parameterType);
+    writePunctuation(")");
+    writeSpace();
+    writeOperator("->");
+    writeSpace();
+    emit(node.returnType);
   }
 
   function emitFunctionTypeHead(node: FunctionTypeNode | ConstructorTypeNode) {

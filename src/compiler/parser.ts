@@ -61,6 +61,7 @@ import {
   Decorator,
   DefaultClause,
   DeleteExpression,
+  DependentFunctionTypeNode,
   Diagnostic,
   DiagnosticArguments,
   DiagnosticMessage,
@@ -520,6 +521,11 @@ const forEachChildTable: ForEachChildTable = {
   [SyntaxKind.FunctionKind]: function forEachChildInFunctionKind<T>(node: FunctionKindNode, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.parameters) ||
       visitNode(cbNode, node.returnKind);
+  },
+  [SyntaxKind.DependentFunctionType]: function forEachChildInDependentFunctionType<T>(node: DependentFunctionTypeNode, cbNode: (node: Node) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.parameterName) ||
+      visitNode(cbNode, node.parameterType) ||
+      visitNode(cbNode, node.returnType);
   },
   [SyntaxKind.ShorthandPropertyAssignment]: function forEachChildInShorthandPropertyAssignment<T>(node: ShorthandPropertyAssignment, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
@@ -4578,6 +4584,44 @@ namespace Parser {
     return withJSDoc(finishNode(node, pos), hasJSDoc);
   }
 
+  function isStartOfDependentFunctionType(): boolean {
+    if (token() !== SyntaxKind.OpenParenToken) return false;
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    return lookAhead(() => {
+      nextToken();
+      if (!isIdentifier()) return false;
+      nextToken();
+      if (token() !== SyntaxKind.ColonToken) return false;
+      nextToken();
+
+      let depth = 1;
+      while (token() !== SyntaxKind.EndOfFileToken) {
+        if (token() === SyntaxKind.OpenParenToken) depth++;
+        else if (token() === SyntaxKind.CloseParenToken && --depth === 0) {
+          nextToken();
+          if (token() !== SyntaxKind.MinusToken) return false;
+          nextToken();
+          return token() === SyntaxKind.GreaterThanToken;
+        }
+        nextToken();
+      }
+      return false;
+    });
+  }
+
+  function parseDependentFunctionType(): DependentFunctionTypeNode {
+    const pos = getNodePos();
+    parseExpected(SyntaxKind.OpenParenToken);
+    const parameterName = parseIdentifier();
+    parseExpected(SyntaxKind.ColonToken);
+    const parameterType = parseType();
+    parseExpected(SyntaxKind.CloseParenToken);
+    parseExpected(SyntaxKind.MinusToken);
+    parseExpected(SyntaxKind.GreaterThanToken);
+    const returnType = parseType();
+    return finishNode(factory.createDependentFunctionTypeNode(parameterName, parameterType, returnType), pos);
+  }
+
   function parseKeywordAndNoDot(): TypeNode | undefined {
     const node = parseTokenNode<TypeNode>();
     return token() === SyntaxKind.DotToken ? undefined : node;
@@ -4998,6 +5042,9 @@ namespace Parser {
   function parseType(): TypeNode {
     if (contextFlags & NodeFlags.TypeExcludesFlags) {
       return doOutsideOfContext(NodeFlags.TypeExcludesFlags, parseType);
+    }
+    if (isStartOfDependentFunctionType()) {
+      return parseDependentFunctionType();
     }
     if (isStartOfFunctionTypeOrConstructorType()) {
       return parseFunctionOrConstructorType();

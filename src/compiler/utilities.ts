@@ -2786,7 +2786,7 @@ const fullTripleSlashAMDModuleRegEx = /^\/\/\/\s*<amd-module\s+(?:\S.*?)??\/>/;
 const defaultLibReferenceRegEx = /^\/\/\/\s*<reference\s+no-default-lib\s*=\s*(?:'[^']*'|"[^"]*")\s*\/>/;
 
 export function isPartOfTypeNode(node: Node): boolean {
-  if (SyntaxKind.FirstTypeNode <= node.kind && node.kind <= SyntaxKind.LastTypeNode) {
+  if (SyntaxKind.FirstTypeNode <= node.kind && node.kind <= SyntaxKind.LastTypeNode || node.kind === SyntaxKind.DependentFunctionType) {
     return true;
   }
 
@@ -2840,7 +2840,7 @@ export function isPartOfTypeNode(node: Node): boolean {
       //
       // Calling isPartOfTypeNode would consider the qualified name A.B a type node.
       // Only C and A.B.C are type nodes.
-      if (SyntaxKind.FirstTypeNode <= parent.kind && parent.kind <= SyntaxKind.LastTypeNode) {
+      if (SyntaxKind.FirstTypeNode <= parent.kind && parent.kind <= SyntaxKind.LastTypeNode || parent.kind === SyntaxKind.DependentFunctionType) {
         return true;
       }
       switch (parent.kind) {
@@ -8331,6 +8331,7 @@ export function isObjectTypeDeclaration(node: Node): node is ObjectTypeDeclarati
 /** @internal */
 export function isTypeNodeKind(kind: SyntaxKind): kind is TypeNodeSyntaxKind {
   return (kind >= SyntaxKind.FirstTypeNode && kind <= SyntaxKind.LastTypeNode)
+    || kind === SyntaxKind.DependentFunctionType
     || kind === SyntaxKind.AnyKeyword
     || kind === SyntaxKind.UnknownKeyword
     || kind === SyntaxKind.NumberKeyword

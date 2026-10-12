@@ -818,6 +818,15 @@ const visitEachChildTable: VisitEachChildTable = {
     );
   },
 
+  [SyntaxKind.DependentFunctionType]: function visitEachChildOfDependentFunctionTypeNode(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateDependentFunctionTypeNode(
+      node,
+      Debug.checkDefined(nodeVisitor(node.parameterName, visitor, isIdentifier)),
+      Debug.checkDefined(nodeVisitor(node.parameterType, visitor, isTypeNode)),
+      Debug.checkDefined(nodeVisitor(node.returnType, visitor, isTypeNode)),
+    );
+  },
+
   [SyntaxKind.ConstructorType]: function visitEachChildOfConstructorTypeNode(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
     return context.factory.updateConstructorTypeNode(
       node,

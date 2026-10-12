@@ -145,6 +145,8 @@ import {
   defaultMaximumTruncationLength,
   DeferredTypeReference,
   DeleteExpression,
+  DependentFunctionType,
+  DependentFunctionTypeNode,
   Diagnostic,
   DiagnosticAndArguments,
   DiagnosticArguments,
@@ -1154,6 +1156,18 @@ import {
 } from "./_namespaces/ts.js";
 import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers.js";
 import * as performance from "./_namespaces/ts.performance.js";
+import {
+  areMlttTermsDefinitionallyEqual,
+  inferMlttType,
+  mlttApplication,
+  mlttPi,
+  MlttTerm,
+  MlttTypeError,
+  mlttUniverse,
+  mlttVariable,
+  printMlttTerm,
+  weakHeadNormalizeMltt,
+} from "./mlttCore.js";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;
@@ -6950,6 +6964,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
       if (type.universeTypeLevel !== undefined) {
         return factory.createTypeReferenceNode(`Type${type.universeTypeLevel}`, /*typeArguments*/ undefined);
+      }
+
+      if (type.flags & TypeFlags.DependentFunction) {
+        return factory.cloneNode((type as DependentFunctionType).node);
       }
 
       if (type.flags & TypeFlags.Any) {
@@ -17180,7 +17198,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
 
     const type = getTypeFromTypeNode(node);
-    return expectedKind ? checkTypeKind(type, expectedKind, node) : type;
+    return expectedKind && type !== errorType ? checkTypeKind(type, expectedKind, node) : type;
   }
 
   function getTypeArgumentFromNode(node: TypeNode, typeParameter: TypeParameter | undefined): Type {
@@ -20688,6 +20706,85 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       addOptionality(getTypeFromTypeNode(node.type), /*isProperty*/ true, !!node.questionToken));
   }
 
+  function getTypeFromDependentFunctionTypeNode(node: DependentFunctionTypeNode): Type {
+    const links = getNodeLinks(node);
+    if (links.resolvedType) return links.resolvedType;
+
+    const term = getMlttTermFromTypeNode(node, emptyArray);
+    if (!term) return links.resolvedType = errorType;
+
+    try {
+      const termType = weakHeadNormalizeMltt(inferMlttType(term));
+      if (termType.kind !== "universe") {
+        error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `Expected a type, but found a term of type '${printMlttTerm(termType)}'.`);
+        return links.resolvedType = errorType;
+      }
+
+      const level = String(termType.level);
+      const type = createType(TypeFlags.DependentFunction) as DependentFunctionType;
+      type.mlttTerm = term;
+      type.node = node;
+      type.typeKind = level === "0" ? ordinaryTypeKind : { flags: KindFlags.Type, typeLevel: level, universeLevel: incrementUniverseLevel(level) };
+      return links.resolvedType = type;
+    }
+    catch (mlttError) {
+      if (!(mlttError instanceof MlttTypeError)) throw mlttError;
+      error(node, Diagnostics.Invalid_MLTT_type_Colon_0, mlttError.message);
+      return links.resolvedType = errorType;
+    }
+  }
+
+  function getMlttTermFromTypeNode(node: TypeNode, scope: readonly string[]): MlttTerm | undefined {
+    if (node.kind === SyntaxKind.ParenthesizedType) {
+      return getMlttTermFromTypeNode((node as ParenthesizedTypeNode).type, scope);
+    }
+
+    if (node.kind === SyntaxKind.DependentFunctionType) {
+      const dependent = node as DependentFunctionTypeNode;
+      const domain = getMlttTermFromTypeNode(dependent.parameterType, scope);
+      const codomain = getMlttTermFromTypeNode(dependent.returnType, [idText(dependent.parameterName), ...scope]);
+      return domain && codomain ? mlttPi(idText(dependent.parameterName), domain, codomain) : undefined;
+    }
+
+    if (node.kind === SyntaxKind.TypeReference) {
+      const reference = node as TypeReferenceNode;
+      if (!isIdentifier(reference.typeName)) {
+        error(node, Diagnostics.Type_syntax_0_is_not_supported_in_an_MLTT_dependent_function_type, getTextOfNode(node));
+        return undefined;
+      }
+
+      const name = idText(reference.typeName);
+      const universeMatch = name === "Type" ? [name, "0"] : /^Type(0|[1-9]\d*)$/.exec(name);
+      let term: MlttTerm;
+      if (universeMatch) {
+        const level = Number(universeMatch[1]);
+        if (!Number.isSafeInteger(level)) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `Universe level '${universeMatch[1]}' is too large.`);
+          return undefined;
+        }
+        term = mlttUniverse(level);
+      }
+      else {
+        const index = scope.indexOf(name);
+        if (index < 0) {
+          error(node, Diagnostics.Unbound_MLTT_type_variable_0, name);
+          return undefined;
+        }
+        term = mlttVariable(index);
+      }
+
+      for (const argument of reference.typeArguments ?? emptyArray) {
+        const argumentTerm = getMlttTermFromTypeNode(argument, scope);
+        if (!argumentTerm) return undefined;
+        term = mlttApplication(term, argumentTerm);
+      }
+      return term;
+    }
+
+    error(node, Diagnostics.Type_syntax_0_is_not_supported_in_an_MLTT_dependent_function_type, getTextOfNode(node));
+    return undefined;
+  }
+
   function getTypeFromTypeNode(node: TypeNode): Type {
     return getConditionalFlowTypeOfType(getTypeFromTypeNodeWorker(node), node);
   }
@@ -20731,6 +20828,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return getTypeFromLiteralTypeNode(node as LiteralTypeNode);
       case SyntaxKind.TypeReference:
         return getTypeFromTypeReference(node as TypeReferenceNode);
+      case SyntaxKind.DependentFunctionType:
+        return getTypeFromDependentFunctionTypeNode(node as DependentFunctionTypeNode);
       case SyntaxKind.TypePredicate:
         return (node as TypePredicateNode).assertsModifier ? voidType : booleanType;
       case SyntaxKind.ExpressionWithTypeArguments:
@@ -22573,6 +22672,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       // We have excluded types that may simplify to other forms, so types must have identical flags
       if (source.flags !== target.flags) return false;
       if (source.flags & TypeFlags.Singleton) return true;
+    }
+    if ((source.flags | target.flags) & TypeFlags.DependentFunction) {
+      return !!(source.flags & target.flags & TypeFlags.DependentFunction) &&
+        areMlttTermsDefinitionallyEqual((source as DependentFunctionType).mlttTerm, (target as DependentFunctionType).mlttTerm);
     }
     if (source.flags & TypeFlags.Object && target.flags & TypeFlags.Object) {
       const related = relation.get(getRelationKey(source, target, IntersectionState.None, relation, /*ignoreConstraints*/ false));
