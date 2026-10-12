@@ -1,4 +1,4 @@
-# tsplus
+# ts-plus-plus
 
 [English](README.md) | **简体中文**
 
@@ -10,7 +10,7 @@
 - `[草案]`：已提出语法或语义，欢迎评审
 - `[探索中]`：想要研究的想法，可能会改动甚至放弃
 
-*`tsplus` 是暂定名，见[与其他项目的关系](#与其他项目的关系)。*
+_`ts-plus-plus` 是暂定名，见[与其他项目的关系](#与其他项目的关系)。_
 
 ---
 
@@ -18,12 +18,12 @@
 
 TypeScript 的类型系统相当出色，但有些东西它表达不了，而变通方案大家都很熟悉：
 
-| 你想要 | 今天的 TypeScript | tsplus |
-| --- | --- | --- |
-| 对 `Option`、`Array`、`Promise` 做抽象（`Functor`） | 以 URI 为键的查表、`interface HKT { ... }` 之类的编码 | `F: Type => Type` |
-| 两种绝不能混用的 `string` ID | "品牌"交叉类型：`string & { __brand: "UserId" }` | `newtype UserId = string` |
-| 类型取决于你匹配到了哪个构造器 | 重载加类型断言 | GADT，在 `match` 中真正做类型细化 |
-| 类型层编程 | 条件类型、`infer`、递归技巧 | 作用于类型的普通函数，在编译期求值 |
+| 你想要                                              | 今天的 TypeScript                                     | ts-plus-plus                       |
+| --------------------------------------------------- | ----------------------------------------------------- | ---------------------------------- |
+| 对 `Option`、`Array`、`Promise` 做抽象（`Functor`） | 以 URI 为键的查表、`interface HKT { ... }` 之类的编码 | `F: Type => Type`                  |
+| 两种绝不能混用的 `string` ID                        | "品牌"交叉类型：`string & { __brand: "UserId" }`      | `newtype UserId = string`          |
+| 类型取决于你匹配到了哪个构造器                      | 重载加类型断言                                        | GADT，在 `match` 中真正做类型细化  |
+| 类型层编程                                          | 条件类型、`infer`、递归技巧                           | 作用于类型的普通函数，在编译期求值 |
 
 目标不是为了新语法而新语法，而是**提供 TypeScript 用同等代码量无法复现的类型层能力**。
 
@@ -32,7 +32,7 @@ TypeScript 的类型系统相当出色，但有些东西它表达不了，而变
 ## 原则（Stage 1）
 
 1. **TypeScript 6.0 的超集** `[已决定]`
-   任何 `tsc` 6.0 能编译的程序，tsplus 也能编译，且含义不变。更新的 TypeScript 版本不在范围内。我们打算在 CI 中运行上游测试套件来保证这一点：其基线不得发生变化。
+   任何 `tsc` 6.0 能编译的程序，ts-plus-plus 也能编译，且含义不变。更新的 TypeScript 版本不在范围内。我们打算在 CI 中运行上游测试套件来保证这一点：其基线不得发生变化。
 
 2. **我们扩展类型，类型会被擦除** `[已决定]`
    编译产物是普通 JavaScript，可由任何 JavaScript 运行时运行，不需要任何运行时库。
@@ -40,11 +40,11 @@ TypeScript 的类型系统相当出色，但有些东西它表达不了，而变
 3. **emit 分档** `[草案]`
    并非所有特性都是纯类型层的扩展，所以我们如实分类：
 
-   | 档 | 含义 | 例子 |
-   | --- | --- | --- |
-   | **A** | 只涉及类型。删掉类型就是合法的 JS。 | kind / HKT、名义检查、GADT 细化、编译期类型 |
-   | **B** | 新增值层语法，但降级**只依赖语法**，不依赖类型信息。 | `data` 构造器、`match` |
-   | **C** | emit 依赖类型信息。 | trait 实例解析、trait 方法的点调用 |
+   | 档    | 含义                                                 | 例子                                        |
+   | ----- | ---------------------------------------------------- | ------------------------------------------- |
+   | **A** | 只涉及类型。删掉类型就是合法的 JS。                  | kind / HKT、名义检查、GADT 细化、编译期类型 |
+   | **B** | 新增值层语法，但降级**只依赖语法**，不依赖类型信息。 | `data` 构造器、`match`                      |
+   | **C** | emit 依赖类型信息。                                  | trait 实例解析、trait 方法的点调用          |
 
    Tier C 是对擦除原则的明确例外，需要单独的 RFC。我们提出的护栏是：**一个文件必须能仅凭其导入模块的声明产物完成编译**（不做整程序推断），从而保留逐文件并行构建的可能。
 
@@ -54,8 +54,8 @@ TypeScript 的类型系统相当出色，但有些东西它表达不了，而变
 5. **新语法使用上下文关键字** `[草案]`
    `data`、`match`、`newtype`、`trait`、`impl` 等都是上下文关键字，已有代码中同名的标识符照常可用。
 
-6. **tsplus 语法使用新的文件扩展名** `[探索中]`
-   `.ts` 保持严格的 TypeScript 6.0 语义，因此现有工具（ESLint、Prettier、编辑器）不受影响。仅 tsplus 才有的语法放在新扩展名中，编译器两种都接受。扩展名尚未确定（不用 `.tsp`，TypeSpec 在用）。
+6. **ts-plus-plus 语法使用新的文件扩展名** `[探索中]`
+   `.ts` 保持严格的 TypeScript 6.0 语义，因此现有工具（ESLint、Prettier、编辑器）不受影响。仅 ts-plus-plus 才有的语法放在新扩展名中，编译器两种都接受。扩展名尚未确定（不用 `.tsp`，TypeSpec 在用）。
 
 ---
 
@@ -238,14 +238,14 @@ type P = Pair(string, number)   // { first: string; second: number }
 
 **Stage 1：只加不破坏。** 一切都是增量的。每个里程碑的门禁：上游 TypeScript 6.0 的测试基线不得变化。
 
-| 里程碑 | 范围 |
-| --- | --- |
-| M0 | 仓库启动、命名、CI 中的兼容性门禁、贡献者文档 |
-| M1 | 名义类型：`newtype`、`data`；带穷尽性检查的 `match` |
-| M2 | 高阶类型：kind 系统、类型应用、推断 |
-| M3 | 固有 `impl`；带孤儿规则的 trait；trait 方法的点调用（Tier C 的 RFC） |
-| M4 | GADT |
-| M5 | 一等（编译期）类型 |
+| 里程碑 | 范围                                                                 |
+| ------ | -------------------------------------------------------------------- |
+| M0     | 仓库启动、命名、CI 中的兼容性门禁、贡献者文档                        |
+| M1     | 名义类型：`newtype`、`data`；带穷尽性检查的 `match`                  |
+| M2     | 高阶类型：kind 系统、类型应用、推断                                  |
+| M3     | 固有 `impl`；带孤儿规则的 trait；trait 方法的点调用（Tier C 的 RFC） |
+| M4     | GADT                                                                 |
+| M5     | 一等（编译期）类型                                                   |
 
 **Stage 2：整顿，放在 edition 开关之后。** Stage 1 稳定后，用一个独立的、需主动开启的 edition（绝不搞一刀切）开始摒弃历史包袱：遗留的 `var`、`with`、`arguments`，`enum` 与 `namespace` 的怪异之处，宽松相等，隐式 `any`，`null`/`undefined` 的二分，以及旧式的类型层语法（由新的原语取代）。老项目照现在的方式继续编译。
 
@@ -255,8 +255,8 @@ type P = Pair(string, number)   // { first: string; second: number }
 
 我们宁可列出来，也不藏起来：
 
-- **名字。** `tsplus` 与一个已有项目重名（见下文）。
-- **tsplus 专有语法的文件扩展名。**
+- **名字。** `ts-plus-plus` 与一个已有项目重名（见下文）。
+- **ts-plus-plus 专有语法的文件扩展名。**
 - **面向纯 TypeScript 使用者的声明输出。** 名义类型无法在普通 `.d.ts` 中无损表达；用"品牌式结构类型"做回退是一种选择。
 - **跨重复包的名义身份。** `node_modules` 里同一个包的两份副本，不能变成"同名但不兼容的类型"。
 - **工具链。** 任何在 emit 时依赖类型信息的东西，对逐文件转译器都很难处理。Tier C 正是这里的痛点。
@@ -284,7 +284,7 @@ type P = Pair(string, number)   // { first: string; second: number }
 ## 与其他项目的关系
 
 - **TypeScript**：我们是 6.0 版本线的 fork，与微软无隶属关系，也未获其背书。
-- **TS+（Effect）**：Effect 团队早先做的一个与我们无关的实验性 TypeScript fork，以 `@tsplus/*` 发布，后来被他们放弃，并写了一篇[复盘](https://effect.website/blog/ts-plus-postmortem)。它的主要教训（依赖类型信息的 emit 加上替换 `tsc`，会与现代逐文件构建工具冲突；改变 `.ts` 文件的含义是个糟糕的主意）塑造了上面的原则。我们的名字目前与它重叠，打算在任何公开发布之前解决。
+- **TS+（Effect）**：Effect 团队早先做的一个与我们无关的实验性 TypeScript fork，以 `@ts-plus-plus/*` 发布，后来被他们放弃，并写了一篇[复盘](https://effect.website/blog/ts-plus-postmortem)。它的主要教训（依赖类型信息的 emit 加上替换 `tsc`，会与现代逐文件构建工具冲突；改变 `.ts` 文件的含义是个糟糕的主意）塑造了上面的原则。我们的名字目前与它重叠，打算在任何公开发布之前解决。
 - **灵感来源**：Haskell 和 Scala（类型类、HKT），Rust（孤儿规则、固有 `impl`），Zig（`comptime`），Gleam 和 Koka（`use` / `with`），OCaml 和 F#（ADT、模式匹配）。
 
 ---
@@ -297,10 +297,10 @@ type P = Pair(string, number)   // { first: string; second: number }
 - 建立测试程序语料库：今天 TypeScript 表达不了的东西，以及必须保持原有含义的 TypeScript 6.0 程序。
 - 参与 M0 与 M1 的编译器工作：新上下文关键字的 parser 支持、名义类型的 binder 与 checker 规则、`match` 的决策树降级。
 
-构建方式沿用上游 TypeScript 6.0（`npm ci`，然后运行 `Herebyfile.mjs` 中的 `hereby` 任务）；tsplus 专属的指南会随 M0 一起提供。`CONTRIBUTING.md` 出现后请参阅之。
+构建方式沿用上游 TypeScript 6.0（`npm ci`，然后运行 `Herebyfile.mjs` 中的 `hereby` 任务）；ts-plus-plus 专属的指南会随 M0 一起提供。`CONTRIBUTING.md` 出现后请参阅之。
 
 ---
 
 ## 许可证
 
-Apache License 2.0。tsplus 派生自微软的 TypeScript；原有的许可证、版权声明和 `NOTICE` 均予以保留，被修改的文件会标明已修改。"TypeScript" 是 Microsoft Corporation 的商标。
+Apache License 2.0。ts-plus-plus 派生自微软的 TypeScript；原有的许可证、版权声明和 `NOTICE` 均予以保留，被修改的文件会标明已修改。"TypeScript" 是 Microsoft Corporation 的商标。
