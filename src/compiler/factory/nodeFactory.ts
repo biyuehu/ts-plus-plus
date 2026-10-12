@@ -1652,8 +1652,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function createTypeKindNode(): TypeKindNode {
-    return createBaseNode<TypeKindNode>(SyntaxKind.TypeKind);
+  function createTypeKindNode(level?: string): TypeKindNode {
+    const node = createBaseNode<TypeKindNode>(SyntaxKind.TypeKind);
+    node.level = level;
+    return node;
   }
 
   // @api
@@ -4507,11 +4509,13 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     name: string | Identifier,
     typeParameters: readonly TypeParameterDeclaration[] | undefined,
     type: TypeNode,
+    kindType?: KindNode,
   ) {
     const node = createBaseDeclaration<TypeAliasDeclaration>(SyntaxKind.TypeAliasDeclaration);
     node.modifiers = asNodeArray(modifiers);
     node.name = asName(name);
     node.typeParameters = asNodeArray(typeParameters);
+    node.kindType = kindType;
     node.type = type;
     node.transformFlags = TransformFlags.ContainsTypeScript;
 
@@ -4528,12 +4532,15 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     name: Identifier,
     typeParameters: readonly TypeParameterDeclaration[] | undefined,
     type: TypeNode,
+    kindType?: KindNode,
   ) {
+    if (arguments.length < 6) kindType = node.kindType;
     return node.modifiers !== modifiers
         || node.name !== name
         || node.typeParameters !== typeParameters
+        || node.kindType !== kindType
         || node.type !== type
-      ? update(createTypeAliasDeclaration(modifiers, name, typeParameters, type), node)
+      ? update(createTypeAliasDeclaration(modifiers, name, typeParameters, type, kindType), node)
       : node;
   }
 
@@ -7121,7 +7128,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
       isFunctionDeclaration(node) ? updateFunctionDeclaration(node, modifierArray, node.asteriskToken, node.name, node.typeParameters, node.parameters, node.type, node.body) :
       isClassDeclaration(node) ? updateClassDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
       isInterfaceDeclaration(node) ? updateInterfaceDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
-      isTypeAliasDeclaration(node) ? updateTypeAliasDeclaration(node, modifierArray, node.name, node.typeParameters, node.type) :
+      isTypeAliasDeclaration(node) ? updateTypeAliasDeclaration(node, modifierArray, node.name, node.typeParameters, node.type, node.kindType) :
       isEnumDeclaration(node) ? updateEnumDeclaration(node, modifierArray, node.name, node.members) :
       isModuleDeclaration(node) ? updateModuleDeclaration(node, modifierArray, node.name, node.body) :
       isImportEqualsDeclaration(node) ? updateImportEqualsDeclaration(node, modifierArray, node.isTypeOnly, node.name, node.moduleReference) :

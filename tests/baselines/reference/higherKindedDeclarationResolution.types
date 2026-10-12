@@ -7,10 +7,26 @@ export interface Apply<F: Type => Type, A> {
 >      : ^^^^^^^^^^^^^^^^^^^^^
 }
 
+export type ArrayConstructor: Type => Type = Array;
+>ArrayConstructor : Array
+>                 : ^^^^^
+
+export type UniverseZero: Type1 = Type0;
+>UniverseZero : Type0
+>             : ^^^^^
+
 === /consumer.tspp ===
-import type { Apply } from "./library.d.tspp";
+import type { Apply, ArrayConstructor, UniverseZero } from "./library.d.tspp";
 >Apply : Apply<F, A>
 >      : ^^^^^^^^^^^
+>ArrayConstructor : Array
+>                 : ^^^^^
+>UniverseZero : Type0
+>             : ^^^^^
+
+type ImportedArrayConstructor: UniverseZero => UniverseZero = Array;
+>ImportedArrayConstructor : Array
+>                         : ^^^^^
 
 declare const applied: Apply<Array, string>;
 >applied : Apply<Array, string>
@@ -47,4 +63,60 @@ applied.value.push(1);
 >     : ^^^^     ^^^^^^^^^^^^^^^      
 >1 : 1
 >  : ^
+
+declare const aliased: ArrayConstructor<number>;
+>aliased : number[]
+>        : ^^^^^^^^
+
+aliased.push(1);
+>aliased.push(1) : number
+>                : ^^^^^^
+>aliased.push : (...items: number[]) => number
+>             : ^^^^     ^^^^^^^^^^^^^^^      
+>aliased : number[]
+>        : ^^^^^^^^
+>push : (...items: number[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>1 : 1
+>  : ^
+
+aliased.push("no");
+>aliased.push("no") : number
+>                   : ^^^^^^
+>aliased.push : (...items: number[]) => number
+>             : ^^^^     ^^^^^^^^^^^^^^^      
+>aliased : number[]
+>        : ^^^^^^^^
+>push : (...items: number[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>"no" : "no"
+>     : ^^^^
+
+declare const importedKindAlias: ImportedArrayConstructor<boolean>;
+>importedKindAlias : boolean[]
+>                  : ^^^^^^^^^
+
+importedKindAlias.push(true);
+>importedKindAlias.push(true) : number
+>                             : ^^^^^^
+>importedKindAlias.push : (...items: boolean[]) => number
+>                       : ^^^^     ^^^^^^^^^^^^^^^^      
+>importedKindAlias : boolean[]
+>                  : ^^^^^^^^^
+>push : (...items: boolean[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^^      
+>true : true
+>     : ^^^^
+
+importedKindAlias.push("no");
+>importedKindAlias.push("no") : number
+>                             : ^^^^^^
+>importedKindAlias.push : (...items: boolean[]) => number
+>                       : ^^^^     ^^^^^^^^^^^^^^^^      
+>importedKindAlias : boolean[]
+>                  : ^^^^^^^^^
+>push : (...items: boolean[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^^      
+>"no" : "no"
+>     : ^^^^
 

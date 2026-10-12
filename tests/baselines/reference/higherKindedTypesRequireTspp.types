@@ -7,3 +7,17 @@ export interface InvalidInTypeScript<F: Type => Type> {
 >      : ^^^
 }
 
+export type InvalidAliasInTypeScript: Type => Type = Array;
+>InvalidAliasInTypeScript : any
+>                         : ^^^
+>Type => Type = Array : (Type: any) => ArrayConstructor
+>                     : ^    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+>Type : any
+>     : ^^^
+>Type = Array : ArrayConstructor
+>             : ^^^^^^^^^^^^^^^^
+>Type : any
+>     : ^^^
+>Array : ArrayConstructor
+>      : ^^^^^^^^^^^^^^^^
+

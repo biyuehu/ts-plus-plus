@@ -2,9 +2,11 @@ higherKindedTypesRequireTspp.ts(1,39): error TS1005: ',' expected.
 higherKindedTypesRequireTspp.ts(1,46): error TS1005: ',' expected.
 higherKindedTypesRequireTspp.ts(1,49): error TS2300: Duplicate identifier 'Type'.
 higherKindedTypesRequireTspp.ts(2,12): error TS2315: Type 'F' is not generic.
+higherKindedTypesRequireTspp.ts(5,37): error TS1005: '=' expected.
+higherKindedTypesRequireTspp.ts(5,39): error TS7006: Parameter 'Type' implicitly has an 'any' type.
 
 
-==== higherKindedTypesRequireTspp.ts (4 errors) ====
+==== higherKindedTypesRequireTspp.ts (6 errors) ====
     export interface InvalidInTypeScript<F: Type => Type> {
                                           ~
 !!! error TS1005: ',' expected.
@@ -16,4 +18,10 @@ higherKindedTypesRequireTspp.ts(2,12): error TS2315: Type 'F' is not generic.
                ~~~~~~~~~
 !!! error TS2315: Type 'F' is not generic.
     }
+    
+    export type InvalidAliasInTypeScript: Type => Type = Array;
+                                        ~
+!!! error TS1005: '=' expected.
+                                          ~~~~
+!!! error TS7006: Parameter 'Type' implicitly has an 'any' type.
     
