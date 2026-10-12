@@ -5,20 +5,11 @@
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
 
-  // Features to add to the dev container. More info: https://containers.dev/features.
-  "features": {
-    "ghcr.io/devcontainers/features/go:1": {}
-  },
-
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": {
-    "Configure Build Tools": "sudo npm install -g hereby; npm ci",
-    "Install pprof": "go install github.com/google/pprof@latest",
-    "Install Graphviz": "sudo apt install graphviz"
-  },
+  "postCreateCommand": "npm ci",
 
   // Configure tool-specific properties.
   "customizations": {
