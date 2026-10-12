@@ -50,6 +50,8 @@ internal/
 !**/.vscode/settings.template.json
 !**/.vscode/launch.template.json
 !**/.vscode/extensions.json
+!/.vscode/launch.json
+!/example/**/.vscode/settings.json
 !tests/cases/projects/projectOption/**/node_modules
 !tests/cases/projects/NodeModulesSearch/**/*
 !tests/baselines/reference/project/nodeModules*/**/*
