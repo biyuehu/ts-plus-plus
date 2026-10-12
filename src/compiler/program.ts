@@ -1353,7 +1353,7 @@ export function getImpliedNodeFormatForFileWorker(
     || pathContainsNodeModules(fileName);
   return fileExtensionIsOneOf(fileName, [Extension.Dmts, Extension.Mts, Extension.Mjs]) ? ModuleKind.ESNext :
     fileExtensionIsOneOf(fileName, [Extension.Dcts, Extension.Cts, Extension.Cjs]) ? ModuleKind.CommonJS :
-    shouldLookupFromPackageJson && fileExtensionIsOneOf(fileName, [Extension.Dts, Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx]) ? lookupFromPackageJson() :
+    shouldLookupFromPackageJson && fileExtensionIsOneOf(fileName, [Extension.Dts, Extension.Tspp, Extension.Ts, Extension.Tsx, Extension.Js, Extension.Jsx]) ? lookupFromPackageJson() :
     undefined; // other extensions, like `json` or `tsbuildinfo`, are set as `undefined` here but they should never be fed through the transformer pipeline
 
   function lookupFromPackageJson(): Partial<CreateSourceFileOptions> {
@@ -4785,6 +4785,7 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
       // Otherwise just check if sourceFile with the name exists
       const filePathWithoutExtension = removeFileExtension(filePath);
       return !!getSourceFileByPath((filePathWithoutExtension + Extension.Ts) as Path) ||
+        !!getSourceFileByPath((filePathWithoutExtension + Extension.Tspp) as Path) ||
         !!getSourceFileByPath((filePathWithoutExtension + Extension.Tsx) as Path);
     }
     return false;
@@ -5139,6 +5140,7 @@ export function resolveProjectReferencePath(ref: ProjectReference): ResolvedConf
 export function getResolutionDiagnostic(options: CompilerOptions, { extension }: ResolvedModuleFull, { isDeclarationFile }: { isDeclarationFile: SourceFile["isDeclarationFile"]; }): DiagnosticMessage | undefined {
   switch (extension) {
     case Extension.Ts:
+    case Extension.Tspp:
     case Extension.Dts:
     case Extension.Mts:
     case Extension.Dmts:

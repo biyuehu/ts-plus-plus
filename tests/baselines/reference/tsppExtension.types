@@ -1,0 +1,30 @@
+//// [tests/cases/conformance/moduleResolution/tsppExtension.ts] ////
+
+=== /dep.tspp ===
+export const answer: number = 42;
+>answer : number
+>       : ^^^^^^
+>42 : 42
+>   : ^^
+
+=== /main.tspp ===
+import { answer } from "./dep";
+>answer : number
+>       : ^^^^^^
+
+import { answer as explicitAnswer } from "./dep.tspp";
+>answer : number
+>       : ^^^^^^
+>explicitAnswer : number
+>               : ^^^^^^
+
+export const doubled = answer + explicitAnswer;
+>doubled : number
+>        : ^^^^^^
+>answer + explicitAnswer : number
+>                        : ^^^^^^
+>answer : number
+>       : ^^^^^^
+>explicitAnswer : number
+>               : ^^^^^^
+

@@ -4,13 +4,13 @@
 
 > TypeScript 6.0 的超集，专注于扩展**类型系统**：高阶类型、名义类型、GADT、编译期类型，编译后擦除为纯 JavaScript。
 
-**状态：设计阶段。** 编译器目前是 TypeScript 6.0 的 fork，下文描述的内容尚未实现。本文是我们打算照着去建设的设计草案，每个特性都带有标签：
+**状态：设计阶段。** 编译器目前是 TypeScript 6.0 的 fork。仓库初始化和 `.tspp` 源文件识别已经开始；下文描述的语言特性尚未实现。本文是我们打算照着去建设的设计草案，每个特性都带有标签：
 
 - `[已决定]`：已经敲定，会按此方式实现
 - `[草案]`：已提出语法或语义，欢迎评审
 - `[探索中]`：想要研究的想法，可能会改动甚至放弃
 
-_`ts-plus-plus` 是暂定名，见[与其他项目的关系](#与其他项目的关系)。_
+npm 包名为 `ts-plus-plus`；编译器命令为 `tspp`，以便与 TypeScript 的 `tsc` 在同一项目中共存。
 
 ---
 
@@ -54,8 +54,8 @@ TypeScript 的类型系统相当出色，但有些东西它表达不了，而变
 5. **新语法使用上下文关键字** `[草案]`
    `data`、`match`、`newtype`、`trait`、`impl` 等都是上下文关键字，已有代码中同名的标识符照常可用。
 
-6. **ts-plus-plus 语法使用新的文件扩展名** `[探索中]`
-   `.ts` 保持严格的 TypeScript 6.0 语义，因此现有工具（ESLint、Prettier、编辑器）不受影响。仅 ts-plus-plus 才有的语法放在新扩展名中，编译器两种都接受。扩展名尚未确定（不用 `.tsp`，TypeSpec 在用）。
+6. **ts-plus-plus 语法使用 `.tspp` 文件扩展名** `[已决定]`
+   `.ts` 保持严格的 TypeScript 6.0 语义，因此现有工具（ESLint、Prettier、编辑器）不受影响。ts-plus-plus 专有语法放在 `.tspp` 文件中；编译器同时接受 `.ts` 和 `.tspp`。
 
 ---
 
@@ -255,8 +255,6 @@ type P = Pair(string, number)   // { first: string; second: number }
 
 我们宁可列出来，也不藏起来：
 
-- **名字。** `ts-plus-plus` 与一个已有项目重名（见下文）。
-- **ts-plus-plus 专有语法的文件扩展名。**
 - **面向纯 TypeScript 使用者的声明输出。** 名义类型无法在普通 `.d.ts` 中无损表达；用"品牌式结构类型"做回退是一种选择。
 - **跨重复包的名义身份。** `node_modules` 里同一个包的两份副本，不能变成"同名但不兼容的类型"。
 - **工具链。** 任何在 emit 时依赖类型信息的东西，对逐文件转译器都很难处理。Tier C 正是这里的痛点。
@@ -284,7 +282,7 @@ type P = Pair(string, number)   // { first: string; second: number }
 ## 与其他项目的关系
 
 - **TypeScript**：我们是 6.0 版本线的 fork，与微软无隶属关系，也未获其背书。
-- **TS+（Effect）**：Effect 团队早先做的一个与我们无关的实验性 TypeScript fork，以 `@ts-plus-plus/*` 发布，后来被他们放弃，并写了一篇[复盘](https://effect.website/blog/ts-plus-postmortem)。它的主要教训（依赖类型信息的 emit 加上替换 `tsc`，会与现代逐文件构建工具冲突；改变 `.ts` 文件的含义是个糟糕的主意）塑造了上面的原则。我们的名字目前与它重叠，打算在任何公开发布之前解决。
+- **TS+（Effect）**：Effect 团队早先做的一个与我们无关的实验性 TypeScript fork，以 `@tsplus/*` 发布，后来被他们放弃，并写了一篇[复盘](https://effect.website/blog/ts-plus-postmortem)。它的主要教训（依赖类型信息的 emit 加上替换 `tsc`，会与现代逐文件构建工具冲突；改变 `.ts` 文件的含义是个糟糕的主意）塑造了上面的原则。两个项目的名字相似，但 npm 包名不同；我们的编译器命令是 `tspp` 而不是 `tsc`，因此两套编译器可以安装在同一个项目中。
 - **灵感来源**：Haskell 和 Scala（类型类、HKT），Rust（孤儿规则、固有 `impl`），Zig（`comptime`），Gleam 和 Koka（`use` / `with`），OCaml 和 F#（ADT、模式匹配）。
 
 ---
@@ -297,7 +295,7 @@ type P = Pair(string, number)   // { first: string; second: number }
 - 建立测试程序语料库：今天 TypeScript 表达不了的东西，以及必须保持原有含义的 TypeScript 6.0 程序。
 - 参与 M0 与 M1 的编译器工作：新上下文关键字的 parser 支持、名义类型的 binder 与 checker 规则、`match` 的决策树降级。
 
-构建方式沿用上游 TypeScript 6.0（`npm ci`，然后运行 `Herebyfile.mjs` 中的 `hereby` 任务）；ts-plus-plus 专属的指南会随 M0 一起提供。`CONTRIBUTING.md` 出现后请参阅之。
+构建方式沿用上游 TypeScript 6.0（`npm ci`，然后运行 `Herebyfile.mjs` 中的 `hereby` 任务）；ts-plus-plus 专属的指南会随 M0 一起提供。安装包后，使用 `npx tspp` 调用编译器。`CONTRIBUTING.md` 出现后请参阅之。
 
 ---
 

@@ -8067,6 +8067,7 @@ export interface PackageId {
 
 export const enum Extension {
   Ts = ".ts",
+  Tspp = ".tspp",
   Tsx = ".tsx",
   Dts = ".d.ts",
   Js = ".js",

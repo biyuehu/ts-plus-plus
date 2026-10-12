@@ -1,10 +1,10 @@
 {
   "name": "ts-plus-plus",
   "author": "",
-  "homepage": "TypeScriptPlus is a powerful superset of TypeScript that compiles to clean TypeScript and JavaScript output.",
+  "homepage": "https://github.com/biyuehu/ts-plus-plus#readme",
   "version": "0.0.1",
   "license": "Apache-2.0",
-  "description": "TypeScript is a language for application scale JavaScript development",
+  "description": "A superset of TypeScript 6.0 with higher-kinded types, nominal types, GADTs, and compile-time types.",
   "keywords": [
     "ts-plus-plus",
     "tspp",
@@ -24,8 +24,8 @@
   "main": "./lib/typescript.js",
   "typings": "./lib/typescript.d.ts",
   "bin": {
-    "tsc": "./bin/tsc",
-    "tsserver": "./bin/tsserver"
+    "tspp": "./bin/tsc",
+    "tsppserver": "./bin/tsserver"
   },
   "engines": {
     "node": ">=14.17"

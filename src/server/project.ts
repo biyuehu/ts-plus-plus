@@ -240,7 +240,7 @@ export function allFilesAreJsOrDts(project: Project): boolean {
 
 /** @internal */
 export function hasNoTypeScriptSource(fileNames: string[]): boolean {
-  return !fileNames.some(fileName => (fileExtensionIs(fileName, Extension.Ts) && !isDeclarationFileName(fileName)) || fileExtensionIs(fileName, Extension.Tsx));
+  return !fileNames.some(fileName => fileExtensionIs(fileName, Extension.Tspp) || (fileExtensionIs(fileName, Extension.Ts) && !isDeclarationFileName(fileName)) || fileExtensionIs(fileName, Extension.Tsx));
 }
 
 /** @internal */
