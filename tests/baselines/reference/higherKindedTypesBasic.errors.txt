@@ -1,7 +1,7 @@
 higherKindedTypesBasic.tspp(22,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
 higherKindedTypesBasic.tspp(31,13): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
-higherKindedTypesBasic.tspp(37,29): error TS18062: Type 'string' has kind 'Type', but kind 'Type => Type' was expected.
-higherKindedTypesBasic.tspp(38,32): error TS18062: Type '"higherKindedTypesBasic".Pair' has kind '(Type, Type) => Type', but kind 'Type => Type' was expected.
+higherKindedTypesBasic.tspp(37,29): error TS18062: Type 'string' has kind 'Type0', but kind 'Type0 => Type0' was expected.
+higherKindedTypesBasic.tspp(38,32): error TS18062: Type '"higherKindedTypesBasic".Pair' has kind '(Type0, Type0) => Type0', but kind 'Type0 => Type0' was expected.
 
 
 ==== higherKindedTypesBasic.tspp (4 errors) ====
@@ -47,8 +47,8 @@ higherKindedTypesBasic.tspp(38,32): error TS18062: Type '"higherKindedTypesBasic
     
     export type Invalid = Apply<string, string>;
                                 ~~~~~~
-!!! error TS18062: Type 'string' has kind 'Type', but kind 'Type => Type' was expected.
+!!! error TS18062: Type 'string' has kind 'Type0', but kind 'Type0 => Type0' was expected.
     export type WrongArity = Apply<Pair, string>;
                                    ~~~~
-!!! error TS18062: Type '"higherKindedTypesBasic".Pair' has kind '(Type, Type) => Type', but kind 'Type => Type' was expected.
+!!! error TS18062: Type '"higherKindedTypesBasic".Pair' has kind '(Type0, Type0) => Type0', but kind 'Type0 => Type0' was expected.
     

@@ -2229,7 +2229,11 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
 
   function emitKind(node: KindNode) {
     if (node.kind === SyntaxKind.TypeKind) {
-      write("Type");
+      write(node.level === undefined ? "Type" : `Type${node.level}`);
+      return;
+    }
+    if (node.kind === SyntaxKind.TypeReference) {
+      emitTypeReference(node);
       return;
     }
 
@@ -3634,6 +3638,11 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writeSpace();
     emit(node.name);
     emitTypeParameters(node, node.typeParameters);
+    if (node.kindType && (!currentSourceFile || fileExtensionIs(currentSourceFile.fileName, Extension.Tspp) || fileExtensionIs(currentSourceFile.fileName, Extension.Dtspp))) {
+      writePunctuation(":");
+      writeSpace();
+      emitKind(node.kindType);
+    }
     writeSpace();
     writePunctuation("=");
     writeSpace();

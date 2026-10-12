@@ -1,4 +1,6 @@
-/consumer.tspp(5,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+/consumer.tspp(7,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+/consumer.tspp(11,14): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+/consumer.tspp(15,24): error TS2345: Argument of type 'string' is not assignable to parameter of type 'boolean'.
 
 
 ==== /library.d.tspp (0 errors) ====
@@ -6,12 +8,29 @@
         value: F<A>;
     }
     
-==== /consumer.tspp (1 errors) ====
-    import type { Apply } from "./library.d.tspp";
+    export type ArrayConstructor: Type => Type = Array;
+    export type UniverseZero: Type1 = Type0;
+    
+==== /consumer.tspp (3 errors) ====
+    import type { Apply, ArrayConstructor, UniverseZero } from "./library.d.tspp";
+    
+    type ImportedArrayConstructor: UniverseZero => UniverseZero = Array;
     
     declare const applied: Apply<Array, string>;
     applied.value.push("ok");
     applied.value.push(1);
                        ~
 !!! error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+    
+    declare const aliased: ArrayConstructor<number>;
+    aliased.push(1);
+    aliased.push("no");
+                 ~~~~
+!!! error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+    
+    declare const importedKindAlias: ImportedArrayConstructor<boolean>;
+    importedKindAlias.push(true);
+    importedKindAlias.push("no");
+                           ~~~~
+!!! error TS2345: Argument of type 'string' is not assignable to parameter of type 'boolean'.
     

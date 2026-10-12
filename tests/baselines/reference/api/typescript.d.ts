@@ -4709,9 +4709,11 @@ declare namespace ts {
     }
     /** A kind classifies a type or type constructor. */
     type KindNode = TypeKindNode | FunctionKindNode;
-    /** The kind inhabited by ordinary types. */
+    /** A universe kind. The legacy spelling `Type` denotes `Type0`. */
     interface TypeKindNode extends Node {
         readonly kind: SyntaxKind.TypeKind;
+        /** The explicit universe index. `undefined` preserves the legacy spelling `Type`, which aliases `Type0`. */
+        readonly level?: string;
     }
     /** The kind of a type constructor. */
     interface FunctionKindNode extends Node {
@@ -5474,6 +5476,8 @@ declare namespace ts {
         readonly modifiers?: NodeArray<ModifierLike>;
         readonly name: Identifier;
         readonly typeParameters?: NodeArray<TypeParameterDeclaration>;
+        /** The explicitly declared result kind of this type alias. An omitted result kind defaults to `Type0`. */
+        readonly kindType?: KindNode;
         readonly type: TypeNode;
     }
     interface EnumMember extends NamedDeclaration, JSDocContainer {
@@ -6697,11 +6701,17 @@ declare namespace ts {
     }
     interface TypeKind {
         readonly flags: KindFlags.Type;
+        /** The index in `Type0`, `Type1`, ... */
+        readonly typeLevel: string;
+        /** The universe containing this kind expression. For `TypeN`, this is `N + 1`. */
+        readonly universeLevel: string;
     }
     interface FunctionKind {
         readonly flags: KindFlags.Function;
         readonly parameters: readonly Kind[];
         readonly returnKind: Kind;
+        /** The lowest universe containing this function kind. */
+        readonly universeLevel: string;
     }
     type Kind = TypeKind | FunctionKind;
     interface FreshableType extends Type {
@@ -7563,7 +7573,7 @@ declare namespace ts {
         updateComputedPropertyName(node: ComputedPropertyName, expression: Expression): ComputedPropertyName;
         createTypeParameterDeclaration(modifiers: readonly Modifier[] | undefined, name: string | Identifier, constraint?: TypeNode, defaultType?: TypeNode, kindType?: KindNode): TypeParameterDeclaration;
         updateTypeParameterDeclaration(node: TypeParameterDeclaration, modifiers: readonly Modifier[] | undefined, name: Identifier, constraint: TypeNode | undefined, defaultType: TypeNode | undefined, kindType?: KindNode): TypeParameterDeclaration;
-        createTypeKindNode(): TypeKindNode;
+        createTypeKindNode(level?: string): TypeKindNode;
         createFunctionKindNode(parameters: readonly KindNode[], returnKind: KindNode): FunctionKindNode;
         updateFunctionKindNode(node: FunctionKindNode, parameters: NodeArray<KindNode>, returnKind: KindNode): FunctionKindNode;
         createParameterDeclaration(modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken?: QuestionToken, type?: TypeNode, initializer?: Expression): ParameterDeclaration;
@@ -7769,8 +7779,8 @@ declare namespace ts {
         updateClassDeclaration(node: ClassDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly ClassElement[]): ClassDeclaration;
         createInterfaceDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;
         updateInterfaceDeclaration(node: InterfaceDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;
-        createTypeAliasDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode): TypeAliasDeclaration;
-        updateTypeAliasDeclaration(node: TypeAliasDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode): TypeAliasDeclaration;
+        createTypeAliasDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode): TypeAliasDeclaration;
+        updateTypeAliasDeclaration(node: TypeAliasDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode): TypeAliasDeclaration;
         createEnumDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, members: readonly EnumMember[]): EnumDeclaration;
         updateEnumDeclaration(node: EnumDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, members: readonly EnumMember[]): EnumDeclaration;
         createModuleDeclaration(modifiers: readonly ModifierLike[] | undefined, name: ModuleName, body: ModuleBody | undefined, flags?: NodeFlags): ModuleDeclaration;

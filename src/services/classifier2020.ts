@@ -147,7 +147,10 @@ function collectTokens(program: Program, sourceFile: SourceFile, span: TextSpan,
       inJSXElement = false;
     }
 
-    if (isIdentifier(node) && !inJSXElement && !inImportClause(node) && !isInfinityOrNaNString(node.escapedText)) {
+    if (node.kind === SyntaxKind.TypeKind) {
+      collector(node, TokenType.type, /*modifierSet*/ 0);
+    }
+    else if (isIdentifier(node) && !inJSXElement && !inImportClause(node) && !isInfinityOrNaNString(node.escapedText)) {
       let symbol = typeChecker.getSymbolAtLocation(node);
       if (symbol) {
         if (symbol.flags & SymbolFlags.Alias) {
