@@ -243,6 +243,7 @@ import {
   FunctionDeclaration,
   FunctionExpression,
   FunctionFlags,
+  FunctionKind,
   FunctionLikeDeclaration,
   FunctionOrConstructorTypeNode,
   FunctionTypeNode,
@@ -1527,8 +1528,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   var emptySymbols = createSymbolTable();
   var arrayVariances = [VarianceFlags.Covariant];
-  var ordinaryTypeKind: Kind = { flags: KindFlags.Type };
+  var ordinaryTypeKind: Kind = { flags: KindFlags.Type, typeLevel: "0", universeLevel: "1" };
   var typeConstructorTypes = new Map<Symbol, Type>();
+  var universeTypes = new Map<string, Type>();
 
   var compilerOptions = host.getCompilerOptions();
   var languageVersion = getEmitScriptTarget(compilerOptions);
@@ -5576,21 +5578,34 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function getKindFromNode(node: KindNode | undefined): Kind {
     if (!node || node.kind === SyntaxKind.TypeKind) {
+      const typeLevel = node?.level || "0";
+      return typeLevel === "0" ? ordinaryTypeKind : { flags: KindFlags.Type, typeLevel, universeLevel: incrementUniverseLevel(typeLevel) };
+    }
+    if (node.kind === SyntaxKind.TypeReference) {
+      const type = getTypeFromTypeNode(node);
+      if (type.universeTypeLevel !== undefined) {
+        const typeLevel = type.universeTypeLevel;
+        return typeLevel === "0" ? ordinaryTypeKind : { flags: KindFlags.Type, typeLevel, universeLevel: incrementUniverseLevel(typeLevel) };
+      }
+      if (type !== errorType) {
+        error(node, Diagnostics.Type_0_cannot_be_used_as_a_kind_because_it_does_not_resolve_to_a_universe, typeToString(type));
+      }
       return ordinaryTypeKind;
     }
-    return {
-      flags: KindFlags.Function,
-      parameters: node.parameters.map(getKindFromNode),
-      returnKind: getKindFromNode(node.returnKind),
-    };
+    return createFunctionKind(node.parameters.map(getKindFromNode), getKindFromNode(node.returnKind));
   }
 
   function getKindOfType(type: Type): Kind {
     return type.typeKind || ordinaryTypeKind;
   }
 
+  function isOrdinaryTypeKind(kind: Kind): boolean {
+    return kind.flags === KindFlags.Type && kind.typeLevel === "0";
+  }
+
   function kindsAreIdentical(left: Kind, right: Kind): boolean {
-    if (left.flags === KindFlags.Type || right.flags === KindFlags.Type) return left.flags === right.flags;
+    if (left.flags === KindFlags.Type) return right.flags === KindFlags.Type && left.typeLevel === right.typeLevel;
+    if (right.flags === KindFlags.Type) return false;
     const leftFunction = left;
     const rightFunction = right;
     return leftFunction.parameters.length === rightFunction.parameters.length &&
@@ -5599,7 +5614,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function kindToString(kind: Kind): string {
-    if (kind.flags === KindFlags.Type) return "Type";
+    if (kind.flags === KindFlags.Type) return `Type${kind.typeLevel}`;
     const functionKind = kind;
     const parameters = functionKind.parameters.map(parameter => {
       const text = kindToString(parameter);
@@ -5609,9 +5624,54 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function kindToKindNode(kind: Kind): KindNode {
-    if (kind.flags === KindFlags.Type) return factory.createTypeKindNode();
+    if (kind.flags === KindFlags.Type) return factory.createTypeKindNode(kind.typeLevel === "0" ? undefined : kind.typeLevel);
     const functionKind = kind;
     return factory.createFunctionKindNode(functionKind.parameters.map(kindToKindNode), kindToKindNode(functionKind.returnKind));
+  }
+
+  function createFunctionKind(parameters: readonly Kind[], returnKind: Kind): FunctionKind {
+    return {
+      flags: KindFlags.Function,
+      parameters,
+      returnKind,
+      universeLevel: reduceLeft(parameters, (level, parameter) => maxUniverseLevel(level, parameter.universeLevel), returnKind.universeLevel),
+    };
+  }
+
+  function incrementUniverseLevel(level: string): string {
+    const digits = level.split("");
+    for (let index = digits.length - 1; index >= 0; index--) {
+      if (digits[index] !== "9") {
+        digits[index] = String.fromCharCode(digits[index].charCodeAt(0) + 1);
+        return digits.join("");
+      }
+      digits[index] = "0";
+    }
+    return `1${digits.join("")}`;
+  }
+
+  function maxUniverseLevel(left: string, right: string): string {
+    if (left.length !== right.length) return left.length > right.length ? left : right;
+    return left >= right ? left : right;
+  }
+
+  function getUniverseType(level: string): Type {
+    let type = universeTypes.get(level);
+    if (!type) {
+      type = createIntrinsicType(TypeFlags.Unknown, `Type${level}`);
+      type.universeTypeLevel = level;
+      const typeLevel = incrementUniverseLevel(level);
+      type.typeKind = { flags: KindFlags.Type, typeLevel, universeLevel: incrementUniverseLevel(typeLevel) };
+      universeTypes.set(level, type);
+    }
+    return type;
+  }
+
+  function getUniverseLevelFromTypeNode(node: TypeNode): string | undefined {
+    if (!isTypeReferenceNode(node) || node.typeArguments || !isIdentifier(node.typeName)) return undefined;
+    const sourceFileName = getSourceFileOfNode(node).fileName;
+    if (!fileExtensionIs(sourceFileName, Extension.Tspp) && !fileExtensionIs(sourceFileName, Extension.Dtspp)) return undefined;
+    return /^Type(0|[1-9]\d*)$/.exec(idText(node.typeName))?.[1];
   }
 
   function getTypeParametersOfTypeConstructor(symbol: Symbol): readonly TypeParameter[] | undefined {
@@ -5636,11 +5696,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     const type = createTypeWithSymbol(TypeFlags.TypeParameter, symbol);
     type.higherKindedSymbol = symbol;
-    type.typeKind = {
-      flags: KindFlags.Function,
-      parameters: typeParameters.map(getKindOfType),
-      returnKind: ordinaryTypeKind,
-    };
+    const declaration = symbol.declarations?.find(isTypeAliasDeclaration);
+    const returnKind = declaration?.kindType ? getKindFromNode(declaration.kindType) : ordinaryTypeKind;
+    type.typeKind = createFunctionKind(typeParameters.map(getKindOfType), returnKind);
     typeConstructorTypes.set(symbol, type);
     return type;
   }
@@ -6889,6 +6947,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
       if (isTypeConstructorType(type)) {
         return factory.createTypeReferenceNode(symbolToEntityNameNode(type.higherKindedSymbol!), /*typeArguments*/ undefined);
+      }
+      if (type.universeTypeLevel !== undefined) {
+        return factory.createTypeReferenceNode(`Type${type.universeTypeLevel}`, /*typeArguments*/ undefined);
       }
 
       if (type.flags & TypeFlags.Any) {
@@ -8450,7 +8511,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const defaultParameterNode = defaultParameter && typeToTypeNodeHelper(defaultParameter, context);
       restoreFlags();
       const kind = getKindOfType(type);
-      return factory.createTypeParameterDeclaration(modifiers, name, constraintNode, defaultParameterNode, kind.flags === KindFlags.Function ? kindToKindNode(kind) : undefined);
+      return factory.createTypeParameterDeclaration(modifiers, name, constraintNode, defaultParameterNode, isOrdinaryTypeKind(kind) ? undefined : kindToKindNode(kind));
     }
 
     function typeToTypeNodeHelperWithPossibleReusableTypeNode(type: Type, typeNode: TypeNode | undefined, context: NodeBuilderContext) {
@@ -13614,7 +13675,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const declaration = Debug.checkDefined(symbol.declarations?.find(isTypeAlias), "Type alias symbol with no valid declaration found");
       const typeNode = isJSDocTypeAlias(declaration) ? declaration.typeExpression : declaration.type;
       // If typeNode is missing, we will error in checkJSDocTypedefTag.
-      let type = typeNode ? getTypeFromTypeNode(typeNode) : errorType;
+      let type = typeNode ? isTypeAliasDeclaration(declaration) ?
+        getTypeArgumentFromNodeForKind(typeNode, getKindFromNode(declaration.kindType)) :
+        getTypeFromTypeNode(typeNode) : errorType;
       if (popTypeResolution()) {
         const typeParameters = getLocalTypeParametersOfClassOrInterfaceOrTypeAlias(symbol);
         if (typeParameters) {
@@ -17099,6 +17162,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
    * Get type from type-reference that reference to class or interface
    */
   function getTypeArgumentFromNodeForKind(node: TypeNode, expectedKind: Kind | undefined): Type {
+    const universeLevel = getUniverseLevelFromTypeNode(node);
+    if (universeLevel !== undefined) {
+      const universeType = getUniverseType(universeLevel);
+      return expectedKind ? checkTypeKind(universeType, expectedKind, node) : universeType;
+    }
     if (expectedKind?.flags === KindFlags.Function && isTypeReferenceNode(node) && !node.typeArguments) {
       let symbol = resolveTypeReferenceName(node, SymbolFlags.Type);
       if (symbol.flags & SymbolFlags.Alias) symbol = resolveAlias(symbol);
@@ -17130,7 +17198,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function applyHigherKindedType(target: Type, typeArguments: readonly Type[], node: Node): Type {
     const kind = getKindOfType(target);
     if (kind.flags !== KindFlags.Function) {
-      return checkTypeKind(target, { flags: KindFlags.Function, parameters: typeArguments.map(() => ordinaryTypeKind), returnKind: ordinaryTypeKind }, node);
+      return checkTypeKind(target, createFunctionKind(typeArguments.map(() => ordinaryTypeKind), ordinaryTypeKind), node);
     }
 
     const functionKind = kind;
@@ -17235,6 +17303,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       return errorType;
     }
     const type = getDeclaredTypeOfSymbol(symbol);
+    const kind = getKindOfType(type);
+    if (kind.flags === KindFlags.Function) {
+      if (node.typeArguments) {
+        return applyHigherKindedType(type, getTypeArgumentsFromNodesForKinds(node.typeArguments, kind.parameters), node);
+      }
+      error(node, Diagnostics.Type_constructor_0_must_be_applied_to_1_type_argument_s, symbolToString(symbol), kind.parameters.length);
+      return errorType;
+    }
     const typeParameters = getSymbolLinks(symbol).typeParameters;
     if (typeParameters) {
       const numTypeArguments = length(node.typeArguments);
@@ -20996,7 +21072,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function maybeTypeParameterReference(node: Node, typeParameter: TypeParameter) {
-    return getKindOfType(typeParameter).flags === KindFlags.Function ||
+    return !isOrdinaryTypeKind(getKindOfType(typeParameter)) ||
       !(node.parent.kind === SyntaxKind.TypeReference && (node.parent as TypeReferenceNode).typeArguments && node === (node.parent as TypeReferenceNode).typeName ||
         node.parent.kind === SyntaxKind.ImportType && (node.parent as ImportTypeNode).typeArguments && node === (node.parent as ImportTypeNode).qualifier);
   }
@@ -42983,8 +43059,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
     }
     const typeParameters = node.typeArguments && getTypeParametersForTypeReferenceOrImport(node);
+    const sourceFileName = getSourceFileOfNode(node).fileName;
+    const checkOrdinaryKinds = fileExtensionIs(sourceFileName, Extension.Tspp) || fileExtensionIs(sourceFileName, Extension.Dtspp);
     forEach(node.typeArguments, (typeArgument, index) => {
-      if (typeParameters?.[index] && getKindOfType(typeParameters[index]).flags === KindFlags.Function) {
+      if (typeParameters?.[index] && (checkOrdinaryKinds || !isOrdinaryTypeKind(getKindOfType(typeParameters[index])))) {
         getTypeArgumentFromNode(typeArgument, typeParameters[index]);
       }
       else {
@@ -48100,7 +48178,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
     }
     else {
-      checkSourceElement(node.type);
+      if (node.kindType) {
+        getDeclaredTypeOfSymbol(getSymbolOfDeclaration(node));
+      }
+      else {
+        checkSourceElement(node.type);
+      }
       registerForUnusedIdentifiersCheck(node);
     }
   }

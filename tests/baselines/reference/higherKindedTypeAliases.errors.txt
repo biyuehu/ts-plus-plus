@@ -1,0 +1,43 @@
+higherKindedTypeAliases.tspp(18,14): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+higherKindedTypeAliases.tspp(20,29): error TS2314: Generic type 'Array<T>' requires 1 type argument(s).
+higherKindedTypeAliases.tspp(21,34): error TS18063: Type constructor 'ArrayConstructor' must be applied to 1 type argument(s).
+higherKindedTypeAliases.tspp(22,42): error TS18062: Type 'string' has kind 'Type0', but kind 'Type0 => Type0' was expected.
+higherKindedTypeAliases.tspp(23,48): error TS18062: Type 'Array' has kind 'Type0 => Type0', but kind '(Type0, Type0) => Type0' was expected.
+
+
+==== higherKindedTypeAliases.tspp (5 errors) ====
+    export interface AcceptsUnary<F: Type => Type> {
+        value: F<string>;
+    }
+    
+    export type Pair<A, B> = [A, B];
+    
+    export type ArrayConstructor: Type => Type = Array;
+    export type ArrayConstructorAlias: Type => Type = ArrayConstructor;
+    export type PairConstructor: (Type, Type) => Type = Pair;
+    
+    export type StringArray = ArrayConstructor<string>;
+    export type NumberArray = ArrayConstructorAlias<number>;
+    export type PairValue = PairConstructor<string, number>;
+    export type AcceptedAlias = AcceptsUnary<ArrayConstructor>;
+    
+    declare const strings: StringArray;
+    strings.push("ok");
+    strings.push(1);
+                 ~
+!!! error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+    
+    export type OrdinaryAlias = Array;
+                                ~~~~~
+!!! error TS2314: Generic type 'Array<T>' requires 1 type argument(s).
+    export type MissingApplication = ArrayConstructor;
+                                     ~~~~~~~~~~~~~~~~
+!!! error TS18063: Type constructor 'ArrayConstructor' must be applied to 1 type argument(s).
+    export type KindMismatch: Type => Type = string;
+                                             ~~~~~~
+!!! error TS18062: Type 'string' has kind 'Type0', but kind 'Type0 => Type0' was expected.
+    export type WrongArity: (Type, Type) => Type = Array;
+                                                   ~~~~~
+!!! error TS18062: Type 'Array' has kind 'Type0 => Type0', but kind '(Type0, Type0) => Type0' was expected.
+    export type HigherOrderConstructor<T>: Type => Type = Array;
+    

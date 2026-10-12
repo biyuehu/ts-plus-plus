@@ -12,26 +12,70 @@ export interface Apply<F: Type => Type, A> {
 >A : Symbol(A, Decl(library.d.tspp, --, --))
 }
 
+export type ArrayConstructor: Type => Type = Array;
+>ArrayConstructor : Symbol(ArrayConstructor, Decl(library.d.tspp, --, --))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+export type UniverseZero: Type1 = Type0;
+>UniverseZero : Symbol(UniverseZero, Decl(library.d.tspp, --, --))
+>Type0 : Symbol(Type0)
+
 === /consumer.tspp ===
-import type { Apply } from "./library.d.tspp";
+import type { Apply, ArrayConstructor, UniverseZero } from "./library.d.tspp";
 >Apply : Symbol(Apply, Decl(consumer.tspp, 0, 13))
+>ArrayConstructor : Symbol(ArrayConstructor, Decl(consumer.tspp, 0, 20))
+>UniverseZero : Symbol(UniverseZero, Decl(consumer.tspp, 0, 38))
+
+type ImportedArrayConstructor: UniverseZero => UniverseZero = Array;
+>ImportedArrayConstructor : Symbol(ImportedArrayConstructor, Decl(consumer.tspp, 0, 78))
+>UniverseZero : Symbol(UniverseZero, Decl(consumer.tspp, 0, 38))
+>UniverseZero : Symbol(UniverseZero, Decl(consumer.tspp, 0, 38))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
 
 declare const applied: Apply<Array, string>;
->applied : Symbol(applied, Decl(consumer.tspp, 2, 13))
+>applied : Symbol(applied, Decl(consumer.tspp, 4, 13))
 >Apply : Symbol(Apply, Decl(consumer.tspp, 0, 13))
 >Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
 
 applied.value.push("ok");
 >applied.value.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
 >applied.value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
->applied : Symbol(applied, Decl(consumer.tspp, 2, 13))
+>applied : Symbol(applied, Decl(consumer.tspp, 4, 13))
 >value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
 >push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
 
 applied.value.push(1);
 >applied.value.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
 >applied.value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
->applied : Symbol(applied, Decl(consumer.tspp, 2, 13))
+>applied : Symbol(applied, Decl(consumer.tspp, 4, 13))
 >value : Symbol(Apply.value, Decl(library.d.tspp, --, --))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+declare const aliased: ArrayConstructor<number>;
+>aliased : Symbol(aliased, Decl(consumer.tspp, 8, 13))
+>ArrayConstructor : Symbol(ArrayConstructor, Decl(consumer.tspp, 0, 20))
+
+aliased.push(1);
+>aliased.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>aliased : Symbol(aliased, Decl(consumer.tspp, 8, 13))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+aliased.push("no");
+>aliased.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>aliased : Symbol(aliased, Decl(consumer.tspp, 8, 13))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+declare const importedKindAlias: ImportedArrayConstructor<boolean>;
+>importedKindAlias : Symbol(importedKindAlias, Decl(consumer.tspp, 12, 13))
+>ImportedArrayConstructor : Symbol(ImportedArrayConstructor, Decl(consumer.tspp, 0, 78))
+
+importedKindAlias.push(true);
+>importedKindAlias.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>importedKindAlias : Symbol(importedKindAlias, Decl(consumer.tspp, 12, 13))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+importedKindAlias.push("no");
+>importedKindAlias.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>importedKindAlias : Symbol(importedKindAlias, Decl(consumer.tspp, 12, 13))
 >push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
 

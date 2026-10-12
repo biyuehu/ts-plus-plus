@@ -1472,12 +1472,18 @@ const visitEachChildTable: VisitEachChildTable = {
   },
 
   [SyntaxKind.TypeAliasDeclaration]: function visitEachChildOfTypeAliasDeclaration(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    const modifiers = nodesVisitor(node.modifiers, visitor, isModifierLike);
+    const name = Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier));
+    const typeParameters = nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration);
+    const kindType = nodeVisitor(node.kindType, visitor, isKindNode);
+    const type = Debug.checkDefined(nodeVisitor(node.type, visitor, isTypeNode));
     return context.factory.updateTypeAliasDeclaration(
       node,
-      nodesVisitor(node.modifiers, visitor, isModifierLike),
-      Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
-      nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration),
-      Debug.checkDefined(nodeVisitor(node.type, visitor, isTypeNode)),
+      modifiers,
+      name,
+      typeParameters,
+      type,
+      kindType,
     );
   },
 

@@ -1,0 +1,89 @@
+//// [tests/cases/compiler/higherKindedTypeAliases.ts] ////
+
+=== higherKindedTypeAliases.tspp ===
+export interface AcceptsUnary<F: Type => Type> {
+    value: F<string>;
+>value : "higherKindedTypeAliases".AcceptsUnary.F<string>
+>      : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+}
+
+export type Pair<A, B> = [A, B];
+>Pair : Pair<A, B>
+>     : ^^^^^^^^^^
+
+export type ArrayConstructor: Type => Type = Array;
+>ArrayConstructor : Array
+>                 : ^^^^^
+
+export type ArrayConstructorAlias: Type => Type = ArrayConstructor;
+>ArrayConstructorAlias : Array
+>                      : ^^^^^
+
+export type PairConstructor: (Type, Type) => Type = Pair;
+>PairConstructor : "higherKindedTypeAliases".Pair
+>                : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+export type StringArray = ArrayConstructor<string>;
+>StringArray : string[]
+>            : ^^^^^^^^
+
+export type NumberArray = ArrayConstructorAlias<number>;
+>NumberArray : number[]
+>            : ^^^^^^^^
+
+export type PairValue = PairConstructor<string, number>;
+>PairValue : Pair<string, number>
+>          : ^^^^^^^^^^^^^^^^^^^^
+
+export type AcceptedAlias = AcceptsUnary<ArrayConstructor>;
+>AcceptedAlias : AcceptedAlias
+>              : ^^^^^^^^^^^^^
+
+declare const strings: StringArray;
+>strings : string[]
+>        : ^^^^^^^^
+
+strings.push("ok");
+>strings.push("ok") : number
+>                   : ^^^^^^
+>strings.push : (...items: string[]) => number
+>             : ^^^^     ^^^^^^^^^^^^^^^      
+>strings : string[]
+>        : ^^^^^^^^
+>push : (...items: string[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>"ok" : "ok"
+>     : ^^^^
+
+strings.push(1);
+>strings.push(1) : number
+>                : ^^^^^^
+>strings.push : (...items: string[]) => number
+>             : ^^^^     ^^^^^^^^^^^^^^^      
+>strings : string[]
+>        : ^^^^^^^^
+>push : (...items: string[]) => number
+>     : ^^^^     ^^^^^^^^^^^^^^^      
+>1 : 1
+>  : ^
+
+export type OrdinaryAlias = Array;
+>OrdinaryAlias : any
+>              : ^^^
+
+export type MissingApplication = ArrayConstructor;
+>MissingApplication : any
+>                   : ^^^
+
+export type KindMismatch: Type => Type = string;
+>KindMismatch : any
+>             : ^^^
+
+export type WrongArity: (Type, Type) => Type = Array;
+>WrongArity : any
+>           : ^^^
+
+export type HigherOrderConstructor<T>: Type => Type = Array;
+>HigherOrderConstructor : Array
+>                       : ^^^^^
+

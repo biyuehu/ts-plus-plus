@@ -8563,5 +8563,9 @@
   "Type constructor '{0}' must be applied to {1} type argument(s).": {
     "category": "Error",
     "code": 18063
+  },
+  "Type '{0}' cannot be used as a kind because it does not resolve to a universe.": {
+    "category": "Error",
+    "code": 18064
   }
 }

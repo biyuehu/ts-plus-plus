@@ -916,6 +916,7 @@ const forEachChildTable: ForEachChildTable = {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
       visitNode(cbNode, node.name) ||
       visitNodes(cbNode, cbNodes, node.typeParameters) ||
+      visitNode(cbNode, node.kindType) ||
       visitNode(cbNode, node.type);
   },
   [SyntaxKind.EnumDeclaration]: function forEachChildInEnumDeclaration<T>(node: EnumDeclaration, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
@@ -3984,19 +3985,27 @@ namespace Parser {
       return finishNode(factory.createTypeKindNode(), pos);
     }
 
-    if (token() !== SyntaxKind.Identifier || scanner.getTokenValue() !== "Type") {
-      parseErrorAtCurrentToken(Diagnostics.Type_expected);
-      if (token() === SyntaxKind.Identifier) nextToken();
+    const tokenValue = token() === SyntaxKind.Identifier ? scanner.getTokenValue() : undefined;
+    const universeMatch = tokenValue?.match(/^Type(0|[1-9]\d*)$/);
+    let kind: KindNode;
+    if (tokenValue === "Type" || universeMatch) {
+      nextToken();
+      kind = finishNode(factory.createTypeKindNode(universeMatch?.[1]), pos);
+    }
+    else if (token() === SyntaxKind.Identifier) {
+      const typeName = parseEntityName(/*allowReservedWords*/ true);
+      kind = finishNode(factory.createTypeReferenceNode(typeName, /*typeArguments*/ undefined), pos);
     }
     else {
-      nextToken();
+      parseErrorAtCurrentToken(Diagnostics.Type_expected);
+      kind = finishNode(factory.createTypeKindNode(), pos);
     }
 
-    const typeKind = finishNode(factory.createTypeKindNode(), pos);
     if (parseOptional(SyntaxKind.EqualsGreaterThanToken)) {
-      return finishNode(factory.createFunctionKindNode([typeKind], parseKind()), pos);
+      const parameters = createNodeArray([kind], kind.pos, kind.end);
+      return finishNode(factory.createFunctionKindNode(parameters, parseKind()), pos);
     }
-    return typeKind;
+    return kind;
   }
 
   function parseTypeParameter(): TypeParameterDeclaration {
@@ -8302,10 +8311,12 @@ namespace Parser {
     }
     const name = parseIdentifier();
     const typeParameters = parseTypeParameters();
+    const isTspp = fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp);
+    const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseKind() : undefined;
     parseExpected(SyntaxKind.EqualsToken);
     const type = token() === SyntaxKind.IntrinsicKeyword && tryParse(parseKeywordAndNoDot) || parseType();
     parseSemicolon();
-    const node = factory.createTypeAliasDeclaration(modifiers, name, typeParameters, type);
+    const node = factory.createTypeAliasDeclaration(modifiers, name, typeParameters, type, kindType);
     return withJSDoc(finishNode(node, pos), hasJSDoc);
   }
 

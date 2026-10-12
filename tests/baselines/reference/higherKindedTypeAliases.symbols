@@ -1,0 +1,82 @@
+//// [tests/cases/compiler/higherKindedTypeAliases.ts] ////
+
+=== higherKindedTypeAliases.tspp ===
+export interface AcceptsUnary<F: Type => Type> {
+>AcceptsUnary : Symbol(AcceptsUnary, Decl(higherKindedTypeAliases.tspp, 0, 0))
+>F : Symbol(F, Decl(higherKindedTypeAliases.tspp, 0, 30))
+
+    value: F<string>;
+>value : Symbol(AcceptsUnary.value, Decl(higherKindedTypeAliases.tspp, 0, 48))
+>F : Symbol(F, Decl(higherKindedTypeAliases.tspp, 0, 30))
+}
+
+export type Pair<A, B> = [A, B];
+>Pair : Symbol(Pair, Decl(higherKindedTypeAliases.tspp, 2, 1))
+>A : Symbol(A, Decl(higherKindedTypeAliases.tspp, 4, 17))
+>B : Symbol(B, Decl(higherKindedTypeAliases.tspp, 4, 19))
+>A : Symbol(A, Decl(higherKindedTypeAliases.tspp, 4, 17))
+>B : Symbol(B, Decl(higherKindedTypeAliases.tspp, 4, 19))
+
+export type ArrayConstructor: Type => Type = Array;
+>ArrayConstructor : Symbol(ArrayConstructor, Decl(higherKindedTypeAliases.tspp, 4, 32))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+export type ArrayConstructorAlias: Type => Type = ArrayConstructor;
+>ArrayConstructorAlias : Symbol(ArrayConstructorAlias, Decl(higherKindedTypeAliases.tspp, 6, 51))
+>ArrayConstructor : Symbol(ArrayConstructor, Decl(higherKindedTypeAliases.tspp, 4, 32))
+
+export type PairConstructor: (Type, Type) => Type = Pair;
+>PairConstructor : Symbol(PairConstructor, Decl(higherKindedTypeAliases.tspp, 7, 67))
+>Pair : Symbol(Pair, Decl(higherKindedTypeAliases.tspp, 2, 1))
+
+export type StringArray = ArrayConstructor<string>;
+>StringArray : Symbol(StringArray, Decl(higherKindedTypeAliases.tspp, 8, 57))
+>ArrayConstructor : Symbol(ArrayConstructor, Decl(higherKindedTypeAliases.tspp, 4, 32))
+
+export type NumberArray = ArrayConstructorAlias<number>;
+>NumberArray : Symbol(NumberArray, Decl(higherKindedTypeAliases.tspp, 10, 51))
+>ArrayConstructorAlias : Symbol(ArrayConstructorAlias, Decl(higherKindedTypeAliases.tspp, 6, 51))
+
+export type PairValue = PairConstructor<string, number>;
+>PairValue : Symbol(PairValue, Decl(higherKindedTypeAliases.tspp, 11, 56))
+>PairConstructor : Symbol(PairConstructor, Decl(higherKindedTypeAliases.tspp, 7, 67))
+
+export type AcceptedAlias = AcceptsUnary<ArrayConstructor>;
+>AcceptedAlias : Symbol(AcceptedAlias, Decl(higherKindedTypeAliases.tspp, 12, 56))
+>AcceptsUnary : Symbol(AcceptsUnary, Decl(higherKindedTypeAliases.tspp, 0, 0))
+>ArrayConstructor : Symbol(ArrayConstructor, Decl(higherKindedTypeAliases.tspp, 4, 32))
+
+declare const strings: StringArray;
+>strings : Symbol(strings, Decl(higherKindedTypeAliases.tspp, 15, 13))
+>StringArray : Symbol(StringArray, Decl(higherKindedTypeAliases.tspp, 8, 57))
+
+strings.push("ok");
+>strings.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>strings : Symbol(strings, Decl(higherKindedTypeAliases.tspp, 15, 13))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+strings.push(1);
+>strings.push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+>strings : Symbol(strings, Decl(higherKindedTypeAliases.tspp, 15, 13))
+>push : Symbol(Array.push, Decl(lib.es5.d.ts, --, --))
+
+export type OrdinaryAlias = Array;
+>OrdinaryAlias : Symbol(OrdinaryAlias, Decl(higherKindedTypeAliases.tspp, 17, 16))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+export type MissingApplication = ArrayConstructor;
+>MissingApplication : Symbol(MissingApplication, Decl(higherKindedTypeAliases.tspp, 19, 34))
+>ArrayConstructor : Symbol(ArrayConstructor, Decl(higherKindedTypeAliases.tspp, 4, 32))
+
+export type KindMismatch: Type => Type = string;
+>KindMismatch : Symbol(KindMismatch, Decl(higherKindedTypeAliases.tspp, 20, 50))
+
+export type WrongArity: (Type, Type) => Type = Array;
+>WrongArity : Symbol(WrongArity, Decl(higherKindedTypeAliases.tspp, 21, 48))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
+export type HigherOrderConstructor<T>: Type => Type = Array;
+>HigherOrderConstructor : Symbol(HigherOrderConstructor, Decl(higherKindedTypeAliases.tspp, 22, 53))
+>T : Symbol(T, Decl(higherKindedTypeAliases.tspp, 23, 35))
+>Array : Symbol(Array, Decl(lib.es5.d.ts, --, --), Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.core.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --) ... and 4 more)
+
