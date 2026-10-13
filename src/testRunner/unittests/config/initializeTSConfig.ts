@@ -45,6 +45,10 @@ describe("unittests:: config:: initTSConfig", () => {
       assert.include(result, `// "${definition.name}",`);
       assert.notInclude(result, `      "${definition.name}",`);
     }
+    assert.include(result, "获得：newtype 名义类型声明与对应构造器。");
+    assert.include(result, "影响：TS超集=是；透明擦除=否（生成运行时构造器）。");
+    assert.include(result, "获得：data 可辨识联合声明与对应变体构造器。");
+    assert.include(result, "影响：TS超集=是；透明擦除=否（生成运行时变体值与构造器）。");
   });
 
   it("validates TS++ feature dependencies without enabling them implicitly", () => {
