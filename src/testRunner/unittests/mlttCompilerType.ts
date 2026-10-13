@@ -98,6 +98,7 @@ describe("unittests:: MLTT compiler type", () => {
       type VectorBuilder: Type1 = (A: Type0) -> (value: A) -> (N: Nat) -> Vector<N, A>;
       type EmptyVector: Type1 = (A: Type0) -> Vector<Zero, A>;
       type TwoVector: Type1 = (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
+      type ComputedTwoVector: Type1 = (A: Type0) -> Vector<NatAdd<Succ<Zero>, Succ<Zero>>, A>;
       declare const buildVector: VectorBuilder;
       const pair = buildVector("item", 2);
     `,
@@ -112,6 +113,10 @@ describe("unittests:: MLTT compiler type", () => {
     const diagnostics = naturals.getSemanticDiagnostics();
     assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
     assert.strictEqual(naturalsChecker.typeToString(naturalsChecker.getTypeAtLocation(pair.name)), "Vector<2, string>");
+    const aliases = naturalsFile.statements.filter(ts.isTypeAliasDeclaration);
+    const twoVector = naturalsChecker.getTypeAtLocation(aliases[3].type);
+    const computedTwoVector = naturalsChecker.getTypeAtLocation(aliases[4].type);
+    assert.isTrue(naturalsChecker.isTypeAssignableTo(twoVector, computedTwoVector));
   });
 
   it("checks that Succ is applied to a natural number", () => {

@@ -79,6 +79,10 @@ type Vector<N extends number, A> = { length: N; value: A };
 export type EmptyVector: Type1 = (A: Type0) -> Vector<Zero, A>;
 export type TwoVector: Type1 = (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
 
+// 受限的类型级计算只归约内核原语；这里的 NatAdd 会结构递归到 2。
+export type ComputedTwoVector: Type1 =
+  (A: Type0) -> Vector<NatAdd<Succ<Zero>, Succ<Zero>>, A>;
+
 // 进入 TS 调用桥接时，(N: Nat) 投影为 N extends number 和一个运行时参数。
 export type VectorBuilder: Type1 =
   (A: Type0) -> (value: A) -> (N: Nat) -> Vector<N, A>;

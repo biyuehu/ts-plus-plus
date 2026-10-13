@@ -1162,6 +1162,7 @@ import {
   mlttApplication,
   MlttExternal,
   mlttExternal,
+  mlttNatAdd,
   mlttNatType,
   mlttPi,
   mlttSuccessor,
@@ -17672,6 +17673,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           return getNumberLiteralType((predecessor as NumberLiteralType).value + 1);
         }
       }
+      if (name === "NatAdd" && reference.typeArguments?.length === 2) {
+        const left = getTypeFromTypeNode(reference.typeArguments[0]);
+        const right = getTypeFromTypeNode(reference.typeArguments[1]);
+        if (left.flags & TypeFlags.NumberLiteral && right.flags & TypeFlags.NumberLiteral) {
+          return getNumberLiteralType((left as NumberLiteralType).value + (right as NumberLiteralType).value);
+        }
+      }
     }
     const links = getNodeLinks(node);
     if (!links.resolvedType) {
@@ -20832,6 +20840,15 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const predecessor = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
         return predecessor && mlttSuccessor(predecessor);
       }
+      if (name === "NatAdd") {
+        if (reference.typeArguments?.length !== 2) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'NatAdd' requires exactly two natural-number arguments.");
+          return undefined;
+        }
+        const left = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
+        const right = getMlttTermFromTypeNode(reference.typeArguments[1], scope);
+        return left && right ? mlttNatAdd(left, right) : undefined;
+      }
       const universeMatch = name === "Type" ? [name, "0"] : /^Type(0|[1-9]\d*)$/.exec(name);
       let term: MlttTerm;
       if (universeMatch) {
@@ -21131,6 +21148,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const predecessor = getCompilerTypeFromMlttTerm(term.predecessor, scope);
       return predecessor && predecessor.flags & TypeFlags.NumberLiteral
         ? getNumberLiteralType((predecessor as NumberLiteralType).value + 1)
+        : undefined;
+    }
+    if (term.kind === "nat-add") {
+      const left = getCompilerTypeFromMlttTerm(term.left, scope);
+      const right = getCompilerTypeFromMlttTerm(term.right, scope);
+      return left && right && left.flags & TypeFlags.NumberLiteral && right.flags & TypeFlags.NumberLiteral
+        ? getNumberLiteralType((left as NumberLiteralType).value + (right as NumberLiteralType).value)
         : undefined;
     }
     if (term.kind !== "external") return undefined;

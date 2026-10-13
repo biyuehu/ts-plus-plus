@@ -46,6 +46,16 @@ describe("unittests:: MLTT core", () => {
     assertMlttError(() => mltt.inferMlttType(mltt.mlttSuccessor(type0)), "type-mismatch");
   });
 
+  it("normalizes structurally recursive natural-number addition", () => {
+    const one = mltt.mlttSuccessor(mltt.mlttZero());
+    const two = mltt.mlttSuccessor(one);
+    const three = mltt.mlttSuccessor(two);
+
+    assert.deepEqual(mltt.inferMlttType(mltt.mlttNatAdd(one, two)), mltt.mlttNatType());
+    assert.deepEqual(mltt.normalizeMlttTerm(mltt.mlttNatAdd(one, two)), three);
+    assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(mltt.mlttNatAdd(one, two), three));
+  });
+
   it("forms dependent Pi types", () => {
     assert.deepEqual(mltt.inferMlttType(polymorphicIdentityType), mltt.mlttUniverse(1));
   });
