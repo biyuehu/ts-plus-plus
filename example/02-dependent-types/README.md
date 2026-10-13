@@ -214,4 +214,4 @@ npm run emit-declarations
 
 第二条命令会在 `dist` 中按课程文件生成对应的 `.d.tspp` 声明。依赖函数会保持 `(A: Type0) -> ...`，不会退化成 `unknown`。
 
-阅读完正常示例后，可以取消 [`03-boundaries.tspp`](./src/03-boundaries.tspp) 中任意错误案例的注释，再运行 `npm run check`，观察未绑定变量、错误 universe 和非法组合的诊断。
+阅读完正常示例后，可以查看 [`03-boundaries.tspp`](./src/03-boundaries.tspp) 中由 `// @ts-expect-error` 保护的错误案例。运行 `npm run check` 会同时验证未绑定变量、错误 universe 和非法组合仍能产生诊断；如果某个反例不再报错，编译器会报告该指令未使用。

@@ -1,7 +1,7 @@
 {
   "name": "tspp-development",
-  "displayName": "TypeScript++ Development",
-  "description": "Development host support for the TypeScript++ compiler in this repository.",
+  "displayName": "TS++ Development",
+  "description": "Development host support for the TS++ compiler in this repository.",
   "version": "0.0.1",
   "publisher": "tspp-local",
   "private": true,

@@ -47,37 +47,46 @@ export type DirectSigma: Type0 =
 // 4. 错误实验
 // -----------------------------------------------------------------------------
 //
-// 可以逐条取消注释，然后运行 `npm run check`。
+// 以下反例由 @ts-expect-error 保护，运行 `npm run check` 会同时验证它们仍会报错。
 
 // Missing 没有被任何 binder 引入。
-// export type UnboundName: Type1 = (A: Type0) -> Missing;
+// @ts-expect-error -- Missing 是未绑定名称
+export type UnboundName: Type1 = (A: Type0) -> Missing;
 
 // `(A: Type0) -> A` 位于 Type1，不能声明为 Type0。
-// export type WrongUniverse: Type0 = (A: Type0) -> A;
+// @ts-expect-error -- 实际 universe 为 Type1
+export type WrongUniverse: Type0 = (A: Type0) -> A;
 
 // Succ 只能接收 Nat，string 是类型，不是自然数项。
-// export type WrongSuccessor: Type0 = (N: Nat) -> Succ<string>;
+// @ts-expect-error -- Succ 只能接收 Nat
+export type WrongSuccessor: Type0 = (N: Nat) -> Succ<string>;
 
 // Nat 调用只接受非负安全整数字面量。
-// export declare const buildAt: (N: Nat) -> { index: N };
-// buildAt(-1);
-// buildAt(1.5);
-// buildAt(9007199254740992);
-// declare let dynamicNumber: number;
-// buildAt(dynamicNumber);
+export declare const buildAt: (N: Nat) -> { index: N };
+// @ts-expect-error -- 负数不是 Nat
+buildAt(-1);
+// @ts-expect-error -- 小数不是 Nat
+buildAt(1.5);
+// @ts-expect-error -- 超出安全整数范围
+buildAt(9007199254740992);
+declare let dynamicNumber: number;
+// @ts-expect-error -- 动态 number 无法在编译期证明为 Nat
+buildAt(dynamicNumber);
 
 // Pair 的第二项必须满足 Sigma 中依赖第一项的类型。
-// export type WrongPair: Type0 =
-//   (N: Nat) ->
-//   Eq<
-//     Sigma<(value: Nat) -> Eq<Nat, value, N>>,
-//     Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Zero>,
-//     Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Refl<Nat, N>>
-//   >;
+export type WrongPair: Type0 =
+  // @ts-expect-error -- Zero 不能证明任意 N 等于 Zero
+  (N: Nat) ->
+  Eq<
+    Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+    Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Zero>,
+    Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Refl<Nat, N>>
+  >;
 
 // union/intersection 不能把 Type1 的类型伪装成 Type0。
-// export type HiddenHigherUniverse: Type1 =
-//   (A: Type0) -> A | ((B: Type0) -> B);
+export type HiddenHigherUniverse: Type1 =
+  // @ts-expect-error -- union 的右侧位于 Type1
+  (A: Type0) -> A | ((B: Type0) -> B);
 
 // -----------------------------------------------------------------------------
 // 5. 明确不在当前范围内的能力

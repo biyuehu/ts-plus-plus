@@ -69,9 +69,11 @@ export type VectorBuilder: Type1 =
 
 export declare const buildVector: VectorBuilder;
 export const pair = buildVector("item", 2); // Vector<2, string>
-// buildVector("item", -1); // 错误：-1 不是 Nat
-// declare let dynamicLength: number;
-// buildVector("item", dynamicLength); // 错误：动态 number 不能证明自己是 Nat
+// @ts-expect-error -- -1 不是 Nat
+buildVector("item", -1);
+declare let dynamicLength: number;
+// @ts-expect-error -- 动态 number 不能证明自己是 Nat
+buildVector("item", dynamicLength);
 
 // -----------------------------------------------------------------------------
 // 3. NatAdd：受限但可预测的类型级计算

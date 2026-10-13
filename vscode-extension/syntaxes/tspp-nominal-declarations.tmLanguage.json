@@ -1,5 +1,5 @@
 {
-  "name": "TypeScript++ Newtype and Data Declarations",
+  "name": "TS++ Newtype and Data Declarations",
   "scopeName": "tspp.nominal-declarations",
   "injectionSelector": "L:source.ts -comment -string -meta.type",
   "patterns": [

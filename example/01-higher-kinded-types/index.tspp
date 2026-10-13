@@ -32,7 +32,7 @@ const arrayFunctor: Functor<Arrays> = {
 };
 
 // map 从 number[] 和 number => string 推导出 labels 为 string[]。
-const labels = arrayFunctor.map([1, 2, 3], value => `item-${value}`);
+const labels = arrayFunctor.map<number, string>([1, 2, 3], value => `item-${value}`);
 const checkedLabels: StringArray = labels;
 
 labels.push("item-4");
@@ -51,11 +51,17 @@ type IdentityAtOne<K: Type1>: Type1 = K;
 type PreservedType0: Type1 = IdentityAtOne<Type0>;
 
 // 6. 当前采用非累积宇宙：Type0 与 Type1 不会自动互相提升或兼容。
-// 可以逐行取消注释，观察语言服务给出的 kind/type 错误：
-// type MissingConstructorKind = Array;
-// type InvalidFunctor = Functor<string>;
-// type InvalidUniverse: Type0 = Type0;
-// labels.push(4);
+// 以下是由 @ts-expect-error 保护的反例：它们必须持续产生预期错误。
+type LocalArray<T> = T[];
+// @ts-expect-error -- 缺少保存类型构造器所需的 kind 标注
+type MissingConstructorKind = LocalArray;
+type HigherKindedBox<F: Type0 => Type0> = F<string>;
+// @ts-expect-error -- string 的 kind 不是 Type0 => Type0
+type InvalidHigherKindedBox = HigherKindedBox<string>;
+// @ts-expect-error -- Type0 本身位于 Type1
+type InvalidUniverse: Type0 = Type0;
+// @ts-expect-error -- labels 的元素是 string
+labels.push(4);
 
 export { arrayFunctor, checkedLabels, labels, namedAge };
 export type {

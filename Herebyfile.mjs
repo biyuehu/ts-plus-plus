@@ -119,6 +119,26 @@ const localizationTargets = localizationDirectories
   .map(f => `built/local/${f}/diagnosticMessages.generated.json`)
   .concat(generatedLCGFile);
 
+const sdkPackageJson = task({
+  name: "sdk-package-json",
+  description: "Writes TS++ editor SDK metadata and its standard-layout server entrypoint",
+  run: async () => {
+    const corePublic = await fs.promises.readFile("src/compiler/corePublic.ts", "utf-8");
+    const version = corePublic.match(/export const version = "([^"]+)"/u)?.[1];
+    assert(version, "Could not read the compiler version from src/compiler/corePublic.ts");
+    await fs.promises.mkdir("built/local", { recursive: true });
+    await fs.promises.writeFile(
+      "built/local/package.json",
+      JSON.stringify({ name: "ts-plus-plus-sdk", version, main: "./lib/tsserver.js" }, undefined, 2) + "\n",
+    );
+    await fs.promises.mkdir("built/local/lib", { recursive: true });
+    await fs.promises.writeFile(
+      "built/local/lib/tsserver.js",
+      `module.exports = require("../tsserver.js");\n`,
+    );
+  },
+});
+
 const localize = task({
   name: "localize",
   dependencies: [generateDiagnostics],
@@ -663,7 +683,7 @@ export const watchOtherOutputs = task({
 export const local = task({
   name: "local",
   description: "Builds the full compiler and services",
-  dependencies: [localize, tsc, tsserver, services, lssl, otherOutputs, dts],
+  dependencies: [localize, tsc, tsserver, services, lssl, otherOutputs, dts, sdkPackageJson],
 });
 export default local;
 
@@ -671,7 +691,7 @@ export const watchLocal = task({
   name: "watch-local",
   description: "Watches the full compiler and services",
   hiddenFromTaskList: true,
-  dependencies: [localize, watchTsc, watchTsserver, watchServices, lssl, watchOtherOutputs, dts, watchSrc],
+  dependencies: [localize, watchTsc, watchTsserver, watchServices, lssl, watchOtherOutputs, dts, watchSrc, sdkPackageJson],
 });
 
 const runtestsDeps = [tests, generateLibs, generateTypesMap].concat(cmdLineOptions.typecheck ? [dts] : []);

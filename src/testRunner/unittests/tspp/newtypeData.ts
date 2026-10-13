@@ -99,6 +99,29 @@ describe("unittests:: tspp:: newtype and data", () => {
       assert.match(messages[0], /not assignable/);
     });
 
+    it("supports @ts-expect-error for newtype and data diagnostics", () => {
+      const program = createProgram(
+        "/expected-errors.tspp",
+        `
+        newtype UserId = number;
+        newtype OrderId = number;
+        declare const userId: UserId;
+        // @ts-expect-error -- a plain number is not a UserId
+        const badNumber: UserId = 1;
+        // @ts-expect-error -- distinct newtypes are nominal
+        const badOrder: OrderId = userId;
+
+        data Option<T> = None | Some(value: T);
+        // @ts-expect-error -- the variant field has the wrong type
+        const badOption: Option<number> = Some("x");
+        // @ts-expect-error -- structural lookalikes do not carry the variant brand
+        const badVariant: typeof None = { _tag: "None" as const };
+      `,
+      );
+
+      assert.isEmpty(program.getSemanticDiagnostics());
+    });
+
     it("keeps distinct newtypes nominal even with identical underlying types", () => {
       const program = createProgram(
         "/file.tspp",

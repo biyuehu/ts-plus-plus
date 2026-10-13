@@ -18,10 +18,12 @@ declare const orderId: OrderId;
 const asNumber: number = userId;
 
 // 反过来不行：number 不能赋给 UserId。
-// const badNumber: UserId = 1;
+// @ts-expect-error -- number 不是 UserId
+const badNumber: UserId = 1;
 
 // UserId 与 OrderId 也不能互相赋值。
-// const badOrder: OrderId = userId;
+// @ts-expect-error -- 不同 newtype 之间保持名义隔离
+const badOrder: OrderId = userId;
 
 // newtype 会引入一个同名的值构造器，签名是底层类型的恒等函数。
 const created: UserId = UserId(42);
@@ -45,7 +47,8 @@ const nothing: Option<number> = None;
 const something: Option<number> = Some(1);
 
 // 字段类型会被检查。
-// const bad: Option<number> = Some("x");
+// @ts-expect-error -- Some 的字段应为 number
+const bad: Option<number> = Some("x");
 
 // 变体只接收它提到的类型参数：None 不接受参数，Some 只接受 T。
 data Either<L, R> = Left(value: L) | Right(value: R) | Empty;
@@ -65,7 +68,8 @@ const extracted: typeof Nil = Nil;
 const tag: "Nil" = extracted._tag;
 
 // 尽管与结构化的 { _tag: "Nil" } 相像，但实际上不能作为使用
-// const error: typeof Nil = { _tag: "Nil" as const }
+// @ts-expect-error -- 结构相似的对象没有 Nil 的名义 brand
+const error: typeof Nil = { _tag: "Nil" as const };
 
 // -----------------------------------------------------------------------------
 // 3. 名义性与 as

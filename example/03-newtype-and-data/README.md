@@ -85,7 +85,7 @@ npm run check
 npm run emit-declarations
 ```
 
-取消 `index.tspp` 中被注释的反例，观察语言服务的诊断。
+`index.tspp` 中的反例由 `// @ts-expect-error` 保护：它们会触发语言服务的诊断，同时仍能让整个示例通过检查。如果某个反例不再报错，编译器会报告该指令未使用。
 
 ## 特性开关
 
