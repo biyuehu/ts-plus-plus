@@ -2,7 +2,7 @@
   // If updating this, also update the config in dtsBundler.mjs.
   "indentWidth": 2,
   "lineWidth": 1000,
-  "newLineKind": "auto",
+  "newLineKind": "crlf",
   "useTabs": false,
   "typescript": {
     "newLineKind": "crlf",
