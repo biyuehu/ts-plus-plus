@@ -9,7 +9,7 @@
  * @internal
  */
 
-export type MlttTerm = MlttUniverse | MlttNatType | MlttZero | MlttSuccessor | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
+export type MlttTerm = MlttUniverse | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
 
 export interface MlttUniverse {
   readonly kind: "universe";
@@ -30,6 +30,13 @@ export interface MlttZero {
 export interface MlttSuccessor {
   readonly kind: "successor";
   readonly predecessor: MlttTerm;
+}
+
+/** Structurally recursive addition over Nat. */
+export interface MlttNatAdd {
+  readonly kind: "nat-add";
+  readonly left: MlttTerm;
+  readonly right: MlttTerm;
 }
 
 export interface MlttVariable {
@@ -113,6 +120,10 @@ export function mlttSuccessor(predecessor: MlttTerm): MlttSuccessor {
   return { kind: "successor", predecessor };
 }
 
+export function mlttNatAdd(left: MlttTerm, right: MlttTerm): MlttNatAdd {
+  return { kind: "nat-add", left, right };
+}
+
 export function mlttVariable(index: number): MlttVariable {
   if (!Number.isSafeInteger(index) || index < 0) {
     throw new RangeError(`Variable index must be a non-negative safe integer; received ${index}.`);
@@ -160,6 +171,11 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
 
     case "successor":
       checkMlttType(term.predecessor, mlttNatType(), context);
+      return mlttNatType();
+
+    case "nat-add":
+      checkMlttType(term.left, mlttNatType(), context);
+      checkMlttType(term.right, mlttNatType(), context);
       return mlttNatType();
 
     case "variable": {
@@ -224,6 +240,18 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
       current = current.term;
       continue;
     }
+    if (current.kind === "nat-add") {
+      const left = weakHeadNormalizeMltt(current.left);
+      if (left.kind === "zero") {
+        current = current.right;
+        continue;
+      }
+      if (left.kind === "successor") {
+        current = mlttSuccessor(mlttNatAdd(left.predecessor, current.right));
+        continue;
+      }
+      return left === current.left ? current : mlttNatAdd(left, current.right);
+    }
     if (current.kind !== "application") return current;
 
     const functionTerm = weakHeadNormalizeMltt(current.functionTerm);
@@ -245,6 +273,8 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
       return head;
     case "successor":
       return mlttSuccessor(normalizeMlttTerm(head.predecessor));
+    case "nat-add":
+      return mlttNatAdd(normalizeMlttTerm(head.left), normalizeMlttTerm(head.right));
     case "pi":
       return mlttPi(head.parameterName, normalizeMlttTerm(head.domain), normalizeMlttTerm(head.codomain));
     case "lambda":
@@ -292,6 +322,8 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
       return term;
     case "successor":
       return mlttSuccessor(shiftMlttTerm(term.predecessor, amount, cutoff));
+    case "nat-add":
+      return mlttNatAdd(shiftMlttTerm(term.left, amount, cutoff), shiftMlttTerm(term.right, amount, cutoff));
     case "variable":
       return term.index < cutoff ? term : mlttVariable(term.index + amount);
     case "pi":
@@ -321,6 +353,11 @@ function substituteMltt(term: MlttTerm, variableIndex: number, replacement: Mltt
       return term;
     case "successor":
       return mlttSuccessor(substituteMltt(term.predecessor, variableIndex, replacement, binderDepth));
+    case "nat-add":
+      return mlttNatAdd(
+        substituteMltt(term.left, variableIndex, replacement, binderDepth),
+        substituteMltt(term.right, variableIndex, replacement, binderDepth),
+      );
     case "variable":
       return term.index === variableIndex + binderDepth ? shiftMlttTerm(replacement, binderDepth) : term;
     case "pi":
@@ -370,6 +407,10 @@ function structurallyEqualMlttTerms(
       return true;
     case "successor":
       return structurallyEqualMlttTerms(left.predecessor, (right as MlttSuccessor).predecessor, compareExternal);
+    case "nat-add": {
+      const rightAdd = right as MlttNatAdd;
+      return structurallyEqualMlttTerms(left.left, rightAdd.left, compareExternal) && structurallyEqualMlttTerms(left.right, rightAdd.right, compareExternal);
+    }
     case "variable":
       return left.index === (right as MlttVariable).index;
     case "pi": {
@@ -406,6 +447,8 @@ function printMlttTermWorker(term: MlttTerm, names: readonly string[]): string {
       return "Zero";
     case "successor":
       return `Succ<${printMlttTermWorker(term.predecessor, names)}>`;
+    case "nat-add":
+      return `NatAdd<${printMlttTermWorker(term.left, names)}, ${printMlttTermWorker(term.right, names)}>`;
     case "variable":
       return names[term.index] ?? `#${term.index}`;
     case "pi": {
