@@ -497,7 +497,7 @@ const formatter = dprintFormatter.createFromBuffer(buffer);
 formatter.setConfig({
   indentWidth: 4,
   lineWidth: 1000,
-  newLineKind: "auto",
+  newLineKind: "crlf",
   useTabs: false,
 }, {
   quoteStyle: "preferDouble",
