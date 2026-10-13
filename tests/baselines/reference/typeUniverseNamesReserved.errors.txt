@@ -1,0 +1,25 @@
+typeUniverseNamesReserved.tspp(1,13): error TS2457: Type alias name cannot be 'Type'.
+typeUniverseNamesReserved.tspp(2,13): error TS2457: Type alias name cannot be 'Type0'.
+typeUniverseNamesReserved.tspp(3,13): error TS2457: Type alias name cannot be 'Type1'.
+
+
+==== ordinaryTypeScript.ts (0 errors) ====
+    export type Type = 1;
+    export type Type0 = 1;
+    export type Type1 = 1;
+    
+==== typeUniverseNamesReserved.tspp (3 errors) ====
+    export type Type = 1;
+                ~~~~
+!!! error TS2457: Type alias name cannot be 'Type'.
+    export type Type0 = 1;
+                ~~~~~
+!!! error TS2457: Type alias name cannot be 'Type0'.
+    export type Type1 = 1;
+                ~~~~~
+!!! error TS2457: Type alias name cannot be 'Type1'.
+    
+    // These names do not denote universes and remain available to user code.
+    export type Type00 = 1;
+    export type Type01 = 1;
+    
