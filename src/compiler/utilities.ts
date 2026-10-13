@@ -11064,6 +11064,8 @@ export function isTypeDeclaration(node: Node): node is TypeParameterDeclaration 
     case SyntaxKind.ClassDeclaration:
     case SyntaxKind.InterfaceDeclaration:
     case SyntaxKind.TypeAliasDeclaration:
+    case SyntaxKind.NewtypeDeclaration:
+    case SyntaxKind.DataDeclaration:
     case SyntaxKind.EnumDeclaration:
     case SyntaxKind.JSDocTypedefTag:
     case SyntaxKind.JSDocCallbackTag:

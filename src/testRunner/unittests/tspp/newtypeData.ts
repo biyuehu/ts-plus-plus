@@ -86,8 +86,19 @@ describe("unittests:: tspp:: newtype and data", () => {
         const bad: Option<number> = Some("x");
       `,
       );
+      const checker = program.getTypeChecker();
+      const file = program.getSourceFiles().find(f => f.fileName.endsWith(".tspp"))!;
+      const decls = file.statements.filter(ts.isVariableStatement).flatMap(s => [...s.declarationList.declarations]);
+      const someSym = checker.getSymbolAtLocation((decls[1].initializer as ts.CallExpression).expression);
+      const someType = checker.typeToString(checker.getTypeAtLocation(decls[1].initializer!));
+      const badType = checker.typeToString(checker.getTypeAtLocation(decls[2].initializer!));
+      const ctor = someSym ? checker.getTypeOfSymbolAtLocation(someSym, decls[1].initializer!) : undefined;
+      const ctorType = ctor ? checker.typeToString(ctor) : "(nosym)";
+      const sigs = ctor ? checker.getSignaturesOfType(ctor, ts.SignatureKind.Call) : [];
+      const ret = sigs.length ? checker.typeToString(sigs[0].getReturnType()) : "(nosig)";
+      const callType = checker.typeToString(checker.getTypeAtLocation(decls[1].initializer!));
       const messages = semanticMessages(program);
-      assert.lengthOf(messages, 1, messages.join("\n"));
+      assert.lengthOf(messages, 1, `ctor=${ctorType} sigs=${sigs.length} ret=${ret} call=${callType} some=${someType} bad=${badType} :: ${messages.join("\n") || "(no messages)"}`);
       assert.match(messages[0], /not assignable/);
     });
 
@@ -103,16 +114,31 @@ describe("unittests:: tspp:: newtype and data", () => {
       assert.isEmpty(semanticMessages(program));
     });
 
-    it("only gives a variant the type parameters it mentions", () => {
+    it("does not allow a variant to be used as a type", () => {
       const program = createProgram(
         "/file.tspp",
         `
-        data Either<L, R> = Left(value: L) | Right(value: R) | Empty;
-        declare const left: Left<number>;
-        const l: number = left.value;
+        data List<T> = Nil | Cons(head: T, tail: List<T>);
+        declare const a: Nil;
+        type X = Nil;
       `,
       );
-      assert.isEmpty(semanticMessages(program));
+      const messages = semanticMessages(program);
+      assert.lengthOf(messages, 2, messages.join("\n"));
+      assert.match(messages.join("\n"), /refers to a value/);
+    });
+
+    it("lets typeof reach the variant type of a constant variant", () => {
+      const program = createProgram(
+        "/file.tspp",
+        `
+        data List<T> = Nil | Cons(head: T, tail: List<T>);
+        const nil: typeof Nil = Nil;
+        const list: List<number> = nil;
+      `,
+      );
+      const messages = semanticMessages(program);
+      assert.isEmpty(messages, messages.join("\n"));
     });
 
     it("rejects a variant field of the wrong type", () => {
@@ -120,8 +146,8 @@ describe("unittests:: tspp:: newtype and data", () => {
         "/file.tspp",
         `
         data Either<L, R> = Left(value: L) | Right(value: R) | Empty;
-        declare const left: Left<string>;
-        const n: number = left.value;
+        declare const either: Either<string, number>;
+        const n: number = either._tag === "Left" ? either.value : 0;
       `,
       );
       const messages = semanticMessages(program);
@@ -143,13 +169,12 @@ describe("unittests:: tspp:: newtype and data", () => {
       assert.match(messages[0], /not assignable/);
     });
 
-    it("rejects a variant applied to a mismatched type argument", () => {
+    it("rejects a variant constructed with a mismatched type argument", () => {
       const program = createProgram(
         "/file.tspp",
         `
         data Either<L, R> = Left(value: L) | Right(value: R) | Empty;
-        declare const left: Left<number, string>;
-        const l: number = left.value;
+        const bad: Either<number, string> = Left("x");
       `,
       );
       assert.isNotEmpty(semanticMessages(program));
@@ -161,9 +186,8 @@ describe("unittests:: tspp:: newtype and data", () => {
         `
         data List<T> = Nil | Cons(head: T, tail: List<T>);
         declare const list: List<number>;
-        declare const cons: Cons<number>;
-        const n: number = cons.head;
-        const t: List<number> = cons.tail;
+        const n: number = list._tag === "Cons" ? list.head : 0;
+        const t: List<number> = list._tag === "Cons" ? list.tail : Nil;
         const ok: List<number> = Nil;
       `,
       );

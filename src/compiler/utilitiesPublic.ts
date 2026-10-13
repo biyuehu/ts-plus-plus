@@ -2352,6 +2352,9 @@ function isDeclarationKind(kind: SyntaxKind) {
     || kind === SyntaxKind.SetAccessor
     || kind === SyntaxKind.ShorthandPropertyAssignment
     || kind === SyntaxKind.TypeAliasDeclaration
+    || kind === SyntaxKind.NewtypeDeclaration
+    || kind === SyntaxKind.DataDeclaration
+    || kind === SyntaxKind.DataVariant
     || kind === SyntaxKind.TypeParameter
     || kind === SyntaxKind.VariableDeclaration
     || kind === SyntaxKind.JSDocTypedefTag
