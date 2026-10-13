@@ -9,7 +9,7 @@
  * @internal
  */
 
-export type MlttTerm = MlttUniverse | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
+export type MlttTerm = MlttUniverse | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttNatElim | MlttIdentityType | MlttRefl | MlttSigma | MlttPair | MlttFirst | MlttSecond | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
 
 export interface MlttUniverse {
   readonly kind: "universe";
@@ -37,6 +37,55 @@ export interface MlttNatAdd {
   readonly kind: "nat-add";
   readonly left: MlttTerm;
   readonly right: MlttTerm;
+}
+
+/** The dependent eliminator for Nat. */
+export interface MlttNatElim {
+  readonly kind: "nat-elim";
+  readonly motive: MlttTerm;
+  readonly zeroCase: MlttTerm;
+  readonly successorCase: MlttTerm;
+  readonly scrutinee: MlttTerm;
+}
+
+/** Propositional identity between two terms of the same type. */
+export interface MlttIdentityType {
+  readonly kind: "identity-type";
+  readonly type: MlttTerm;
+  readonly left: MlttTerm;
+  readonly right: MlttTerm;
+}
+
+/** Reflexivity proof for the identity type. */
+export interface MlttRefl {
+  readonly kind: "refl";
+  readonly type: MlttTerm;
+  readonly term: MlttTerm;
+}
+
+/** A dependent pair type. The bound first component is variable zero in the codomain. */
+export interface MlttSigma {
+  readonly kind: "sigma";
+  readonly parameterName: string;
+  readonly domain: MlttTerm;
+  readonly codomain: MlttTerm;
+}
+
+export interface MlttPair {
+  readonly kind: "pair";
+  readonly sigmaType: MlttTerm;
+  readonly first: MlttTerm;
+  readonly second: MlttTerm;
+}
+
+export interface MlttFirst {
+  readonly kind: "first";
+  readonly pair: MlttTerm;
+}
+
+export interface MlttSecond {
+  readonly kind: "second";
+  readonly pair: MlttTerm;
 }
 
 export interface MlttVariable {
@@ -92,7 +141,7 @@ export type MlttExternalEqualityComparer = (left: MlttExternal, right: MlttExter
 export type MlttContext = readonly MlttTerm[];
 
 export class MlttTypeError extends Error {
-  readonly code: "cannot-infer-lambda" | "expected-function" | "expected-type" | "invalid-level" | "type-mismatch" | "unbound-variable";
+  readonly code: "cannot-infer-lambda" | "expected-function" | "expected-pair" | "expected-type" | "invalid-level" | "type-mismatch" | "unbound-variable";
 
   constructor(code: MlttTypeError["code"], message: string) {
     super(message);
@@ -122,6 +171,34 @@ export function mlttSuccessor(predecessor: MlttTerm): MlttSuccessor {
 
 export function mlttNatAdd(left: MlttTerm, right: MlttTerm): MlttNatAdd {
   return { kind: "nat-add", left, right };
+}
+
+export function mlttNatElim(motive: MlttTerm, zeroCase: MlttTerm, successorCase: MlttTerm, scrutinee: MlttTerm): MlttNatElim {
+  return { kind: "nat-elim", motive, zeroCase, successorCase, scrutinee };
+}
+
+export function mlttIdentityType(type: MlttTerm, left: MlttTerm, right: MlttTerm): MlttIdentityType {
+  return { kind: "identity-type", type, left, right };
+}
+
+export function mlttRefl(type: MlttTerm, term: MlttTerm): MlttRefl {
+  return { kind: "refl", type, term };
+}
+
+export function mlttSigma(parameterName: string, domain: MlttTerm, codomain: MlttTerm): MlttSigma {
+  return { kind: "sigma", parameterName, domain, codomain };
+}
+
+export function mlttPair(sigmaType: MlttTerm, first: MlttTerm, second: MlttTerm): MlttPair {
+  return { kind: "pair", sigmaType, first, second };
+}
+
+export function mlttFirst(pair: MlttTerm): MlttFirst {
+  return { kind: "first", pair };
+}
+
+export function mlttSecond(pair: MlttTerm): MlttSecond {
+  return { kind: "second", pair };
 }
 
 export function mlttVariable(index: number): MlttVariable {
@@ -177,6 +254,77 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
       checkMlttType(term.left, mlttNatType(), context);
       checkMlttType(term.right, mlttNatType(), context);
       return mlttNatType();
+
+    case "nat-elim": {
+      const motiveType = weakHeadNormalizeMltt(inferMlttType(term.motive, context));
+      if (motiveType.kind !== "pi" || !areMlttTermsDefinitionallyEqual(motiveType.domain, mlttNatType())) {
+        throw new MlttTypeError("type-mismatch", `Expected the Nat eliminator motive to have a Pi type over Nat.`);
+      }
+      if (weakHeadNormalizeMltt(motiveType.codomain).kind !== "universe") {
+        throw new MlttTypeError("expected-type", "Expected the Nat eliminator motive to return a type.");
+      }
+      const motiveAtZero = mlttApplication(term.motive, mlttZero());
+      checkMlttType(term.zeroCase, motiveAtZero, context);
+
+      const shiftedMotive = shiftMlttTerm(term.motive, 1);
+      const successorType = mlttPi(
+        "n",
+        mlttNatType(),
+        mlttPi(
+          "previous",
+          mlttApplication(shiftedMotive, mlttVariable(0)),
+          mlttApplication(shiftMlttTerm(term.motive, 2), mlttSuccessor(mlttVariable(1))),
+        ),
+      );
+      checkMlttType(term.successorCase, successorType, context);
+      checkMlttType(term.scrutinee, mlttNatType(), context);
+      return mlttApplication(term.motive, term.scrutinee);
+    }
+
+    case "identity-type": {
+      const level = inferMlttUniverseLevel(term.type, context);
+      checkMlttType(term.left, term.type, context);
+      checkMlttType(term.right, term.type, context);
+      return mlttUniverse(level);
+    }
+
+    case "refl":
+      inferMlttUniverseLevel(term.type, context);
+      checkMlttType(term.term, term.type, context);
+      return mlttIdentityType(term.type, term.term, term.term);
+
+    case "sigma": {
+      const domainLevel = inferMlttUniverseLevel(term.domain, context);
+      const codomainLevel = inferMlttUniverseLevel(term.codomain, extendContext(context, term.domain));
+      return mlttUniverse(Math.max(domainLevel, codomainLevel));
+    }
+
+    case "pair": {
+      inferMlttUniverseLevel(term.sigmaType, context);
+      const sigmaType = weakHeadNormalizeMltt(term.sigmaType);
+      if (sigmaType.kind !== "sigma") {
+        throw new MlttTypeError("expected-pair", `Expected a Sigma type, but found ${printMlttTerm(sigmaType)}.`);
+      }
+      checkMlttType(term.first, sigmaType.domain, context);
+      checkMlttType(term.second, substituteMlttTop(term.first, sigmaType.codomain), context);
+      return term.sigmaType;
+    }
+
+    case "first": {
+      const pairType = weakHeadNormalizeMltt(inferMlttType(term.pair, context));
+      if (pairType.kind !== "sigma") {
+        throw new MlttTypeError("expected-pair", `Expected a Sigma pair, but found ${printMlttTerm(pairType)}.`);
+      }
+      return pairType.domain;
+    }
+
+    case "second": {
+      const pairType = weakHeadNormalizeMltt(inferMlttType(term.pair, context));
+      if (pairType.kind !== "sigma") {
+        throw new MlttTypeError("expected-pair", `Expected a Sigma pair, but found ${printMlttTerm(pairType)}.`);
+      }
+      return substituteMlttTop(mlttFirst(term.pair), pairType.codomain);
+    }
 
     case "variable": {
       const type = context[term.index];
@@ -252,6 +400,31 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
       }
       return left === current.left ? current : mlttNatAdd(left, current.right);
     }
+    if (current.kind === "nat-elim") {
+      const scrutinee = weakHeadNormalizeMltt(current.scrutinee);
+      if (scrutinee.kind === "zero") {
+        current = current.zeroCase;
+        continue;
+      }
+      if (scrutinee.kind === "successor") {
+        current = mlttApplication(
+          mlttApplication(current.successorCase, scrutinee.predecessor),
+          mlttNatElim(current.motive, current.zeroCase, current.successorCase, scrutinee.predecessor),
+        );
+        continue;
+      }
+      return scrutinee === current.scrutinee
+        ? current
+        : mlttNatElim(current.motive, current.zeroCase, current.successorCase, scrutinee);
+    }
+    if (current.kind === "first" || current.kind === "second") {
+      const pair = weakHeadNormalizeMltt(current.pair);
+      if (pair.kind === "pair") {
+        current = current.kind === "first" ? pair.first : pair.second;
+        continue;
+      }
+      return pair === current.pair ? current : current.kind === "first" ? mlttFirst(pair) : mlttSecond(pair);
+    }
     if (current.kind !== "application") return current;
 
     const functionTerm = weakHeadNormalizeMltt(current.functionTerm);
@@ -275,6 +448,25 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
       return mlttSuccessor(normalizeMlttTerm(head.predecessor));
     case "nat-add":
       return mlttNatAdd(normalizeMlttTerm(head.left), normalizeMlttTerm(head.right));
+    case "nat-elim":
+      return mlttNatElim(
+        normalizeMlttTerm(head.motive),
+        normalizeMlttTerm(head.zeroCase),
+        normalizeMlttTerm(head.successorCase),
+        normalizeMlttTerm(head.scrutinee),
+      );
+    case "identity-type":
+      return mlttIdentityType(normalizeMlttTerm(head.type), normalizeMlttTerm(head.left), normalizeMlttTerm(head.right));
+    case "refl":
+      return mlttRefl(normalizeMlttTerm(head.type), normalizeMlttTerm(head.term));
+    case "sigma":
+      return mlttSigma(head.parameterName, normalizeMlttTerm(head.domain), normalizeMlttTerm(head.codomain));
+    case "pair":
+      return mlttPair(normalizeMlttTerm(head.sigmaType), normalizeMlttTerm(head.first), normalizeMlttTerm(head.second));
+    case "first":
+      return mlttFirst(normalizeMlttTerm(head.pair));
+    case "second":
+      return mlttSecond(normalizeMlttTerm(head.pair));
     case "pi":
       return mlttPi(head.parameterName, normalizeMlttTerm(head.domain), normalizeMlttTerm(head.codomain));
     case "lambda":
@@ -324,6 +516,33 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
       return mlttSuccessor(shiftMlttTerm(term.predecessor, amount, cutoff));
     case "nat-add":
       return mlttNatAdd(shiftMlttTerm(term.left, amount, cutoff), shiftMlttTerm(term.right, amount, cutoff));
+    case "nat-elim":
+      return mlttNatElim(
+        shiftMlttTerm(term.motive, amount, cutoff),
+        shiftMlttTerm(term.zeroCase, amount, cutoff),
+        shiftMlttTerm(term.successorCase, amount, cutoff),
+        shiftMlttTerm(term.scrutinee, amount, cutoff),
+      );
+    case "identity-type":
+      return mlttIdentityType(
+        shiftMlttTerm(term.type, amount, cutoff),
+        shiftMlttTerm(term.left, amount, cutoff),
+        shiftMlttTerm(term.right, amount, cutoff),
+      );
+    case "refl":
+      return mlttRefl(shiftMlttTerm(term.type, amount, cutoff), shiftMlttTerm(term.term, amount, cutoff));
+    case "sigma":
+      return mlttSigma(term.parameterName, shiftMlttTerm(term.domain, amount, cutoff), shiftMlttTerm(term.codomain, amount, cutoff + 1));
+    case "pair":
+      return mlttPair(
+        shiftMlttTerm(term.sigmaType, amount, cutoff),
+        shiftMlttTerm(term.first, amount, cutoff),
+        shiftMlttTerm(term.second, amount, cutoff),
+      );
+    case "first":
+      return mlttFirst(shiftMlttTerm(term.pair, amount, cutoff));
+    case "second":
+      return mlttSecond(shiftMlttTerm(term.pair, amount, cutoff));
     case "variable":
       return term.index < cutoff ? term : mlttVariable(term.index + amount);
     case "pi":
@@ -358,6 +577,40 @@ function substituteMltt(term: MlttTerm, variableIndex: number, replacement: Mltt
         substituteMltt(term.left, variableIndex, replacement, binderDepth),
         substituteMltt(term.right, variableIndex, replacement, binderDepth),
       );
+    case "nat-elim":
+      return mlttNatElim(
+        substituteMltt(term.motive, variableIndex, replacement, binderDepth),
+        substituteMltt(term.zeroCase, variableIndex, replacement, binderDepth),
+        substituteMltt(term.successorCase, variableIndex, replacement, binderDepth),
+        substituteMltt(term.scrutinee, variableIndex, replacement, binderDepth),
+      );
+    case "identity-type":
+      return mlttIdentityType(
+        substituteMltt(term.type, variableIndex, replacement, binderDepth),
+        substituteMltt(term.left, variableIndex, replacement, binderDepth),
+        substituteMltt(term.right, variableIndex, replacement, binderDepth),
+      );
+    case "refl":
+      return mlttRefl(
+        substituteMltt(term.type, variableIndex, replacement, binderDepth),
+        substituteMltt(term.term, variableIndex, replacement, binderDepth),
+      );
+    case "sigma":
+      return mlttSigma(
+        term.parameterName,
+        substituteMltt(term.domain, variableIndex, replacement, binderDepth),
+        substituteMltt(term.codomain, variableIndex, replacement, binderDepth + 1),
+      );
+    case "pair":
+      return mlttPair(
+        substituteMltt(term.sigmaType, variableIndex, replacement, binderDepth),
+        substituteMltt(term.first, variableIndex, replacement, binderDepth),
+        substituteMltt(term.second, variableIndex, replacement, binderDepth),
+      );
+    case "first":
+      return mlttFirst(substituteMltt(term.pair, variableIndex, replacement, binderDepth));
+    case "second":
+      return mlttSecond(substituteMltt(term.pair, variableIndex, replacement, binderDepth));
     case "variable":
       return term.index === variableIndex + binderDepth ? shiftMlttTerm(replacement, binderDepth) : term;
     case "pi":
@@ -411,6 +664,39 @@ function structurallyEqualMlttTerms(
       const rightAdd = right as MlttNatAdd;
       return structurallyEqualMlttTerms(left.left, rightAdd.left, compareExternal) && structurallyEqualMlttTerms(left.right, rightAdd.right, compareExternal);
     }
+    case "nat-elim": {
+      const rightElim = right as MlttNatElim;
+      return structurallyEqualMlttTerms(left.motive, rightElim.motive, compareExternal) &&
+        structurallyEqualMlttTerms(left.zeroCase, rightElim.zeroCase, compareExternal) &&
+        structurallyEqualMlttTerms(left.successorCase, rightElim.successorCase, compareExternal) &&
+        structurallyEqualMlttTerms(left.scrutinee, rightElim.scrutinee, compareExternal);
+    }
+    case "identity-type": {
+      const rightIdentity = right as MlttIdentityType;
+      return structurallyEqualMlttTerms(left.type, rightIdentity.type, compareExternal) &&
+        structurallyEqualMlttTerms(left.left, rightIdentity.left, compareExternal) &&
+        structurallyEqualMlttTerms(left.right, rightIdentity.right, compareExternal);
+    }
+    case "refl": {
+      const rightRefl = right as MlttRefl;
+      return structurallyEqualMlttTerms(left.type, rightRefl.type, compareExternal) &&
+        structurallyEqualMlttTerms(left.term, rightRefl.term, compareExternal);
+    }
+    case "sigma": {
+      const rightSigma = right as MlttSigma;
+      return structurallyEqualMlttTerms(left.domain, rightSigma.domain, compareExternal) &&
+        structurallyEqualMlttTerms(left.codomain, rightSigma.codomain, compareExternal);
+    }
+    case "pair": {
+      const rightPair = right as MlttPair;
+      return structurallyEqualMlttTerms(left.sigmaType, rightPair.sigmaType, compareExternal) &&
+        structurallyEqualMlttTerms(left.first, rightPair.first, compareExternal) &&
+        structurallyEqualMlttTerms(left.second, rightPair.second, compareExternal);
+    }
+    case "first":
+      return structurallyEqualMlttTerms(left.pair, (right as MlttFirst).pair, compareExternal);
+    case "second":
+      return structurallyEqualMlttTerms(left.pair, (right as MlttSecond).pair, compareExternal);
     case "variable":
       return left.index === (right as MlttVariable).index;
     case "pi": {
@@ -449,6 +735,22 @@ function printMlttTermWorker(term: MlttTerm, names: readonly string[]): string {
       return `Succ<${printMlttTermWorker(term.predecessor, names)}>`;
     case "nat-add":
       return `NatAdd<${printMlttTermWorker(term.left, names)}, ${printMlttTermWorker(term.right, names)}>`;
+    case "nat-elim":
+      return `NatElim<${printMlttTermWorker(term.motive, names)}, ${printMlttTermWorker(term.zeroCase, names)}, ${printMlttTermWorker(term.successorCase, names)}, ${printMlttTermWorker(term.scrutinee, names)}>`;
+    case "identity-type":
+      return `Eq<${printMlttTermWorker(term.type, names)}, ${printMlttTermWorker(term.left, names)}, ${printMlttTermWorker(term.right, names)}>`;
+    case "refl":
+      return `Refl<${printMlttTermWorker(term.type, names)}, ${printMlttTermWorker(term.term, names)}>`;
+    case "sigma": {
+      const name = freshName(term.parameterName, names);
+      return `Sigma<(${name}: ${printMlttTermWorker(term.domain, names)}) -> ${printMlttTermWorker(term.codomain, [name, ...names])}>`;
+    }
+    case "pair":
+      return `Pair<${printMlttTermWorker(term.sigmaType, names)}, ${printMlttTermWorker(term.first, names)}, ${printMlttTermWorker(term.second, names)}>`;
+    case "first":
+      return `First<${printMlttTermWorker(term.pair, names)}>`;
+    case "second":
+      return `Second<${printMlttTermWorker(term.pair, names)}>`;
     case "variable":
       return names[term.index] ?? `#${term.index}`;
     case "pi": {

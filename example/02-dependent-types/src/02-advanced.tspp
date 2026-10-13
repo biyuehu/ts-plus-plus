@@ -89,3 +89,37 @@ export type VectorBuilder: Type1 =
 
 export declare const buildVector: VectorBuilder;
 export const pair = buildVector("item", 2); // Vector<2, string>
+
+// -----------------------------------------------------------------------------
+// 6. Nat eliminator 和 identity type
+// -----------------------------------------------------------------------------
+
+// NatElim<P, z, s, Zero> 会归约为 z，所以下面的等式由定义相等成立。
+export type NatZeroComputation: Type1 =
+  (P: (N: Nat) -> Type0) ->
+  (zeroCase: P<Zero>) ->
+  (successorCase: (N: Nat) -> (previous: P<N>) -> P<Succ<N>>) ->
+  Eq<P<Zero>, NatElim<P, zeroCase, successorCase, Zero>, zeroCase>;
+
+export type Reflexivity: Type1 =
+  (A: Type0) -> (value: A) -> Eq<A, value, value>;
+
+// Refl<A, value> 是 Eq<A, value, value> 的证明对象。
+export type ReflexivityIsStable: Type1 =
+  (A: Type0) ->
+  (value: A) ->
+  Eq<Eq<A, value, value>, Refl<A, value>, Refl<A, value>>;
+
+// -----------------------------------------------------------------------------
+// 7. Sigma 依赖对
+// -----------------------------------------------------------------------------
+
+// Sigma<(x: A) -> B> 的第二项类型可以依赖第一项。
+// Pair 是构造器，First / Second 是会参与归约的投影。
+export type SigmaFirstComputation: Type0 =
+  (N: Nat) ->
+  Eq<
+    Nat,
+    First<Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Refl<Nat, N>>>,
+    N
+  >;

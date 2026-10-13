@@ -56,6 +56,46 @@ describe("unittests:: MLTT core", () => {
     assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(mltt.mlttNatAdd(one, two), three));
   });
 
+  it("checks and computes the dependent Nat eliminator", () => {
+    const motive = mltt.mlttAnnotation(
+      mltt.mlttLambda("n", mltt.mlttNatType()),
+      mltt.mlttPi("n", mltt.mlttNatType(), type0),
+    );
+    const successorCase = mltt.mlttLambda(
+      "n",
+      mltt.mlttLambda("previous", mltt.mlttSuccessor(mltt.mlttVariable(0))),
+    );
+    const two = mltt.mlttSuccessor(mltt.mlttSuccessor(mltt.mlttZero()));
+    const eliminated = mltt.mlttNatElim(motive, mltt.mlttZero(), successorCase, two);
+
+    assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(mltt.inferMlttType(eliminated), mltt.mlttNatType()));
+    assert.deepEqual(mltt.normalizeMlttTerm(eliminated), two);
+  });
+
+  it("forms identity types and checks reflexivity proofs", () => {
+    const equality = mltt.mlttIdentityType(mltt.mlttNatType(), mltt.mlttZero(), mltt.mlttZero());
+    const reflexivity = mltt.mlttRefl(mltt.mlttNatType(), mltt.mlttZero());
+
+    assert.deepEqual(mltt.inferMlttType(equality), type0);
+    assert.deepEqual(mltt.inferMlttType(reflexivity), equality);
+    assert.doesNotThrow(() => mltt.checkMlttType(reflexivity, equality));
+  });
+
+  it("forms dependent pairs and reduces both projections", () => {
+    const sigma = mltt.mlttSigma(
+      "n",
+      mltt.mlttNatType(),
+      mltt.mlttIdentityType(mltt.mlttNatType(), mltt.mlttVariable(0), mltt.mlttVariable(0)),
+    );
+    const proof = mltt.mlttRefl(mltt.mlttNatType(), mltt.mlttZero());
+    const pair = mltt.mlttPair(sigma, mltt.mlttZero(), proof);
+
+    assert.deepEqual(mltt.inferMlttType(sigma), type0);
+    assert.deepEqual(mltt.inferMlttType(pair), sigma);
+    assert.deepEqual(mltt.normalizeMlttTerm(mltt.mlttFirst(pair)), mltt.mlttZero());
+    assert.deepEqual(mltt.normalizeMlttTerm(mltt.mlttSecond(pair)), proof);
+  });
+
   it("forms dependent Pi types", () => {
     assert.deepEqual(mltt.inferMlttType(polymorphicIdentityType), mltt.mlttUniverse(1));
   });

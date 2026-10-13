@@ -1162,9 +1162,16 @@ import {
   mlttApplication,
   MlttExternal,
   mlttExternal,
+  mlttFirst,
+  mlttIdentityType,
   mlttNatAdd,
+  mlttNatElim,
   mlttNatType,
+  mlttPair,
   mlttPi,
+  mlttRefl,
+  mlttSecond,
+  mlttSigma,
   mlttSuccessor,
   MlttTerm,
   MlttTypeError,
@@ -20848,6 +20855,72 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const left = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
         const right = getMlttTermFromTypeNode(reference.typeArguments[1], scope);
         return left && right ? mlttNatAdd(left, right) : undefined;
+      }
+      if (name === "NatElim") {
+        if (reference.typeArguments?.length !== 4) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'NatElim' requires a motive, zero case, successor case, and scrutinee.");
+          return undefined;
+        }
+        const [motiveNode, zeroCaseNode, successorCaseNode, scrutineeNode] = reference.typeArguments;
+        const motive = getMlttTermFromTypeNode(motiveNode, scope);
+        const zeroCase = getMlttTermFromTypeNode(zeroCaseNode, scope);
+        const successorCase = getMlttTermFromTypeNode(successorCaseNode, scope);
+        const scrutinee = getMlttTermFromTypeNode(scrutineeNode, scope);
+        return motive && zeroCase && successorCase && scrutinee
+          ? mlttNatElim(motive, zeroCase, successorCase, scrutinee)
+          : undefined;
+      }
+      if (name === "Eq") {
+        if (reference.typeArguments?.length !== 3) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Eq' requires a type and two terms.");
+          return undefined;
+        }
+        const [typeNode, leftNode, rightNode] = reference.typeArguments;
+        const type = getMlttTermFromTypeNode(typeNode, scope);
+        const left = getMlttTermFromTypeNode(leftNode, scope);
+        const right = getMlttTermFromTypeNode(rightNode, scope);
+        return type && left && right ? mlttIdentityType(type, left, right) : undefined;
+      }
+      if (name === "Refl") {
+        if (reference.typeArguments?.length !== 2) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Refl' requires a type and a term.");
+          return undefined;
+        }
+        const [typeNode, termNode] = reference.typeArguments;
+        const type = getMlttTermFromTypeNode(typeNode, scope);
+        const term = getMlttTermFromTypeNode(termNode, scope);
+        return type && term ? mlttRefl(type, term) : undefined;
+      }
+      if (name === "Sigma") {
+        if (reference.typeArguments?.length !== 1) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Sigma' requires one dependent binder, for example Sigma<(x: A) -> B>.");
+          return undefined;
+        }
+        const binder = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
+        if (binder?.kind !== "pi") {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "The argument to 'Sigma' must be a dependent function type.");
+          return undefined;
+        }
+        return mlttSigma(binder.parameterName, binder.domain, binder.codomain);
+      }
+      if (name === "Pair") {
+        if (reference.typeArguments?.length !== 3) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Pair' requires a Sigma type and two components.");
+          return undefined;
+        }
+        const [sigmaNode, firstNode, secondNode] = reference.typeArguments;
+        const sigma = getMlttTermFromTypeNode(sigmaNode, scope);
+        const first = getMlttTermFromTypeNode(firstNode, scope);
+        const second = getMlttTermFromTypeNode(secondNode, scope);
+        return sigma && first && second ? mlttPair(sigma, first, second) : undefined;
+      }
+      if (name === "First" || name === "Second") {
+        if (reference.typeArguments?.length !== 1) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `'${name}' requires exactly one pair.`);
+          return undefined;
+        }
+        const pair = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
+        return pair ? name === "First" ? mlttFirst(pair) : mlttSecond(pair) : undefined;
       }
       const universeMatch = name === "Type" ? [name, "0"] : /^Type(0|[1-9]\d*)$/.exec(name);
       let term: MlttTerm;

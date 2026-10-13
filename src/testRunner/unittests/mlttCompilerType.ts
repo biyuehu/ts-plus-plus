@@ -129,6 +129,54 @@ describe("unittests:: MLTT compiler type", () => {
     assert.match(invalid.getSemanticDiagnostics()[0].messageText.toString(), /Expected Nat, but inferred Type0/);
   });
 
+  it("exposes identity types, reflexivity, and the Nat eliminator", () => {
+    const proofs = createProgram(
+      "/proofs.tspp",
+      `
+      type NatZeroLaw: Type1 =
+        (P: (N: Nat) -> Type0) ->
+        (zeroCase: P<Zero>) ->
+        (successorCase: (N: Nat) -> (previous: P<N>) -> P<Succ<N>>) ->
+        Eq<P<Zero>, NatElim<P, zeroCase, successorCase, Zero>, zeroCase>;
+
+      type Reflexivity: Type1 =
+        (A: Type0) -> (value: A) -> Eq<A, value, value>;
+
+      type ReflexivityProof: Type1 =
+        (A: Type0) -> (value: A) -> Eq<Eq<A, value, value>, Refl<A, value>, Refl<A, value>>;
+    `,
+      { dependentTypes: true, noLib: true, strict: true },
+    );
+
+    assert.isEmpty(proofs.getSemanticDiagnostics());
+  });
+
+  it("exposes Sigma types, pair construction, and projections", () => {
+    const sigma = createProgram(
+      "/sigma.tspp",
+      `
+      type SigmaFirstLaw: Type0 =
+        (N: Nat) ->
+        Eq<
+          Nat,
+          First<Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Refl<Nat, N>>>,
+          N
+        >;
+
+      type SigmaSecondLaw: Type0 =
+        (N: Nat) ->
+        Eq<
+          Eq<Nat, N, N>,
+          Second<Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Refl<Nat, N>>>,
+          Refl<Nat, N>
+        >;
+    `,
+      { dependentTypes: true, noLib: true, strict: true },
+    );
+
+    assert.isEmpty(sigma.getSemanticDiagnostics());
+  });
+
   it("preserves the real universe of embedded TypeScript aliases", () => {
     const higherCodomain = createProgram(
       "/higher.tspp",
