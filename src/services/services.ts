@@ -3,6 +3,7 @@ import {
   ApplicableRefactorInfo,
   ApplyCodeActionCommandResult,
   AssignmentDeclarationKind,
+  AsyncMacroEvaluation,
   BaseType,
   BinaryExpression,
   BlockLike,
@@ -1647,6 +1648,7 @@ export function createLanguageService(
   let program: Program;
   let lastProjectVersion: string;
   let lastTypesRootVersion = 0;
+  const asyncMacroEvaluations = new Map<string, { readonly kind: "pending"; } | { readonly kind: "resolved"; readonly evaluation: AsyncMacroEvaluation; }>();
 
   const cancellationToken = host.getCancellationToken
     ? new CancellationTokenObject(host.getCancellationToken())
@@ -1776,6 +1778,29 @@ export function createLanguageService(
       getParsedCommandLine,
       jsDocParsingMode: host.jsDocParsingMode,
       getGlobalTypingsCacheLocation: maybeBind(host, host.getGlobalTypingsCacheLocation),
+      getResolvedAsyncMacroEvaluation: key => {
+        const entry = asyncMacroEvaluations.get(key);
+        if (entry?.kind !== "resolved") return undefined;
+        return entry.evaluation;
+      },
+      isAsyncMacroEvaluationPending: key => {
+        const entry = asyncMacroEvaluations.get(key);
+        return entry?.kind === "pending";
+      },
+      scheduleAsyncMacroEvaluation: (key, evaluation) => {
+        if (asyncMacroEvaluations.has(key)) return;
+        const pending = { kind: "pending" as const };
+        asyncMacroEvaluations.set(key, pending);
+        evaluation.then(result => {
+          if (asyncMacroEvaluations.get(key) !== pending) return;
+          asyncMacroEvaluations.set(key, { kind: "resolved", evaluation: result });
+          // The language-service API remains synchronous. Invalidate its current
+          // Program now, then consume this completed result during the next request.
+          program = undefined!;
+          lastProjectVersion = undefined!;
+          host.onAsyncMacroExpansionComplete?.();
+        });
+      },
     };
 
     const originalGetSourceFile = compilerHost.getSourceFile;

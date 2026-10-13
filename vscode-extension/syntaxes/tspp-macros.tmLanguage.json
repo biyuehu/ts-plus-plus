@@ -4,11 +4,13 @@
   "injectionSelector": "L:source.ts -comment -string",
   "patterns": [
     {
-      "match": "\\b(macro)(\\s+)(function)(\\s+)([A-Za-z_$][\\w$]*)",
+      "match": "^(\\s*)(?:(export)(\\s+))?(?:(default)(\\s+))?(?:(declare)(\\s+))?(?:(async)(\\s+))?(macro)(\\s+)(?=function\\b)",
       "captures": {
-        "1": { "name": "keyword.control.macro.tspp" },
-        "3": { "name": "storage.type.function.ts" },
-        "5": { "name": "entity.name.function.macro.tspp" }
+        "2": { "name": "keyword.control.export.ts" },
+        "4": { "name": "storage.modifier.ts" },
+        "6": { "name": "storage.modifier.ts" },
+        "8": { "name": "storage.modifier.async.ts" },
+        "10": { "name": "keyword.control.macro.tspp" }
       }
     },
     {
@@ -16,6 +18,64 @@
       "captures": {
         "1": { "name": "keyword.control.macro.tspp" }
       }
+    },
+    {
+      "name": "meta.function.with-signature.tspp",
+      "begin": "\\b(with)\\b",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.with.tspp" }
+      },
+      "end": "(?<=\\})(?!\\s*(?::|\\{))|(?=;)",
+      "patterns": [
+        {
+          "name": "meta.function.with-clause.tspp",
+          "begin": "\\G(\\s*)(\\{)",
+          "beginCaptures": {
+            "2": { "name": "punctuation.definition.block.begin.tspp" }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.block.end.tspp" }
+          },
+          "patterns": [
+            { "include": "#with-clause-body" }
+          ]
+        },
+        { "include": "source.ts#type-annotation" },
+        { "include": "source.ts#decl-block" },
+        { "include": "source.ts#comment" }
+      ]
     }
-  ]
+  ],
+  "repository": {
+    "with-clause-body": {
+      "patterns": [
+        { "include": "source.ts#comment" },
+        { "include": "source.ts#string" },
+        { "include": "source.ts#literal" },
+        {
+          "match": "([A-Za-z_$][\\w$]*)(\\s*)(:)",
+          "captures": {
+            "1": { "name": "variable.other.property.ts" },
+            "3": { "name": "punctuation.separator.key-value.ts" }
+          }
+        },
+        {
+          "name": "meta.object-literal.ts",
+          "begin": "\\{",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.block.begin.ts" }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.block.end.ts" }
+          },
+          "patterns": [
+            { "include": "#with-clause-body" }
+          ]
+        },
+        { "include": "$base" }
+      ]
+    }
+  }
 }

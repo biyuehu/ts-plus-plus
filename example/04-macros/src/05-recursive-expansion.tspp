@@ -1,0 +1,59 @@
+/**
+ * 宏可以返回另一个宏调用。编译器会持续展开返回的宏调用，
+ * 直到最终结果仅包含普通语句为止。
+ */
+import * as ts from "../../../built/local/typescript";
+
+interface RecursiveUser {
+  id: number;
+}
+
+export macro function beginRecursiveExpansion(
+  [target]: readonly ts.MacroTarget[],
+  context: ts.MacroContext,
+): ts.MacroResult {
+  // 返回对 continueRecursiveExpansion 的宏调用
+  return context.factory.createMacroInvocationStatement(
+    context.factory.createIdentifier("continueRecursiveExpansion"),
+    [context.factory.createIdentifier(target.name)],
+  );
+}
+
+export macro function continueRecursiveExpansion(
+  [target]: readonly ts.MacroTarget[],
+  context: ts.MacroContext,
+): ts.MacroResult {
+  // 返回对 finishRecursiveExpansion 的宏调用
+  return context.factory.createMacroInvocationStatement(
+    context.factory.createIdentifier("finishRecursiveExpansion"),
+    [context.factory.createIdentifier(target.name)],
+  );
+}
+
+export macro function finishRecursiveExpansion(
+  [target]: readonly ts.MacroTarget[],
+  context: ts.MacroContext,
+): ts.MacroResult {
+  // 生成普通 const 变量声明语句，终止递归展开
+  const literal = context.factory.createStringLiteral(target.name);
+  return context.factory.createVariableStatement(
+    [context.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+    context.factory.createVariableDeclarationList(
+      [
+        context.factory.createVariableDeclaration(
+          `${target.name}ExpandedName`,
+          undefined,
+          context.factory.createLiteralTypeNode(literal),
+          literal,
+        ),
+      ],
+      ts.NodeFlags.Const,
+    ),
+  );
+}
+
+// 递归展开流程：beginRecursiveExpansion -> continueRecursiveExpansion -> finishRecursiveExpansion -> const 声明。
+macro beginRecursiveExpansion(RecursiveUser);
+
+const checkedRecursiveName: "RecursiveUser" = RecursiveUserExpandedName;
+console.log(checkedRecursiveName);

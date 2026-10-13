@@ -1643,6 +1643,7 @@ export function transformTypeScript(context: TransformationContext): Transformer
       visitParameterList(node.parameters, visitor, context),
       /*type*/ undefined,
       visitFunctionBody(node.body, visitor, context) || factory.createBlock([]),
+      /*withClause*/ undefined,
     );
     if (isExportOfNamespace(node)) {
       const statements: Statement[] = [updated];

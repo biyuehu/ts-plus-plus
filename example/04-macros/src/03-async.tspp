@@ -1,0 +1,41 @@
+import * as ts from "../../../built/local/typescript";
+
+/**
+ * 异步宏使用 Promise 返回最终的 AST。这里故意等待一个计时器，用来证明编译器不是
+ * 只接受已经完成的 Promise，而是真的会等待异步工作结束。
+ */
+export async macro function exposeTypeNameLater(
+  [target]: readonly ts.MacroTarget[],
+  context: ts.MacroContext,
+) with {
+  timeout: { type: "benchmark", multiplier: 100 };
+}: Promise<ts.MacroResult> {
+  await new Promise<void>(resolve => setTimeout(resolve, 10));
+
+  return context.factory.createVariableStatement(
+    [context.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+    context.factory.createVariableDeclarationList(
+      [
+        context.factory.createVariableDeclaration(
+          `${target.name}AsyncName`,
+          undefined,
+          context.factory.createLiteralTypeNode(
+            context.factory.createStringLiteral(target.name),
+          ),
+          context.factory.createStringLiteral(target.name),
+        ),
+      ],
+      ts.NodeFlags.Const,
+    ),
+  );
+}
+
+export interface AsyncUser {
+  id: number;
+}
+
+// 预算写在宏声明上，所有调用共享；调用本身不需要重复配置。
+macro exposeTypeNameLater(AsyncUser);
+
+const checkedName: "AsyncUser" = AsyncUserAsyncName;
+console.log(checkedName);

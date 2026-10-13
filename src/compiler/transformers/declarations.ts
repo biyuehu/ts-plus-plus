@@ -1483,6 +1483,7 @@ export function transformDeclarations(context: TransformationContext): Transform
           updateParamsList(input, input.parameters),
           ensureType(input),
           /*body*/ undefined,
+          input.withClause,
         ));
         if (clean && resolver.isExpandoFunctionDeclaration(input) && shouldEmitFunctionProperties(input)) {
           const props = resolver.getPropertiesOfContainerFunction(input);
@@ -1542,6 +1543,7 @@ export function transformDeclarations(context: TransformationContext): Transform
             clean.parameters,
             clean.type,
             /*body*/ undefined,
+            clean.withClause,
           );
 
           const namespaceDeclaration = factory.updateModuleDeclaration(

@@ -21,4 +21,7 @@ if (ts.sys.setBlocking) {
   ts.sys.setBlocking();
 }
 
-ts.executeCommandLine(ts.sys, ts.noop, ts.sys.args);
+Promise.resolve(ts.executeCommandLineAsync(ts.sys, ts.noop, ts.sys.args)).catch(error => {
+  ts.sys.write(`${error instanceof Error ? error.stack ?? error.message : String(error)}${ts.sys.newLine}`);
+  ts.sys.exit?.(ts.ExitStatus.DiagnosticsPresent_OutputsSkipped);
+});

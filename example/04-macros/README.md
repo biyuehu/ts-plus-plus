@@ -6,13 +6,21 @@
 1. **检查 AST**：读取目标代码，不符合规则时产生编译错误；
 2. **替换 AST**：返回新的 TypeScript 语句，替换调用宏的位置。
 
-本示例就按这两项能力拆成两个互相独立的文件：
+本示例按能力拆成四个互相独立的文件：
 
 - [`01-check.tspp`](./src/01-check.tspp)：检查函数中是否包含 `return`；
-- [`02-transform.tspp`](./src/02-transform.tspp)：根据接口名称生成一个常量。
+- [`02-transform.tspp`](./src/02-transform.tspp)：根据接口名称生成一个常量；
+- [`03-async.tspp`](./src/03-async.tspp)：等待 Promise 后返回生成的 AST；
+- [`04-security-boundary.tspp`](./src/04-security-boundary.tspp)：展示 Node.js 权限和超时边界。
 
 每个文件都把目标声明、宏实现和宏调用放在一起，可以从上到下直接阅读。实际项目中，
 宏当然也可以导出到其他文件，再像普通函数一样 `import` 后使用。
+
+编译器不会为了取得宏函数而执行宏所在文件的全部顶层代码。它会从 `macro function`
+出发，按符号引用收集宏实际依赖的本地声明、具名 import 和副作用 import，再生成独立的宏
+执行模块。普通应用语句（例如日志、启动服务或写文件）不会仅仅因为同文件定义了宏就在
+编译期执行。宏显式导入的 `.ts`/`.tspp` helper 则会通过编译器的内存模块加载器执行，语义
+与普通 CommonJS 依赖一致。
 
 ## 先看最小用法
 
@@ -124,6 +132,101 @@ const checkedName: "User" = UserTypeName;
 悬浮窗和只读预览都不会修改源文件。修改编译器或 development extension 后，需要
 重新执行 `npm run build:compiler` 并重载 Extension Development Host。
 
+## 异步宏
+
+宏函数可以返回 `Promise<MacroResult>`。一次性命令行编译、悬浮预览和只读展开窗口会
+等待 Promise 完成：
+
+```ts
+export async macro function exposeTypeNameLater(
+  [target]: readonly ts.MacroTarget[],
+  context: ts.MacroContext,
+) with {
+  timeout: { type: "benchmark", multiplier: 100 };
+}: Promise<ts.MacroResult> {
+  await new Promise<void>(resolve => setTimeout(resolve, 10));
+  return context.factory.createVariableStatement(/* ... */);
+}
+```
+
+TypeScript Language Service 会先返回当前同步结果，在 Promise 完成后自动重建 Program 并
+请求编辑器刷新诊断。因此生成的声明会在短暂等待后参与补全、悬浮和正式类型检查；扩展
+提供的宏悬浮与最终源码预览则会直接等待完整展开结果。
+
+没有显式配置时，每个 Promise 宏最多等待 **10 秒**。宏声明可以通过结构化的
+`with { ... }` 块声明预算，所有调用共享该配置：
+
+```ts
+macro function fetchSchema(targets, context) with {
+  timeout: { type: "fixed", value: 500, unit: "ms" };
+}: Promise<ts.MacroResult> {
+  // ...
+}
+
+macro function generateBindings(targets, context) with {
+  timeout: { type: "fixed", value: 2, unit: "s" };
+}: Promise<ts.MacroResult> {
+  // ...
+}
+
+macro function analyzeProject(targets, context) with {
+  timeout: { type: "benchmark", multiplier: 100 };
+}: Promise<ts.MacroResult> {
+  // ...
+}
+
+macro analyzeProject(Project);
+```
+
+`fixed` 是固定墙钟时间，适合网络协议、外部工具等具有明确时间上限的任务。
+`benchmark` 是机器相对预算：编译器首次需要它时运行一次固定的整数运算基准，缓存本机
+耗时，再乘以 `multiplier`。这样 CPU 密集型宏在快慢机器上能获得相近的相对工作量。超过
+最终预算后，编译器会在对应的 `macro` 调用处报告实际毫秒数和预算来源。
+
+`with` 是函数声明上的通用 AST 语法，也允许写成 `function defaults() with {}: void {}`。
+第一版只有宏函数定义了 `timeout` 属性；普通函数暂时没有可用属性。属性名会按照函数
+种类检查，不接受未预定义的键。`timeout` 最多声明一次，数值必须是有限正数；固定预算
+换算成毫秒后不能超过 `2147483647`。固定预算使用
+`{ type: "fixed", value, unit: "ms" | "s" }`，机器相对预算使用
+`{ type: "benchmark", multiplier }`。两者组成标准的判别联合，不引入非 TypeScript 的数字
+后缀语法，也便于 IDE 根据 `type` 提供属性提示。重复、未知或无效的配置都会在对应属性上
+报错，宏不会执行。
+
+声明没有写 `with` 时使用默认配置，编译器不会在 `.d.tspp` 中补出默认值；源声明显式写了
+`with` 时则会保留到 `.d.tspp`，让依赖包导出的宏继续携带执行策略。JavaScript 输出
+会擦除 `with`，它不会成为运行时代码。
+
+目前 watch、incremental 和 solution build 仍走同步 builder 流程，尚不执行异步宏。
+
+## 权限与安全边界
+
+AST 宏不是权限沙箱。一次性异步编译和 development extension 会在独立 Node.js worker
+中重建编译程序并运行宏，所以同步死循环、内存耗尽或 `process.exit()` 不会直接终止编译器
+主线程。worker 仍以当前用户身份运行，因此宏
+可以执行普通 Node.js 代码，包括：
+
+- 读取和写入当前用户有权访问的文件；
+- 读取环境变量、加载本地模块和原生模块；
+- 发起网络请求或启动子进程；
+- 修改进程级状态，或者让构建结果依赖时间、机器和网络环境。
+
+[`04-security-boundary.tspp`](./src/04-security-boundary.tspp) 安全地读取了示例自己的
+`package.json`，再把包名写入生成的 AST。这证明宏拥有真实的 Node.js 模块访问能力，
+但示例不会写文件或访问网络。
+
+因此只应执行代码仓库或可信依赖提供的宏。安装一个包含宏的 npm 包，本质上也意味着在
+编译时授权它以编译器进程的权限执行代码。CI 中应锁定依赖版本，并尽量让宏保持纯函数：
+相同源码和配置始终产生相同结果。为了提供展开预览和宏执行诊断，development extension
+会在打开或编辑 `.tspp` 文件时自动求值其中的宏；不要用它打开包含不可信宏实现的项目。
+
+每条宏调用的预算同时约束同步执行和 **Promise 的等待时间**。超过预算后，编译器会先让
+worker 内的 Promise 超时逻辑生成精确诊断；对于同步死循环或阻塞 I/O，主线程会强制终止
+worker。worker 还设置了旧生代内存上限。不过这只是进程稳定性隔离，并不会阻止宏读写文件、
+访问网络或启动子进程，因此仍然只能运行可信宏。
+
+直接调用同步 `createProgram` 以及当前的 watch、incremental、solution build 路径仍在编译器
+线程中执行同步宏；这些入口完成异步调度改造前，不具备上述 worker 强制终止能力。
+
 ## 两个参数分别是什么
 
 ### `targets`
@@ -161,6 +264,21 @@ const checkedName: "User" = UserTypeName;
 | `Statement` | 用一条语句替换调用 |
 | `Statement[]` | 用多条语句替换调用 |
 | `MacroFailure` | 报告编译错误，不生成代码 |
+| `Promise<MacroResult>` | 等待完成后按以上规则处理结果 |
+
+## 递归展开
+
+[`05-recursive-expansion.tspp`](./src/05-recursive-expansion.tspp) 展示宏返回另一条宏调用：
+
+```text
+beginRecursiveExpansion
+  -> continueRecursiveExpansion
+  -> finishRecursiveExpansion
+  -> export const RecursiveUserExpandedName = "RecursiveUser"
+```
+
+一次性异步编译会继续展开返回结果中的顶层宏调用，直到只剩普通语句。为避免宏直接或间接
+返回自身造成无限递归，单条展开链最多执行 32 层；超过后会在最初的宏调用位置报告诊断。
 
 ## 运行示例
 
@@ -183,18 +301,27 @@ npm start
 
 ```text
 User
+AsyncUser
+tspp-example-04-macros
+RecursiveUser
 ```
 
 构建后可以对照查看：
 
 - `dist/01-check.js`：保留普通函数，但没有宏调用；
 - `dist/02-transform.js`：包含生成的 `UserTypeName`；
-- `dist/02-transform.d.tspp`：包含生成的公开声明。
+- `dist/02-transform.d.tspp`：包含生成的公开声明；
+- `dist/03-async.js`：包含 Promise 完成后生成的 `AsyncUserAsyncName`。
+- `dist/04-security-boundary.js`：包含从 `package.json` 读取并固化的包名。
+- `dist/05-recursive-expansion.js`：三阶段宏调用已经递归展开为最终常量。
 
 ## 当前边界
 
 - 宏调用必须是独立语句：`macro fn(Target1, Target2);`；
 - 目标必须是可解析为声明的标识符或属性访问；
-- 宏同步执行，不支持返回 `Promise`；
-- 当前只展开一轮，生成的 AST 不会再次作为宏调用执行；
-- 宏运行在编译器进程中，应只使用可信实现，并保持构建结果可重复。
+- 一次性 CLI、Language Service 和 IDE 展开预览支持 Promise；watch、incremental 和
+  solution build 暂时仍是同步流程；
+- Promise 宏默认等待上限是 10 秒，也可在声明上选择固定时间或本机基准倍率；同步阻塞
+  代码无法被同进程超时机制抢占；
+- 一次性异步编译会递归展开宏返回的顶层宏调用，最大深度为 32；
+- 宏没有沙箱，拥有编译器进程的 Node.js 权限，应只使用可信实现并保持构建结果可重复。

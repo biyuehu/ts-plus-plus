@@ -204,6 +204,7 @@ import {
   isExportSpecifier,
   isExpression,
   isFileLevelUniqueName,
+  isFunctionDeclaration,
   isFunctionLike,
   isGeneratedIdentifier,
   isGeneratedPrivateIdentifier,
@@ -420,6 +421,8 @@ import {
   version,
   VoidExpression,
   WhileStatement,
+  WithClause,
+  WithProperty,
   WithStatement,
   writeCommentRange,
   writeFile,
@@ -1705,6 +1708,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitEmptyStatement(/*isEmbeddedStatement*/ false);
         case SyntaxKind.ExpressionStatement:
           return emitExpressionStatement(node as ExpressionStatement);
+        case SyntaxKind.WithClause:
+          return emitWithClause(node as WithClause);
+        case SyntaxKind.WithProperty:
+          return emitWithProperty(node as WithProperty);
         case SyntaxKind.MacroInvocationStatement:
           return emitMacroInvocationStatement(node as MacroInvocationStatement);
         case SyntaxKind.IfStatement:
@@ -3135,6 +3142,26 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writeTrailingSemicolon();
   }
 
+  function emitWithClause(node: WithClause) {
+    writeKeyword("with");
+    writeSpace();
+    writePunctuation("{");
+    for (const property of node.properties) {
+      writeSpace();
+      emit(property);
+    }
+    if (node.properties.length) writeSpace();
+    writePunctuation("}");
+  }
+
+  function emitWithProperty(node: WithProperty) {
+    emit(node.name);
+    writePunctuation(":");
+    writeSpace();
+    emitExpression(node.value);
+    writeTrailingSemicolon();
+  }
+
   function emitIfStatement(node: IfStatement) {
     const openParenPos = emitTokenWithComment(SyntaxKind.IfKeyword, node.pos, writeKeyword, node);
     writeSpace();
@@ -3535,6 +3562,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
   function emitSignatureHead(node: SignatureDeclaration) {
     emitTypeParameters(node, node.typeParameters);
     emitParameters(node, node.parameters);
+    if (isFunctionDeclaration(node) && node.withClause) {
+      writeSpace();
+      emit(node.withClause);
+    }
     emitTypeAnnotation(node.type);
   }
 
