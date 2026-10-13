@@ -302,6 +302,7 @@ import {
   LeftHandSideExpression,
   LiteralToken,
   LiteralTypeNode,
+  MacroInvocationStatement,
   MappedTypeNode,
   MemberName,
   memoize,
@@ -728,6 +729,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     createEmptyStatement,
     createExpressionStatement,
     updateExpressionStatement,
+    createMacroInvocationStatement,
+    updateMacroInvocationStatement,
     createIfStatement,
     updateIfStatement,
     createDoStatement,
@@ -1578,6 +1581,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     const result: Modifier[] = [];
     if (flags & ModifierFlags.Export) result.push(createModifier(SyntaxKind.ExportKeyword));
     if (flags & ModifierFlags.Ambient) result.push(createModifier(SyntaxKind.DeclareKeyword));
+    if (flags & ModifierFlags.Macro) result.push(createModifier(SyntaxKind.MacroKeyword));
     if (flags & ModifierFlags.Default) result.push(createModifier(SyntaxKind.DefaultKeyword));
     if (flags & ModifierFlags.Const) result.push(createModifier(SyntaxKind.ConstKeyword));
     if (flags & ModifierFlags.Public) result.push(createModifier(SyntaxKind.PublicKeyword));
@@ -3988,6 +3992,25 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
+  function createMacroInvocationStatement(macro: EntityName, targets: readonly EntityName[]): MacroInvocationStatement {
+    const node = createBaseNode<MacroInvocationStatement>(SyntaxKind.MacroInvocationStatement);
+    node.macro = macro;
+    node.targets = createNodeArray(targets);
+    node.transformFlags |= TransformFlags.ContainsTypeScript |
+      propagateChildFlags(node.macro) |
+      propagateChildrenFlags(node.targets);
+    node.jsDoc = undefined;
+    return node;
+  }
+
+  // @api
+  function updateMacroInvocationStatement(node: MacroInvocationStatement, macro: EntityName, targets: readonly EntityName[]) {
+    return node.macro !== macro || node.targets !== targets
+      ? update(createMacroInvocationStatement(macro, targets), node)
+      : node;
+  }
+
+  // @api
   function createIfStatement(expression: Expression, thenStatement: Statement, elseStatement?: Statement) {
     const node = createBaseNode<IfStatement>(SyntaxKind.IfStatement);
     node.expression = expression;
@@ -4381,7 +4404,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     node.type = type;
     node.body = body;
 
-    if (!node.body || modifiersToFlags(node.modifiers) & ModifierFlags.Ambient) {
+    if (!node.body || modifiersToFlags(node.modifiers) & (ModifierFlags.Ambient | ModifierFlags.Macro)) {
       node.transformFlags = TransformFlags.ContainsTypeScript;
     }
     else {

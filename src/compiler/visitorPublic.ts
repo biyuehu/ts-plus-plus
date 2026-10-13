@@ -1314,6 +1314,14 @@ const visitEachChildTable: VisitEachChildTable = {
     );
   },
 
+  [SyntaxKind.MacroInvocationStatement]: function visitEachChildOfMacroInvocationStatement(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateMacroInvocationStatement(
+      node,
+      Debug.checkDefined(nodeVisitor(node.macro, visitor, isEntityName)),
+      nodesVisitor(node.targets, visitor, isEntityName),
+    );
+  },
+
   [SyntaxKind.IfStatement]: function visitEachChildOfIfStatement(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
     return context.factory.updateIfStatement(
       node,

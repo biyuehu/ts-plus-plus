@@ -293,6 +293,7 @@ import {
   LiteralExpression,
   LiteralLikeNode,
   LiteralTypeNode,
+  MacroInvocationStatement,
   makeIdentifierFromModuleName,
   MappedTypeNode,
   memoize,
@@ -1704,6 +1705,8 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitEmptyStatement(/*isEmbeddedStatement*/ false);
         case SyntaxKind.ExpressionStatement:
           return emitExpressionStatement(node as ExpressionStatement);
+        case SyntaxKind.MacroInvocationStatement:
+          return emitMacroInvocationStatement(node as MacroInvocationStatement);
         case SyntaxKind.IfStatement:
           return emitIfStatement(node as IfStatement);
         case SyntaxKind.DoStatement:
@@ -3120,6 +3123,16 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     if (!currentSourceFile || !isJsonSourceFile(currentSourceFile) || nodeIsSynthesized(node.expression)) {
       writeTrailingSemicolon();
     }
+  }
+
+  function emitMacroInvocationStatement(node: MacroInvocationStatement) {
+    writeKeyword("macro");
+    writeSpace();
+    emit(node.macro);
+    writePunctuation("(");
+    emitList(node, node.targets, ListFormat.CommaListElements);
+    writePunctuation(")");
+    writeTrailingSemicolon();
   }
 
   function emitIfStatement(node: IfStatement) {

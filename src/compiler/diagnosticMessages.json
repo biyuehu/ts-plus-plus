@@ -8619,5 +8619,25 @@
   "An MLTT Nat argument must have a non-negative safe integer literal type.": {
     "category": "Error",
     "code": 18077
+  },
+  "The 'macro' modifier can only appear on a function declaration.": {
+    "category": "Error",
+    "code": 18078
+  },
+  "'{0}' is not a macro function.": {
+    "category": "Error",
+    "code": 18079
+  },
+  "Macro '{0}' failed: {1}": {
+    "category": "Error",
+    "code": 18080
+  },
+  "Macro '{0}' returned a value that is not a statement, statement array, failure, or undefined.": {
+    "category": "Error",
+    "code": 18081
+  },
+  "Macro '{0}' returned a Promise. Asynchronous macros are not supported by this compiler version.": {
+    "category": "Error",
+    "code": 18082
   }
 }

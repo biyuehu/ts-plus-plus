@@ -1,0 +1,21 @@
+{
+  "name": "TS++ Compile-time Macros",
+  "scopeName": "tspp.macros",
+  "injectionSelector": "L:source.ts -comment -string",
+  "patterns": [
+    {
+      "match": "\\b(macro)(\\s+)(function)(\\s+)([A-Za-z_$][\\w$]*)",
+      "captures": {
+        "1": { "name": "keyword.control.macro.tspp" },
+        "3": { "name": "storage.type.function.ts" },
+        "5": { "name": "entity.name.function.macro.tspp" }
+      }
+    },
+    {
+      "match": "^\\s*(macro)(?=\\s+[A-Za-z_$][\\w$]*(?:\\s*\\.\\s*[A-Za-z_$][\\w$]*)*\\s*\\()",
+      "captures": {
+        "1": { "name": "keyword.control.macro.tspp" }
+      }
+    }
+  ]
+}

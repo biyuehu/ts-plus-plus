@@ -32,6 +32,7 @@ export default tseslint.config(
       "scripts/**/*.d.*",
       "internal/**",
       "coverage/**",
+      "example/**/dist/**",
     ],
   },
   eslint.configs.recommended,

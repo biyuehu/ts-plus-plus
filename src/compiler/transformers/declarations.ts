@@ -660,9 +660,9 @@ export function transformDeclarations(context: TransformationContext): Transform
   }
 
   function shouldPrintWithInitializer(node: Node): node is CanHaveLiteralInitializer & { initializer: Expression; } {
-    return canHaveLiteralInitializer(node)
-      && !!node.initializer
-      && resolver.isLiteralConstDeclaration(getParseTreeNode(node) as CanHaveLiteralInitializer); // TODO: Make safea
+    if (!canHaveLiteralInitializer(node) || !node.initializer) return false;
+    const parseTreeNode = getParseTreeNode(node, canHaveLiteralInitializer);
+    return !!parseTreeNode && resolver.isLiteralConstDeclaration(parseTreeNode);
   }
 
   function ensureNoInitializer(node: CanHaveLiteralInitializer) {
@@ -723,7 +723,9 @@ export function transformDeclarations(context: TransformationContext): Transform
   }
 
   function isDeclarationAndNotVisible(node: NamedDeclaration) {
-    node = getParseTreeNode(node) as NamedDeclaration;
+    // Macro expansion inserts synthesized declarations directly into the source tree. They do
+    // not have a parse-tree original, but still need the same visibility checks during .d.ts emit.
+    node = getParseTreeNode(node) as NamedDeclaration || node;
     switch (node.kind) {
       case SyntaxKind.FunctionDeclaration:
       case SyntaxKind.ModuleDeclaration:

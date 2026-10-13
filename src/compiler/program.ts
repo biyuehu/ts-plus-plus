@@ -42,6 +42,7 @@ import {
   createModeAwareCacheKey,
   createModuleResolutionCache,
   createMultiMap,
+  createPrinter,
   createProgramDiagnostics,
   CreateProgramOptions,
   createSourceFile,
@@ -64,6 +65,7 @@ import {
   directorySeparator,
   DirectoryStructureHost,
   emitFiles,
+  EmitHint,
   EmitHost,
   emitModuleKindIsNonNodeESM,
   EmitOnly,
@@ -102,6 +104,7 @@ import {
   forEachPropertyAssignment,
   forEachResolvedProjectReference as ts_forEachResolvedProjectReference,
   forEachTsConfigPropArray,
+  FunctionDeclaration,
   FunctionLikeDeclaration,
   getAllowJSCompilerOption,
   getAutomaticTypeDirectiveNames,
@@ -138,6 +141,7 @@ import {
   getResolvedTypeReferenceDirectiveFromResolution,
   getResolveJsonModule,
   getRootLength,
+  getScriptKindFromFileName,
   getSetExternalModuleIndicator,
   getSourceFileOfNode,
   getStrictOptionValue,
@@ -145,6 +149,7 @@ import {
   getSupportedExtensionsWithJsonIfResolveJsonModule,
   getTemporaryModuleResolutionState,
   getTextOfIdentifierOrLiteral,
+  getTextOfNode,
   getTransformers,
   getTsBuildInfoEmitOutputFilePath,
   getTsConfigObjectLiteralExpression,
@@ -166,6 +171,7 @@ import {
   ImportClause,
   ImportDeclaration,
   ImportOrExportSpecifier,
+  ImportSpecifier,
   importSyntaxAffectsModuleResolution,
   InternalEmitFlags,
   inverseJsxOptionMap,
@@ -199,6 +205,7 @@ import {
   isRequireCall,
   isRootedDiskPath,
   isSourceFileJS,
+  isStatement,
   isString,
   isStringLiteral,
   isStringLiteralLike,
@@ -209,6 +216,8 @@ import {
   length,
   LibResolution,
   libs,
+  MacroExpansion,
+  MacroInvocationStatement,
   mapDefined,
   maybeBind,
   memoize,
@@ -285,6 +294,7 @@ import {
   ScriptTarget,
   setParent,
   setParentRecursive,
+  setTextRange,
   skipTrivia,
   skipTypeChecking,
   some,
@@ -299,6 +309,7 @@ import {
   StringLiteralLike,
   StructureIsReused,
   supportedJSExtensionsFlat,
+  SymbolFlags,
   SymlinkCache,
   SyntaxKind,
   sys,
@@ -318,12 +329,15 @@ import {
   VariableStatement,
   Version,
   versionMajorMinor,
+  visitEachChild,
+  Visitor,
   walkUpParenthesizedExpressions,
   WriteFileCallback,
   WriteFileCallbackData,
   writeFileEnsuringDirectories,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
+import { hasTsppFeature } from "./tsppFeatures.js";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
   return forEachAncestorDirectory(searchPath, ancestor => {
@@ -1486,6 +1500,294 @@ function createCreateProgramOptions(rootNames: readonly string[], options: Compi
   };
 }
 
+let macroExpansionDepth = 0;
+
+interface MacroExpansionResult {
+  readonly sourceFiles: Map<string, ExpandedMacroSourceFile>;
+  readonly diagnostics: Diagnostic[];
+}
+
+interface ExpandedMacroSourceFile {
+  readonly text: string;
+  readonly invocations: readonly ExpandedMacroInvocation[];
+}
+
+interface ExpandedMacroInvocation {
+  readonly pos: number;
+  readonly start: number;
+  readonly end: number;
+  readonly macroName: string;
+  readonly statements: readonly Statement[];
+  readonly text: string;
+}
+
+function expandCompileTimeMacros(program: Program, host: CompilerHost): MacroExpansionResult {
+  const checker = program.getTypeChecker();
+  const options = program.getCompilerOptions();
+  const sourceFiles = new Map<string, ExpandedMacroSourceFile>();
+  const diagnostics: Diagnostic[] = [];
+  const printer = createPrinter();
+  const moduleCache = new Map<string, Record<string, unknown>>();
+  let macroProgram: Program | undefined;
+
+  function diagnostic(invocation: MacroInvocationStatement, messageText: string, code = Diagnostics.Macro_0_failed_Colon_1.code) {
+    const sourceFile = getSourceFileOfNode(invocation);
+    const start = skipTrivia(sourceFile.text, invocation.pos);
+    diagnostics.push({
+      category: DiagnosticCategory.Error,
+      code,
+      file: sourceFile,
+      start,
+      length: invocation.end - start,
+      messageText,
+    });
+  }
+
+  function getMacroProgram() {
+    if (!macroProgram) {
+      const macroHost = Object.create(host) as CompilerHost;
+      macroHost.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
+        const source = host.getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+        if (!source || source.isDeclarationFile || !fileExtensionIs(fileName, Extension.Tspp)) return source;
+        return createSourceFile(fileName, source.text, languageVersionOrOptions, /*setParentNodes*/ true, getScriptKindFromFileName(fileName));
+      };
+      macroProgram = createProgram({
+        rootNames: program.getRootFileNames(),
+        options: {
+          ...options,
+          declaration: false,
+          declarationMap: false,
+          emitDeclarationOnly: false,
+          incremental: false,
+          composite: false,
+          module: ModuleKind.CommonJS,
+          noEmit: false,
+          noEmitOnError: false,
+          sourceMap: false,
+        },
+        host: macroHost,
+      });
+    }
+    return macroProgram;
+  }
+
+  function evaluateMacroModule(sourceFile: SourceFile): Record<string, unknown> {
+    const cached = moduleCache.get(sourceFile.fileName);
+    if (cached) return cached;
+
+    const buildProgram = getMacroProgram();
+    const buildSource = buildProgram.getSourceFile(sourceFile.fileName);
+    if (!buildSource) throw new Error(`Macro source '${sourceFile.fileName}' is not part of the program.`);
+    let javascript = "";
+    buildProgram.emit(
+      buildSource,
+      (fileName, text) => {
+        if (/\.(?:c|m)?js$/i.test(fileName)) javascript = text;
+      },
+      /*cancellationToken*/ undefined,
+      /*emitOnlyDtsFiles*/ false,
+    );
+    if (!javascript) throw new Error(`Macro source '${sourceFile.fileName}' did not produce JavaScript.`);
+
+    const names = sourceFile.statements
+      .filter(statement => statement.kind === SyntaxKind.FunctionDeclaration && hasSyntacticModifier(statement, ModifierFlags.Macro))
+      .map(statement => (statement as FunctionDeclaration).name && getTextOfNode((statement as FunctionDeclaration).name!))
+      .filter((name): name is string => !!name);
+    javascript = `module.exports.__tsppLocalMacros = {${names.map(name => `${JSON.stringify(name)}: typeof ${name} === "function" ? ${name} : undefined`).join(",")}};\n${javascript}`;
+
+    const nativeRequire = (require("module") as typeof import("module")).createRequire(sourceFile.fileName);
+    const moduleRecord: { exports: Record<string, unknown>; } = { exports: {} };
+    // eslint-disable-next-line no-new-func -- The macro module is compiler-generated JavaScript and requires a CommonJS wrapper.
+    const execute = new Function("require", "exports", "module", "__filename", "__dirname", javascript);
+    try {
+      execute(nativeRequire, moduleRecord.exports, moduleRecord, sourceFile.fileName, (require("path") as typeof import("path")).dirname(sourceFile.fileName));
+    }
+    catch (e) {
+      // Function declarations are hoisted and captured before module evaluation. This lets a
+      // same-file macro generate names that later top-level statements refer to.
+      if (!moduleRecord.exports.__tsppLocalMacros) throw e;
+    }
+    moduleCache.set(sourceFile.fileName, moduleRecord.exports);
+    return moduleRecord.exports;
+  }
+
+  function loadExternalMacro(invocation: MacroInvocationStatement): unknown {
+    let left: Node = invocation.macro;
+    while (left.kind === SyntaxKind.QualifiedName) left = (left as any).left;
+    const alias = checker.getSymbolAtLocation(left);
+    const localName = getTextOfNode(left);
+    let aliasDeclaration = alias?.declarations?.[0];
+    let importAncestor: Node | undefined = aliasDeclaration;
+    while (importAncestor && importAncestor.kind !== SyntaxKind.ImportDeclaration) importAncestor = importAncestor.parent;
+    if (!importAncestor) {
+      aliasDeclaration = undefined;
+      for (const statement of getSourceFileOfNode(invocation).statements) {
+        if (statement.kind !== SyntaxKind.ImportDeclaration) continue;
+        const clause = (statement as ImportDeclaration).importClause;
+        if (clause?.name && getTextOfNode(clause.name) === localName) {
+          aliasDeclaration = clause;
+          break;
+        }
+        const bindings = clause?.namedBindings;
+        if (bindings?.kind === SyntaxKind.NamespaceImport && getTextOfNode(bindings.name) === localName) {
+          aliasDeclaration = bindings;
+          break;
+        }
+        if (bindings?.kind === SyntaxKind.NamedImports) {
+          const specifier = bindings.elements.find(element => getTextOfNode(element.name) === localName);
+          if (specifier) {
+            aliasDeclaration = specifier;
+            break;
+          }
+        }
+      }
+    }
+    let current: Node | undefined = aliasDeclaration;
+    while (current && current.kind !== SyntaxKind.ImportDeclaration) current = current.parent;
+    if (!current || current.kind !== SyntaxKind.ImportDeclaration) throw new Error(`The import for macro '${getTextOfNode(invocation.macro)}' could not be determined.`);
+    const importDeclaration = current as ImportDeclaration;
+    if (!isStringLiteral(importDeclaration.moduleSpecifier)) return undefined;
+    const nativeRequire = (require("module") as typeof import("module")).createRequire(getSourceFileOfNode(invocation).fileName);
+    let value: any = nativeRequire(importDeclaration.moduleSpecifier.text);
+    if (aliasDeclaration?.kind === SyntaxKind.ImportSpecifier) {
+      const specifier = aliasDeclaration as ImportSpecifier;
+      value = value[getTextOfNode(specifier.propertyName ?? specifier.name)];
+    }
+    else if (aliasDeclaration?.kind === SyntaxKind.ImportClause) {
+      value = value.default;
+    }
+    let name: any = invocation.macro;
+    const suffix: string[] = [];
+    while (name.kind === SyntaxKind.QualifiedName) {
+      suffix.unshift(getTextOfNode(name.right));
+      name = name.left;
+    }
+    for (const part of suffix) value = value?.[part];
+    if (value === undefined) throw new Error(`Module '${importDeclaration.moduleSpecifier.text}' does not export macro '${getTextOfNode(invocation.macro)}'.`);
+    return value;
+  }
+
+  function executeInvocation(invocation: MacroInvocationStatement): readonly Statement[] {
+    const invocationSource = getSourceFileOfNode(invocation);
+    const macroName = getTextOfNode(invocation.macro);
+    let symbol = checker.getSymbolAtLocation(invocation.macro);
+    if (!symbol && invocation.macro.kind === SyntaxKind.Identifier) {
+      symbol = checker.resolveName(macroName, invocation, SymbolFlags.Value | SymbolFlags.Alias, /*excludeGlobals*/ false);
+    }
+    if (symbol && symbol.flags & SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+    const localName = macroName.includes(".") ? undefined : macroName;
+    const declaration = (symbol?.declarations?.find(node => node.kind === SyntaxKind.FunctionDeclaration && hasSyntacticModifier(node, ModifierFlags.Macro)) ??
+      invocationSource.statements.find(node => node.kind === SyntaxKind.FunctionDeclaration && hasSyntacticModifier(node, ModifierFlags.Macro) && getTextOfNode((node as FunctionDeclaration).name!) === localName)) as FunctionDeclaration | undefined;
+    let macro: unknown;
+    try {
+      if (declaration?.body) {
+        const macroSource = getSourceFileOfNode(declaration);
+        const declarationName = getTextOfNode(declaration.name!);
+        const exports = evaluateMacroModule(macroSource);
+        macro = (exports.__tsppLocalMacros as Record<string, unknown> | undefined)?.[declarationName] ?? exports[declarationName];
+      }
+      else {
+        macro = loadExternalMacro(invocation);
+      }
+      if (typeof macro !== "function") {
+        const available = declaration?.body ? ` Available exports: ${Object.keys(evaluateMacroModule(getSourceFileOfNode(declaration))).join(", ") || "(none)"}.` : "";
+        throw new Error(`The implementation of macro '${macroName}' could not be loaded.${available}`);
+      }
+
+      const targets = invocation.targets.map(target => {
+        let targetSymbol = checker.getSymbolAtLocation(target);
+        if (!targetSymbol && target.kind === SyntaxKind.Identifier) {
+          targetSymbol = checker.resolveName(
+            getTextOfNode(target),
+            invocation,
+            SymbolFlags.Value | SymbolFlags.Type | SymbolFlags.Namespace | SymbolFlags.Alias,
+            /*excludeGlobals*/ false,
+          );
+        }
+        if (targetSymbol && targetSymbol.flags & SymbolFlags.Alias) targetSymbol = checker.getAliasedSymbol(targetSymbol);
+        if (!targetSymbol && target.kind === SyntaxKind.Identifier) {
+          targetSymbol = invocationSource.locals?.get(target.escapedText) ?? invocationSource.symbol?.exports?.get(target.escapedText);
+        }
+        const declarations = targetSymbol?.declarations ?? [];
+        const node = targetSymbol?.valueDeclaration ?? declarations[0];
+        if (!targetSymbol || !node) throw new Error(`Target '${getTextOfNode(target)}' could not be resolved.`);
+        return {
+          name: getTextOfNode(target),
+          symbol: targetSymbol,
+          node,
+          declarations,
+          sourceFile: getSourceFileOfNode(node),
+        };
+      });
+      const reported: string[] = [];
+      const invokeMacro = macro as (targets: readonly unknown[], context: Record<string, unknown>) => unknown;
+      const result = invokeMacro(targets, {
+        program,
+        checker,
+        factory,
+        typescript: { factory },
+        sourceFile: invocationSource,
+        macroInvocation: invocation,
+        report: (item: { message: string; }) => reported.push(item.message),
+        fail: (message: string) => ({ kind: "macro-failure", diagnostics: [{ message }] }),
+      });
+      const resultRecord = result && typeof result === "object" ? result as Record<string, unknown> : undefined;
+      if (typeof resultRecord?.then === "function") {
+        diagnostic(invocation, `Macro '${macroName}' returned a Promise. Asynchronous macros are not supported by this compiler version.`, Diagnostics.Macro_0_returned_a_Promise_Asynchronous_macros_are_not_supported_by_this_compiler_version.code);
+        return emptyArray;
+      }
+      if (reported.length) {
+        for (const message of reported) diagnostic(invocation, `Macro '${macroName}' failed: ${message}`);
+      }
+      if (resultRecord?.kind === "macro-failure") {
+        const failureDiagnostics = Array.isArray(resultRecord.diagnostics) ? resultRecord.diagnostics : [];
+        for (const item of failureDiagnostics) {
+          const message = item && typeof item === "object" && hasProperty(item, "message") ? String(item.message) : String(item);
+          diagnostic(invocation, `Macro '${macroName}' failed: ${message}`);
+        }
+        return emptyArray;
+      }
+      if (result === undefined || Array.isArray(result) && result.length === 0) return emptyArray;
+      const statements = Array.isArray(result) ? result : [result];
+      if (!statements.every(statement => statement && typeof statement === "object" && hasProperty(statement, "kind") && isStatement(statement as Node))) {
+        diagnostic(invocation, `Macro '${macroName}' returned a value that is not a statement, statement array, failure, or undefined.`, Diagnostics.Macro_0_returned_a_value_that_is_not_a_statement_statement_array_failure_or_undefined.code);
+        return emptyArray;
+      }
+      return statements as Statement[];
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      diagnostic(invocation, `Macro '${macroName}' failed: ${message}`);
+      return emptyArray;
+    }
+  }
+
+  for (const sourceFile of program.getSourceFiles()) {
+    if (sourceFile.isDeclarationFile) continue;
+    const invocations: MacroInvocationStatement[] = [];
+    forEachChildRecursively(sourceFile, node => {
+      if (node.kind === SyntaxKind.MacroInvocationStatement) invocations.push(node as MacroInvocationStatement);
+      return undefined;
+    });
+    if (!invocations.length) continue;
+    sourceFiles.set(sourceFile.fileName, {
+      text: sourceFile.text,
+      invocations: invocations.map(invocation => {
+        const statements = executeInvocation(invocation);
+        return {
+          pos: invocation.pos,
+          start: skipTrivia(sourceFile.text, invocation.pos),
+          end: invocation.end,
+          macroName: getTextOfNode(invocation.macro),
+          statements,
+          text: statements.map(statement => printer.printNode(EmitHint.Unspecified, statement, sourceFile)).join("\n"),
+        };
+      }),
+    });
+  }
+  return { sourceFiles, diagnostics };
+}
+
 /**
  * Create a new 'Program' instance. A Program is an immutable collection of 'SourceFile's and a 'CompilerOptions'
  * that represent a compilation unit.
@@ -1964,6 +2266,78 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
   performance.mark("afterProgram");
   performance.measure("Program", "beforeProgram", "afterProgram");
   tracing?.pop();
+
+  if (macroExpansionDepth === 0 && hasTsppFeature(options, "macros")) {
+    macroExpansionDepth++;
+    try {
+      const expansion = expandCompileTimeMacros(program, host);
+      if (expansion.sourceFiles.size) {
+        const expandedHost = Object.create(host) as CompilerHost;
+        expandedHost.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
+          const expanded = expansion.sourceFiles.get(fileName) ?? expansion.sourceFiles.get(normalizePath(fileName));
+          if (expanded) {
+            const sourceFile = createSourceFile(fileName, expanded.text, languageVersionOrOptions, /*setParentNodes*/ true, getScriptKindFromFileName(fileName));
+            const invocationMap = new Map(expanded.invocations.map(invocation => [`${invocation.pos}:${invocation.end}`, invocation.statements]));
+            const visitor: Visitor = node => {
+              if (node.kind === SyntaxKind.MacroInvocationStatement) {
+                const statements = invocationMap.get(`${node.pos}:${node.end}`);
+                // Keep the original invocation in the tree so editor positions and symbol
+                // references remain tied to the user's source. The TypeScript transformer
+                // erases it before emit; generated statements follow it in the same scope.
+                if (statements) {
+                  // Synthesized statements have no source coordinates. Give their roots an
+                  // empty range at the invocation boundary so syntax-list scanning can skip
+                  // them while editor positions continue to address only original text.
+                  for (const statement of statements) {
+                    setTextRange(statement, { pos: node.end, end: node.end });
+                  }
+                  return [node, ...statements];
+                }
+              }
+              return visitEachChild(node, visitor, /*context*/ undefined);
+            };
+            return setParentRecursive(visitEachChild(sourceFile, visitor, /*context*/ undefined), /*incremental*/ false);
+          }
+          return host.getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+        };
+        const expandedProgram = createProgram({
+          rootNames,
+          options,
+          host: expandedHost,
+          projectReferences,
+          configFileParsingDiagnostics,
+          typeScriptVersion,
+        });
+        expandedProgram.getMacroExpansions = (fileName?: string): readonly MacroExpansion[] => {
+          const result: MacroExpansion[] = [];
+          for (const [expandedFileName, expanded] of expansion.sourceFiles) {
+            if (fileName !== undefined && comparePaths(expandedFileName, fileName, currentDirectory, !host.useCaseSensitiveFileNames()) !== Comparison.EqualTo) continue;
+            for (const invocation of expanded.invocations) {
+              result.push({
+                fileName: expandedFileName,
+                start: invocation.start,
+                length: invocation.end - invocation.start,
+                macroName: invocation.macroName,
+                text: invocation.text,
+              });
+            }
+          }
+          return result;
+        };
+        if (expansion.diagnostics.length) {
+          const original = expandedProgram.getSemanticDiagnostics.bind(expandedProgram) as (...args: any[]) => readonly Diagnostic[];
+          (expandedProgram as any).getSemanticDiagnostics = (sourceFile?: SourceFile, ...args: any[]) => {
+            const own = sourceFile ? expansion.diagnostics.filter(diagnostic => diagnostic.file?.fileName === sourceFile.fileName) : expansion.diagnostics;
+            return [...original(sourceFile, ...args), ...own];
+          };
+        }
+        return expandedProgram;
+      }
+    }
+    finally {
+      macroExpansionDepth--;
+    }
+  }
 
   return program;
 

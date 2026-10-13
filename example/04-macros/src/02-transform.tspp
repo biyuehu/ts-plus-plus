@@ -1,0 +1,42 @@
+/**
+ * 展示：宏返回 TypeScript AST，用生成的语句替换宏调用。
+ * 运行：npm run build && npm start
+ * 预期：输出 User。
+ */
+import * as ts from "../../../built/local/typescript";
+
+export interface User {
+  id: number;
+  name: string;
+}
+
+export macro function exposeTypeName(
+  [target]: readonly ts.MacroTarget[],
+  context: ts.MacroContext,
+): ts.MacroReturn {
+  // 下面的 factory 调用构造：
+  //   export const UserTypeName: "User" = "User";
+  const declaration = context.factory.createVariableDeclaration(
+    `${target.name}TypeName`,
+    undefined,
+    context.factory.createLiteralTypeNode(
+      context.factory.createStringLiteral(target.name),
+    ),
+    context.factory.createStringLiteral(target.name),
+  );
+
+  return context.factory.createVariableStatement(
+    [context.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+    context.factory.createVariableDeclarationList(
+      [declaration],
+      ts.NodeFlags.Const,
+    ),
+  );
+}
+
+// 这条宏调用会被上面返回的 VariableStatement 替换。
+macro exposeTypeName(User);
+
+// 生成结果会继续参与同一次类型检查，也会进入 JavaScript 和声明文件。
+const checkedName: "User" = UserTypeName;
+console.log(checkedName);

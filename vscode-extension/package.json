@@ -22,6 +22,11 @@
         "scopeName": "tspp.nominal-declarations",
         "path": "./syntaxes/tspp-nominal-declarations.tmLanguage.json",
         "injectTo": ["source.ts"]
+      },
+      {
+        "scopeName": "tspp.macros",
+        "path": "./syntaxes/tspp-macros.tmLanguage.json",
+        "injectTo": ["source.ts"]
       }
     ],
     "commands": [
@@ -44,7 +49,21 @@
       {
         "command": "tspp.openNewtypeAndDataExample",
         "title": "TS++: Open Newtype and Data Example"
+      },
+      {
+        "command": "tspp.showExpandedSource",
+        "title": "TS++: Show Expanded Source",
+        "icon": "$(preview)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "tspp.showExpandedSource",
+          "when": "editorLangId == typescript && resourceExtname == .tspp",
+          "group": "navigation@10"
+        }
+      ]
+    }
   }
 }
