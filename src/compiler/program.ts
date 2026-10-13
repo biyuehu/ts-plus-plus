@@ -1805,18 +1805,19 @@ function expandCompileTimeMacros(program: Program, host: CompilerHost, allowAsyn
       length: invocation.end - invocationStart,
       macroName,
     });
-    let macro: unknown;
+    let macroFunction: unknown;
     try {
       if (declaration?.body) {
         const macroSource = getSourceFileOfNode(declaration);
         const declarationName = getTextOfNode(declaration.name!);
         const exports = evaluateMacroModule(macroSource);
-        macro = (exports.__tsppLocalMacros as Record<string, unknown> | undefined)?.[declarationName] ?? exports[declarationName];
+        const localMacros = exports.__tsppLocalMacros as Record<string, unknown> | undefined;
+        macroFunction = localMacros === undefined ? exports[declarationName] : localMacros[declarationName] ?? exports[declarationName];
       }
       else {
-        macro = loadExternalMacro(invocation, invocationSource);
+        macroFunction = loadExternalMacro(invocation, invocationSource);
       }
-      if (typeof macro !== "function") {
+      if (typeof macroFunction !== "function") {
         const available = declaration?.body ? ` Available exports: ${Object.keys(evaluateMacroModule(getSourceFileOfNode(declaration))).join(", ") || "(none)"}.` : "";
         throw new Error(`The implementation of macro '${macroName}' could not be loaded.${available}`);
       }
@@ -1860,7 +1861,7 @@ function expandCompileTimeMacros(program: Program, host: CompilerHost, allowAsyn
         endInvocation();
         return emptyArray;
       }
-      const invokeMacro = macro as (targets: readonly unknown[], context: Record<string, unknown>) => unknown;
+      const invokeMacro = macroFunction as (targets: readonly unknown[], context: Record<string, unknown>) => unknown;
       const result = invokeMacro(targets, {
         program,
         checker,
