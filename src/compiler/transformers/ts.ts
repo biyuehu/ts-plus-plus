@@ -702,6 +702,13 @@ export function transformTypeScript(context: TransformationContext): Transformer
         // TypeScript type-only declarations are elided.
         return factory.createNotEmittedStatement(node);
 
+      case SyntaxKind.NewtypeDeclaration:
+      case SyntaxKind.DataDeclaration:
+        // TODO(emit): a newtype constructor lowers to the identity function and a data variant lowers to an object
+        // carrying `_tag`. Until then the whole declaration is elided like a type alias, so referring to one of
+        // the constructors at runtime is a ReferenceError.
+        return factory.createNotEmittedStatement(node);
+
       case SyntaxKind.NamespaceExportDeclaration:
         // TypeScript namespace export declarations are elided.
         return undefined;

@@ -224,6 +224,8 @@ export const enum SyntaxKind {
   BigIntKeyword,
   OverrideKeyword,
   OfKeyword,
+  NewtypeKeyword,
+  DataKeyword,
   DeferKeyword, // LastKeyword and LastToken and LastContextualKeyword
 
   // Parse tree nodes
@@ -337,6 +339,8 @@ export const enum SyntaxKind {
   ClassDeclaration,
   InterfaceDeclaration,
   TypeAliasDeclaration,
+  NewtypeDeclaration,
+  DataDeclaration,
   EnumDeclaration,
   ModuleDeclaration,
   ModuleBlock,
@@ -391,6 +395,9 @@ export const enum SyntaxKind {
 
   // Enum
   EnumMember,
+
+  // Data
+  DataVariant,
 
   // Top-level nodes
   SourceFile,
@@ -639,6 +646,8 @@ export type KeywordSyntaxKind =
   | SyntaxKind.NumberKeyword
   | SyntaxKind.ObjectKeyword
   | SyntaxKind.OfKeyword
+  | SyntaxKind.NewtypeKeyword
+  | SyntaxKind.DataKeyword
   | SyntaxKind.PackageKeyword
   | SyntaxKind.PrivateKeyword
   | SyntaxKind.ProtectedKeyword
@@ -1202,6 +1211,9 @@ export type HasChildren =
   | ShorthandPropertyAssignment
   | SpreadAssignment
   | EnumMember
+  | NewtypeDeclaration
+  | DataDeclaration
+  | DataVariant
   | SourceFile
   | PartiallyEmittedExpression
   | CommaListExpression;
@@ -1266,6 +1278,9 @@ export type HasJSDoc =
   | ThrowStatement
   | TryStatement
   | TypeAliasDeclaration
+  | NewtypeDeclaration
+  | DataDeclaration
+  | DataVariant
   | TypeParameterDeclaration
   | VariableDeclaration
   | VariableStatement
@@ -1430,6 +1445,9 @@ export type IsContainer =
   | InterfaceDeclaration
   | ModuleDeclaration
   | TypeAliasDeclaration
+  | NewtypeDeclaration
+  | DataDeclaration
+  | DataVariant
   | MappedTypeNode
   | IndexSignatureDeclaration
   | SourceFile
@@ -3635,6 +3653,31 @@ export interface TypeAliasDeclaration extends DeclarationStatement, JSDocContain
   /** The explicitly declared result kind of this type alias. An omitted result kind defaults to `Type0`. */
   readonly kindType?: KindNode;
   readonly type: TypeNode;
+}
+
+export interface NewtypeDeclaration extends DeclarationStatement, JSDocContainer, LocalsContainer {
+  readonly kind: SyntaxKind.NewtypeDeclaration;
+  readonly modifiers?: NodeArray<ModifierLike>;
+  readonly name: Identifier;
+  readonly typeParameters?: NodeArray<TypeParameterDeclaration>;
+  readonly type: TypeNode;
+}
+
+export interface DataVariant extends NamedDeclaration, JSDocContainer, LocalsContainer {
+  readonly kind: SyntaxKind.DataVariant;
+  readonly parent: DataDeclaration;
+  /** Shared with the enclosing `data` declaration by the parser, so that a variant is exported together with it. */
+  readonly modifiers?: NodeArray<ModifierLike>;
+  readonly name: Identifier;
+  readonly parameters?: NodeArray<ParameterDeclaration>;
+}
+
+export interface DataDeclaration extends DeclarationStatement, JSDocContainer, LocalsContainer {
+  readonly kind: SyntaxKind.DataDeclaration;
+  readonly modifiers?: NodeArray<ModifierLike>;
+  readonly name: Identifier;
+  readonly typeParameters?: NodeArray<TypeParameterDeclaration>;
+  readonly variants: NodeArray<DataVariant>;
 }
 
 export interface EnumMember extends NamedDeclaration, JSDocContainer {
@@ -6095,6 +6138,7 @@ export interface Symbol {
 /** @internal */
 export interface SymbolLinks {
     _symbolLinksBrand: any;
+    nominalBrand?: Symbol;                      // Synthetic brand property of a newtype / data type
     immediateTarget?: Symbol;                   // Immediate target of an alias. May be another alias. Do not access directly, use `checker.getImmediateAliasedSymbol` instead.
     aliasTarget?: Symbol,                       // Resolved (non-alias) target of an alias
     target?: Symbol;                            // Original version of an instantiated symbol
@@ -9157,6 +9201,12 @@ export interface NodeFactory {
   updateInterfaceDeclaration(node: InterfaceDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;
   createTypeAliasDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode): TypeAliasDeclaration;
   updateTypeAliasDeclaration(node: TypeAliasDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode): TypeAliasDeclaration;
+  createNewtypeDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode): NewtypeDeclaration;
+  updateNewtypeDeclaration(node: NewtypeDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode): NewtypeDeclaration;
+  createDataVariant(name: string | Identifier, parameters: readonly ParameterDeclaration[] | undefined): DataVariant;
+  updateDataVariant(node: DataVariant, name: Identifier, parameters: readonly ParameterDeclaration[] | undefined): DataVariant;
+  createDataDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, variants: readonly DataVariant[]): DataDeclaration;
+  updateDataDeclaration(node: DataDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, variants: readonly DataVariant[]): DataDeclaration;
   createEnumDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, members: readonly EnumMember[]): EnumDeclaration;
   updateEnumDeclaration(node: EnumDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, members: readonly EnumMember[]): EnumDeclaration;
   createModuleDeclaration(modifiers: readonly ModifierLike[] | undefined, name: ModuleName, body: ModuleBody | undefined, flags?: NodeFlags): ModuleDeclaration;

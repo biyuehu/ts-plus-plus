@@ -1,3 +1,8 @@
+import type {
+  DataDeclaration,
+  DataVariant,
+  NewtypeDeclaration,
+} from "./_namespaces/ts.js";
 import {
   __String,
   AccessExpression,
@@ -2309,6 +2314,9 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
       case SyntaxKind.JSDocFunctionType:
       case SyntaxKind.ClassStaticBlockDeclaration:
       case SyntaxKind.TypeAliasDeclaration:
+      case SyntaxKind.NewtypeDeclaration:
+      case SyntaxKind.DataDeclaration:
+      case SyntaxKind.DataVariant:
       case SyntaxKind.MappedType:
         // All the children of these container types are never visible through another
         // symbol (i.e. through another symbol's 'exports' or 'members').  Instead,
@@ -2432,6 +2440,15 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
     }
     addDeclarationToSymbol(symbol, node, symbolFlags);
     return symbol;
+  }
+
+  function bindDataDeclaration(node: DataDeclaration) {
+    // The data type itself is a type.
+    bindBlockScopedDeclaration(node, SymbolFlags.TypeAlias, SymbolFlags.TypeAliasExcludes);
+    // Every variant is declared next to it, in the enclosing scope, as both a type and a value constructor.
+    for (const variant of node.variants) {
+      bindBlockScopedDeclaration(variant, SymbolFlags.TypeAlias | SymbolFlags.Function, SymbolFlags.TypeAliasExcludes | SymbolFlags.FunctionExcludes);
+    }
   }
 
   function bindBlockScopedDeclaration(node: Declaration, symbolFlags: SymbolFlags, symbolExcludes: SymbolFlags) {
@@ -3034,6 +3051,13 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
         return bindBlockScopedDeclaration(node as Declaration, SymbolFlags.Interface, SymbolFlags.InterfaceExcludes);
       case SyntaxKind.TypeAliasDeclaration:
         return bindBlockScopedDeclaration(node as Declaration, SymbolFlags.TypeAlias, SymbolFlags.TypeAliasExcludes);
+      case SyntaxKind.NewtypeDeclaration:
+        // A newtype is a type and, through its constructor, also a value.
+        return bindBlockScopedDeclaration(node as Declaration, SymbolFlags.TypeAlias | SymbolFlags.Function, SymbolFlags.TypeAliasExcludes | SymbolFlags.FunctionExcludes);
+      case SyntaxKind.DataDeclaration:
+        return bindDataDeclaration(node as DataDeclaration);
+      case SyntaxKind.DataVariant:
+        return; // declared together with its data declaration, see bindDataDeclaration
       case SyntaxKind.EnumDeclaration:
         return bindEnumDeclaration(node as EnumDeclaration);
       case SyntaxKind.ModuleDeclaration:
@@ -3828,6 +3852,9 @@ export function getContainerFlags(node: Node): ContainerFlags {
 
     case SyntaxKind.ModuleDeclaration:
     case SyntaxKind.TypeAliasDeclaration:
+    case SyntaxKind.NewtypeDeclaration:
+    case SyntaxKind.DataDeclaration:
+    case SyntaxKind.DataVariant:
     case SyntaxKind.MappedType:
     case SyntaxKind.IndexSignature:
       return ContainerFlags.IsContainer | ContainerFlags.HasLocals;

@@ -1,3 +1,9 @@
+import { isNewtypeDeclaration } from "./_namespaces/ts.js";
+import type {
+  DataDeclaration,
+  DataVariant,
+  NewtypeDeclaration,
+} from "./_namespaces/ts.js";
 import {
   __String,
   AccessExpression,
@@ -4485,8 +4491,26 @@ export function isJSDocTypeAlias(node: Node): node is JSDocTypedefTag | JSDocCal
 }
 
 /** @internal */
-export function isTypeAlias(node: Node): node is JSDocTypedefTag | JSDocCallbackTag | JSDocEnumTag | TypeAliasDeclaration {
-  return isJSDocTypeAlias(node) || isTypeAliasDeclaration(node);
+export function isTypeAlias(node: Node): node is JSDocTypedefTag | JSDocCallbackTag | JSDocEnumTag | TypeAliasDeclaration | NewtypeDeclaration {
+  return isJSDocTypeAlias(node) || isTypeAliasDeclaration(node) || isNewtypeDeclaration(node);
+}
+
+/**
+ * Declarations that introduce both a type and a value constructor: a `newtype` or a variant of a `data` declaration.
+ *
+ * @internal
+ */
+export function isNominalConstructorDeclaration(node: Node): node is NewtypeDeclaration | DataVariant {
+  return node.kind === SyntaxKind.NewtypeDeclaration || node.kind === SyntaxKind.DataVariant;
+}
+
+/**
+ * Declarations whose declared type is not computed from a single type node: a `data` declaration or one of its variants.
+ *
+ * @internal
+ */
+export function isDataLikeDeclaration(node: Node): node is DataDeclaration | DataVariant {
+  return node.kind === SyntaxKind.DataDeclaration || node.kind === SyntaxKind.DataVariant;
 }
 
 function getSourceOfAssignment(node: Node): Node | undefined {

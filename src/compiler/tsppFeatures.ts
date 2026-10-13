@@ -16,6 +16,22 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "newtypeDeclarations",
+    dependencies: [],
+    initComments: [
+      "获得：newtype 名义类型声明与对应构造器。",
+      "影响：TS超集=是；透明擦除=是。",
+    ],
+  },
+  {
+    name: "dataDeclarations",
+    dependencies: [],
+    initComments: [
+      "获得：data 可辨识联合声明与对应变体构造器。",
+      "影响：TS超集=是；透明擦除=是。",
+    ],
+  },
+  {
     name: "typeUniverses",
     dependencies: ["higherKindedTypes"],
     initComments: [

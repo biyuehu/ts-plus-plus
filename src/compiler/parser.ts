@@ -1,3 +1,8 @@
+import type {
+  DataDeclaration,
+  DataVariant,
+  NewtypeDeclaration,
+} from "./_namespaces/ts.js";
 import {
   AccessorDeclaration,
   addRange,
@@ -924,6 +929,23 @@ const forEachChildTable: ForEachChildTable = {
       visitNodes(cbNode, cbNodes, node.typeParameters) ||
       visitNode(cbNode, node.kindType) ||
       visitNode(cbNode, node.type);
+  },
+  [SyntaxKind.NewtypeDeclaration]: function forEachChildInNewtypeDeclaration<T>(node: NewtypeDeclaration, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNodes(cbNode, cbNodes, node.modifiers) ||
+      visitNode(cbNode, node.name) ||
+      visitNodes(cbNode, cbNodes, node.typeParameters) ||
+      visitNode(cbNode, node.type);
+  },
+  [SyntaxKind.DataDeclaration]: function forEachChildInDataDeclaration<T>(node: DataDeclaration, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNodes(cbNode, cbNodes, node.modifiers) ||
+      visitNode(cbNode, node.name) ||
+      visitNodes(cbNode, cbNodes, node.typeParameters) ||
+      visitNodes(cbNode, cbNodes, node.variants);
+  },
+  [SyntaxKind.DataVariant]: function forEachChildInDataVariant<T>(node: DataVariant, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    // The shared `modifiers` belong to the enclosing data declaration and are deliberately not visited here.
+    return visitNode(cbNode, node.name) ||
+      visitNodes(cbNode, cbNodes, node.parameters);
   },
   [SyntaxKind.EnumDeclaration]: function forEachChildInEnumDeclaration<T>(node: EnumDeclaration, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
@@ -7310,6 +7332,9 @@ namespace Parser {
         case SyntaxKind.TypeKeyword:
         case SyntaxKind.DeferKeyword:
           return nextTokenIsIdentifierOnSameLine();
+        case SyntaxKind.NewtypeKeyword:
+        case SyntaxKind.DataKeyword:
+          return nextTokenIsIdentifierOnSameLine();
         case SyntaxKind.ModuleKeyword:
         case SyntaxKind.NamespaceKeyword:
           return nextTokenIsIdentifierOrStringLiteralOnSameLine();
@@ -7542,6 +7567,8 @@ namespace Parser {
       case SyntaxKind.AsyncKeyword:
       case SyntaxKind.InterfaceKeyword:
       case SyntaxKind.TypeKeyword:
+      case SyntaxKind.NewtypeKeyword:
+      case SyntaxKind.DataKeyword:
       case SyntaxKind.ModuleKeyword:
       case SyntaxKind.NamespaceKeyword:
       case SyntaxKind.DeclareKeyword:
@@ -7624,6 +7651,10 @@ namespace Parser {
         return parseInterfaceDeclaration(pos, hasJSDoc, modifiersIn);
       case SyntaxKind.TypeKeyword:
         return parseTypeAliasDeclaration(pos, hasJSDoc, modifiersIn);
+      case SyntaxKind.NewtypeKeyword:
+        return parseNewtypeDeclaration(pos, hasJSDoc, modifiersIn);
+      case SyntaxKind.DataKeyword:
+        return parseDataDeclaration(pos, hasJSDoc, modifiersIn);
       case SyntaxKind.EnumKeyword:
         return parseEnumDeclaration(pos, hasJSDoc, modifiersIn);
       case SyntaxKind.GlobalKeyword:
@@ -8364,6 +8395,53 @@ namespace Parser {
     const type = token() === SyntaxKind.IntrinsicKeyword && tryParse(parseKeywordAndNoDot) || parseType();
     parseSemicolon();
     const node = factory.createTypeAliasDeclaration(modifiers, name, typeParameters, type, kindType);
+    return withJSDoc(finishNode(node, pos), hasJSDoc);
+  }
+
+  function parseNewtypeDeclaration(pos: number, hasJSDoc: boolean, modifiers: NodeArray<ModifierLike> | undefined): NewtypeDeclaration {
+    parseExpected(SyntaxKind.NewtypeKeyword);
+    if (scanner.hasPrecedingLineBreak()) {
+      parseErrorAtCurrentToken(Diagnostics.Line_break_not_permitted_here);
+    }
+    const name = parseIdentifier();
+    const typeParameters = parseTypeParameters();
+    parseExpected(SyntaxKind.EqualsToken);
+    const type = parseType();
+    parseSemicolon();
+    const node = factory.createNewtypeDeclaration(modifiers, name, typeParameters, type);
+    return withJSDoc(finishNode(node, pos), hasJSDoc);
+  }
+
+  function parseDataVariant(): DataVariant {
+    const pos = getNodePos();
+    const hasJSDoc = hasPrecedingJSDocComment();
+    const name = parseIdentifier();
+    const parameters = token() === SyntaxKind.OpenParenToken ? parseParameters(SignatureFlags.None) : undefined;
+    return withJSDoc(finishNode(factory.createDataVariant(name, parameters), pos), hasJSDoc);
+  }
+
+  function parseDataDeclaration(pos: number, hasJSDoc: boolean, modifiers: NodeArray<ModifierLike> | undefined): DataDeclaration {
+    parseExpected(SyntaxKind.DataKeyword);
+    if (scanner.hasPrecedingLineBreak()) {
+      parseErrorAtCurrentToken(Diagnostics.Line_break_not_permitted_here);
+    }
+    const name = parseIdentifier();
+    const typeParameters = parseTypeParameters();
+    parseExpected(SyntaxKind.EqualsToken);
+    parseOptional(SyntaxKind.BarToken); // a leading `|` is allowed
+    const variantsPos = getNodePos();
+    const variantList: DataVariant[] = [];
+    do {
+      variantList.push(parseDataVariant());
+    }
+    while (parseOptional(SyntaxKind.BarToken));
+    const variants = createNodeArray(variantList, variantsPos);
+    // Variants share the modifiers of their `data` declaration, so that they are exported together with it.
+    for (const variant of variants) {
+      (variant as Mutable<DataVariant>).modifiers = modifiers;
+    }
+    parseSemicolon();
+    const node = factory.createDataDeclaration(modifiers, name, typeParameters, variants);
     return withJSDoc(finishNode(node, pos), hasJSDoc);
   }
 
