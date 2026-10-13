@@ -32,6 +32,14 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "macros",
+    dependencies: [],
+    initComments: [
+      "获得：macro function 编译期函数与 macro 调用语句。",
+      "影响：TS超集=是；透明擦除=否（宏调用会被编译期结果替换）。",
+    ],
+  },
+  {
     name: "typeUniverses",
     dependencies: ["higherKindedTypes"],
     initComments: [

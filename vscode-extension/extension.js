@@ -5,6 +5,7 @@ const vscode = require("vscode");
 function activate(context) {
   const repositoryRoot = path.resolve(context.extensionPath, "..");
   const compilerPath = path.join(repositoryRoot, "built", "local", "tsserver.js");
+  const typescriptPath = path.join(repositoryRoot, "built", "local", "typescript.js");
   const examplesRoot = path.join(repositoryRoot, "example");
   const examples = [
     {
@@ -44,6 +45,122 @@ function activate(context) {
   status.text = "$(beaker) TS++ Examples";
   status.tooltip = `Using ${compilerPath}. Click to choose an example.`;
   status.show();
+
+  const macroExpansionCache = new Map();
+
+  function getMacroExpansions(document) {
+    if (document.uri.scheme !== "file" || path.extname(document.fileName).toLowerCase() !== ".tspp") return [];
+    const cacheKey = `${document.uri.toString()}:${document.version}`;
+    const cached = macroExpansionCache.get(cacheKey);
+    if (cached) return cached;
+
+    let expansions = [];
+    try {
+      const ts = require(typescriptPath);
+      const configPath = ts.findConfigFile(path.dirname(document.fileName), ts.sys.fileExists, "tsppconfig.json");
+      if (!configPath) return [];
+      const config = ts.readConfigFile(configPath, ts.sys.readFile);
+      if (config.error) return [];
+      const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(configPath), /*existingOptions*/ undefined, configPath);
+      const host = ts.createCompilerHost(parsed.options);
+      const originalGetSourceFile = host.getSourceFile.bind(host);
+      host.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
+        const openDocument = vscode.workspace.textDocuments.find(candidate => candidate.uri.scheme === "file" && samePath(fileName, candidate.fileName));
+        if (openDocument) {
+          return ts.createSourceFile(fileName, openDocument.getText(), languageVersionOrOptions, /*setParentNodes*/ true, ts.ScriptKind.TS);
+        }
+        return originalGetSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+      };
+      const rootNames = parsed.fileNames.some(fileName => samePath(fileName, document.fileName))
+        ? parsed.fileNames
+        : [...parsed.fileNames, document.fileName];
+      const program = ts.createProgram({ rootNames, options: parsed.options, host });
+      expansions = program.getMacroExpansions?.(document.fileName) || [];
+    }
+    catch {
+      // The language service will surface compiler diagnostics. Expansion previews simply stay
+      // unavailable while a macro cannot be evaluated.
+    }
+    macroExpansionCache.set(cacheKey, expansions);
+    return expansions;
+  }
+
+  function expansionAt(document, position) {
+    const offset = document.offsetAt(position);
+    return getMacroExpansions(document).find(expansion => expansion.start <= offset && offset <= expansion.start + expansion.length);
+  }
+
+  const macroSelector = { language: "typescript", scheme: "file", pattern: "**/*.tspp" };
+  const expandedDocuments = new Map();
+  const expandedDocumentChanges = new vscode.EventEmitter();
+  const expandedDocumentProvider = {
+    onDidChange: expandedDocumentChanges.event,
+    provideTextDocumentContent(uri) {
+      return expandedDocuments.get(uri.toString()) || "";
+    },
+  };
+
+  function createExpandedSource(document) {
+    let text = document.getText();
+    const expansions = [...getMacroExpansions(document)].sort((left, right) => right.start - left.start);
+    for (const expansion of expansions) {
+      text = text.slice(0, expansion.start) + expansion.text + text.slice(expansion.start + expansion.length);
+    }
+    return { expansions, text };
+  }
+
+  context.subscriptions.push(
+    expandedDocumentChanges,
+    vscode.workspace.registerTextDocumentContentProvider("tspp-expanded", expandedDocumentProvider),
+    vscode.languages.registerHoverProvider(macroSelector, {
+      provideHover(document, position) {
+        const expansion = expansionAt(document, position);
+        if (!expansion) return undefined;
+        const markdown = new vscode.MarkdownString();
+        markdown.appendMarkdown(`**TS++ macro expansion: \`${expansion.macroName}\`**\n\n`);
+        if (expansion.text.trim()) {
+          markdown.appendCodeblock(expansion.text, "typescript");
+        }
+        else {
+          markdown.appendMarkdown("This is a validation-only macro; it emits no statements.");
+        }
+        return new vscode.Hover(
+          markdown,
+          new vscode.Range(
+            document.positionAt(expansion.start),
+            document.positionAt(expansion.start + expansion.length),
+          ),
+        );
+      },
+    }),
+    vscode.commands.registerCommand("tspp.showExpandedSource", async () => {
+      const document = vscode.window.activeTextEditor?.document;
+      if (!document || document.uri.scheme !== "file" || path.extname(document.fileName).toLowerCase() !== ".tspp") return;
+      const result = createExpandedSource(document);
+      if (!result.expansions.length) {
+        await vscode.window.showInformationMessage("This file contains no compile-time macro invocations.");
+        return;
+      }
+      const expandedPath = document.uri.path.replace(/\.tspp$/i, ".expanded.tspp");
+      const expandedUri = vscode.Uri.from({
+        scheme: "tspp-expanded",
+        path: expandedPath,
+        query: `source=${encodeURIComponent(document.uri.toString())}`,
+      });
+      expandedDocuments.set(expandedUri.toString(), result.text);
+      expandedDocumentChanges.fire(expandedUri);
+      let expandedDocument = await vscode.workspace.openTextDocument(expandedUri);
+      if (expandedDocument.languageId !== "typescript") {
+        expandedDocument = await vscode.languages.setTextDocumentLanguage(expandedDocument, "typescript");
+      }
+      await vscode.window.showTextDocument(expandedDocument, {
+        viewColumn: vscode.ViewColumn.Beside,
+        preview: true,
+      });
+    }),
+    vscode.workspace.onDidChangeTextDocument(() => macroExpansionCache.clear()),
+    vscode.workspace.onDidSaveTextDocument(() => macroExpansionCache.clear()),
+  );
 
   async function openExample(example, viewColumn = vscode.ViewColumn.Active) {
     const document = await vscode.workspace.openTextDocument(path.join(example.directory, example.entry));

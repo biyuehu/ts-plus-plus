@@ -177,6 +177,7 @@ import {
   isJsxText,
   isLabelName,
   isLiteralComputedPropertyDeclarationName,
+  isMacroInvocationStatement,
   isNamedExports,
   isNamedTupleMember,
   isNameOfModuleDeclaration,
@@ -2300,6 +2301,12 @@ export function createLanguageService(
       };
     }
 
+    const macroInvocation = findAncestor(nodeForQuickInfo, isMacroInvocationStatement);
+    const semanticMeaning = macroInvocation
+      ? macroInvocation.macro === nodeForQuickInfo || findAncestor(nodeForQuickInfo, ancestor => ancestor === macroInvocation.macro)
+        ? SymbolFlags.Value
+        : SymbolFlags.Value | SymbolFlags.Type | SymbolFlags.Namespace
+      : undefined;
     const { symbolKind, displayParts, documentation, tags, canIncreaseVerbosityLevel } = typeChecker.runWithCancellationToken(
       cancellationToken,
       typeChecker =>
@@ -2309,7 +2316,7 @@ export function createLanguageService(
           sourceFile,
           getContainerNode(nodeForQuickInfo),
           nodeForQuickInfo,
-          /*semanticMeaning*/ undefined,
+          semanticMeaning,
           /*alias*/ undefined,
           maximumLength ?? defaultHoverMaximumTruncationLength,
           verbosityLevel,
@@ -2589,24 +2596,26 @@ export function createLanguageService(
   function getSemanticClassifications(fileName: string, span: TextSpan, format?: SemanticClassificationFormat): ClassifiedSpan[] | ClassifiedSpan2020[] {
     synchronizeHostData();
 
+    const sourceFile = getValidSourceFile(fileName);
     const responseFormat = format || SemanticClassificationFormat.Original;
     if (responseFormat === SemanticClassificationFormat.TwentyTwenty) {
-      return classifier2020.getSemanticClassifications(program, cancellationToken, getValidSourceFile(fileName), span);
+      return classifier2020.getSemanticClassifications(program, cancellationToken, sourceFile, span);
     }
     else {
-      return classifier.getSemanticClassifications(program.getTypeChecker(), cancellationToken, getValidSourceFile(fileName), program.getClassifiableNames(), span);
+      return classifier.getSemanticClassifications(program.getTypeChecker(), cancellationToken, sourceFile, program.getClassifiableNames(), span);
     }
   }
 
   function getEncodedSemanticClassifications(fileName: string, span: TextSpan, format?: SemanticClassificationFormat): Classifications {
     synchronizeHostData();
 
+    const sourceFile = getValidSourceFile(fileName);
     const responseFormat = format || SemanticClassificationFormat.Original;
     if (responseFormat === SemanticClassificationFormat.Original) {
-      return classifier.getEncodedSemanticClassifications(program.getTypeChecker(), cancellationToken, getValidSourceFile(fileName), program.getClassifiableNames(), span);
+      return classifier.getEncodedSemanticClassifications(program.getTypeChecker(), cancellationToken, sourceFile, program.getClassifiableNames(), span);
     }
     else {
-      return classifier2020.getEncodedSemanticClassifications(program, cancellationToken, getValidSourceFile(fileName), span);
+      return classifier2020.getEncodedSemanticClassifications(program, cancellationToken, sourceFile, span);
     }
   }
 

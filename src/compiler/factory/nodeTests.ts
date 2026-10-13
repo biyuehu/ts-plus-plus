@@ -144,6 +144,7 @@ import {
   KindNode,
   LabeledStatement,
   LiteralTypeNode,
+  MacroInvocationStatement,
   MappedTypeNode,
   MetaProperty,
   MethodDeclaration,
@@ -737,6 +738,10 @@ export function isEmptyStatement(node: Node): node is EmptyStatement {
 
 export function isExpressionStatement(node: Node): node is ExpressionStatement {
   return node.kind === SyntaxKind.ExpressionStatement;
+}
+
+export function isMacroInvocationStatement(node: Node): node is MacroInvocationStatement {
+  return node.kind === SyntaxKind.MacroInvocationStatement;
 }
 
 export function isIfStatement(node: Node): node is IfStatement {
