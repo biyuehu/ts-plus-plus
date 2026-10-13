@@ -1,3 +1,7 @@
+import type {
+  DataDeclaration,
+  NewtypeDeclaration,
+} from "./_namespaces/ts.js";
 import {
   AccessorDeclaration,
   addRange,
@@ -176,6 +180,10 @@ function getSymbolKindOfConstructorPropertyMethodAccessorFunctionOrVar(typeCheck
       return ScriptElementKind.letElement;
     }
     return isLocalVariableOrFunction(symbol) ? ScriptElementKind.localVariableElement : ScriptElementKind.variableElement;
+  }
+  // A data variant without fields (`Nil`) is a constant, not a function.
+  if (flags & SymbolFlags.Function && symbol.valueDeclaration?.kind === SyntaxKind.DataVariant && !(symbol.valueDeclaration as unknown as { parameters?: unknown; }).parameters) {
+    return ScriptElementKind.constElement;
   }
   if (flags & SymbolFlags.Function) return isLocalVariableOrFunction(symbol) ? ScriptElementKind.localFunctionElement : ScriptElementKind.functionElement;
   // FIXME: getter and setter use the same symbol. And it is rare to use only setter without getter, so in most cases the symbol always has getter flag.
@@ -483,10 +491,33 @@ function getSymbolDisplayPartsDocumentationAndSymbolKindWorker(
   }
   if ((symbolFlags & SymbolFlags.TypeAlias) && (semanticMeaning & SemanticMeaning.Type)) {
     prefixNextMeaning();
-    displayParts.push(keywordPart(SyntaxKind.TypeKeyword));
+    // `newtype` and `data` are shown with their own keyword so they are not mistaken for plain type aliases.
+    const nominalDeclaration = symbol.declarations?.find(d => d.kind === SyntaxKind.NewtypeDeclaration || d.kind === SyntaxKind.DataDeclaration) as NewtypeDeclaration | DataDeclaration | undefined;
+    displayParts.push(keywordPart(
+      nominalDeclaration
+        ? nominalDeclaration.kind === SyntaxKind.NewtypeDeclaration ? SyntaxKind.NewtypeKeyword : SyntaxKind.DataKeyword
+        : SyntaxKind.TypeKeyword,
+    ));
     displayParts.push(spacePart());
     addFullSymbolName(symbol);
-    writeTypeParametersOfSymbol(symbol, sourceFile);
+    if (nominalDeclaration) {
+      // The generic checker helper does not know these declarations, so print the declared type parameters directly.
+      const typeParameters = nominalDeclaration.typeParameters;
+      if (typeParameters && typeParameters.length) {
+        displayParts.push(punctuationPart(SyntaxKind.LessThanToken));
+        typeParameters.forEach((typeParameter, index) => {
+          if (index > 0) {
+            displayParts.push(punctuationPart(SyntaxKind.CommaToken));
+            displayParts.push(spacePart());
+          }
+          displayParts.push(textPart(typeParameter.getText()));
+        });
+        displayParts.push(punctuationPart(SyntaxKind.GreaterThanToken));
+      }
+    }
+    else {
+      writeTypeParametersOfSymbol(symbol, sourceFile);
+    }
     displayParts.push(spacePart());
     displayParts.push(operatorPart(SyntaxKind.EqualsToken));
     displayParts.push(spacePart());
@@ -494,7 +525,7 @@ function getSymbolDisplayPartsDocumentationAndSymbolKindWorker(
       displayParts,
       typeToDisplayParts(
         typeChecker,
-        location.parent && isConstTypeReference(location.parent) ? typeChecker.getTypeAtLocation(location.parent) : typeChecker.getDeclaredTypeOfSymbol(symbol),
+        location.parent && isConstTypeReference(location.parent) ? typeChecker.getTypeAtLocation(location.parent) : getDisplayedAliasedType(typeChecker, symbol),
         enclosingDeclaration,
         TypeFormatFlags.InTypeAlias,
         maximumLength,
@@ -1061,4 +1092,10 @@ function isLocalVariableOrFunction(symbol: Symbol) {
     // parent is in function block
     return true;
   });
+}
+
+/** A newtype is displayed as its underlying type, the synthetic nominal brand is an implementation detail. */
+function getDisplayedAliasedType(typeChecker: TypeChecker, symbol: Symbol): Type {
+  const newtype = symbol.declarations?.find(declaration => declaration.kind === SyntaxKind.NewtypeDeclaration) as NewtypeDeclaration | undefined;
+  return newtype ? typeChecker.getTypeFromTypeNode(newtype.type) : typeChecker.getDeclaredTypeOfSymbol(symbol);
 }

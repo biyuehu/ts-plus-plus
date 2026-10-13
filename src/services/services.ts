@@ -184,6 +184,7 @@ import {
   isNodeKind,
   isObjectLiteralElement,
   isObjectLiteralExpression,
+  isPartOfTypeNode,
   isPrivateIdentifier,
   isProgramUptoDate,
   isPropertyAccessExpression,
@@ -2391,7 +2392,8 @@ export function createLanguageService(
       case SyntaxKind.MetaProperty:
         return isImportMeta(node);
       default:
-        return false;
+        // Keyword types on the right of a `newtype` (`number`, `string`, ...) have no symbol, so show their type directly.
+        return isPartOfTypeNode(node) && !!findAncestor(node, n => n.kind === SyntaxKind.NewtypeDeclaration);
     }
   }
 
