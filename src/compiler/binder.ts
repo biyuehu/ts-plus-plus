@@ -1,8 +1,4 @@
-import type {
-  DataDeclaration,
-  DataVariant,
-  NewtypeDeclaration,
-} from "./_namespaces/ts.js";
+import type { DataDeclaration } from "./_namespaces/ts.js";
 import {
   __String,
   AccessExpression,
@@ -2445,9 +2441,10 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
   function bindDataDeclaration(node: DataDeclaration) {
     // The data type itself is a type.
     bindBlockScopedDeclaration(node, SymbolFlags.TypeAlias, SymbolFlags.TypeAliasExcludes);
-    // Every variant is declared next to it, in the enclosing scope, as both a type and a value constructor.
+    // Every variant is declared next to it, in the enclosing scope, as a value constructor only.
+    // Its variant type is reachable through `typeof`, never by name in a type position.
     for (const variant of node.variants) {
-      bindBlockScopedDeclaration(variant, SymbolFlags.TypeAlias | SymbolFlags.Function, SymbolFlags.TypeAliasExcludes | SymbolFlags.FunctionExcludes);
+      declareModuleMember(variant, SymbolFlags.Function, SymbolFlags.FunctionExcludes);
     }
   }
 

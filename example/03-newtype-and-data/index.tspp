@@ -47,16 +47,8 @@ const something: Option<number> = Some(1);
 // 字段类型会被检查。
 // const bad: Option<number> = Some("x");
 
-// 每个变体也能作为独立类型使用。
-declare const someValue: Some<number>;
-const extracted: number = someValue.value;
-const tag: "Some" = someValue._tag;
-
 // 变体只接收它提到的类型参数：None 不接受参数，Some 只接受 T。
 data Either<L, R> = Left(value: L) | Right(value: R) | Empty;
-
-declare const left: Left<number>;
-const leftValue: number = left.value;
 
 const leftArm: Either<number, string> = Left(1);
 const rightArm: Either<number, string> = Right("x");
@@ -67,6 +59,13 @@ data List<T> = Nil | Cons(head: T, tail: List<T>);
 
 const emptyList: List<number> = Nil;
 const singleItem: List<number> = Cons(1, Nil);
+
+// 每个变体是值，不能直接作为独立类型使用，得通过 typeof。
+const extracted: typeof Nil = Nil;
+const tag: "Nil" = extracted._tag;
+
+// 尽管与结构化的 { _tag: "Nil" } 相像，但实际上不能作为使用
+// const error: typeof Nil = { _tag: "Nil" as const }
 
 // -----------------------------------------------------------------------------
 // 3. 名义性与 as
@@ -80,5 +79,5 @@ const singleItem: List<number> = Cons(1, Nil);
 // 品牌属性不会出现在 keyof、诊断消息或 hover 中。
 const keys: "x" | "y" = "x" satisfies keyof Point;
 
-export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, leftValue, nothing, rightArm, singleItem, something, tag };
+export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, nothing, rightArm, singleItem, something, tag };
 export type { Either, List, Option, OrderId, Point, Some, StringOrNumber, UserId };

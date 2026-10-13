@@ -13183,6 +13183,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function getTypeOfSymbol(symbol: Symbol): Type {
     const checkFlags = getCheckFlags(symbol);
+    if (!(checkFlags & CheckFlags.Instantiated) && symbol.valueDeclaration && isNominalConstructorDeclaration(symbol.valueDeclaration)) {
+      return getTypeOfNominalConstructor(symbol, symbol.valueDeclaration);
+    }
+    if (!(checkFlags & CheckFlags.Instantiated) && symbol.valueDeclaration && isParameter(symbol.valueDeclaration) && (symbol.valueDeclaration.parent as Node).kind === SyntaxKind.DataVariant) {
+      // A variant field takes its type from the annotation, resolved lazily so recursive data types do not circularly resolve.
+      const fieldLinks = getSymbolLinks(symbol);
+      return fieldLinks.type ??= symbol.valueDeclaration.type ? getTypeFromTypeNode(symbol.valueDeclaration.type) : errorType;
+    }
     if (checkFlags & CheckFlags.DeferredType) {
       return getTypeOfSymbolWithDeferredType(symbol);
     }
@@ -13195,11 +13203,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (checkFlags & CheckFlags.ReverseMapped) {
       return getTypeOfReverseMappedSymbol(symbol as ReverseMappedSymbol);
     }
-    if (symbol.flags & (SymbolFlags.Variable | SymbolFlags.Property)) {
-      return getTypeOfVariableOrParameterOrProperty(symbol);
-    }
     if (symbol.flags & SymbolFlags.Function && symbol.valueDeclaration && isNominalConstructorDeclaration(symbol.valueDeclaration)) {
       return getTypeOfNominalConstructor(symbol, symbol.valueDeclaration);
+    }
+    if (symbol.flags & (SymbolFlags.Variable | SymbolFlags.Property)) {
+      return getTypeOfVariableOrParameterOrProperty(symbol);
     }
     if (symbol.flags & (SymbolFlags.Function | SymbolFlags.Method | SymbolFlags.Class | SymbolFlags.Enum | SymbolFlags.ValueModule)) {
       return getTypeOfFuncClassEnumModule(symbol);
@@ -13824,7 +13832,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
     const typeParameters = appendTypeParameters(/*typeParameters*/ undefined, declaration.typeParameters ?? emptyArray);
     // data D = A | B(...)   ==>   the union A | B of the variant types
-    let type: Type = getUnionType(map(declaration.variants, variant => getDeclaredTypeOfSymbol(getSymbolOfDeclaration(variant))), UnionReduction.Literal, symbol, typeParameters);
+    let type: Type = getUnionType(map(declaration.variants, variant => getDeclaredTypeOfTypeAlias(getSymbolOfDeclaration(variant))), UnionReduction.Literal, symbol, typeParameters);
     if (popTypeResolution()) {
       if (typeParameters) {
         links.typeParameters = typeParameters;
@@ -13845,7 +13853,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const data = variant.parent;
     const dataTypeParameters = appendTypeParameters(/*typeParameters*/ undefined, data.typeParameters ?? emptyArray);
     // A variant only takes the type parameters it mentions: `None` takes none, `Some<A>` takes `A`.
-    const typeParameters = dataTypeParameters && filter(dataTypeParameters, typeParameter => isTypeParameterNameMentioned(typeParameter.symbol.escapedName, variant));
+    const mentionedTypeParameters = dataTypeParameters && filter(dataTypeParameters, typeParameter => isTypeParameterNameMentioned(typeParameter.symbol.escapedName, variant));
+    const typeParameters = length(mentionedTypeParameters) ? mentionedTypeParameters : undefined;
 
     const members = createSymbolTable();
     const tag = createSymbol(SymbolFlags.Property, "_tag" as __String, CheckFlags.Readonly);
@@ -13856,7 +13865,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       if (isIdentifier(parameter.name)) {
         const field = createSymbol(SymbolFlags.Property, parameter.name.escapedText);
         field.declarations = [parameter];
-        field.valueDeclaration = parameter; // the type of the field is resolved lazily from the parameter's annotation
+        field.valueDeclaration = parameter;
+        // The field type is resolved lazily from the parameter annotation, so recursive data types do not circularly resolve the declared type.
         members.set(field.escapedName, field);
       }
     }
@@ -13865,28 +13875,27 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     const type = createAnonymousType(symbol, members, emptyArray, emptyArray, emptyArray);
     type.aliasSymbol = symbol;
-    type.aliasTypeArguments = typeParameters && length(typeParameters) ? typeParameters : undefined;
-    if (typeParameters && typeParameters.length) {
-      links.typeParameters = typeParameters;
-      links.instantiations = new Map<string, Type>();
-      links.instantiations.set(getTypeListId(typeParameters), type);
-    }
-    else {
-      links.typeParameters = undefined;
-    }
+    type.aliasTypeArguments = typeParameters;
+    links.typeParameters = typeParameters;
+    links.instantiations = new Map<string, Type>();
+    links.instantiations.set(getTypeListId(typeParameters || emptyArray), type);
     return links.declaredType = type;
   }
 
   function createNominalConstructorType(typeParameters: readonly TypeParameter[] | undefined, parameters: readonly Symbol[], returnType: Type): Type {
     const signature = createSignature(/*declaration*/ undefined, typeParameters, /*thisParameter*/ undefined, parameters, returnType, /*resolvedTypePredicate*/ undefined, parameters.length, SignatureFlags.None);
-    return createAnonymousType(/*symbol*/ undefined, emptySymbols, [signature], emptyArray, emptyArray);
+    const result = createAnonymousType(/*symbol*/ undefined, emptySymbols, [signature], emptyArray, emptyArray);
+    result.aliasSymbol = returnType.aliasSymbol;
+    result.aliasTypeArguments = returnType.aliasTypeArguments;
+    result.callSignatures = [signature];
+    return result;
   }
 
   /** The type of the value constructor that a newtype or a data variant introduces. */
   function getTypeOfNominalConstructor(symbol: Symbol, declaration: NewtypeDeclaration | DataVariant): Type {
     const links = getSymbolLinks(symbol);
     if (!links.type) {
-      const declaredType = getDeclaredTypeOfSymbol(symbol); // also populates links.typeParameters
+      const declaredType = getDeclaredTypeOfTypeAlias(symbol); // also populates links.typeParameters; a variant symbol has no type meaning, so it is resolved directly
       const typeParameters = links.typeParameters;
       if (declaration.kind === SyntaxKind.NewtypeDeclaration) {
         // newtype N<T> = U   ==>   <T>(value: U) => N<T>
@@ -13991,11 +14000,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function tryGetDeclaredTypeOfSymbol(symbol: Symbol): Type | undefined {
+    if (symbol.flags & SymbolFlags.TypeAlias || symbol.declarations?.some(isDataLikeDeclaration)) {
+      return getDeclaredTypeOfTypeAlias(symbol);
+    }
     if (symbol.flags & (SymbolFlags.Class | SymbolFlags.Interface)) {
       return getDeclaredTypeOfClassOrInterface(symbol);
-    }
-    if (symbol.flags & SymbolFlags.TypeAlias) {
-      return getDeclaredTypeOfTypeAlias(symbol);
     }
     if (symbol.flags & SymbolFlags.TypeParameter) {
       return getDeclaredTypeOfTypeParameter(symbol);
@@ -16854,6 +16863,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getReturnTypeOfSignature(signature: Signature): Type {
+    if (signature.resolvedReturnType) {
+      return signature.resolvedReturnType;
+    }
     if (!signature.resolvedReturnType) {
       if (!pushTypeResolution(signature, TypeSystemPropertyName.ResolvedReturnType)) {
         return errorType;
@@ -21673,6 +21685,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function instantiateSignature(signature: Signature, mapper: TypeMapper, eraseTypeParameters?: boolean): Signature {
+    if (signature.resolvedReturnType && !signature.typeParameters) {
+      const result = createSignature(signature.declaration, /*typeParameters*/ undefined, signature.thisParameter && instantiateSymbol(signature.thisParameter, mapper), instantiateList(signature.parameters, mapper, instantiateSymbol), instantiateType(signature.resolvedReturnType, mapper), /*resolvedTypePredicate*/ undefined, signature.minArgumentCount, signature.flags & SignatureFlags.PropagatingFlags);
+      result.target = signature;
+      result.mapper = mapper;
+      return result;
+    }
     let freshTypeParameters: TypeParameter[] | undefined;
     if (signature.typeParameters && !eraseTypeParameters) {
       // First create a fresh set of type parameters, then include a mapping from the old to the
@@ -24650,7 +24668,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       // the order in which things were checked.
       if (
         sourceFlags & (TypeFlags.Object | TypeFlags.Conditional) && source.aliasSymbol && source.aliasTypeArguments &&
-        source.aliasSymbol === target.aliasSymbol && !(isMarkerType(source) || isMarkerType(target))
+        source.aliasSymbol === target.aliasSymbol && !(isMarkerType(source) || isMarkerType(target)) &&
+        getSymbolLinks(source.aliasSymbol).typeParameters
       ) {
         const variances = getAliasVariances(source.aliasSymbol);
         if (variances === emptyArray) {
@@ -26104,7 +26123,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (isErrorType(type)) {
       return type;
     }
-    const result = symbol.flags & SymbolFlags.TypeAlias ?
+    const result = symbol.flags & SymbolFlags.TypeAlias || symbol.declarations?.some(isDataLikeDeclaration) ?
       getTypeAliasInstantiation(symbol, instantiateTypes(getSymbolLinks(symbol).typeParameters!, mapper)) :
       createTypeReference(type as GenericType, instantiateTypes((type as GenericType).typeParameters, mapper));
     markerTypes.add(getTypeId(result));
