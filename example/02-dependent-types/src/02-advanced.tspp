@@ -52,3 +52,19 @@ export type WithStructuralBody: Type1 = (T: Type0) -> { value: T };
 
 // MLTT 部分先比较归一化 term；遇到 external type 时，再委托 TS checker
 // 进行严格 identity 或双向结构 assignability 检查。
+
+// -----------------------------------------------------------------------------
+// 4. 与运行时 TypeScript 函数衔接
+// -----------------------------------------------------------------------------
+
+export type RuntimeIdentity: Type1 =
+  (A: Type0) -> (value: A) -> A;
+
+// 显式注解的 TS 泛型函数可与等价 Pi 类型互相赋值。
+const ordinaryIdentity = <A>(value: A): A => value;
+export const dependentIdentity: RuntimeIdentity = ordinaryIdentity;
+
+// Type0 binder 作为擦除的类型参数；运行时只需传 value。
+// 调用会复用 TypeScript 原有的泛型推断。
+export const explicitIdentityResult = dependentIdentity<string>("explicit");
+export const inferredIdentityResult = dependentIdentity("inferred");

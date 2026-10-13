@@ -130,6 +130,8 @@ kind 检查、别名传播、类型打印和关系判断
 - `F<A>` 形式的类型应用；
 - 由原 TypeScript checker 检查的 primitive、union/intersection、普通泛型引用、`keyof`、indexed access、mapped type 和 conditional type；
 - alpha/beta 定义相等和 universe/kind 检查。
+- 将形如 `(A: Type0) -> (value: A) -> A` 的 Pi 类型与显式注解的
+  TypeScript 泛型函数互相赋值，并复用 TypeScript 的调用推断。
 
 嵌入 MLTT 的 TypeScript 类型会保留其真实 kind，并继续采用 TypeScript 的结构类型语义；别名名称不同但结构相同的类型不会因此变成不同的依赖类型。union/intersection 也不能用来把高层 universe 的类型伪装成 `Type0`。
 
@@ -145,7 +147,9 @@ kind 检查、别名传播、类型打印和关系判断
 
 两个条件缺一不可：文件必须是 `.tspp`/`.d.tspp`，并且 `tsppconfig.json` 必须显式开启 `dependentTypes`。普通 `.ts` 文件永远不会启用依赖语法，即使同一项目打开了该选项；其中原有的 `=>` 函数类型也不受影响。
 
-另外，这里的代码是在**描述类型**，还没有提供对应的运行时函数实现语法。
+目前没有新增一套运行时函数语法；实现仍写成普通 TypeScript 泛型函数。
+`02-advanced.tspp` 演示了它如何赋给 Pi 类型并以依赖函数的类型直接调用。
+这个桥接暂时要求函数签名完整注解，不包括可选/剩余参数、默认/约束类型参数等扩展形式。
 
 ## 运行与实验
 

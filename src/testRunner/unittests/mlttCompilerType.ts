@@ -48,6 +48,48 @@ describe("unittests:: MLTT compiler type", () => {
     assert.isTrue(checker.isTypeAssignableTo(withGenericAlias, withStructuralBody));
   });
 
+  it("bridges explicitly annotated TypeScript generic function signatures to Pi types", () => {
+    const bridged = createProgram(
+      "/bridged.tspp",
+      `
+      type DependentIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+      type GenericIdentity = <A>(value: A) => A;
+      type WrongResult = <A>(value: A) => string;
+    `,
+      { dependentTypes: true, noLib: true, strict: true },
+    );
+    const bridgedChecker = bridged.getTypeChecker();
+    const bridgedFile = bridged.getSourceFile("/bridged.tspp")!;
+    const [dependent, generic, wrong] = bridgedFile.statements
+      .filter(ts.isTypeAliasDeclaration)
+      .map(declaration => bridgedChecker.getTypeAtLocation(declaration.type));
+
+    assert.isTrue(bridgedChecker.isTypeAssignableTo(generic, dependent));
+    assert.isTrue(bridgedChecker.isTypeAssignableTo(dependent, generic));
+    assert.isFalse(bridgedChecker.isTypeAssignableTo(wrong, dependent));
+  });
+
+  it("exposes callable signatures for dependent functions and reuses TypeScript inference", () => {
+    const callable = createProgram(
+      "/callable.tspp",
+      `
+      type DependentIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+      declare const identity: DependentIdentity;
+      const explicit = identity<string>("explicit");
+      const inferred = identity("inferred");
+    `,
+      { dependentTypes: true, noLib: true, strict: true },
+    );
+    const callableChecker = callable.getTypeChecker();
+    const callableFile = callable.getSourceFile("/callable.tspp")!;
+    const declarations = callableFile.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+
+    assert.isEmpty(callable.getSemanticDiagnostics());
+    assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[1].name)), "string");
+    assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[2].name)), '"inferred"');
+  });
+
   it("preserves the real universe of embedded TypeScript aliases", () => {
     const higherCodomain = createProgram(
       "/higher.tspp",
