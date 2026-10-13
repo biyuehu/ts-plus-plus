@@ -35,6 +35,19 @@
       "preLaunchTask": "npm: build:compiler"
     },
     {
+      "name": "TS++: Run Example 03 — Newtype and Data",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--new-window",
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
+        "${workspaceFolder}/example/03-newtype-and-data"
+      ],
+      "preLaunchTask": "npm: build:compiler"
+    },
+    {
       "type": "node",
       "request": "launch",
       "name": "Mocha Tests (currently opened test)",
