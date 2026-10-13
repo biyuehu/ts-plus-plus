@@ -1539,6 +1539,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   var currentNode: Node | undefined;
   var currentMlttTypeBindings: readonly MlttTypeBinding[] | undefined;
   var mlttPlaceholderTypes: TypeParameter[] | undefined;
+  var dependentFunctionCallSignatures = new Map<number, Signature | false>();
   var varianceTypeParameter: TypeParameter | undefined;
   var isInferencePartiallyBlocked = false;
   var withinUnreachableCode = false;
@@ -16142,6 +16143,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
    * maps primitive types and type parameters are to their apparent types.
    */
   function getSignaturesOfType(type: Type, kind: SignatureKind): readonly Signature[] {
+    if (kind === SignatureKind.Call && type.flags & TypeFlags.DependentFunction) {
+      const signature = getCallSignatureFromDependentFunctionType(type as DependentFunctionType);
+      return signature ? [signature] : emptyArray;
+    }
     const result = getSignaturesOfStructuredType(getReducedApparentType(type), kind);
     if (kind === SignatureKind.Call && !length(result) && type.flags & TypeFlags.Union) {
       if ((type as UnionType).arrayFallbackSignatures) {
@@ -20928,6 +20933,144 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return isTypeAssignableTo(leftIdentity.type, rightType) && isTypeAssignableTo(rightType, leftIdentity.type);
   }
 
+  interface MlttSignatureBinder {
+    readonly name: string;
+    readonly domain: MlttTerm;
+  }
+
+  function getMlttTermFromSignature(signature: Signature): MlttTerm | undefined {
+    const declaration = signature.declaration;
+    const returnTypeNode = declaration && getEffectiveReturnTypeNode(declaration);
+    if (!declaration || !returnTypeNode || !every(declaration.parameters, isParameter)) return undefined;
+    const parameters = declaration.parameters as NodeArray<ParameterDeclaration>;
+    if (parameters.some(parameter => !!parameter.dotDotDotToken || !!parameter.questionToken || !!parameter.initializer || !isIdentifier(parameter.name))) {
+      return undefined;
+    }
+
+    const typeParameterDeclarations = getEffectiveTypeParameterDeclarations(declaration);
+    const typeParameters = signature.typeParameters ?? emptyArray;
+    if (typeParameterDeclarations.length !== typeParameters.length || typeParameterDeclarations.some(parameter => !!parameter.constraint || !!parameter.default)) {
+      return undefined;
+    }
+
+    const binders: MlttSignatureBinder[] = [];
+    let scope: MlttTypeBinding[] = [];
+    for (let index = 0; index < typeParameterDeclarations.length; index++) {
+      const declaration = typeParameterDeclarations[index];
+      const name = idText(declaration.name);
+      const domain = getMlttTypeFromKind(getKindOfType(typeParameters[index]), declaration);
+      if (!domain) return undefined;
+      const compilerType = typeParameters[index];
+      binders.push({ name, domain });
+      scope = [{ name, placeholderName: name, compilerType }, ...scope];
+    }
+
+    for (const parameter of parameters) {
+      if (!parameter.type) return undefined;
+      const domain = getMlttTermFromTypeNode(parameter.type, scope);
+      if (!domain) return undefined;
+      const name = idText(parameter.name as Identifier);
+      binders.push({ name, domain });
+      scope = [createMlttTypeBinding(name, scope.length), ...scope];
+    }
+
+    let term = getMlttTermFromTypeNode(returnTypeNode, scope);
+    if (!term) return undefined;
+    for (let index = binders.length - 1; index >= 0; index--) {
+      const binder = binders[index];
+      term = mlttPi(binder.name, binder.domain, term);
+    }
+    return term;
+  }
+
+  function isDependentFunctionRelatedToType(dependent: DependentFunctionType, other: Type): boolean {
+    const signatures = getSignaturesOfType(other, SignatureKind.Call);
+    if (signatures.length !== 1) return false;
+    const signatureTerm = getMlttTermFromSignature(signatures[0]);
+    return !!signatureTerm && areMlttTermsDefinitionallyEqual(dependent.mlttTerm, signatureTerm, compareMlttExternalTerms);
+  }
+
+  function getCallSignatureFromDependentFunctionType(type: DependentFunctionType): Signature | undefined {
+    const cached = dependentFunctionCallSignatures.get(type.id);
+    if (cached !== undefined) return cached || undefined;
+
+    const typeParameters: TypeParameter[] = [];
+    const parameters: Symbol[] = [];
+    let scope: MlttTypeBinding[] = [];
+    let node: TypeNode = type.node;
+
+    // A leading `(A: Type0) -> ...` binder is represented as an erased TS type
+    // parameter. Once a runtime parameter is encountered, later binders remain
+    // runtime parameters so call arity is stable and unsurprising.
+    while (isMlttDependentFunctionTypeNode(node) && isMlttTypeZeroNode(node.parameterType) && parameters.length === 0) {
+      const name = idText(node.parameterName);
+      const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
+      const typeParameter = createTypeParameter(symbol);
+      typeParameter.typeKind = ordinaryTypeKind;
+      typeParameters.push(typeParameter);
+      scope = [{ name, placeholderName: name, compilerType: typeParameter }, ...scope];
+      node = node.returnType;
+    }
+
+    while (isMlttDependentFunctionTypeNode(node)) {
+      const parameterType = getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
+      if (!parameterType || getKindOfType(parameterType).flags !== KindFlags.Type || !isOrdinaryTypeKind(getKindOfType(parameterType))) {
+        dependentFunctionCallSignatures.set(type.id, false);
+        return undefined;
+      }
+      const name = idText(node.parameterName);
+      const parameter = createSymbol(SymbolFlags.FunctionScopedVariable, escapeLeadingUnderscores(name));
+      getSymbolLinks(parameter).type = parameterType;
+      parameters.push(parameter);
+      scope = [createMlttTypeBinding(name, scope.length), ...scope];
+      node = node.returnType;
+    }
+
+    if (!parameters.length) {
+      dependentFunctionCallSignatures.set(type.id, false);
+      return undefined;
+    }
+    const returnType = getCompilerTypeFromMlttTypeNode(node, scope);
+    if (!returnType || !isOrdinaryTypeKind(getKindOfType(returnType))) {
+      dependentFunctionCallSignatures.set(type.id, false);
+      return undefined;
+    }
+
+    const signature = createSignature(
+      /*declaration*/ undefined,
+      typeParameters.length ? typeParameters : undefined,
+      /*thisParameter*/ undefined,
+      parameters,
+      returnType,
+      /*resolvedTypePredicate*/ undefined,
+      parameters.length,
+      SignatureFlags.None,
+    );
+    dependentFunctionCallSignatures.set(type.id, signature);
+    return signature;
+  }
+
+  function isMlttTypeZeroNode(node: TypeNode): boolean {
+    return isTypeReferenceNode(node) && !node.typeArguments && isIdentifier(node.typeName) &&
+      (idText(node.typeName) === "Type0" || idText(node.typeName) === "Type");
+  }
+
+  function isMlttDependentFunctionTypeNode(node: TypeNode): node is DependentFunctionTypeNode {
+    return node.kind === SyntaxKind.DependentFunctionType;
+  }
+
+  function getCompilerTypeFromMlttTypeNode(node: TypeNode, scope: readonly MlttTypeBinding[]): Type | undefined {
+    const savedBindings = currentMlttTypeBindings;
+    currentMlttTypeBindings = scope;
+    try {
+      const type = getTypeFromTypeNode(node);
+      return type === errorType ? undefined : type;
+    }
+    finally {
+      currentMlttTypeBindings = savedBindings;
+    }
+  }
+
   function getTypeFromTypeNode(node: TypeNode): Type {
     return getConditionalFlowTypeOfType(getTypeFromTypeNodeWorker(node), node);
   }
@@ -22817,12 +22960,16 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       if (source.flags & TypeFlags.Singleton) return true;
     }
     if ((source.flags | target.flags) & TypeFlags.DependentFunction) {
-      return !!(source.flags & target.flags & TypeFlags.DependentFunction) &&
-        areMlttTermsDefinitionallyEqual(
+      if (source.flags & target.flags & TypeFlags.DependentFunction) {
+        return areMlttTermsDefinitionallyEqual(
           (source as DependentFunctionType).mlttTerm,
           (target as DependentFunctionType).mlttTerm,
           compareMlttExternalTerms,
         );
+      }
+      return source.flags & TypeFlags.DependentFunction
+        ? isDependentFunctionRelatedToType(source as DependentFunctionType, target)
+        : isDependentFunctionRelatedToType(target as DependentFunctionType, source);
     }
     if (source.flags & TypeFlags.Object && target.flags & TypeFlags.Object) {
       const related = relation.get(getRelationKey(source, target, IntersectionState.None, relation, /*ignoreConstraints*/ false));
