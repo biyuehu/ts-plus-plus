@@ -17,6 +17,11 @@
         "scopeName": "tspp.kind-operators",
         "path": "./syntaxes/tspp-kind-operators.tmLanguage.json",
         "injectTo": ["source.ts"]
+      },
+      {
+        "scopeName": "tspp.nominal-declarations",
+        "path": "./syntaxes/tspp-nominal-declarations.tmLanguage.json",
+        "injectTo": ["source.ts"]
       }
     ],
     "commands": [
