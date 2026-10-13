@@ -1,0 +1,16 @@
+{
+  "name": "TypeScript++ Newtype and Data Declarations",
+  "scopeName": "tspp.nominal-declarations",
+  "injectionSelector": "L:source.ts -comment -string -meta.type",
+  "patterns": [
+    {
+      "match": "^\\s*(?:(export)\\s+)?(?:(declare)\\s+)?(newtype|data)\\s+([A-Za-z_$][\\w$]*)",
+      "captures": {
+        "1": { "name": "storage.modifier.ts" },
+        "2": { "name": "storage.modifier.ts" },
+        "3": { "name": "storage.type.ts" },
+        "4": { "name": "entity.name.type.alias.ts" }
+      }
+    }
+  ]
+}
