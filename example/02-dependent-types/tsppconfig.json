@@ -2,7 +2,8 @@
   "compilerOptions": {
     "strict": true,
     "noEmit": true,
-    "dependentTypes": true
+    "dependentTypes": true,
+    "rootDir": "src"
   },
-  "include": ["index.tspp"]
+  "include": ["src/**/*.tspp"]
 }

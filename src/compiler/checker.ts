@@ -1160,6 +1160,7 @@ import {
   areMlttTermsDefinitionallyEqual,
   inferMlttType,
   mlttApplication,
+  MlttExternal,
   mlttExternal,
   mlttPi,
   MlttTerm,
@@ -1537,7 +1538,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   var inlineLevel = 0;
   var currentNode: Node | undefined;
   var currentMlttTypeBindings: readonly MlttTypeBinding[] | undefined;
-  var nextMlttPlaceholderId = 0;
+  var mlttPlaceholderTypes: TypeParameter[] | undefined;
   var varianceTypeParameter: TypeParameter | undefined;
   var isInferencePartiallyBlocked = false;
   var withinUnreachableCode = false;
@@ -20753,17 +20754,26 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     readonly compilerType: TypeParameter;
   }
 
+  interface MlttExternalIdentity {
+    readonly type: Type;
+    readonly parameters: readonly TypeParameter[];
+  }
+
   function dependentTypesAreEnabled(): boolean {
     if (!compilerOptions.dependentTypes) return false;
     const configFilePath = compilerOptions.configFilePath?.replace(/\\/g, "/").toLowerCase();
     return !configFilePath || configFilePath.endsWith("/tsppconfig.json") || configFilePath === "tsppconfig.json";
   }
 
-  function createMlttTypeBinding(name: string): MlttTypeBinding {
-    const placeholderName = `__mltt_placeholder_${nextMlttPlaceholderId++}__`;
-    const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(placeholderName));
-    const compilerType = createTypeParameter(symbol);
-    compilerType.typeKind = ordinaryTypeKind;
+  function createMlttTypeBinding(name: string, binderDepth: number): MlttTypeBinding {
+    const placeholderName = `__mltt_placeholder_${binderDepth}__`;
+    const placeholders = mlttPlaceholderTypes ||= [];
+    let compilerType = placeholders[binderDepth];
+    if (!compilerType) {
+      const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(placeholderName));
+      compilerType = placeholders[binderDepth] = createTypeParameter(symbol);
+      compilerType.typeKind = ordinaryTypeKind;
+    }
     return { name, placeholderName, compilerType };
   }
 
@@ -20775,7 +20785,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (node.kind === SyntaxKind.DependentFunctionType) {
       const dependent = node as DependentFunctionTypeNode;
       const domain = getMlttTermFromTypeNode(dependent.parameterType, scope);
-      const binding = createMlttTypeBinding(idText(dependent.parameterName));
+      const binding = createMlttTypeBinding(idText(dependent.parameterName), scope.length);
       const codomain = getMlttTermFromTypeNode(dependent.returnType, [binding, ...scope]);
       return domain && codomain ? mlttPi(idText(dependent.parameterName), domain, codomain) : undefined;
     }
@@ -20835,15 +20845,87 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       currentMlttTypeBindings = savedBindings;
     }
 
+    if (!checkMlttExternalUnionOrIntersectionKinds(type, node)) return undefined;
+
+    const referencedBindings = new Set<MlttTypeBinding>();
+    collectMlttBindingsReferencedInTypeNode(node, scope, referencedBindings);
     const arguments_: MlttTerm[] = [];
+    const parameters: TypeParameter[] = [];
     for (let index = 0; index < scope.length; index++) {
       const binding = scope[index];
-      if (!key.includes(binding.placeholderName)) continue;
+      if (!referencedBindings.has(binding)) continue;
       const argumentIndex = arguments_.length;
       key = key.split(binding.placeholderName).join(`$${argumentIndex}`);
       arguments_.push(mlttVariable(index));
+      parameters.push(binding.compilerType);
     }
-    return mlttExternal(key, getTextOfNode(node), arguments_, mlttUniverse(0));
+    const mlttType = getMlttTypeFromKind(getKindOfType(type), node);
+    return mlttType && mlttExternal(
+      key,
+      getTextOfNode(node),
+      arguments_,
+      mlttType,
+      { type, parameters } satisfies MlttExternalIdentity,
+    );
+  }
+
+  function collectMlttBindingsReferencedInTypeNode(
+    node: Node,
+    scope: readonly MlttTypeBinding[],
+    result: Set<MlttTypeBinding>,
+  ): void {
+    if (isTypeReferenceNode(node) && isIdentifier(node.typeName)) {
+      const name = idText(node.typeName);
+      const binding = scope.find(binding => binding.name === name);
+      if (binding) result.add(binding);
+    }
+    forEachChild(node, child => collectMlttBindingsReferencedInTypeNode(child, scope, result));
+  }
+
+  function checkMlttExternalUnionOrIntersectionKinds(type: Type, node: TypeNode): boolean {
+    if (!(type.flags & (TypeFlags.Union | TypeFlags.Intersection))) return true;
+    let valid = true;
+    for (const constituent of (type as UnionOrIntersectionType).types) {
+      if (!isOrdinaryTypeKind(getKindOfType(constituent))) {
+        error(node, Diagnostics.Type_0_has_kind_1_but_kind_2_was_expected, typeToString(constituent), kindToString(getKindOfType(constituent)), kindToString(ordinaryTypeKind));
+        valid = false;
+      }
+    }
+    return valid;
+  }
+
+  function getMlttTypeFromKind(kind: Kind, node: Node): MlttTerm | undefined {
+    if (kind.flags === KindFlags.Type) {
+      const level = Number(kind.typeLevel);
+      if (!Number.isSafeInteger(level)) {
+        error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `Universe level '${kind.typeLevel}' is too large.`);
+        return undefined;
+      }
+      return mlttUniverse(level);
+    }
+
+    let result = getMlttTypeFromKind(kind.returnKind, node);
+    if (!result) return undefined;
+    for (let index = kind.parameters.length - 1; index >= 0; index--) {
+      const parameter = getMlttTypeFromKind(kind.parameters[index], node);
+      if (!parameter) return undefined;
+      result = mlttPi(`_${index}`, parameter, result);
+    }
+    return result;
+  }
+
+  function compareMlttExternalTerms(left: MlttExternal, right: MlttExternal): boolean {
+    const leftIdentity = left.identity as MlttExternalIdentity | undefined;
+    const rightIdentity = right.identity as MlttExternalIdentity | undefined;
+    if (!leftIdentity || !rightIdentity) return left.key === right.key;
+    if (leftIdentity.parameters.length !== rightIdentity.parameters.length) return false;
+
+    const rightType = rightIdentity.parameters.length
+      ? instantiateType(rightIdentity.type, createTypeMapper(rightIdentity.parameters, leftIdentity.parameters))
+      : rightIdentity.type;
+    if (isTypeIdenticalTo(leftIdentity.type, rightType)) return true;
+    if ((leftIdentity.type.flags | rightType.flags) & (TypeFlags.Any | TypeFlags.Unknown)) return false;
+    return isTypeAssignableTo(leftIdentity.type, rightType) && isTypeAssignableTo(rightType, leftIdentity.type);
   }
 
   function getTypeFromTypeNode(node: TypeNode): Type {
@@ -22736,7 +22818,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
     if ((source.flags | target.flags) & TypeFlags.DependentFunction) {
       return !!(source.flags & target.flags & TypeFlags.DependentFunction) &&
-        areMlttTermsDefinitionallyEqual((source as DependentFunctionType).mlttTerm, (target as DependentFunctionType).mlttTerm);
+        areMlttTermsDefinitionallyEqual(
+          (source as DependentFunctionType).mlttTerm,
+          (target as DependentFunctionType).mlttTerm,
+          compareMlttExternalTerms,
+        );
     }
     if (source.flags & TypeFlags.Object && target.flags & TypeFlags.Object) {
       const related = relation.get(getRelationKey(source, target, IntersectionState.None, relation, /*ignoreConstraints*/ false));
@@ -54546,6 +54632,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     // Return TypeFlagsEnum for all enum-like unit types (they'll be sorted by their symbols)
     if (t.flags & (TypeFlags.EnumLiteral | TypeFlags.Enum) && !(t.flags & TypeFlags.Union)) {
       return TypeFlags.Enum;
+    }
+    // Bit 31 is signed in JavaScript bitwise operations. Keep dependent functions
+    // after the existing complex types instead of accidentally sorting them first.
+    if (t.flags & TypeFlags.DependentFunction) {
+      return 2 ** 31;
     }
     return t.flags;
   }

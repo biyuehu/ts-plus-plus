@@ -1,6 +1,16 @@
 # 02 — 不需要 MLTT 基础的依赖类型入门
 
-这个示例从普通 TypeScript 使用者熟悉的“值有类型”出发，逐步解释 TS++ 中的类型宇宙、依赖函数和类型族。建议先按顺序阅读 [`index.tspp`](./index.tspp)，再回来查看本页的整体说明。
+这个示例从普通 TypeScript 使用者熟悉的“值有类型”出发，逐步解释 TS++ 中的类型宇宙、依赖函数、类型族，以及它们与原生 TypeScript 类型的关系。
+
+## 学习路线
+
+示例拆分在 `src` 目录中，建议按顺序阅读：
+
+1. [`01-basics.tspp`](./src/01-basics.tspp)：universe、依赖函数和类型族；
+2. [`02-advanced.tspp`](./src/02-advanced.tspp)：与 TS 类型组合、alpha/beta 和结构等价；
+3. [`03-boundaries.tspp`](./src/03-boundaries.tspp)：kind 传播、错误实验和当前限制。
+
+三个文件分别对应基础、进阶和边界探索，既可以连续阅读，也可以单独实验。
 
 ## 先建立一个心智模型
 
@@ -121,6 +131,8 @@ kind 检查、别名传播、类型打印和关系判断
 - 由原 TypeScript checker 检查的 primitive、union/intersection、普通泛型引用、`keyof`、indexed access、mapped type 和 conditional type；
 - alpha/beta 定义相等和 universe/kind 检查。
 
+嵌入 MLTT 的 TypeScript 类型会保留其真实 kind，并继续采用 TypeScript 的结构类型语义；别名名称不同但结构相同的类型不会因此变成不同的依赖类型。union/intersection 也不能用来把高层 universe 的类型伪装成 `Type0`。
+
 项目使用独立的 `tsppconfig.json` 开启这项实验能力：
 
 ```json
@@ -157,6 +169,6 @@ npm run check
 npm run emit-declarations
 ```
 
-第二条命令会在 `dist/index.d.tspp` 中生成声明。依赖函数会保持 `(A: Type0) -> ...`，不会退化成 `unknown`。
+第二条命令会在 `dist` 中按课程文件生成对应的 `.d.tspp` 声明。依赖函数会保持 `(A: Type0) -> ...`，不会退化成 `unknown`。
 
-阅读完正常示例后，可以取消 `index.tspp` 最后几条错误案例中的任意一条注释，再运行 `npm run check`，观察未绑定变量和错误 universe 的诊断。
+阅读完正常示例后，可以取消 [`03-boundaries.tspp`](./src/03-boundaries.tspp) 中任意错误案例的注释，再运行 `npm run check`，观察未绑定变量、错误 universe 和非法组合的诊断。

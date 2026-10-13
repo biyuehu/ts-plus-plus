@@ -61,6 +61,17 @@ describe("unittests:: MLTT core", () => {
     assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(applied, expected));
   });
 
+  it("lets the host compare external types without exposing their identities to the core", () => {
+    const leftIdentity = {};
+    const rightIdentity = {};
+    const left = mltt.mlttExternal("left display key", "Left", [], type0, leftIdentity);
+    const right = mltt.mlttExternal("right display key", "Right", [], type0, rightIdentity);
+
+    assert.isFalse(mltt.areMlttTermsDefinitionallyEqual(left, right));
+    assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(left, right, (leftExternal, rightExternal) => leftExternal.identity === leftIdentity && rightExternal.identity === rightIdentity));
+    assert.strictEqual((mltt.normalizeMlttTerm(left) as mltt.MlttExternal).identity, leftIdentity);
+  });
+
   it("substitutes a dependent codomain after application", () => {
     const identityOverType1 = mltt.mlttAnnotation(
       polymorphicIdentity,

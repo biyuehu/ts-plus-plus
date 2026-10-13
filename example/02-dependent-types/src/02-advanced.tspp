@@ -1,0 +1,54 @@
+// =============================================================================
+// 高级篇：与 TypeScript 类型组合，以及定义相等
+// =============================================================================
+//
+// MLTT 负责 binder、universe、类型应用和定义相等；union、泛型、keyof、
+// mapped type 等仍由原来的 TypeScript checker 处理。
+
+type Box<T> = { value: T };
+
+// -----------------------------------------------------------------------------
+// 1. 嵌入普通 TypeScript 类型
+// -----------------------------------------------------------------------------
+
+export type BuiltinResult: Type1 = (A: Type0) -> string;
+export type UnionResult: Type1 = (A: Type0) -> A | string;
+export type IntersectionResult: Type1 = (A: Type0) -> A & object;
+export type GenericReferenceResult: Type1 = (A: Type0) -> Box<A>;
+export type KeysOf: Type1 = (A: Type0) -> keyof A;
+export type PropertyResult: Type1 = (A: Type0) -> { value: A }["value"];
+export type ReadonlyShape: Type1 = (A: Type0) -> { readonly [K in keyof A]: A[K] };
+export type ConditionalResult: Type1 = (A: Type0) -> A extends string ? number : boolean;
+
+// -----------------------------------------------------------------------------
+// 2. Alpha 等价和遮蔽
+// -----------------------------------------------------------------------------
+
+// binder 名字不同，但绑定结构相同，因此下面两个类型 alpha 等价。
+export type IdentityWithA: Type1 =
+  (A: Type0) -> (value: A) -> A;
+
+export type IdentityWithT: Type1 =
+  (T: Type0) -> (item: T) -> T;
+
+// 内层 A 遮蔽外层 A；最后一个 A 指向最近的 binder。
+export type Shadowing: Type1 =
+  (A: Type0) -> (A: Type0) -> A;
+
+// -----------------------------------------------------------------------------
+// 3. TypeScript 结构等价
+// -----------------------------------------------------------------------------
+
+type LeftShape = { value: string };
+type RightShape = { value: string };
+
+// external type 不比较 alias 名字，而是继续采用 TS 的结构类型语义。
+export type WithLeftShape: Type1 = (A: Type0) -> LeftShape;
+export type WithRightShape: Type1 = (A: Type0) -> RightShape;
+
+// 结构等价也会穿过 MLTT binder。
+export type WithGenericAlias: Type1 = (A: Type0) -> Box<A>;
+export type WithStructuralBody: Type1 = (T: Type0) -> { value: T };
+
+// MLTT 部分先比较归一化 term；遇到 external type 时，再委托 TS checker
+// 进行严格 identity 或双向结构 assignability 检查。
