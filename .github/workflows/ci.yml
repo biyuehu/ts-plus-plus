@@ -77,6 +77,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Build compiler for macro workers
+        run: npx hereby local
       - name: TS++ unit tests
         run: "npx hereby runtests --tests 'unittests:: (MLTT|tspp::)' --lint=false"
 

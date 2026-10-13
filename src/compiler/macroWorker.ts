@@ -142,11 +142,18 @@ run().then(
 
 export function canUseMacroWorkers(): boolean {
   try {
-    return typeof require === "function" && !!require("node:worker_threads").Worker;
+    return typeof require === "function" && !!require("node:worker_threads").Worker && getMacroWorkerCompilerPath() !== undefined;
   }
   catch {
     return false;
   }
+}
+
+function getMacroWorkerCompilerPath(): string | undefined {
+  const path = require("node:path") as typeof import("node:path");
+  const fs = require("node:fs") as typeof import("node:fs");
+  const siblingCompilerPath = path.join(path.dirname(__filename), "typescript.js");
+  return fs.existsSync(siblingCompilerPath) ? siblingCompilerPath : undefined;
 }
 
 interface QueuedMacroWorkerTask {
@@ -204,10 +211,9 @@ function startMacroExpansionWorker(
 ): Promise<MacroWorkerResult> {
   const normalizedOptions = { ...defaultMacroWorkerOptions, ...options };
   const path = require("node:path") as typeof import("node:path");
-  const fs = require("node:fs") as typeof import("node:fs");
   const { Worker } = require("node:worker_threads") as typeof import("node:worker_threads");
-  const siblingCompilerPath = path.join(path.dirname(__filename), "typescript.js");
-  const compilerPath = fs.existsSync(siblingCompilerPath) ? siblingCompilerPath : __filename;
+  const compilerPath = getMacroWorkerCompilerPath();
+  if (compilerPath === undefined) throw new Error("The macro worker could not locate the TypeScript compiler module.");
   const currentDirectory = program.getCurrentDirectory();
   const useCaseSensitiveFileNames = program.useCaseSensitiveFileNames();
   const normalizeFileName = (fileName: string) => {
