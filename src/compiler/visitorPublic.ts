@@ -27,6 +27,7 @@ import {
   isClassElement,
   isColonToken,
   isConciseBody,
+  isDataVariant,
   isDotDotDotToken,
   isElementAccessChain,
   isEntityName,
@@ -1493,6 +1494,34 @@ const visitEachChildTable: VisitEachChildTable = {
       typeParameters,
       type,
       kindType,
+    );
+  },
+
+  [SyntaxKind.NewtypeDeclaration]: function visitEachChildOfNewtypeDeclaration(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateNewtypeDeclaration(
+      node,
+      nodesVisitor(node.modifiers, visitor, isModifierLike),
+      Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
+      nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration),
+      Debug.checkDefined(nodeVisitor(node.type, visitor, isTypeNode)),
+    );
+  },
+
+  [SyntaxKind.DataDeclaration]: function visitEachChildOfDataDeclaration(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateDataDeclaration(
+      node,
+      nodesVisitor(node.modifiers, visitor, isModifierLike),
+      Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
+      nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration),
+      nodesVisitor(node.variants, visitor, isDataVariant),
+    );
+  },
+
+  [SyntaxKind.DataVariant]: function visitEachChildOfDataVariant(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateDataVariant(
+      node,
+      Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
+      nodesVisitor(node.parameters, visitor, isParameter),
     );
   },
 

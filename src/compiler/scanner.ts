@@ -217,6 +217,8 @@ export const textToKeywordObj: MapLike<KeywordSyntaxKind> = {
   async: SyntaxKind.AsyncKeyword,
   await: SyntaxKind.AwaitKeyword,
   of: SyntaxKind.OfKeyword,
+  newtype: SyntaxKind.NewtypeKeyword,
+  data: SyntaxKind.DataKeyword,
 };
 
 const textToKeyword = new Map(Object.entries(textToKeywordObj));

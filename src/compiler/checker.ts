@@ -1,4 +1,13 @@
 import {
+  isDataLikeDeclaration,
+  isNominalConstructorDeclaration,
+} from "./_namespaces/ts.js";
+import type {
+  DataDeclaration,
+  DataVariant,
+  NewtypeDeclaration,
+} from "./_namespaces/ts.js";
+import {
   __String,
   AccessExpression,
   AccessFlags,
@@ -7895,6 +7904,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           if (isExpanding(context) && propertySymbol.flags & SymbolFlags.Prototype) {
             continue;
           }
+          if (isNominalBrandPropertyName(propertySymbol.escapedName)) {
+            continue;
+          }
           i++;
           if (context.flags & NodeBuilderFlags.WriteClassExpressionAsTypeLiteral) {
             if (propertySymbol.flags & SymbolFlags.Prototype) {
@@ -13186,6 +13198,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (symbol.flags & (SymbolFlags.Variable | SymbolFlags.Property)) {
       return getTypeOfVariableOrParameterOrProperty(symbol);
     }
+    if (symbol.flags & SymbolFlags.Function && symbol.valueDeclaration && isNominalConstructorDeclaration(symbol.valueDeclaration)) {
+      return getTypeOfNominalConstructor(symbol, symbol.valueDeclaration);
+    }
     if (symbol.flags & (SymbolFlags.Function | SymbolFlags.Method | SymbolFlags.Class | SymbolFlags.Enum | SymbolFlags.ValueModule)) {
       return getTypeOfFuncClassEnumModule(symbol);
     }
@@ -13286,6 +13301,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         case SyntaxKind.FunctionExpression:
         case SyntaxKind.ArrowFunction:
         case SyntaxKind.TypeAliasDeclaration:
+        case SyntaxKind.NewtypeDeclaration:
+        case SyntaxKind.DataDeclaration:
         case SyntaxKind.JSDocTemplateTag:
         case SyntaxKind.JSDocTypedefTag:
         case SyntaxKind.JSDocEnumTag:
@@ -13720,6 +13737,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function getDeclaredTypeOfTypeAlias(symbol: Symbol): Type {
     const links = getSymbolLinks(symbol);
     if (!links.declaredType) {
+      const dataLikeDeclaration = symbol.declarations?.find(isDataLikeDeclaration);
+      if (dataLikeDeclaration) {
+        return getDeclaredTypeOfDataLikeDeclaration(symbol, links, dataLikeDeclaration);
+      }
       // Note that we use the links object as the target here because the symbol object is used as the unique
       // identity for resolution of the 'type' property in SymbolLinks.
       if (!pushTypeResolution(symbol, TypeSystemPropertyName.DeclaredType)) {
@@ -13734,6 +13755,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         getTypeFromTypeNode(typeNode) : errorType;
       if (popTypeResolution()) {
         const typeParameters = getLocalTypeParametersOfClassOrInterfaceOrTypeAlias(symbol);
+        if (declaration.kind === SyntaxKind.NewtypeDeclaration) {
+          type = getNominalNewtypeType(symbol, type, typeParameters);
+        }
         if (typeParameters) {
           // Initialize the instantiation cache for generic type aliases. The declared type corresponds to
           // an instantiation of the type alias with the type parameters supplied as type arguments.
@@ -13757,6 +13781,133 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       links.declaredType ??= type;
     }
     return links.declaredType;
+  }
+
+  /**
+   * The synthetic property that makes a newtype or a data type nominal: only types declared by `symbol` carry it,
+   * so no structurally identical type is assignable to them. The `__@` prefix keeps it out of `keyof`.
+   */
+  function getNominalBrandProperty(symbol: Symbol): Symbol {
+    const links = getSymbolLinks(symbol);
+    if (!links.nominalBrand) {
+      const brand = createSymbol(SymbolFlags.Property, `__@nominal@${getSymbolId(symbol)}` as __String, CheckFlags.Readonly);
+      brand.links.type = trueType;
+      links.nominalBrand = brand;
+    }
+    return links.nominalBrand;
+  }
+
+  /** The synthetic property that makes a newtype or data type nominal, kept out of user-visible output. */
+  function isNominalBrandPropertyName(name: __String): boolean {
+    return typeof name === "string" && name.startsWith("__@nominal@");
+  }
+
+  /** `newtype N = U` has the declared type `U & brand(N)`: `N` is assignable to `U`, but neither `U` nor any other newtype is assignable to `N`. */
+  function getNominalNewtypeType(symbol: Symbol, underlyingType: Type, typeParameters: readonly TypeParameter[] | undefined): Type {
+    // TODO(diagnostics): the underlying type must not be any, unknown or never, the brand is lost otherwise.
+    const brandType = createAnonymousType(/*symbol*/ undefined, createSymbolTable([getNominalBrandProperty(symbol)]), emptyArray, emptyArray, emptyArray);
+    return getIntersectionType([underlyingType, brandType], IntersectionFlags.None, symbol, typeParameters);
+  }
+
+  /** Purely syntactic, so that resolving a variant does not resolve the (possibly recursive) types of its fields. */
+  function isTypeParameterNameMentioned(name: __String, node: Node): boolean {
+    return isIdentifier(node) ? node.escapedText === name : !!forEachChild(node, child => isTypeParameterNameMentioned(name, child));
+  }
+
+  function getDeclaredTypeOfDataLikeDeclaration(symbol: Symbol, links: SymbolLinks, declaration: DataDeclaration | DataVariant): Type {
+    if (declaration.kind === SyntaxKind.DataVariant) {
+      return getDeclaredTypeOfDataVariant(symbol, links, declaration);
+    }
+    // TODO(HKT): a data type is a type constructor, attach its kind once kinds are inferred for declarations other than type aliases.
+    if (!pushTypeResolution(symbol, TypeSystemPropertyName.DeclaredType)) {
+      return errorType;
+    }
+    const typeParameters = appendTypeParameters(/*typeParameters*/ undefined, declaration.typeParameters ?? emptyArray);
+    // data D = A | B(...)   ==>   the union A | B of the variant types
+    let type: Type = getUnionType(map(declaration.variants, variant => getDeclaredTypeOfSymbol(getSymbolOfDeclaration(variant))), UnionReduction.Literal, symbol, typeParameters);
+    if (popTypeResolution()) {
+      if (typeParameters) {
+        links.typeParameters = typeParameters;
+        links.instantiations = new Map<string, Type>();
+        links.instantiations.set(getTypeListId(typeParameters), type);
+      }
+    }
+    else {
+      type = errorType;
+      error(declaration.name, Diagnostics.Type_alias_0_circularly_references_itself, symbolToString(symbol));
+    }
+    links.declaredType ??= type;
+    return links.declaredType;
+  }
+
+  /** A variant is the object type `{ _tag: "Name"; field: Type; ...; brand }`, with lazily resolved field types. */
+  function getDeclaredTypeOfDataVariant(symbol: Symbol, links: SymbolLinks, variant: DataVariant): Type {
+    const data = variant.parent;
+    const dataTypeParameters = appendTypeParameters(/*typeParameters*/ undefined, data.typeParameters ?? emptyArray);
+    // A variant only takes the type parameters it mentions: `None` takes none, `Some<A>` takes `A`.
+    const typeParameters = dataTypeParameters && filter(dataTypeParameters, typeParameter => isTypeParameterNameMentioned(typeParameter.symbol.escapedName, variant));
+
+    const members = createSymbolTable();
+    const tag = createSymbol(SymbolFlags.Property, "_tag" as __String, CheckFlags.Readonly);
+    tag.links.type = getStringLiteralType(idText(variant.name));
+    members.set(tag.escapedName, tag);
+    for (const parameter of variant.parameters ?? emptyArray) {
+      // TODO(diagnostics): variant fields must be plain identifiers with a type annotation, reject optional, default-valued, rest and destructured parameters.
+      if (isIdentifier(parameter.name)) {
+        const field = createSymbol(SymbolFlags.Property, parameter.name.escapedText);
+        field.declarations = [parameter];
+        field.valueDeclaration = parameter; // the type of the field is resolved lazily from the parameter's annotation
+        members.set(field.escapedName, field);
+      }
+    }
+    const brand = getNominalBrandProperty(getSymbolOfDeclaration(data));
+    members.set(brand.escapedName, brand);
+
+    const type = createAnonymousType(symbol, members, emptyArray, emptyArray, emptyArray);
+    type.aliasSymbol = symbol;
+    type.aliasTypeArguments = typeParameters && length(typeParameters) ? typeParameters : undefined;
+    if (typeParameters && typeParameters.length) {
+      links.typeParameters = typeParameters;
+      links.instantiations = new Map<string, Type>();
+      links.instantiations.set(getTypeListId(typeParameters), type);
+    }
+    else {
+      links.typeParameters = undefined;
+    }
+    return links.declaredType = type;
+  }
+
+  function createNominalConstructorType(typeParameters: readonly TypeParameter[] | undefined, parameters: readonly Symbol[], returnType: Type): Type {
+    const signature = createSignature(/*declaration*/ undefined, typeParameters, /*thisParameter*/ undefined, parameters, returnType, /*resolvedTypePredicate*/ undefined, parameters.length, SignatureFlags.None);
+    return createAnonymousType(/*symbol*/ undefined, emptySymbols, [signature], emptyArray, emptyArray);
+  }
+
+  /** The type of the value constructor that a newtype or a data variant introduces. */
+  function getTypeOfNominalConstructor(symbol: Symbol, declaration: NewtypeDeclaration | DataVariant): Type {
+    const links = getSymbolLinks(symbol);
+    if (!links.type) {
+      const declaredType = getDeclaredTypeOfSymbol(symbol); // also populates links.typeParameters
+      const typeParameters = links.typeParameters;
+      if (declaration.kind === SyntaxKind.NewtypeDeclaration) {
+        // newtype N<T> = U   ==>   <T>(value: U) => N<T>
+        // TODO(emit): at runtime the constructor is the identity function, a newtype is completely erased.
+        const value = createSymbol(SymbolFlags.FunctionScopedVariable, "value" as __String);
+        value.links.type = getTypeFromTypeNode(declaration.type);
+        links.type = createNominalConstructorType(typeParameters, [value], declaredType);
+      }
+      else if (!declaration.parameters) {
+        // None   ==>   a constant of the variant type
+        // TODO(emit): at runtime this is the object `{ _tag: "None" }`.
+        links.type = declaredType;
+      }
+      else {
+        // Some(value: A)   ==>   <A>(value: A) => Some<A>
+        // TODO(emit): at runtime this is the function `(value) => ({ _tag: "Some", value })`.
+        const parameters = map(declaration.parameters, parameter => getSymbolOfDeclaration(parameter));
+        links.type = createNominalConstructorType(typeParameters, parameters, declaredType);
+      }
+    }
+    return links.type;
   }
 
   function getBaseTypeOfEnumLikeType(type: Type) {
@@ -17584,7 +17735,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function getConditionalFlowTypeOfType(type: Type, node: Node) {
     let constraints: Type[] | undefined;
     let covariant = true;
-    while (node && !isStatement(node) && node.kind !== SyntaxKind.JSDoc) {
+    while (node && node.parent && !isStatement(node) && node.kind !== SyntaxKind.JSDoc) {
       const parent = node.parent;
       // only consider variance flipped by parameter locations - `keyof` types would usually be considered variance inverting, but
       // often get used in indexed accesses where they behave sortof invariantly, but our checking is lax
@@ -21585,7 +21736,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const links = getNodeLinks(declaration);
     const target = type.objectFlags & ObjectFlags.Reference ? links.resolvedType! as DeferredTypeReference :
       type.objectFlags & ObjectFlags.Instantiated ? type.target! : type;
-    let typeParameters = links.outerTypeParameters;
+    let typeParameters: TypeParameter[] | undefined = !(type.objectFlags & ObjectFlags.Instantiated) && type.aliasTypeArguments ?
+      type.aliasTypeArguments as TypeParameter[] :
+      links.outerTypeParameters;
     if (!typeParameters) {
       // The first time an anonymous type is instantiated we compute and store a list of the type
       // parameters that are in scope (and therefore potentially referenced). For type literals that
@@ -25264,14 +25417,17 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           return;
         }
       }
-      const props = arrayFrom(getUnmatchedProperties(source, target, requireOptionalProperties, /*matchDiscriminantProperties*/ false));
+      const props = arrayFrom(getUnmatchedProperties(source, target, requireOptionalProperties, /*matchDiscriminantProperties*/ false)).filter(p => !isNominalBrandPropertyName(p.escapedName));
       if (
         !headMessage || (headMessage.code !== Diagnostics.Class_0_incorrectly_implements_interface_1.code &&
           headMessage.code !== Diagnostics.Class_0_incorrectly_implements_class_1_Did_you_mean_to_extend_1_and_inherit_its_members_as_a_subclass.code)
       ) {
         shouldSkipElaboration = true; // Retain top-level error for interface implementing issues, otherwise omit it
       }
-      if (props.length === 1) {
+      if (props.length === 0) {
+        reportError(Diagnostics.Type_0_is_not_assignable_to_type_1, ...getTypeNamesForErrorDisplay(source, target));
+      }
+      else if (props.length === 1) {
         const propName = symbolToString(unmatchedProperty, /*enclosingDeclaration*/ undefined, SymbolFlags.None, SymbolFormatFlags.AllowAnyNodeKind | SymbolFormatFlags.WriteComputedProps);
         reportError(Diagnostics.Property_0_is_missing_in_type_1_but_required_in_type_2, propName, ...getTypeNamesForErrorDisplay(source, target));
         if (length(unmatchedProperty.declarations)) {
@@ -48780,6 +48936,33 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
   }
 
+  function checkNewtypeDeclaration(node: NewtypeDeclaration) {
+    requireTsppFeature(node, "newtypeDeclarations");
+    // TODO(diagnostics): grammar checks for modifiers, the new node kinds are not part of HasModifiers yet.
+    checkTypeNameIsReserved(node.name, Diagnostics.Type_alias_name_cannot_be_0);
+    checkExportsOnMergedDeclarations(node);
+    checkTypeParameters(node.typeParameters);
+    checkSourceElement(node.type);
+    // Resolve the declared type and the constructor type so that circularity errors surface on the declaration.
+    // Not registered for the unused identifier check: checkUnusedIdentifiers rejects node kinds it does not know.
+    getTypeOfNominalConstructor(getSymbolOfDeclaration(node), node);
+    // TODO(HKT): kind checks as in checkTypeAliasDeclaration.
+  }
+
+  function checkDataDeclaration(node: DataDeclaration) {
+    requireTsppFeature(node, "dataDeclarations");
+    checkTypeNameIsReserved(node.name, Diagnostics.Type_alias_name_cannot_be_0);
+    checkExportsOnMergedDeclarations(node);
+    checkTypeParameters(node.typeParameters);
+    getDeclaredTypeOfSymbol(getSymbolOfDeclaration(node));
+    for (const variant of node.variants) {
+      for (const parameter of variant.parameters ?? emptyArray) {
+        checkSourceElement(parameter.type);
+      }
+      getTypeOfNominalConstructor(getSymbolOfDeclaration(variant), variant);
+    }
+  }
+
   function computeEnumMemberValues(node: EnumDeclaration) {
     const nodeLinks = getNodeLinks(node);
     if (!(nodeLinks.flags & NodeCheckFlags.EnumValuesComputed)) {
@@ -50150,6 +50333,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return checkInterfaceDeclaration(node as InterfaceDeclaration);
       case SyntaxKind.TypeAliasDeclaration:
         return checkTypeAliasDeclaration(node as TypeAliasDeclaration);
+      case SyntaxKind.NewtypeDeclaration:
+        return checkNewtypeDeclaration(node as NewtypeDeclaration);
+      case SyntaxKind.DataDeclaration:
+        return checkDataDeclaration(node as DataDeclaration);
       case SyntaxKind.EnumDeclaration:
         return checkEnumDeclaration(node as EnumDeclaration);
       case SyntaxKind.EnumMember:

@@ -1,3 +1,8 @@
+import type {
+  DataDeclaration,
+  DataVariant,
+  NewtypeDeclaration,
+} from "../_namespaces/ts.js";
 import {
   AbstractKeyword,
   AccessorKeyword,
@@ -822,6 +827,18 @@ export function isInterfaceDeclaration(node: Node): node is InterfaceDeclaration
 
 export function isTypeAliasDeclaration(node: Node): node is TypeAliasDeclaration {
   return node.kind === SyntaxKind.TypeAliasDeclaration;
+}
+
+export function isNewtypeDeclaration(node: Node): node is NewtypeDeclaration {
+  return node.kind === SyntaxKind.NewtypeDeclaration;
+}
+
+export function isDataDeclaration(node: Node): node is DataDeclaration {
+  return node.kind === SyntaxKind.DataDeclaration;
+}
+
+export function isDataVariant(node: Node): node is DataVariant {
+  return node.kind === SyntaxKind.DataVariant;
 }
 
 export function isEnumDeclaration(node: Node): node is EnumDeclaration {

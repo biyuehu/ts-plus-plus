@@ -1,3 +1,8 @@
+import type {
+  DataDeclaration,
+  DataVariant,
+  NewtypeDeclaration,
+} from "../_namespaces/ts.js";
 import {
   __String,
   AccessorDeclaration,
@@ -762,6 +767,12 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateInterfaceDeclaration,
     createTypeAliasDeclaration,
     updateTypeAliasDeclaration,
+    createNewtypeDeclaration,
+    updateNewtypeDeclaration,
+    createDataVariant,
+    updateDataVariant,
+    createDataDeclaration,
+    updateDataDeclaration,
     createEnumDeclaration,
     updateEnumDeclaration,
     createModuleDeclaration,
@@ -4561,6 +4572,107 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         || node.kindType !== kindType
         || node.type !== type
       ? update(createTypeAliasDeclaration(modifiers, name, typeParameters, type, kindType), node)
+      : node;
+  }
+
+  // @api
+  function createNewtypeDeclaration(
+    modifiers: readonly ModifierLike[] | undefined,
+    name: string | Identifier,
+    typeParameters: readonly TypeParameterDeclaration[] | undefined,
+    type: TypeNode,
+  ) {
+    const node = createBaseDeclaration<NewtypeDeclaration>(SyntaxKind.NewtypeDeclaration);
+    node.modifiers = asNodeArray(modifiers);
+    node.name = asName(name);
+    node.typeParameters = asNodeArray(typeParameters);
+    node.type = type;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+
+    node.jsDoc = undefined; // initialized by parser (JsDocContainer)
+    node.locals = undefined; // initialized by binder (LocalsContainer)
+    node.nextContainer = undefined; // initialized by binder (LocalsContainer)
+    return node;
+  }
+
+  // @api
+  function updateNewtypeDeclaration(
+    node: NewtypeDeclaration,
+    modifiers: readonly ModifierLike[] | undefined,
+    name: Identifier,
+    typeParameters: readonly TypeParameterDeclaration[] | undefined,
+    type: TypeNode,
+  ) {
+    return node.modifiers !== modifiers
+        || node.name !== name
+        || node.typeParameters !== typeParameters
+        || node.type !== type
+      ? update(createNewtypeDeclaration(modifiers, name, typeParameters, type), node)
+      : node;
+  }
+
+  // @api
+  function createDataVariant(
+    name: string | Identifier,
+    parameters: readonly ParameterDeclaration[] | undefined,
+  ) {
+    const node = createBaseDeclaration<DataVariant>(SyntaxKind.DataVariant);
+    node.modifiers = undefined; // shared with the enclosing data declaration by the parser
+    node.name = asName(name);
+    node.parameters = asNodeArray(parameters);
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+
+    node.jsDoc = undefined; // initialized by parser (JsDocContainer)
+    node.locals = undefined; // initialized by binder (LocalsContainer)
+    node.nextContainer = undefined; // initialized by binder (LocalsContainer)
+    return node;
+  }
+
+  // @api
+  function updateDataVariant(
+    node: DataVariant,
+    name: Identifier,
+    parameters: readonly ParameterDeclaration[] | undefined,
+  ) {
+    return node.name !== name
+        || node.parameters !== parameters
+      ? update(createDataVariant(name, parameters), node)
+      : node;
+  }
+
+  // @api
+  function createDataDeclaration(
+    modifiers: readonly ModifierLike[] | undefined,
+    name: string | Identifier,
+    typeParameters: readonly TypeParameterDeclaration[] | undefined,
+    variants: readonly DataVariant[],
+  ) {
+    const node = createBaseDeclaration<DataDeclaration>(SyntaxKind.DataDeclaration);
+    node.modifiers = asNodeArray(modifiers);
+    node.name = asName(name);
+    node.typeParameters = asNodeArray(typeParameters);
+    node.variants = createNodeArray(variants);
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+
+    node.jsDoc = undefined; // initialized by parser (JsDocContainer)
+    node.locals = undefined; // initialized by binder (LocalsContainer)
+    node.nextContainer = undefined; // initialized by binder (LocalsContainer)
+    return node;
+  }
+
+  // @api
+  function updateDataDeclaration(
+    node: DataDeclaration,
+    modifiers: readonly ModifierLike[] | undefined,
+    name: Identifier,
+    typeParameters: readonly TypeParameterDeclaration[] | undefined,
+    variants: readonly DataVariant[],
+  ) {
+    return node.modifiers !== modifiers
+        || node.name !== name
+        || node.typeParameters !== typeParameters
+        || node.variants !== variants
+      ? update(createDataDeclaration(modifiers, name, typeParameters, variants), node)
       : node;
   }
 
