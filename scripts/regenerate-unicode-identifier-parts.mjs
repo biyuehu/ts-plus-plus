@@ -9,14 +9,14 @@ let startsActive = false;
 const starts = [];
 
 for (let i = 0; i < MAX_UNICODE_CODEPOINT; i++) {
-    if (isStart(String.fromCodePoint(i)) !== startsActive) {
-        starts.push(i - +startsActive);
-        startsActive = !startsActive;
-    }
-    if (isPart(String.fromCodePoint(i)) !== partsActive) {
-        parts.push(i - +partsActive);
-        partsActive = !partsActive;
-    }
+  if (isStart(String.fromCodePoint(i)) !== startsActive) {
+    starts.push(i - +startsActive);
+    startsActive = !startsActive;
+  }
+  if (isPart(String.fromCodePoint(i)) !== partsActive) {
+    parts.push(i - +partsActive);
+    partsActive = !partsActive;
+  }
 }
 
 console.log(`/**

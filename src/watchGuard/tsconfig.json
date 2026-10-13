@@ -1,9 +1,9 @@
 {
-    "extends": "../tsconfig-base",
-    "compilerOptions": {
-        "types": [
-            "node"
-        ]
-    },
-    "include": ["**/*"]
+  "extends": "../tsconfig-base",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  },
+  "include": ["**/*"]
 }

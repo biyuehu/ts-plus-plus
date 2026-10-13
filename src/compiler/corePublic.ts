@@ -11,15 +11,15 @@ export const version = "6.0.3" as string;
  * since `Object.prototype` may be modified by outside code.
  */
 export interface MapLike<T> {
-    [index: string]: T;
+  [index: string]: T;
 }
 
 export interface SortedReadonlyArray<T> extends ReadonlyArray<T> {
-    " __sortedArrayBrand": any;
+  " __sortedArrayBrand": any;
 }
 
 export interface SortedArray<T> extends Array<T> {
-    " __sortedArrayBrand": any;
+  " __sortedArrayBrand": any;
 }
 
 /**
@@ -28,9 +28,9 @@ export interface SortedArray<T> extends Array<T> {
  * @internal
  */
 export interface ReadonlyCollection<K> {
-    readonly size: number;
-    has(key: K): boolean;
-    keys(): IterableIterator<K>;
+  readonly size: number;
+  has(key: K): boolean;
+  keys(): IterableIterator<K>;
 }
 
 /** @internal */
@@ -41,7 +41,7 @@ export type Comparer<T> = (a: T, b: T) => Comparison;
 
 /** @internal */
 export const enum Comparison {
-    LessThan = -1,
-    EqualTo = 0,
-    GreaterThan = 1,
+  LessThan = -1,
+  EqualTo = 0,
+  GreaterThan = 1,
 }

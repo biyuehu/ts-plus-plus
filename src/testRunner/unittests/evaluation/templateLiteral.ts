@@ -1,8 +1,8 @@
 import * as evaluator from "../../_namespaces/evaluator.js";
 
 describe("unittests:: evaluation:: templateLiteral", () => {
-    it("toString() over valueOf()", () => {
-        const result = evaluator.evaluateTypeScript(`
+  it("toString() over valueOf()", () => {
+    const result = evaluator.evaluateTypeScript(`
             class C {
                 toString() {
                     return "toString";
@@ -14,11 +14,11 @@ describe("unittests:: evaluation:: templateLiteral", () => {
 
             export const output = \`\${new C}\`;
         `);
-        assert.strictEqual(result.output, "toString");
-    });
+    assert.strictEqual(result.output, "toString");
+  });
 
-    it("correct evaluation order", () => {
-        const result = evaluator.evaluateTypeScript(`
+  it("correct evaluation order", () => {
+    const result = evaluator.evaluateTypeScript(`
             class C {
                 counter: number;
 
@@ -37,6 +37,6 @@ describe("unittests:: evaluation:: templateLiteral", () => {
             const c = new C;
             export const output = \`\${c.foo} \${c.foo}\`;
         `);
-        assert.strictEqual(result.output, "1 3");
-    });
+    assert.strictEqual(result.output, "1 3");
+  });
 });

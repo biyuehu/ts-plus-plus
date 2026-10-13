@@ -1,17 +1,17 @@
 import { execFileSync } from "child_process";
 import {
-    readFileSync,
-    writeFileSync,
+  readFileSync,
+  writeFileSync,
 } from "fs";
 import {
-    dirname,
-    resolve,
+  dirname,
+  resolve,
 } from "path";
 
 const packageJsonFilePath = process.argv[2];
 if (!packageJsonFilePath) {
-    console.error("Usage: node addPackageJsonGitHead.mjs <package.json location>");
-    process.exit(1);
+  console.error("Usage: node addPackageJsonGitHead.mjs <package.json location>");
+  process.exit(1);
 }
 
 const packageJsonValue = JSON.parse(readFileSync(packageJsonFilePath, "utf8"));
