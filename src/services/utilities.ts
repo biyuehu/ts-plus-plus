@@ -426,8 +426,13 @@ export function getMeaningFromDeclaration(node: Node): SemanticMeaning {
     case SyntaxKind.TypeParameter:
     case SyntaxKind.InterfaceDeclaration:
     case SyntaxKind.TypeAliasDeclaration:
+    case SyntaxKind.NewtypeDeclaration:
+    case SyntaxKind.DataDeclaration:
     case SyntaxKind.TypeLiteral:
       return SemanticMeaning.Type;
+
+    case SyntaxKind.DataVariant:
+      return SemanticMeaning.Value;
 
     case SyntaxKind.JSDocTypedefTag:
       // If it has no name node, it shares the name with the value declaration below it.
