@@ -35,6 +35,10 @@
       {
         "command": "tspp.openDependentTypesExample",
         "title": "TS++: Open Dependent Types Example"
+      },
+      {
+        "command": "tspp.openNewtypeAndDataExample",
+        "title": "TS++: Open Newtype and Data Example"
       }
     ]
   }

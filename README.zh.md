@@ -24,6 +24,8 @@ tspp --init
   "compilerOptions": {
     "tsppFeatures": [
       "higherKindedTypes",
+      "newtypeDeclarations",
+      "dataDeclarations",
       "typeUniverses"
     ]
   }

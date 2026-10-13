@@ -21,6 +21,13 @@ function activate(context) {
       directory: path.join(examplesRoot, "02-dependent-types"),
       entry: path.join("src", "01-basics.tspp"),
     },
+    {
+      label: "03 — Newtype and Data",
+      description: "Nominal types, discriminated unions, and variant constructors",
+      command: "tspp.openNewtypeAndDataExample",
+      directory: path.join(examplesRoot, "03-newtype-and-data"),
+      entry: "index.tspp",
+    },
   ];
 
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -46,14 +53,16 @@ function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand("tspp.openHigherKindedTypesExample", () => openExample(examples[0])),
     vscode.commands.registerCommand("tspp.openDependentTypesExample", () => openExample(examples[1])),
+    vscode.commands.registerCommand("tspp.openNewtypeAndDataExample", () => openExample(examples[2])),
     vscode.commands.registerCommand("tspp.openAllExamples", async () => {
       await openExample(examples[0], vscode.ViewColumn.One);
       await openExample(examples[1], vscode.ViewColumn.Two);
+      await openExample(examples[2], vscode.ViewColumn.Three);
     }),
     vscode.commands.registerCommand("tspp.pickExample", async () => {
       const selection = await vscode.window.showQuickPick(
         [
-          { label: "All examples", description: "Open examples 01 and 02 side by side", command: "tspp.openAllExamples" },
+          { label: "All examples", description: "Open examples 01, 02 and 03 side by side", command: "tspp.openAllExamples" },
           ...examples,
         ],
         { placeHolder: "Choose a TS++ example to open" },
