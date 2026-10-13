@@ -1168,11 +1168,14 @@ import * as performance from "./_namespaces/ts.performance.js";
 import {
   areMlttTermsDefinitionallyEqual,
   inferMlttType,
+  mlttAnnotation,
   mlttApplication,
   MlttExternal,
   mlttExternal,
   mlttFirst,
+  mlttIdentityElim,
   mlttIdentityType,
+  mlttLambda,
   mlttNatAdd,
   mlttNatElim,
   mlttNatType,
@@ -1561,6 +1564,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   var currentMlttTypeBindings: readonly MlttTypeBinding[] | undefined;
   var mlttPlaceholderTypes: TypeParameter[] | undefined;
   var dependentFunctionCallSignatures = new Map<number, Signature | false>();
+  var mlttNaturalSignatureParameterIndices = new WeakMap<Signature, readonly number[]>();
   var varianceTypeParameter: TypeParameter | undefined;
   var isInferencePartiallyBlocked = false;
   var withinUnreachableCode = false;
@@ -17851,9 +17855,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getTypeFromTypeReference(node: TypeReferenceType): Type {
-    if (currentMlttTypeBindings && node.kind === SyntaxKind.TypeReference && isIdentifier((node as TypeReferenceNode).typeName)) {
-      const reference = node as TypeReferenceNode;
-      const name = idText(reference.typeName as Identifier);
+    if (currentMlttTypeBindings && node.kind === SyntaxKind.TypeReference && isIdentifier(node.typeName)) {
+      const name = idText(node.typeName);
+      const reference = node;
       if (!reference.typeArguments?.length) {
         const binding = currentMlttTypeBindings.find(binding => binding.name === name);
         if (binding) return binding.compilerType;
@@ -17873,6 +17877,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           return getNumberLiteralType((left as NumberLiteralType).value + (right as NumberLiteralType).value);
         }
       }
+    }
+    if (node.kind === SyntaxKind.TypeReference && isStandaloneMlttTypeReference(node)) {
+      return getTypeFromMlttTypeNode(node);
     }
     const links = getNodeLinks(node);
     if (!links.resolvedType) {
@@ -20935,7 +20942,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       addOptionality(getTypeFromTypeNode(node.type), /*isProperty*/ true, !!node.questionToken));
   }
 
-  function getTypeFromDependentFunctionTypeNode(node: DependentFunctionTypeNode): Type {
+  function getTypeFromMlttTypeNode(node: TypeNode): Type {
     const links = getNodeLinks(node);
     if (links.resolvedType) return links.resolvedType;
 
@@ -20965,6 +20972,21 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       error(node, Diagnostics.Invalid_MLTT_type_Colon_0, mlttError.message);
       return links.resolvedType = errorType;
     }
+  }
+
+  function isStandaloneMlttTypeReference(node: TypeReferenceNode): boolean {
+    if (currentMlttTypeBindings || !isIdentifier(node.typeName)) return false;
+    const sourceFileName = getSourceFileOfNode(node).fileName;
+    if (!fileExtensionIs(sourceFileName, Extension.Tspp) && !fileExtensionIs(sourceFileName, Extension.Dtspp)) return false;
+    const name = idText(node.typeName);
+    const feature = name === "Nat" || name === "Zero" || name === "Succ" ? "naturalNumbers"
+      : name === "NatAdd" ? "naturalNumberAddition"
+      : name === "NatElim" ? "naturalNumberElimination"
+      : name === "Eq" || name === "Refl" || name === "J" ? "identityTypes"
+      : name === "Lam" || name === "Ann" ? "dependentFunctionTypes"
+      : name === "Sigma" || name === "Pair" || name === "First" || name === "Second" ? "sigmaTypes"
+      : undefined;
+    return !!feature && hasTsppFeature(compilerOptions, feature);
   }
 
   interface MlttTypeBinding {
@@ -21011,6 +21033,28 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
 
       const name = idText(reference.typeName);
+      if (name === "Lam") {
+        if (!requireTsppFeature(node, "dependentFunctionTypes")) return undefined;
+        if (reference.typeArguments?.length !== 1 || reference.typeArguments[0].kind !== SyntaxKind.DependentFunctionType) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Lam' requires one dependent binder, for example Lam<(value: A) -> value>.");
+          return undefined;
+        }
+        const binder = reference.typeArguments[0] as DependentFunctionTypeNode;
+        const parameterType = getMlttTermFromTypeNode(binder.parameterType, scope);
+        const binding = createMlttTypeBinding(idText(binder.parameterName), scope.length);
+        const body = getMlttTermFromTypeNode(binder.returnType, [binding, ...scope]);
+        return parameterType && body && mlttLambda(idText(binder.parameterName), body, parameterType);
+      }
+      if (name === "Ann") {
+        if (!requireTsppFeature(node, "dependentFunctionTypes")) return undefined;
+        if (reference.typeArguments?.length !== 2) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Ann' requires a term and its MLTT type.");
+          return undefined;
+        }
+        const term = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
+        const type = getMlttTermFromTypeNode(reference.typeArguments[1], scope);
+        return term && type ? mlttAnnotation(term, type) : undefined;
+      }
       if (name === "Nat" || name === "Zero") {
         if (!requireTsppFeature(node, "naturalNumbers")) return undefined;
         if (reference.typeArguments?.length) {
@@ -21075,6 +21119,23 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const type = getMlttTermFromTypeNode(typeNode, scope);
         const term = getMlttTermFromTypeNode(termNode, scope);
         return type && term ? mlttRefl(type, term) : undefined;
+      }
+      if (name === "J") {
+        if (!requireTsppFeature(node, "identityTypes")) return undefined;
+        if (reference.typeArguments?.length !== 6) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'J' requires a type, motive, reflexivity case, two endpoints, and an equality proof.");
+          return undefined;
+        }
+        const [typeNode, motiveNode, reflexivityCaseNode, leftNode, rightNode, equalityNode] = reference.typeArguments;
+        const type = getMlttTermFromTypeNode(typeNode, scope);
+        const motive = getMlttTermFromTypeNode(motiveNode, scope);
+        const reflexivityCase = getMlttTermFromTypeNode(reflexivityCaseNode, scope);
+        const left = getMlttTermFromTypeNode(leftNode, scope);
+        const right = getMlttTermFromTypeNode(rightNode, scope);
+        const equality = getMlttTermFromTypeNode(equalityNode, scope);
+        return type && motive && reflexivityCase && left && right && equality
+          ? mlttIdentityElim(type, motive, reflexivityCase, left, right, equality)
+          : undefined;
       }
       if (name === "Sigma") {
         if (!requireTsppFeature(node, "sigmaTypes")) return undefined;
@@ -21162,21 +21223,21 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     const referencedBindings = new Set<MlttTypeBinding>();
     collectMlttBindingsReferencedInTypeNode(node, scope, referencedBindings);
-    const arguments_: MlttTerm[] = [];
+    const termArguments: MlttTerm[] = [];
     const parameters: TypeParameter[] = [];
     for (let index = 0; index < scope.length; index++) {
       const binding = scope[index];
       if (!referencedBindings.has(binding)) continue;
-      const argumentIndex = arguments_.length;
+      const argumentIndex = termArguments.length;
       key = key.split(binding.placeholderName).join(`$${argumentIndex}`);
-      arguments_.push(mlttVariable(index));
+      termArguments.push(mlttVariable(index));
       parameters.push(binding.compilerType);
     }
     const mlttType = getMlttTypeFromKind(getKindOfType(type), node);
     return mlttType && mlttExternal(
       key,
       getTextOfNode(node),
-      arguments_,
+      termArguments,
       mlttType,
       { type, parameters } satisfies MlttExternalIdentity,
     );
@@ -21250,7 +21311,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const declaration = signature.declaration;
     const returnTypeNode = declaration && getEffectiveReturnTypeNode(declaration);
     if (!declaration || !returnTypeNode || !every(declaration.parameters, isParameter)) return undefined;
-    const parameters = declaration.parameters as NodeArray<ParameterDeclaration>;
+    const parameters = declaration.parameters;
     if (parameters.some(parameter => !!parameter.dotDotDotToken || !!parameter.questionToken || !!parameter.initializer || !isIdentifier(parameter.name))) {
       return undefined;
     }
@@ -21304,6 +21365,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     const typeParameters: TypeParameter[] = [];
     const parameters: Symbol[] = [];
+    const naturalParameterIndices: number[] = [];
     let scope: MlttTypeBinding[] = [];
     let node: TypeNode = type.node;
     let term: MlttTerm = type.mlttTerm;
@@ -21335,6 +21397,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         typeParameters.push(typeParameter);
         parameterType = typeParameter;
         binding = { name, placeholderName: name, compilerType: typeParameter };
+        naturalParameterIndices.push(parameters.length);
       }
       else {
         parameterType = getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
@@ -21372,6 +21435,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       parameters.length,
       SignatureFlags.None,
     );
+    if (naturalParameterIndices.length) mlttNaturalSignatureParameterIndices.set(signature, naturalParameterIndices);
     dependentFunctionCallSignatures.set(type.id, signature);
     return signature;
   }
@@ -21423,10 +21487,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     const identity = term.identity as MlttExternalIdentity | undefined;
     if (!identity) return undefined;
-    const arguments_ = term.arguments.map(argument => getCompilerTypeFromMlttTerm(argument, scope));
-    return some(arguments_, argument => !argument)
+    const termArguments = term.arguments.map(argument => getCompilerTypeFromMlttTerm(argument, scope));
+    return some(termArguments, argument => !argument)
       ? undefined
-      : instantiateType(identity.type, createTypeMapper(identity.parameters, arguments_ as Type[]));
+      : instantiateType(identity.type, createTypeMapper(identity.parameters, termArguments as Type[]));
   }
 
   function getTypeFromTypeNode(node: TypeNode): Type {
@@ -21473,7 +21537,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       case SyntaxKind.TypeReference:
         return getTypeFromTypeReference(node as TypeReferenceNode);
       case SyntaxKind.DependentFunctionType:
-        return getTypeFromDependentFunctionTypeNode(node as DependentFunctionTypeNode);
+        return getTypeFromMlttTypeNode(node as DependentFunctionTypeNode);
       case SyntaxKind.TypePredicate:
         return (node as TypePredicateNode).assertsModifier ? voidType : booleanType;
       case SyntaxKind.ExpressionWithTypeArguments:
@@ -37235,6 +37299,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         // parameter types yet and therefore excess property checks may yield false positives (see #17041).
         const checkArgType = checkMode & CheckMode.SkipContextSensitive ? getRegularTypeOfObjectLiteral(argType) : argType;
         const effectiveCheckArgumentNode = getEffectiveCheckNode(arg);
+        const naturalParameterIndices = mlttNaturalSignatureParameterIndices.get(signature.target ?? signature);
+        if (naturalParameterIndices?.includes(i) && !isValidMlttNaturalArgumentType(checkArgType)) {
+          if (reportErrors) {
+            errorOutputContainer.errors = [createDiagnosticForNode(effectiveCheckArgumentNode, Diagnostics.An_MLTT_Nat_argument_must_have_a_non_negative_safe_integer_literal_type)];
+          }
+          return errorOutputContainer.errors || emptyArray;
+        }
         if (!checkTypeRelatedToAndOptionallyElaborate(checkArgType, paramType, relation, reportErrors ? effectiveCheckArgumentNode : undefined, effectiveCheckArgumentNode, headMessage, containingMessageChain, errorOutputContainer)) {
           Debug.assert(!reportErrors || !!errorOutputContainer.errors, "parameter should have errors when reporting errors");
           maybeAddMissingAwaitInfo(arg, checkArgType, paramType);
@@ -37256,6 +37327,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
     }
     return undefined;
+
+    function isValidMlttNaturalArgumentType(type: Type): boolean {
+      if (!(type.flags & TypeFlags.NumberLiteral)) return false;
+      const value = (type as NumberLiteralType).value;
+      return Number.isSafeInteger(value) && value >= 0;
+    }
 
     function maybeAddMissingAwaitInfo(errorNode: Node | undefined, source: Type, target: Type) {
       if (errorNode && reportErrors && errorOutputContainer.errors && errorOutputContainer.errors.length) {
@@ -47902,7 +47979,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (
       isTspp &&
       (typeName === "Type" && hasTsppFeature(compilerOptions, "higherKindedTypes") ||
-        /^Type(?:0|[1-9]\d*)$/.test(typeName) && hasTsppFeature(compilerOptions, "typeUniverses"))
+        /^Type(?:0|[1-9]\d*)$/.test(typeName) && hasTsppFeature(compilerOptions, "typeUniverses") ||
+        (typeName === "Nat" || typeName === "Zero" || typeName === "Succ") && hasTsppFeature(compilerOptions, "naturalNumbers") ||
+        typeName === "NatAdd" && hasTsppFeature(compilerOptions, "naturalNumberAddition") ||
+        typeName === "NatElim" && hasTsppFeature(compilerOptions, "naturalNumberElimination") ||
+        (typeName === "Lam" || typeName === "Ann") && hasTsppFeature(compilerOptions, "dependentFunctionTypes") ||
+        (typeName === "Eq" || typeName === "Refl" || typeName === "J") && hasTsppFeature(compilerOptions, "identityTypes") ||
+        (typeName === "Sigma" || typeName === "Pair" || typeName === "First" || typeName === "Second") && hasTsppFeature(compilerOptions, "sigmaTypes"))
     ) {
       error(name, message, typeName);
       return;

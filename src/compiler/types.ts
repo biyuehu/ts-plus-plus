@@ -6578,11 +6578,11 @@ export interface IntrinsicType extends Type {
   objectFlags: ObjectFlags;
 }
 
-/** A compiler type backed by an elaborated MLTT dependent function term. */
+/** A compiler type backed by an elaborated MLTT term. */
 export interface DependentFunctionType extends Type {
   flags: TypeFlags.DependentFunction;
   /** @internal */ mlttTerm: MlttTerm;
-  /** @internal */ node: DependentFunctionTypeNode;
+  /** @internal */ node: TypeNode;
 }
 
 /** @internal */

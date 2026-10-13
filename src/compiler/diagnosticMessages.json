@@ -8615,5 +8615,9 @@
   "A data variant field must be a required identifier with a type annotation.": {
     "category": "Error",
     "code": 18076
+  },
+  "An MLTT Nat argument must have a non-negative safe integer literal type.": {
+    "category": "Error",
+    "code": 18077
   }
 }

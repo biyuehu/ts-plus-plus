@@ -15,7 +15,7 @@
 第一次接触依赖类型时，不建议跳过基础篇。高级篇中的概念有明确依赖关系：
 
 ```text
-Nat 数据 → NatAdd 计算 → NatElim 递归 → Eq/Refl 证明 → Sigma 携带证明
+Nat 数据 → NatAdd 计算 → NatElim 递归 → Eq/Refl/J 证明 → Sigma 携带证明
 ```
 
 遇到陌生术语时，可以先采用下面的直观理解：
@@ -145,12 +145,13 @@ kind 检查、别名传播、类型打印和关系判断
 - `(A: Type0) -> ...` 依赖函数；
 - 对已绑定名称的引用；
 - `F<A>` 形式的类型应用；
+- `Lam<(x: A) -> term>` term-level lambda 与 `Ann<term, type>` 显式类型标注；
 - 内建 `Nat`、`Zero`、`Succ<N>` 自然数索引，以及可归约的 `NatAdd<A, B>`；
 - `NatElim` 依赖消去器与对 `Zero`/`Succ` 的计算规则；
-- `Eq<A, x, y>`、`Refl<A, x>` identity type 和反身证明；
+- `Eq<A, x, y>`、`Refl<A, x>` identity type 和反身证明，以及 `J` path induction；
 - `Sigma<(x: A) -> B>`、`Pair`、`First`、`Second` 依赖对及投影归约；
 - 由原 TypeScript checker 检查的 primitive、union/intersection、普通泛型引用、`keyof`、indexed access、mapped type 和 conditional type；
-- alpha/beta 定义相等和 universe/kind 检查；
+- alpha/beta 与内建 eliminator 计算规则构成的定义相等，以及 universe/kind 检查；
 - 将形如 `(A: Type0) -> (value: A) -> A` 的 Pi 类型与显式注解的
   TypeScript 泛型函数互相赋值，并复用 TypeScript 的调用推断。
 
@@ -179,13 +180,15 @@ kind 检查、别名传播、类型打印和关系判断
 
 每个能力及其依赖都必须显式列出，编译器不会自动补齐。普通 `.ts` 文件永远不会启用依赖语法，即使同一项目开启了这些特性；其中原有的 `=>` 函数类型也不受影响。
 
+闭合的 `Eq`、`Sigma` 等 MLTT 类型现在可以直接写在类型别名右侧，不再需要人为包一层 Pi。
+
 目前没有新增一套运行时函数语法；实现仍写成普通 TypeScript 泛型函数。
 `02-advanced.tspp` 演示了它如何赋给 Pi 类型并以依赖函数的类型直接调用。
 这个桥接暂时要求函数签名完整注解，不包括可选/剩余参数、默认/约束类型参数等扩展形式。
 
-当前 MLTT 表面 elaboration 的主要入口是包含 `->` 的 dependent-function type。
-因此 `Eq`、`NatElim` 和 `Sigma` 的示例都放在 Pi 类型内部。它们已是内核中的正式构造，
-但尚不能在所有普通 TypeScript 类型位置中脱离 Pi 上下文直接使用；具体示例见边界篇。
+Pi 仍负责引入依赖 binder；`Eq`、`NatElim`、`J` 和 `Sigma` 等构造也可以在 `.tspp`
+的闭合类型位置直接 elaboration。运行时 `Nat` binder 只接受非负安全整数的字面量类型，
+因此负数、小数和无法静态确定的 `number` 会在调用点报错。具体示例见高级篇和边界篇。
 
 ## 运行与实验
 
