@@ -55,6 +55,23 @@
       "preLaunchTask": "npm: build:compiler"
     },
     {
+      // Builds TS++ and opens the newtype and data example.
+      "name": "TS++: Run Example 03 — Newtype and Data",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--new-window",
+        "--disable-extension=shalldie.background",
+        "--disable-extension=rbuckton.tsserver-live-reload",
+        "--disable-extension=wakatime.vscode-wakatime",
+        "--disable-extension=fittentech.fitten-code",
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
+        "${workspaceFolder}/example/03-newtype-and-data"
+      ],
+      "preLaunchTask": "npm: build:compiler"
+    },
+    {
       "type": "node",
       "request": "launch",
       "name": "Mocha Tests (currently opened test)",
