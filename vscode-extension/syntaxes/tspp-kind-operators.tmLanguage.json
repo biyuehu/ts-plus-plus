@@ -1,5 +1,5 @@
 {
-  "name": "TypeScript++ Kind Operators",
+  "name": "TS++ Kind Operators",
   "scopeName": "tspp.kind-operators",
   "injectionSelector": "L:meta.type.declaration.ts -comment -string",
   "patterns": [

@@ -4,7 +4,7 @@
   "homepage": "https://github.com/biyuehu/ts-plus-plus#readme",
   "version": "0.0.1",
   "license": "Apache-2.0",
-  "description": "An experimental TypeScript-derived compiler with explicitly enabled type-system features.",
+  "description": "The experimental TS++ compiler with explicitly enabled type-system features.",
   "keywords": [
     "ts-plus-plus",
     "tspp",

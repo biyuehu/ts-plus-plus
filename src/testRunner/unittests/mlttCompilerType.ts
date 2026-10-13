@@ -152,6 +152,42 @@ describe("unittests:: MLTT compiler type", () => {
     assert.deepEqual(diagnostics.map(diagnostic => diagnostic.code), [18077, 18077, 18077, 18077]);
   });
 
+  it("supports @ts-expect-error for TS++ kind, MLTT, and runtime-boundary diagnostics", () => {
+    const expectedErrors = createProgram(
+      "/expected-errors.tspp",
+      `
+      type Functor<F: Type0 => Type0> = F<string>;
+      // @ts-expect-error -- string does not have the required higher kind
+      type InvalidFunctor = Functor<string>;
+      // @ts-expect-error -- this dependent function belongs to Type1
+      type WrongUniverse: Type0 = (A: Type0) -> A;
+      // @ts-expect-error -- Missing is not bound by the Pi type
+      type UnboundName: Type1 = (A: Type0) -> Missing;
+      // @ts-expect-error -- Succ expects a Nat term
+      type WrongSuccessor: Type0 = (N: Nat) -> Succ<string>;
+      declare const buildAt: (N: Nat) -> { index: N };
+      // @ts-expect-error -- negative values cannot cross the Nat runtime boundary
+      buildAt(-1);
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    assert.isEmpty(expectedErrors.getSemanticDiagnostics());
+  });
+
+  it("reports an unused @ts-expect-error in a TS++ source file", () => {
+    const unusedDirective = createProgram(
+      "/unused-expect-error.tspp",
+      `
+      // @ts-expect-error -- deliberately unused
+      type Valid: Type0 = string;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    assert.deepEqual(unusedDirective.getSemanticDiagnostics().map(diagnostic => diagnostic.code), [2578]);
+  });
+
   it("checks that Succ is applied to a natural number", () => {
     const invalid = createProgram(
       "/invalid-nat.tspp",
