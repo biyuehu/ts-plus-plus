@@ -68,3 +68,20 @@ export const dependentIdentity: RuntimeIdentity = ordinaryIdentity;
 // 调用会复用 TypeScript 原有的泛型推断。
 export const explicitIdentityResult = dependentIdentity<string>("explicit");
 export const inferredIdentityResult = dependentIdentity("inferred");
+
+// -----------------------------------------------------------------------------
+// 5. Nat 索引与数字字面量推断
+// -----------------------------------------------------------------------------
+
+type Vector<N extends number, A> = { length: N; value: A };
+
+// Nat、Zero 和 Succ 是 MLTT 内核原语，不是用 number alias 伪装的类型。
+export type EmptyVector: Type1 = (A: Type0) -> Vector<Zero, A>;
+export type TwoVector: Type1 = (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
+
+// 进入 TS 调用桥接时，(N: Nat) 投影为 N extends number 和一个运行时参数。
+export type VectorBuilder: Type1 =
+  (A: Type0) -> (value: A) -> (N: Nat) -> Vector<N, A>;
+
+export declare const buildVector: VectorBuilder;
+export const pair = buildVector("item", 2); // Vector<2, string>

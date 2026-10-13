@@ -90,6 +90,40 @@ describe("unittests:: MLTT compiler type", () => {
     assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[2].name)), '"inferred"');
   });
 
+  it("supports built-in natural-number indices and infers numeric literals at calls", () => {
+    const naturals = createProgram(
+      "/naturals.tspp",
+      `
+      type Vector<N extends number, A> = { length: N; value: A };
+      type VectorBuilder: Type1 = (A: Type0) -> (value: A) -> (N: Nat) -> Vector<N, A>;
+      type EmptyVector: Type1 = (A: Type0) -> Vector<Zero, A>;
+      type TwoVector: Type1 = (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
+      declare const buildVector: VectorBuilder;
+      const pair = buildVector("item", 2);
+    `,
+      { dependentTypes: true, noLib: true, strict: true },
+    );
+    const naturalsChecker = naturals.getTypeChecker();
+    const naturalsFile = naturals.getSourceFile("/naturals.tspp")!;
+    const pair = naturalsFile.statements
+      .filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations])[1];
+
+    const diagnostics = naturals.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+    assert.strictEqual(naturalsChecker.typeToString(naturalsChecker.getTypeAtLocation(pair.name)), "Vector<2, string>");
+  });
+
+  it("checks that Succ is applied to a natural number", () => {
+    const invalid = createProgram(
+      "/invalid-nat.tspp",
+      "type Invalid: Type1 = (N: Nat) -> Succ<string>;",
+      { dependentTypes: true, noLib: true, strict: true },
+    );
+
+    assert.match(invalid.getSemanticDiagnostics()[0].messageText.toString(), /Expected Nat, but inferred Type0/);
+  });
+
   it("preserves the real universe of embedded TypeScript aliases", () => {
     const higherCodomain = createProgram(
       "/higher.tspp",

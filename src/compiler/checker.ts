@@ -1162,11 +1162,14 @@ import {
   mlttApplication,
   MlttExternal,
   mlttExternal,
+  mlttNatType,
   mlttPi,
+  mlttSuccessor,
   MlttTerm,
   MlttTypeError,
   mlttUniverse,
   mlttVariable,
+  mlttZero,
   printMlttTerm,
   weakHeadNormalizeMltt,
 } from "./mlttCore.js";
@@ -17654,10 +17657,21 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getTypeFromTypeReference(node: TypeReferenceType): Type {
-    if (currentMlttTypeBindings && node.kind === SyntaxKind.TypeReference && isIdentifier((node as TypeReferenceNode).typeName) && !node.typeArguments?.length) {
-      const name = idText((node as TypeReferenceNode).typeName as Identifier);
-      const binding = currentMlttTypeBindings.find(binding => binding.name === name);
-      if (binding) return binding.compilerType;
+    if (currentMlttTypeBindings && node.kind === SyntaxKind.TypeReference && isIdentifier((node as TypeReferenceNode).typeName)) {
+      const reference = node as TypeReferenceNode;
+      const name = idText(reference.typeName as Identifier);
+      if (!reference.typeArguments?.length) {
+        const binding = currentMlttTypeBindings.find(binding => binding.name === name);
+        if (binding) return binding.compilerType;
+        if (name === "Nat") return numberType;
+        if (name === "Zero") return getNumberLiteralType(0);
+      }
+      if (name === "Succ" && reference.typeArguments?.length === 1) {
+        const predecessor = getTypeFromTypeNode(reference.typeArguments[0]);
+        if (predecessor.flags & TypeFlags.NumberLiteral) {
+          return getNumberLiteralType((predecessor as NumberLiteralType).value + 1);
+        }
+      }
     }
     const links = getNodeLinks(node);
     if (!links.resolvedType) {
@@ -20803,6 +20817,21 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
 
       const name = idText(reference.typeName);
+      if (name === "Nat" || name === "Zero") {
+        if (reference.typeArguments?.length) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `'${name}' does not accept type arguments.`);
+          return undefined;
+        }
+        return name === "Nat" ? mlttNatType() : mlttZero();
+      }
+      if (name === "Succ") {
+        if (reference.typeArguments?.length !== 1) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Succ' requires exactly one natural-number argument.");
+          return undefined;
+        }
+        const predecessor = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
+        return predecessor && mlttSuccessor(predecessor);
+      }
       const universeMatch = name === "Type" ? [name, "0"] : /^Type(0|[1-9]\d*)$/.exec(name);
       let term: MlttTerm;
       if (universeMatch) {
@@ -20998,6 +21027,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const parameters: Symbol[] = [];
     let scope: MlttTypeBinding[] = [];
     let node: TypeNode = type.node;
+    let term: MlttTerm = type.mlttTerm;
 
     // A leading `(A: Type0) -> ...` binder is represented as an erased TS type
     // parameter. Once a runtime parameter is encountered, later binders remain
@@ -21010,27 +21040,44 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       typeParameters.push(typeParameter);
       scope = [{ name, placeholderName: name, compilerType: typeParameter }, ...scope];
       node = node.returnType;
+      term = term.kind === "pi" ? term.codomain : term;
     }
 
     while (isMlttDependentFunctionTypeNode(node)) {
-      const parameterType = getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
+      const isNatIndex = isMlttNatTypeNode(node.parameterType);
+      const name = idText(node.parameterName);
+      let parameterType: Type | undefined;
+      let binding: MlttTypeBinding;
+      if (isNatIndex) {
+        const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
+        const typeParameter = createTypeParameter(symbol);
+        typeParameter.constraint = numberType;
+        typeParameter.typeKind = ordinaryTypeKind;
+        typeParameters.push(typeParameter);
+        parameterType = typeParameter;
+        binding = { name, placeholderName: name, compilerType: typeParameter };
+      }
+      else {
+        parameterType = getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
+        binding = createMlttTypeBinding(name, scope.length);
+      }
       if (!parameterType || getKindOfType(parameterType).flags !== KindFlags.Type || !isOrdinaryTypeKind(getKindOfType(parameterType))) {
         dependentFunctionCallSignatures.set(type.id, false);
         return undefined;
       }
-      const name = idText(node.parameterName);
       const parameter = createSymbol(SymbolFlags.FunctionScopedVariable, escapeLeadingUnderscores(name));
       getSymbolLinks(parameter).type = parameterType;
       parameters.push(parameter);
-      scope = [createMlttTypeBinding(name, scope.length), ...scope];
+      scope = [binding, ...scope];
       node = node.returnType;
+      term = term.kind === "pi" ? term.codomain : term;
     }
 
     if (!parameters.length) {
       dependentFunctionCallSignatures.set(type.id, false);
       return undefined;
     }
-    const returnType = getCompilerTypeFromMlttTypeNode(node, scope);
+    const returnType = getCompilerTypeFromMlttTerm(term, scope) ?? getCompilerTypeFromMlttTypeNode(node, scope);
     if (!returnType || !isOrdinaryTypeKind(getKindOfType(returnType))) {
       dependentFunctionCallSignatures.set(type.id, false);
       return undefined;
@@ -21055,11 +21102,16 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       (idText(node.typeName) === "Type0" || idText(node.typeName) === "Type");
   }
 
+  function isMlttNatTypeNode(node: TypeNode): boolean {
+    return isTypeReferenceNode(node) && !node.typeArguments && isIdentifier(node.typeName) && idText(node.typeName) === "Nat";
+  }
+
   function isMlttDependentFunctionTypeNode(node: TypeNode): node is DependentFunctionTypeNode {
     return node.kind === SyntaxKind.DependentFunctionType;
   }
 
   function getCompilerTypeFromMlttTypeNode(node: TypeNode, scope: readonly MlttTypeBinding[]): Type | undefined {
+    if (isMlttNatTypeNode(node)) return numberType;
     const savedBindings = currentMlttTypeBindings;
     currentMlttTypeBindings = scope;
     try {
@@ -21069,6 +21121,26 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     finally {
       currentMlttTypeBindings = savedBindings;
     }
+  }
+
+  function getCompilerTypeFromMlttTerm(term: MlttTerm, scope: readonly MlttTypeBinding[]): Type | undefined {
+    if (term.kind === "variable") return scope[term.index]?.compilerType;
+    if (term.kind === "nat-type") return numberType;
+    if (term.kind === "zero") return getNumberLiteralType(0);
+    if (term.kind === "successor") {
+      const predecessor = getCompilerTypeFromMlttTerm(term.predecessor, scope);
+      return predecessor && predecessor.flags & TypeFlags.NumberLiteral
+        ? getNumberLiteralType((predecessor as NumberLiteralType).value + 1)
+        : undefined;
+    }
+    if (term.kind !== "external") return undefined;
+
+    const identity = term.identity as MlttExternalIdentity | undefined;
+    if (!identity) return undefined;
+    const arguments_ = term.arguments.map(argument => getCompilerTypeFromMlttTerm(argument, scope));
+    return some(arguments_, argument => !argument)
+      ? undefined
+      : instantiateType(identity.type, createTypeMapper(identity.parameters, arguments_ as Type[]));
   }
 
   function getTypeFromTypeNode(node: TypeNode): Type {
