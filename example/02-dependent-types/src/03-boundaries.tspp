@@ -1,16 +1,48 @@
 // =============================================================================
-// 边界与实验篇：kind 传播、错误诊断和当前限制
+// 边界篇：哪些是当前能力，哪些还不是
 // =============================================================================
+//
+// 本篇不引入新概念，只帮助你建立正确预期。
 
-export type Identity: Type1 =
-  (A: Type0) -> A;
+// -----------------------------------------------------------------------------
+// 1. TS++ 是“在 TypeScript 中嵌入 MLTT”
+// -----------------------------------------------------------------------------
+//
+//   - object、union、keyof、mapped/conditional type 由 TS checker 处理；
+//   - universe、Pi、Nat、Eq、Sigma 及定义相等由 MLTT 内核处理；
+//   - external 边界负责在两者之间传递语义。
 
-// external alias 会保留真实 kind。Identity 位于 Type1，不会降级成 Type0。
+export type Identity: Type1 = (A: Type0) -> A;
+
+// external alias 保留真实 kind。Identity 位于 Type1，不会被降级为 Type0。
 export type HigherCodomain: Type1 =
   (ignored: string) -> Identity;
 
 // -----------------------------------------------------------------------------
-// 错误实验
+// 2. 当前表面语法的入口
+// -----------------------------------------------------------------------------
+//
+// 目前 MLTT elaboration 的主要入口是包含 `->` 的 dependent-function type。
+// 因此教程中的 Eq、Sigma 和 NatElim 都出现在 Pi 类型内。
+// 脱离 Pi 上下文的直接写法尚未成为通用入口：
+//
+// type DirectProof: Type0 = Eq<Nat, Zero, Zero>;
+//
+// 这是 checker 集成的表面限制，不是 MLTT 内核缺少 Eq。
+
+// -----------------------------------------------------------------------------
+// 3. 运行时桥接的边界
+// -----------------------------------------------------------------------------
+//
+// 目前主要支持：前导 Type0 binder + 普通值参数 + Nat 索引参数。
+// Type0 binder 成为擦除的 TS 类型参数；Nat binder 同时成为
+// `N extends number` 和运行时数字参数。
+//
+// 尚未纳入桥接的有：可选/剩余参数、默认/约束类型参数、
+// 高阶运行时 binder，以及 Sigma 的专用 JavaScript 运行时表示。
+
+// -----------------------------------------------------------------------------
+// 4. 错误实验
 // -----------------------------------------------------------------------------
 //
 // 可以逐条取消注释，然后运行 `npm run check`。
@@ -21,29 +53,29 @@ export type HigherCodomain: Type1 =
 // `(A: Type0) -> A` 位于 Type1，不能声明为 Type0。
 // export type WrongUniverse: Type0 = (A: Type0) -> A;
 
-// union/intersection 不能把 Type1 的依赖函数伪装成普通 Type0 类型。
+// Succ 只能接收 Nat，string 是类型，不是自然数项。
+// export type WrongSuccessor: Type0 = (N: Nat) -> Succ<string>;
+
+// Pair 的第二项必须满足 Sigma 中依赖第一项的类型。
+// export type WrongPair: Type0 =
+//   (N: Nat) ->
+//   Eq<
+//     Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+//     Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Zero>,
+//     Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Refl<Nat, N>>
+//   >;
+
+// union/intersection 不能把 Type1 的类型伪装成 Type0。
 // export type HiddenHigherUniverse: Type1 =
 //   (A: Type0) -> A | ((B: Type0) -> B);
 
 // -----------------------------------------------------------------------------
-// 当前能力边界
+// 5. 明确不在当前范围内的能力
 // -----------------------------------------------------------------------------
 //
-// 当前核心支持 universe、Pi、binder、类型应用、alpha/beta 定义相等，以及
-// TypeScript external type。以下能力仍处于后续设计范围：
-//
 //   - 用户可声明的通用 inductive family；
-//   - pattern matching；
-//   - 专用的运行时 dependent function 声明语法；
-//   - 让 JavaScript 表达式参与类型级计算。
+//   - dependent pattern matching；
+//   - 让任意 JavaScript 表达式参与类型级计算。
 //
-// 当前已可将“前导 Type0 binder + 值参数”的 Pi 类型与显式
-// 注解的 TS 泛型函数互相赋值，并直接调用。可选/剩余参数、默认/
-// 约束类型参数和高阶运行时 binder 尚未纳入这层桥接。
-//
-// MLTT 内核已支持 NatElim、Eq/Refl 和 Sigma/Pair/First/Second。
-// 它们目前是类型与证明层能力；Sigma 的专用 JavaScript 运行时
-// 表示以及通用 inductive 声明语法仍需后续设计。
-//
-// 当前最准确的理解是：TS++ 在 TypeScript 类型系统中嵌入了一个 MLTT
-// 子语言，而不是用 MLTT 替换整个 TypeScript 类型系统。
+// 后两项是明确保留的边界。类型级计算只执行内核已知且可证明
+// 终止的规则，例如 beta reduction、NatAdd、NatElim 和 Sigma 投影。

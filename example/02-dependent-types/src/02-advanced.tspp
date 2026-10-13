@@ -1,121 +1,136 @@
 // =============================================================================
-// 高级篇：与 TypeScript 类型组合，以及定义相等
+// 高级篇：索引、计算、证明和依赖对
 // =============================================================================
 //
-// MLTT 负责 binder、universe、类型应用和定义相等；union、泛型、keyof、
-// mapped type 等仍由原来的 TypeScript checker 处理。
+// 本篇按以下顺序建立能力：
+//
+//   Nat 表示长度
+//     ↓
+//   NatAdd 在类型级计算
+//     ↓
+//   NatElim 描述递归原理
+//     ↓
+//   Eq / Refl 把“相等”表示为类型和证明
+//     ↓
+//   Sigma 把数据和依赖它的证明放在一起
+
+// -----------------------------------------------------------------------------
+// 1. MLTT 可以嵌入原有 TypeScript 类型
+// -----------------------------------------------------------------------------
+//
+// MLTT 负责 binder、universe、归约和定义相等；
+// object、union、keyof、mapped type 等仍由 TypeScript checker 负责。
 
 type Box<T> = { value: T };
-
-// -----------------------------------------------------------------------------
-// 1. 嵌入普通 TypeScript 类型
-// -----------------------------------------------------------------------------
-
-export type BuiltinResult: Type1 = (A: Type0) -> string;
 export type UnionResult: Type1 = (A: Type0) -> A | string;
-export type IntersectionResult: Type1 = (A: Type0) -> A & object;
-export type GenericReferenceResult: Type1 = (A: Type0) -> Box<A>;
+export type GenericResult: Type1 = (A: Type0) -> Box<A>;
 export type KeysOf: Type1 = (A: Type0) -> keyof A;
-export type PropertyResult: Type1 = (A: Type0) -> { value: A }["value"];
-export type ReadonlyShape: Type1 = (A: Type0) -> { readonly [K in keyof A]: A[K] };
-export type ConditionalResult: Type1 = (A: Type0) -> A extends string ? number : boolean;
+export type ReadonlyShape: Type1 =
+  (A: Type0) -> { readonly [K in keyof A]: A[K] };
 
-// -----------------------------------------------------------------------------
-// 2. Alpha 等价和遮蔽
-// -----------------------------------------------------------------------------
-
-// binder 名字不同，但绑定结构相同，因此下面两个类型 alpha 等价。
-export type IdentityWithA: Type1 =
-  (A: Type0) -> (value: A) -> A;
-
-export type IdentityWithT: Type1 =
-  (T: Type0) -> (item: T) -> T;
-
-// 内层 A 遮蔽外层 A；最后一个 A 指向最近的 binder。
-export type Shadowing: Type1 =
-  (A: Type0) -> (A: Type0) -> A;
-
-// -----------------------------------------------------------------------------
-// 3. TypeScript 结构等价
-// -----------------------------------------------------------------------------
-
+// external TS 类型仍遵守结构类型语义。
 type LeftShape = { value: string };
 type RightShape = { value: string };
-
-// external type 不比较 alias 名字，而是继续采用 TS 的结构类型语义。
 export type WithLeftShape: Type1 = (A: Type0) -> LeftShape;
 export type WithRightShape: Type1 = (A: Type0) -> RightShape;
 
-// 结构等价也会穿过 MLTT binder。
-export type WithGenericAlias: Type1 = (A: Type0) -> Box<A>;
-export type WithStructuralBody: Type1 = (T: Type0) -> { value: T };
-
-// MLTT 部分先比较归一化 term；遇到 external type 时，再委托 TS checker
-// 进行严格 identity 或双向结构 assignability 检查。
+// binder 的拼写不影响含义；下面两个类型 alpha 等价。
+export type IdentityWithA: Type1 = (A: Type0) -> (value: A) -> A;
+export type IdentityWithT: Type1 = (T: Type0) -> (item: T) -> T;
 
 // -----------------------------------------------------------------------------
-// 4. 与运行时 TypeScript 函数衔接
+// 2. Nat：把数字放进类型
 // -----------------------------------------------------------------------------
-
-export type RuntimeIdentity: Type1 =
-  (A: Type0) -> (value: A) -> A;
-
-// 显式注解的 TS 泛型函数可与等价 Pi 类型互相赋值。
-const ordinaryIdentity = <A>(value: A): A => value;
-export const dependentIdentity: RuntimeIdentity = ordinaryIdentity;
-
-// Type0 binder 作为擦除的类型参数；运行时只需传 value。
-// 调用会复用 TypeScript 原有的泛型推断。
-export const explicitIdentityResult = dependentIdentity<string>("explicit");
-export const inferredIdentityResult = dependentIdentity("inferred");
-
-// -----------------------------------------------------------------------------
-// 5. Nat 索引与数字字面量推断
-// -----------------------------------------------------------------------------
+//
+// Nat 是自然数的类型；Zero 是 0，Succ<N> 表示 N 的后继。
+//
+//   Zero             = 0
+//   Succ<Zero>       = 1
+//   Succ<Succ<Zero>> = 2
 
 type Vector<N extends number, A> = { length: N; value: A };
 
-// Nat、Zero 和 Succ 是 MLTT 内核原语，不是用 number alias 伪装的类型。
-export type EmptyVector: Type1 = (A: Type0) -> Vector<Zero, A>;
-export type TwoVector: Type1 = (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
+export type EmptyVector: Type1 =
+  (A: Type0) -> Vector<Zero, A>;
 
-// 受限的类型级计算只归约内核原语；这里的 NatAdd 会结构递归到 2。
-export type ComputedTwoVector: Type1 =
-  (A: Type0) -> Vector<NatAdd<Succ<Zero>, Succ<Zero>>, A>;
+export type TwoVector: Type1 =
+  (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
 
-// 进入 TS 调用桥接时，(N: Nat) 投影为 N extends number 和一个运行时参数。
+// TS 调用桥接会把 (N: Nat) 投影成 N extends number，
+// 因此运行时数字字面量也能成为结果类型的索引。
 export type VectorBuilder: Type1 =
-  (A: Type0) -> (value: A) -> (N: Nat) -> Vector<N, A>;
+  (A: Type0) ->
+  (value: A) ->
+  (N: Nat) ->
+  Vector<N, A>;
 
 export declare const buildVector: VectorBuilder;
 export const pair = buildVector("item", 2); // Vector<2, string>
 
 // -----------------------------------------------------------------------------
-// 6. Nat eliminator 和 identity type
+// 3. NatAdd：受限但可预测的类型级计算
 // -----------------------------------------------------------------------------
+//
+//   NatAdd<Zero, M>    → M
+//   NatAdd<Succ<N>, M> → Succ<NatAdd<N, M>>
+//
+// 这种结构递归总会终止，因此定义相等、缓存和增量编译仍可预测。
+export type ComputedTwoVector: Type1 =
+  (A: Type0) ->
+  Vector<NatAdd<Succ<Zero>, Succ<Zero>>, A>;
 
-// NatElim<P, z, s, Zero> 会归约为 z，所以下面的等式由定义相等成立。
+// -----------------------------------------------------------------------------
+// 4. NatElim：把“对自然数做递归”写成规则
+// -----------------------------------------------------------------------------
+//
+// P 是命题或结果类型，可以随 N 变化。要得到 P<N>，需要：
+//
+//   zeroCase      : P<Zero>
+//   successorCase : 已知 P<N> 时，如何得到 P<Succ<N>>
+
+export type NaturalNumberInduction: Type1 =
+  (P: (N: Nat) -> Type0) ->
+  (zeroCase: P<Zero>) ->
+  (successorCase: (N: Nat) -> (previous: P<N>) -> P<Succ<N>>) ->
+  (N: Nat) ->
+  P<N>;
+
+// NatElim<P, z, s, Zero> 会按计算规则归约为 z。
 export type NatZeroComputation: Type1 =
   (P: (N: Nat) -> Type0) ->
   (zeroCase: P<Zero>) ->
   (successorCase: (N: Nat) -> (previous: P<N>) -> P<Succ<N>>) ->
   Eq<P<Zero>, NatElim<P, zeroCase, successorCase, Zero>, zeroCase>;
 
+// -----------------------------------------------------------------------------
+// 5. Eq 和 Refl：命题也是类型
+// -----------------------------------------------------------------------------
+//
+// Eq<A, left, right> 表示“A 中的 left 和 right 相等”。
+// 它是一个类型；该类型的值就是这个命题的证明。
 export type Reflexivity: Type1 =
-  (A: Type0) -> (value: A) -> Eq<A, value, value>;
+  (A: Type0) ->
+  (value: A) ->
+  Eq<A, value, value>;
 
-// Refl<A, value> 是 Eq<A, value, value> 的证明对象。
-export type ReflexivityIsStable: Type1 =
+// Refl 是反身性证明：每个值都等于自己。
+export type ReflexivityProof: Type1 =
   (A: Type0) ->
   (value: A) ->
   Eq<Eq<A, value, value>, Refl<A, value>, Refl<A, value>>;
 
-// -----------------------------------------------------------------------------
-// 7. Sigma 依赖对
-// -----------------------------------------------------------------------------
+// propositions-as-types 的心智模型：命题 <-> 类型，证明 <-> 该类型的值。
 
-// Sigma<(x: A) -> B> 的第二项类型可以依赖第一项。
-// Pair 是构造器，First / Second 是会参与归约的投影。
+// -----------------------------------------------------------------------------
+// 6. Sigma：第二项的类型依赖第一项
+// -----------------------------------------------------------------------------
+//
+// 普通 tuple [A, B] 的第二项类型 B 是固定的。
+// Sigma<(x: A) -> B> 允许 B 引用实际的第一项 x，
+// 因此可以装载“数据 + 关于该数据的证明”。
+//
+// 下面的第一项是自然数 value，第二项必须证明 value = N。
+
 export type SigmaFirstComputation: Type0 =
   (N: Nat) ->
   Eq<
@@ -123,3 +138,14 @@ export type SigmaFirstComputation: Type0 =
     First<Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Refl<Nat, N>>>,
     N
   >;
+
+export type SigmaSecondComputation: Type0 =
+  (N: Nat) ->
+  Eq<
+    Eq<Nat, N, N>,
+    Second<Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Refl<Nat, N>>>,
+    Refl<Nat, N>
+  >;
+
+// First<Pair<...>> 归约为 N，Second<Pair<...>> 归约为 Refl<Nat, N>。
+// 这些是 MLTT 内核的计算规则，不是字符串替换。

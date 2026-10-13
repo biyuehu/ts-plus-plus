@@ -6,11 +6,28 @@
 
 示例拆分在 `src` 目录中，建议按顺序阅读：
 
-1. [`01-basics.tspp`](./src/01-basics.tspp)：universe、依赖函数和类型族；
-2. [`02-advanced.tspp`](./src/02-advanced.tspp)：与 TS 类型组合、alpha/beta 和结构等价；
-3. [`03-boundaries.tspp`](./src/03-boundaries.tspp)：kind 传播、错误实验和当前限制。
+1. [`01-basics.tspp`](./src/01-basics.tspp)：从值与类型开始，逐步学习 universe、Pi、类型族和 TS 函数桥接；
+2. [`02-advanced.tspp`](./src/02-advanced.tspp)：依次学习 Nat 索引、类型级计算、消去器、相等证明和 Sigma；
+3. [`03-boundaries.tspp`](./src/03-boundaries.tspp)：了解 MLTT/TS 分工、表面语法入口、运行时边界和错误诊断。
 
 三个文件分别对应基础、进阶和边界探索，既可以连续阅读，也可以单独实验。
+
+第一次接触依赖类型时，不建议跳过基础篇。高级篇中的概念有明确依赖关系：
+
+```text
+Nat 数据 → NatAdd 计算 → NatElim 递归 → Eq/Refl 证明 → Sigma 携带证明
+```
+
+遇到陌生术语时，可以先采用下面的直观理解：
+
+| 术语 | 暂时可以理解成 |
+| --- | --- |
+| binder | 声明一个可供右侧引用的名字 |
+| Pi | 返回类型可以依赖参数的函数类型 |
+| type family | 输入类型或索引、输出类型的函数 |
+| eliminator | 使用某类数据时允许采用的递归原则 |
+| proof object | 某个命题类型的值 |
+| Sigma | 后一项类型可以依赖前一项的 pair |
 
 ## 先建立一个心智模型
 
@@ -133,7 +150,7 @@ kind 检查、别名传播、类型打印和关系判断
 - `Eq<A, x, y>`、`Refl<A, x>` identity type 和反身证明；
 - `Sigma<(x: A) -> B>`、`Pair`、`First`、`Second` 依赖对及投影归约；
 - 由原 TypeScript checker 检查的 primitive、union/intersection、普通泛型引用、`keyof`、indexed access、mapped type 和 conditional type；
-- alpha/beta 定义相等和 universe/kind 检查。
+- alpha/beta 定义相等和 universe/kind 检查；
 - 将形如 `(A: Type0) -> (value: A) -> A` 的 Pi 类型与显式注解的
   TypeScript 泛型函数互相赋值，并复用 TypeScript 的调用推断。
 
@@ -154,6 +171,10 @@ kind 检查、别名传播、类型打印和关系判断
 目前没有新增一套运行时函数语法；实现仍写成普通 TypeScript 泛型函数。
 `02-advanced.tspp` 演示了它如何赋给 Pi 类型并以依赖函数的类型直接调用。
 这个桥接暂时要求函数签名完整注解，不包括可选/剩余参数、默认/约束类型参数等扩展形式。
+
+当前 MLTT 表面 elaboration 的主要入口是包含 `->` 的 dependent-function type。
+因此 `Eq`、`NatElim` 和 `Sigma` 的示例都放在 Pi 类型内部。它们已是内核中的正式构造，
+但尚不能在所有普通 TypeScript 类型位置中脱离 Pi 上下文直接使用；具体示例见边界篇。
 
 ## 运行与实验
 
