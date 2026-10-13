@@ -129,6 +129,9 @@ kind 检查、别名传播、类型打印和关系判断
 - 对已绑定名称的引用；
 - `F<A>` 形式的类型应用；
 - 内建 `Nat`、`Zero`、`Succ<N>` 自然数索引，以及可归约的 `NatAdd<A, B>`；
+- `NatElim` 依赖消去器与对 `Zero`/`Succ` 的计算规则；
+- `Eq<A, x, y>`、`Refl<A, x>` identity type 和反身证明；
+- `Sigma<(x: A) -> B>`、`Pair`、`First`、`Second` 依赖对及投影归约；
 - 由原 TypeScript checker 检查的 primitive、union/intersection、普通泛型引用、`keyof`、indexed access、mapped type 和 conditional type；
 - alpha/beta 定义相等和 universe/kind 检查。
 - 将形如 `(A: Type0) -> (value: A) -> A` 的 Pi 类型与显式注解的

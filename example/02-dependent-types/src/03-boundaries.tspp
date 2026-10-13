@@ -32,9 +32,7 @@ export type HigherCodomain: Type1 =
 // 当前核心支持 universe、Pi、binder、类型应用、alpha/beta 定义相等，以及
 // TypeScript external type。以下能力仍处于后续设计范围：
 //
-//   - dependent pair / Sigma type；
-//   - identity type 和证明对象；
-//   - 通用 inductive family，以及 Nat 的 eliminator/recursor；
+//   - 用户可声明的通用 inductive family；
 //   - pattern matching；
 //   - 专用的运行时 dependent function 声明语法；
 //   - 让 JavaScript 表达式参与类型级计算。
@@ -42,6 +40,10 @@ export type HigherCodomain: Type1 =
 // 当前已可将“前导 Type0 binder + 值参数”的 Pi 类型与显式
 // 注解的 TS 泛型函数互相赋值，并直接调用。可选/剩余参数、默认/
 // 约束类型参数和高阶运行时 binder 尚未纳入这层桥接。
+//
+// MLTT 内核已支持 NatElim、Eq/Refl 和 Sigma/Pair/First/Second。
+// 它们目前是类型与证明层能力；Sigma 的专用 JavaScript 运行时
+// 表示以及通用 inductive 声明语法仍需后续设计。
 //
 // 当前最准确的理解是：TS++ 在 TypeScript 类型系统中嵌入了一个 MLTT
 // 子语言，而不是用 MLTT 替换整个 TypeScript 类型系统。
