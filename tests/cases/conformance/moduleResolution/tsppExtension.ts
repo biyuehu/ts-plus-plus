@@ -3,6 +3,7 @@
 // @declaration: true
 // @allowImportingTsExtensions: true
 // @rewriteRelativeImportExtensions: true
+// @tsppFeatures: higherKindedTypes
 
 // @Filename: /dep.tspp
 export const answer: number = 42;

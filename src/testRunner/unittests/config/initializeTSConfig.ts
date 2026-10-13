@@ -35,4 +35,47 @@ describe("unittests:: config:: initTSConfig", () => {
   initTSConfigCorrectly("Initialized TSConfig with --help", ["--init", "--help"]);
 
   initTSConfigCorrectly("Initialized TSConfig with --watch", ["--init", "--watch"]);
+
+  it("generates a versioned TS++ config with every feature disabled", () => {
+    const commit = "0123456789abcdef0123456789abcdef01234567";
+    const result = ts.generateTsppConfig(commit, "\n");
+    assert.include(result, `compiler commit ${commit}`);
+    assert.include(result, `"extends": "./tsconfig.json"`);
+    for (const definition of ts.tsppFeatureDefinitions) {
+      assert.include(result, `// "${definition.name}",`);
+      assert.notInclude(result, `      "${definition.name}",`);
+    }
+  });
+
+  it("validates TS++ feature dependencies without enabling them implicitly", () => {
+    const host: ts.ParseConfigHost = {
+      useCaseSensitiveFileNames: true,
+      fileExists: ts.returnFalse,
+      readFile: ts.returnUndefined,
+      readDirectory: () => [],
+    };
+    const parsed = ts.parseJsonConfigFileContent(
+      { compilerOptions: { tsppFeatures: ["dependentFunctionTypes"] } },
+      host,
+      "/project",
+      /*existingOptions*/ undefined,
+      "/project/tsppconfig.json",
+    );
+    assert.include(parsed.errors.map(error => error.code), 18071);
+    assert.deepEqual(parsed.options.tsppFeatures, ["dependentFunctionTypes"]);
+
+    const wrongFile = ts.parseJsonConfigFileContent(
+      { compilerOptions: { tsppFeatures: ["higherKindedTypes"] } },
+      host,
+      "/project",
+      /*existingOptions*/ undefined,
+      "/project/tsconfig.json",
+    );
+    assert.include(wrongFile.errors.map(error => error.code), 18069);
+  });
+
+  it("does not discover TS++ extensions without a tsppconfig", () => {
+    assert.notInclude(ts.flatten(ts.getSupportedExtensions({})), ts.Extension.Tspp);
+    assert.include(ts.flatten(ts.getSupportedExtensions({ configFilePath: "/project/tsppconfig.json" })), ts.Extension.Tspp);
+  });
 });

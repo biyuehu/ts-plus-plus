@@ -8580,12 +8580,32 @@
     "category": "Error",
     "code": 18067
   },
-  "Enable TS++ dependent function types in .tspp files.": {
+  "Enable TS++ language features listed in tsppconfig.json.": {
     "category": "Message",
     "code": 18068
   },
-  "Dependent function types require 'dependentTypes' to be enabled in 'tsppconfig.json'.": {
+  "Option 'tsppFeatures' can only be specified in 'tsppconfig.json'.": {
     "category": "Error",
     "code": 18069
+  },
+  "TS++ feature '{0}' is listed more than once.": {
+    "category": "Error",
+    "code": 18070
+  },
+  "TS++ feature '{0}' requires feature '{1}' to be enabled explicitly.": {
+    "category": "Error",
+    "code": 18071
+  },
+  "TS++ feature '{0}' is not enabled in 'tsppconfig.json'.": {
+    "category": "Error",
+    "code": 18072
+  },
+  "Unable to determine the ts-plus-plus compiler commit. No configuration files were created.": {
+    "category": "Error",
+    "code": 18073
+  },
+  "A tsppconfig.json file is already defined at: '{0}'.": {
+    "category": "Error",
+    "code": 18074
   }
 }

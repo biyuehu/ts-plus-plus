@@ -47,13 +47,16 @@ import {
   forEach,
   formatMessage,
   generateTSConfig,
+  generateTsppConfig,
   getBuildOrderFromAnyBuildOrder,
   getConfigFileParsingDiagnostics,
   getDiagnosticText,
+  getDirectoryPath,
   getErrorSummaryText,
   getLineStarts,
   getNormalizedAbsolutePath,
   isIncrementalCompilation,
+  isTsppConfigFileName,
   isWatchSet,
   JSDocParsingMode,
   normalizePath,
@@ -667,6 +670,10 @@ function executeCommandLineWorker(
       // eslint-disable-next-line no-restricted-syntax
       sys.write(JSON.stringify(convertToTSConfig(configParseResult, configFileName, sys), null, 4) + sys.newLine);
       return sys.exit(ExitStatus.Success);
+    }
+    if (isTsppConfigFileName(configFileName) && configParseResult.errors.length !== 0) {
+      configParseResult.errors.forEach(reportDiagnostic);
+      return sys.exit(ExitStatus.DiagnosticsPresent_OutputsSkipped);
     }
     reportDiagnostic = updateReportDiagnostic(
       sys,
@@ -1294,18 +1301,74 @@ function writeConfigFile(
   options: CompilerOptions,
 ) {
   const currentDirectory = sys.getCurrentDirectory();
-  const file = normalizePath(combinePaths(currentDirectory, "tsconfig.json"));
-  if (sys.fileExists(file)) {
-    reportDiagnostic(createCompilerDiagnostic(Diagnostics.A_tsconfig_json_file_is_already_defined_at_Colon_0, file));
-  }
-  else {
-    sys.writeFile(file, generateTSConfig(options, sys.newLine));
-    const output: string[] = [sys.newLine, ...getHeader(sys, "Created a new tsconfig.json")];
-    output.push(`You can learn more at https://aka.ms/tsconfig` + sys.newLine);
-    for (const line of output) {
-      sys.write(line);
-    }
+  const tsconfigFile = normalizePath(combinePaths(currentDirectory, "tsconfig.json"));
+  const tsppconfigFile = normalizePath(combinePaths(currentDirectory, "tsppconfig.json"));
+  if (sys.fileExists(tsppconfigFile)) {
+    reportDiagnostic(createCompilerDiagnostic(Diagnostics.A_tsppconfig_json_file_is_already_defined_at_Colon_0, tsppconfigFile));
+    return;
   }
 
-  return;
+  const commitHash = getCompilerCommitHash(sys);
+  if (!commitHash) {
+    reportDiagnostic(createCompilerDiagnostic(Diagnostics.Unable_to_determine_the_ts_plus_plus_compiler_commit_No_configuration_files_were_created));
+    return;
+  }
+
+  const createdTsconfig = !sys.fileExists(tsconfigFile);
+  if (createdTsconfig) {
+    sys.writeFile(tsconfigFile, generateTSConfig(options, sys.newLine));
+  }
+
+  sys.writeFile(tsppconfigFile, generateTsppConfig(commitHash, sys.newLine));
+  const title = createdTsconfig ? "Created tsconfig.json and tsppconfig.json" : "Created a new tsppconfig.json";
+  const output: string[] = [sys.newLine, ...getHeader(sys, title)];
+  output.push(`All TS++ features are disabled until you uncomment them in tsppconfig.json.` + sys.newLine);
+  output.push(`You can learn more at https://aka.ms/tsconfig` + sys.newLine);
+  for (const line of output) sys.write(line);
+}
+
+function getCompilerCommitHash(sys: System): string | undefined {
+  let directory = normalizePath(getDirectoryPath(sys.getExecutingFilePath()));
+  while (true) {
+    const packageJson = sys.readFile(combinePaths(directory, "package.json"));
+    if (packageJson) {
+      try {
+        const metadata = JSON.parse(packageJson) as { name?: string; gitHead?: string; };
+        if (metadata.name === "ts-plus-plus" && isFullCommitHash(metadata.gitHead)) return metadata.gitHead!;
+      }
+      catch {
+        // Keep looking for source-checkout Git metadata.
+      }
+    }
+
+    const gitPath = combinePaths(directory, ".git");
+    const gitDirectory = getGitDirectory(sys, directory, gitPath);
+    if (gitDirectory) {
+      const head = sys.readFile(combinePaths(gitDirectory, "HEAD"))?.trim();
+      if (isFullCommitHash(head)) return head;
+      if (head?.startsWith("ref: ")) {
+        const reference = head.slice("ref: ".length).trim();
+        const looseHash = sys.readFile(combinePaths(gitDirectory, reference))?.trim();
+        if (isFullCommitHash(looseHash)) return looseHash;
+        const packedRefs = sys.readFile(combinePaths(gitDirectory, "packed-refs"));
+        const packedHash = packedRefs?.split(/\r?\n/).find(line => !line.startsWith("#") && !line.startsWith("^") && line.endsWith(` ${reference}`))?.split(" ", 1)[0];
+        if (isFullCommitHash(packedHash)) return packedHash;
+      }
+    }
+
+    const parent = normalizePath(getDirectoryPath(directory));
+    if (parent === directory) return undefined;
+    directory = parent;
+  }
+}
+
+function getGitDirectory(sys: System, repositoryDirectory: string, gitPath: string): string | undefined {
+  if (sys.directoryExists(gitPath)) return gitPath;
+  const gitFile = sys.readFile(gitPath);
+  const match = /^gitdir:\s*(.+)\s*$/i.exec(gitFile || "");
+  return match ? normalizePath(sys.resolvePath(combinePaths(repositoryDirectory, match[1]))) : undefined;
+}
+
+function isFullCommitHash(value: string | undefined): boolean {
+  return value !== undefined && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(value);
 }

@@ -1,6 +1,7 @@
 // @strict: true
 // @module: node16
 // @moduleResolution: node16
+// @tsppFeatures: higherKindedTypes,typeUniverses
 
 // @Filename: /library.d.tspp
 export interface Apply<F: Type => Type, A> {

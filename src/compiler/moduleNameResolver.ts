@@ -113,6 +113,7 @@ import {
   versionMajorMinor,
   VersionRange,
 } from "./_namespaces/ts.js";
+import { isTsppProject } from "./tsppFeatures.js";
 
 /** @internal */
 export function trace(host: ModuleResolutionHost, message: DiagnosticMessage, ...args: any[]): void {
@@ -2166,18 +2167,20 @@ function tryAddingExtensions(candidate: string, extensions: Extensions, original
         || extensions & Extensions.JavaScript && (tryExtension(Extension.Jsx) || tryExtension(Extension.Js))
         || undefined;
     case Extension.Tspp:
+      if (!isTsppProject(state.compilerOptions)) return undefined;
       return extensions & Extensions.TypeScript && tryExtension(Extension.Tspp, /*resolvedUsingTsExtension*/ true)
         || extensions & Extensions.Declaration && tryExtension(Extension.Dtspp)
         || extensions & Extensions.Declaration && tryExtension(Extension.Dts)
         || undefined;
     case Extension.Dtspp:
+      if (!isTsppProject(state.compilerOptions)) return undefined;
       return extensions & Extensions.Declaration && tryExtension(Extension.Dtspp)
         || undefined;
     case Extension.Ts:
     case Extension.Dts:
     case Extension.Js:
     case "":
-      return extensions & Extensions.TypeScript && (tryExtension(Extension.Ts, originalExtension === Extension.Ts || originalExtension === Extension.Dts) || tryExtension(Extension.Tsx, originalExtension === Extension.Ts || originalExtension === Extension.Dts) || tryExtension(Extension.Tspp))
+      return extensions & Extensions.TypeScript && (tryExtension(Extension.Ts, originalExtension === Extension.Ts || originalExtension === Extension.Dts) || tryExtension(Extension.Tsx, originalExtension === Extension.Ts || originalExtension === Extension.Dts) || isTsppProject(state.compilerOptions) && tryExtension(Extension.Tspp))
         || extensions & Extensions.Declaration && tryExtension(Extension.Dts, originalExtension === Extension.Ts || originalExtension === Extension.Dts)
         || extensions & Extensions.JavaScript && (tryExtension(Extension.Js) || tryExtension(Extension.Jsx))
         || state.isConfigLookup && tryExtension(Extension.Json)

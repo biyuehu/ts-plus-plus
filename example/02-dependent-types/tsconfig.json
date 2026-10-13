@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.tspp"]
+}

@@ -1,6 +1,7 @@
 // @strict: true
 // @declaration: true
 // @emitDeclarationOnly: true
+// @tsppFeatures: higherKindedTypes,typeUniverses
 
 // @Filename: higherKindedTypesBasic.tspp
 export interface Apply<F: Type => Type, A> {

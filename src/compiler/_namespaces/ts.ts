@@ -25,6 +25,7 @@ export * from "../factory/utilities.js";
 export * from "../factory/utilitiesPublic.js";
 export * from "../parser.js";
 export * from "../commandLineParser.js";
+export * from "../tsppFeatures.js";
 export * from "../moduleNameResolver.js";
 export * from "../binder.js";
 export * from "../symbolWalker.js";
