@@ -1,7 +1,7 @@
 import * as fs from "fs";
 
 if (process.argv.length < 3) {
-    process.exit(1);
+  process.exit(1);
 }
 const directoryName = process.argv[2];
 // main reason why we need separate process to check if it is safe to watch some path
@@ -10,8 +10,8 @@ const directoryName = process.argv[2];
 // This means that here we treat any result (success or exception) from fs.watch as success since it does not tear down the process.
 // The only case that should be considered as failure - when watchGuard process crashes.
 try {
-    const watcher = fs.watch(directoryName, { recursive: true }, () => ({}));
-    watcher.close();
+  const watcher = fs.watch(directoryName, { recursive: true }, () => ({}));
+  watcher.close();
 }
 catch { /*ignore*/ }
 process.exit(0);

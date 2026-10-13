@@ -2,8 +2,8 @@ import * as evaluator from "../../_namespaces/evaluator.js";
 import * as ts from "../../_namespaces/ts.js";
 
 describe("unittests:: evaluation:: asyncGeneratorEvaluation", () => {
-    it("return (es5)", async () => {
-        const result = evaluator.evaluateTypeScript(`
+  it("return (es5)", async () => {
+    const result = evaluator.evaluateTypeScript(`
         async function * g() {
             return Promise.resolve(0);
         }
@@ -11,14 +11,14 @@ describe("unittests:: evaluation:: asyncGeneratorEvaluation", () => {
         export async function main() {
             output.push(await g().next());
         }`);
-        await result.main();
-        assert.deepEqual(result.output, [
-            { value: 0, done: true },
-        ]);
-    });
-    it("return (es2015)", async () => {
-        const result = evaluator.evaluateTypeScript(
-            `
+    await result.main();
+    assert.deepEqual(result.output, [
+      { value: 0, done: true },
+    ]);
+  });
+  it("return (es2015)", async () => {
+    const result = evaluator.evaluateTypeScript(
+      `
         async function * g() {
             return Promise.resolve(0);
         }
@@ -26,16 +26,16 @@ describe("unittests:: evaluation:: asyncGeneratorEvaluation", () => {
         export async function main() {
             output.push(await g().next());
         }`,
-            { target: ts.ScriptTarget.ES2015 },
-        );
-        await result.main();
-        assert.deepEqual(result.output, [
-            { value: 0, done: true },
-        ]);
-    });
-    it("yields in finally block with async delegator (es2017)", async () => {
-        const result = evaluator.evaluateTypeScript(
-            `
+      { target: ts.ScriptTarget.ES2015 },
+    );
+    await result.main();
+    assert.deepEqual(result.output, [
+      { value: 0, done: true },
+    ]);
+  });
+  it("yields in finally block with async delegator (es2017)", async () => {
+    const result = evaluator.evaluateTypeScript(
+      `
         async function* g1() {
             try {
                 yield 1;
@@ -53,18 +53,18 @@ describe("unittests:: evaluation:: asyncGeneratorEvaluation", () => {
             output.push(await it.return());
             output.push(await it.next());
         }`,
-            { target: ts.ScriptTarget.ES2017 },
-        );
-        await result.main();
-        assert.deepEqual(result.output, [
-            { done: false, value: 1 },
-            { done: false, value: 2 },
-            { done: true, value: undefined },
-        ]);
-    });
-    it("pass promise to gen.return()", async () => {
-        const result = evaluator.evaluateTypeScript(
-            `
+      { target: ts.ScriptTarget.ES2017 },
+    );
+    await result.main();
+    assert.deepEqual(result.output, [
+      { done: false, value: 1 },
+      { done: false, value: 2 },
+      { done: true, value: undefined },
+    ]);
+  });
+  it("pass promise to gen.return()", async () => {
+    const result = evaluator.evaluateTypeScript(
+      `
         export const output = [];
         async function* fn() {
             yield* [1]
@@ -75,34 +75,34 @@ describe("unittests:: evaluation:: asyncGeneratorEvaluation", () => {
             output.push(await it.next());
             output.push(await it.return(Promise.resolve(2)));
         }`,
-            { target: ts.ScriptTarget.ES2017 },
-        );
-        await result.main();
-        assert.deepEqual(result.output, [
-            { done: false, value: 1 },
-            { done: true, value: 2 },
-        ]);
-    });
-    it("Supports global `AsyncIterator.prototype` if present", () => {
-        class AsyncIterator {}
-        const { gen } = evaluator.evaluateTypeScript(
-            `
+      { target: ts.ScriptTarget.ES2017 },
+    );
+    await result.main();
+    assert.deepEqual(result.output, [
+      { done: false, value: 1 },
+      { done: true, value: 2 },
+    ]);
+  });
+  it("Supports global `AsyncIterator.prototype` if present", () => {
+    class AsyncIterator {}
+    const { gen } = evaluator.evaluateTypeScript(
+      `
             export async function * gen() {}
             `,
-            { target: ts.ScriptTarget.ES5 },
-            { AsyncIterator },
-        );
-        const g = gen();
-        assert.instanceOf(g, AsyncIterator);
-    });
-    it("Ignores global `AsyncIterator.prototype` if missing", () => {
-        const { gen } = evaluator.evaluateTypeScript(
-            `
+      { target: ts.ScriptTarget.ES5 },
+      { AsyncIterator },
+    );
+    const g = gen();
+    assert.instanceOf(g, AsyncIterator);
+  });
+  it("Ignores global `AsyncIterator.prototype` if missing", () => {
+    const { gen } = evaluator.evaluateTypeScript(
+      `
             export async function * gen() {}
             `,
-            { target: ts.ScriptTarget.ES5 },
-            { AsyncIterator: undefined },
-        );
-        gen();
-    });
+      { target: ts.ScriptTarget.ES5 },
+      { AsyncIterator: undefined },
+    );
+    gen();
+  });
 });

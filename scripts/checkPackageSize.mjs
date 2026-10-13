@@ -9,7 +9,7 @@ const [before, after] = JSON.parse(cp.execFileSync("npm", ["pack", "--dry-run", 
 
 /** @param {{ path: string; size: number; }[]} files */
 function filesToMap(files) {
-    return new Map(files.map(f => [f.path, f.size]));
+  return new Map(files.map(f => [f.path, f.size]));
 }
 
 const beforeFileToSize = filesToMap(before.files);
@@ -20,16 +20,16 @@ const afterFileToSize = filesToMap(after.files);
  * @param {number} after
  */
 function failIfTooBig(before, after) {
-    if (after > (before * 1.1)) {
-        process.exitCode = 1;
-    }
+  if (after > (before * 1.1)) {
+    process.exitCode = 1;
+  }
 }
 
 /**
  * @param {number} value
  */
 function sign(value) {
-    return value > 0 ? "+" : "-";
+  return value > 0 ? "+" : "-";
 }
 
 const units = ["B", "KiB", "MiB", "GiB"];
@@ -37,15 +37,15 @@ const units = ["B", "KiB", "MiB", "GiB"];
  * @param {number} size
  */
 function prettyPrintSize(size) {
-    assert(size >= 0);
+  assert(size >= 0);
 
-    let i = 0;
-    while (size > 1024) {
-        i++;
-        size /= 1024;
-    }
+  let i = 0;
+  while (size > 1024) {
+    i++;
+    size /= 1024;
+  }
 
-    return `${size.toFixed(2)} ${units[i]}`;
+  return `${size.toFixed(2)} ${units[i]}`;
 }
 
 /**
@@ -53,8 +53,8 @@ function prettyPrintSize(size) {
  * @param {number} after
  */
 function prettyPrintSizeDiff(before, after) {
-    const diff = after - before;
-    return sign(diff) + prettyPrintSize(Math.abs(diff));
+  const diff = after - before;
+  return sign(diff) + prettyPrintSize(Math.abs(diff));
 }
 
 /**
@@ -62,8 +62,8 @@ function prettyPrintSizeDiff(before, after) {
  * @param {number} after
  */
 function prettyPercentDiff(before, after) {
-    const percent = 100 * (after - before) / before;
-    return `${sign(percent)}${Math.abs(percent).toFixed(2)}%`;
+  const percent = 100 * (after - before) / before;
+  return `${sign(percent)}${Math.abs(percent).toFixed(2)}%`;
 }
 
 /**
@@ -71,23 +71,23 @@ function prettyPercentDiff(before, after) {
  * @param {string[][]} data
  */
 function logTable(header, data) {
-    /** @type {string[]} */
-    const lines = [];
+  /** @type {string[]} */
+  const lines = [];
 
-    /**
-     * @param {string[]} row
-     */
-    function addRow(row) {
-        lines.push("| " + row.join(" | ") + " |");
-    }
+  /**
+   * @param {string[]} row
+   */
+  function addRow(row) {
+    lines.push("| " + row.join(" | ") + " |");
+  }
 
-    addRow(header);
-    addRow(new Array(header.length).fill("-"));
-    for (const row of data) {
-        addRow(row);
-    }
+  addRow(header);
+  addRow(new Array(header.length).fill("-"));
+  for (const row of data) {
+    addRow(row);
+  }
 
-    console.log(lines.join("\n"));
+  console.log(lines.join("\n"));
 }
 
 console.log(`# Package size report`);
@@ -97,28 +97,28 @@ console.log(`## Overall package size`);
 console.log();
 
 if (before.size === after.size && before.unpackedSize === after.unpackedSize) {
-    console.log("No change.");
+  console.log("No change.");
 }
 else {
-    logTable(
-        ["", "Before", "After", "Diff", "Diff (percent)"],
-        [
-            [
-                "Packed",
-                prettyPrintSize(before.size),
-                prettyPrintSize(after.size),
-                prettyPrintSizeDiff(before.size, after.size),
-                prettyPercentDiff(before.size, after.size),
-            ],
-            [
-                "Unpacked",
-                prettyPrintSize(before.unpackedSize),
-                prettyPrintSize(after.unpackedSize),
-                prettyPrintSizeDiff(before.unpackedSize, after.unpackedSize),
-                prettyPercentDiff(before.unpackedSize, after.unpackedSize),
-            ],
-        ],
-    );
+  logTable(
+    ["", "Before", "After", "Diff", "Diff (percent)"],
+    [
+      [
+        "Packed",
+        prettyPrintSize(before.size),
+        prettyPrintSize(after.size),
+        prettyPrintSizeDiff(before.size, after.size),
+        prettyPercentDiff(before.size, after.size),
+      ],
+      [
+        "Unpacked",
+        prettyPrintSize(before.unpackedSize),
+        prettyPrintSize(after.unpackedSize),
+        prettyPrintSizeDiff(before.unpackedSize, after.unpackedSize),
+        prettyPercentDiff(before.unpackedSize, after.unpackedSize),
+      ],
+    ],
+  );
 }
 
 failIfTooBig(before.size, after.size);
@@ -136,9 +136,9 @@ const inAfter = 1;
  * @param {-1 | 1} marker
  */
 function addFiles(paths, marker) {
-    for (const p of paths) {
-        fileCounts.set(p, (fileCounts.get(p) ?? 0) + marker);
-    }
+  for (const p of paths) {
+    fileCounts.set(p, (fileCounts.get(p) ?? 0) + marker);
+  }
 }
 addFiles(beforeFileToSize.keys(), inBefore);
 addFiles(afterFileToSize.keys(), inAfter);
@@ -149,56 +149,56 @@ const beforeOnly = allEntries.filter(([, count]) => count === inBefore).map(([pa
 const afterOnly = allEntries.filter(([, count]) => count === inAfter).map(([path]) => path);
 
 const commonData = commonFiles.map(path => {
-    const beforeSize = beforeFileToSize.get(path) ?? 0;
-    const afterSize = afterFileToSize.get(path) ?? 0;
-    return { path, beforeSize, afterSize };
+  const beforeSize = beforeFileToSize.get(path) ?? 0;
+  const afterSize = afterFileToSize.get(path) ?? 0;
+  return { path, beforeSize, afterSize };
 })
-    .filter(({ beforeSize, afterSize }) => beforeSize !== afterSize)
-    .map(({ path, beforeSize, afterSize }) => {
-        return [
-            "`" + path + "`",
-            prettyPrintSize(beforeSize),
-            prettyPrintSize(afterSize),
-            prettyPrintSizeDiff(beforeSize, afterSize),
-            prettyPercentDiff(beforeSize, afterSize),
-        ];
-    });
+  .filter(({ beforeSize, afterSize }) => beforeSize !== afterSize)
+  .map(({ path, beforeSize, afterSize }) => {
+    return [
+      "`" + path + "`",
+      prettyPrintSize(beforeSize),
+      prettyPrintSize(afterSize),
+      prettyPrintSizeDiff(beforeSize, afterSize),
+      prettyPercentDiff(beforeSize, afterSize),
+    ];
+  });
 
 if (commonData.length > 0) {
-    console.log(`## Files`);
-    console.log();
-    logTable(["", "Before", "After", "Diff", "Diff (percent)"], commonData);
-    console.log();
+  console.log(`## Files`);
+  console.log();
+  logTable(["", "Before", "After", "Diff", "Diff (percent)"], commonData);
+  console.log();
 }
 
 if (afterOnly.length > 0) {
-    console.log(`## New files`);
-    console.log();
-    logTable(
-        ["", "Size"],
-        afterOnly.map(path => {
-            const afterSize = afterFileToSize.get(path) ?? 0;
-            return { path, afterSize };
-        })
-            .map(({ path, afterSize }) => {
-                return ["`" + path + "`", prettyPrintSize(afterSize)];
-            }),
-    );
-    console.log();
+  console.log(`## New files`);
+  console.log();
+  logTable(
+    ["", "Size"],
+    afterOnly.map(path => {
+      const afterSize = afterFileToSize.get(path) ?? 0;
+      return { path, afterSize };
+    })
+      .map(({ path, afterSize }) => {
+        return ["`" + path + "`", prettyPrintSize(afterSize)];
+      }),
+  );
+  console.log();
 }
 
 if (beforeOnly.length > 0) {
-    console.log(`## Deleted files`);
-    console.log();
-    logTable(
-        ["", "Size"],
-        beforeOnly.map(path => {
-            const afterSize = afterFileToSize.get(path) ?? 0;
-            return { path, afterSize };
-        })
-            .map(({ path, afterSize }) => {
-                return ["`" + path + "`", prettyPrintSize(afterSize)];
-            }),
-    );
-    console.log();
+  console.log(`## Deleted files`);
+  console.log();
+  logTable(
+    ["", "Size"],
+    beforeOnly.map(path => {
+      const afterSize = afterFileToSize.get(path) ?? 0;
+      return { path, afterSize };
+    })
+      .map(({ path, afterSize }) => {
+        return ["`" + path + "`", prettyPrintSize(afterSize)];
+      }),
+  );
+  console.log();
 }

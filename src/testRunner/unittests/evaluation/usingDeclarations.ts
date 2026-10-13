@@ -2,13 +2,13 @@ import * as evaluator from "../../_namespaces/evaluator.js";
 import * as ts from "../../_namespaces/ts.js";
 
 function FakeSuppressedError(error: any, suppressed: any) {
-    return { error, suppressed };
+  return { error, suppressed };
 }
 
 describe("unittests:: evaluation:: usingDeclarations", () => {
-    it("'using' in Block, normal completion (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, normal completion (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -32,24 +32,24 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after block");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before block",
-            "enter block",
-            "body",
-            "exit block",
-            "disposed",
-            "after block",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before block",
+      "enter block",
+      "body",
+      "exit block",
+      "disposed",
+      "after block",
+    ]);
+  });
 
-    it("'using' in Block, 'throw' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'throw' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -77,24 +77,24 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after try");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before try",
-            "enter try",
-            "body",
-            "disposed",
-            "error",
-            "after try",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before try",
+      "enter try",
+      "body",
+      "disposed",
+      "error",
+      "after try",
+    ]);
+  });
 
-    it("'using' in Block, 'throw' in dispose (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'throw' in dispose (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -122,25 +122,25 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after try");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before try",
-            "enter try",
-            "body",
-            "exit try",
-            "disposed",
-            "error",
-            "after try",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before try",
+      "enter try",
+      "body",
+      "exit try",
+      "disposed",
+      "error",
+      "after try",
+    ]);
+  });
 
-    it("'using' in Block, 'throw' in multiple dispose (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'throw' in multiple dispose (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable_1 = {
@@ -175,30 +175,30 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after try");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-            { SuppressedError: FakeSuppressedError },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+      { SuppressedError: FakeSuppressedError },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before try",
-            "enter try",
-            "body",
-            "exit try",
-            "disposed 2",
-            "disposed 1",
-            {
-                error: "error 1",
-                suppressed: "error 2",
-            },
-            "after try",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before try",
+      "enter try",
+      "body",
+      "exit try",
+      "disposed 2",
+      "disposed 1",
+      {
+        error: "error 1",
+        suppressed: "error 2",
+      },
+      "after try",
+    ]);
+  });
 
-    it("'using' in Block, 'throw' in body and dispose (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'throw' in body and dispose (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -227,28 +227,28 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after try");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-            { SuppressedError: FakeSuppressedError },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+      { SuppressedError: FakeSuppressedError },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before try",
-            "enter try",
-            "body",
-            "disposed",
-            {
-                error: "dispose error",
-                suppressed: "body error",
-            },
-            "after try",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before try",
+      "enter try",
+      "body",
+      "disposed",
+      {
+        error: "dispose error",
+        suppressed: "body error",
+      },
+      "after try",
+    ]);
+  });
 
-    it("'using' in Block, 'throw' in body and multiple dispose (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'throw' in body and multiple dispose (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable_1 = {
@@ -284,32 +284,32 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after try");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-            { SuppressedError: FakeSuppressedError },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+      { SuppressedError: FakeSuppressedError },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before try",
-            "enter try",
-            "body",
-            "disposed 2",
-            "disposed 1",
-            {
-                error: "dispose error 1",
-                suppressed: {
-                    error: "dispose error 2",
-                    suppressed: "body error",
-                },
-            },
-            "after try",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before try",
+      "enter try",
+      "body",
+      "disposed 2",
+      "disposed 1",
+      {
+        error: "dispose error 1",
+        suppressed: {
+          error: "dispose error 2",
+          suppressed: "body error",
+        },
+      },
+      "after try",
+    ]);
+  });
 
-    it("'using' in Block, 'throw' in body and dispose, no global SuppressedError (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'throw' in body and dispose, no global SuppressedError (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -338,29 +338,29 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after try");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output.slice(0, 4), [
-            "before try",
-            "enter try",
-            "body",
-            "disposed",
-        ]);
-        assert.instanceOf(output[4], Error);
-        assert.strictEqual(output[4].name, "SuppressedError");
-        assert.strictEqual((output[4] as any).error, "dispose error");
-        assert.strictEqual((output[4] as any).suppressed, "body error");
-        assert.deepEqual(output.slice(5), [
-            "after try",
-        ]);
-    });
+    assert.deepEqual(output.slice(0, 4), [
+      "before try",
+      "enter try",
+      "body",
+      "disposed",
+    ]);
+    assert.instanceOf(output[4], Error);
+    assert.strictEqual(output[4].name, "SuppressedError");
+    assert.strictEqual((output[4] as any).error, "dispose error");
+    assert.strictEqual((output[4] as any).suppressed, "body error");
+    assert.deepEqual(output.slice(5), [
+      "after try",
+    ]);
+  });
 
-    it("'using' in Block, 'return' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'return' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -384,22 +384,22 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after block");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before block",
-            "enter block",
-            "body",
-            "disposed",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before block",
+      "enter block",
+      "body",
+      "disposed",
+    ]);
+  });
 
-    it("'using' in Block, 'break' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'break' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -423,23 +423,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after block");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before block",
-            "enter block",
-            "body",
-            "disposed",
-            "after block",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before block",
+      "enter block",
+      "body",
+      "disposed",
+      "after block",
+    ]);
+  });
 
-    it("'using' in Block, 'continue' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in Block, 'continue' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -463,26 +463,26 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after block");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before block",
-            "enter block",
-            "body",
-            "disposed",
-            "enter block",
-            "body",
-            "disposed",
-            "after block",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before block",
+      "enter block",
+      "body",
+      "disposed",
+      "enter block",
+      "body",
+      "disposed",
+      "after block",
+    ]);
+  });
 
-    it("'using' in head of 'for', normal completion (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for', normal completion (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -506,27 +506,27 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for', 'throw' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for', 'throw' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -555,24 +555,24 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "disposed",
-            "error",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "disposed",
+      "error",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for', 'throw' in dispose (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for', 'throw' in dispose (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -601,28 +601,28 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "disposed",
-            "error",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "disposed",
+      "error",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for', 'throw' in body and dispose (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for', 'throw' in body and dispose (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -652,28 +652,28 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-            { SuppressedError: FakeSuppressedError },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+      { SuppressedError: FakeSuppressedError },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "disposed",
-            {
-                error: "dispose error",
-                suppressed: "body error",
-            },
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "disposed",
+      {
+        error: "dispose error",
+        suppressed: "body error",
+      },
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for', 'return' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for', 'return' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -697,22 +697,22 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "disposed",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "disposed",
+    ]);
+  });
 
-    it("'using' in head of 'for', 'break' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for', 'break' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -736,23 +736,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for', 'continue' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for', 'continue' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -776,25 +776,25 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "enter loop",
-            "body",
-            "disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "enter loop",
+      "body",
+      "disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for', multiple iterations (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for', multiple iterations (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable = {
@@ -818,27 +818,27 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-of', normal completion (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-of', normal completion (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -868,28 +868,28 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "a disposed",
-            "enter loop",
-            "body",
-            "exit loop",
-            "b disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "a disposed",
+      "enter loop",
+      "body",
+      "exit loop",
+      "b disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-of', 'throw' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-of', 'throw' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -925,24 +925,24 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-            "error",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+      "error",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-of', 'throw' in dispose (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-of', 'throw' in dispose (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -978,25 +978,25 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "a disposed",
-            "error",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "a disposed",
+      "error",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-of', 'throw' in body and dispose (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-of', 'throw' in body and dispose (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1033,28 +1033,28 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-            { SuppressedError: FakeSuppressedError },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+      { SuppressedError: FakeSuppressedError },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-            {
-                error: "dispose error",
-                suppressed: "body error",
-            },
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+      {
+        error: "dispose error",
+        suppressed: "body error",
+      },
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-of', 'return' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-of', 'return' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1084,22 +1084,22 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+    ]);
+  });
 
-    it("'using' in head of 'for-of', 'break' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-of', 'break' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1129,23 +1129,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-of', 'continue' in body (es2018)", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-of', 'continue' in body (es2018)", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1175,26 +1175,26 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-            "enter loop",
-            "body",
-            "b disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+      "enter loop",
+      "body",
+      "b disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-await-of', normal completion (es2018)", async () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-await-of', normal completion (es2018)", async () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1224,28 +1224,28 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        await main();
+    await main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "a disposed",
-            "enter loop",
-            "body",
-            "exit loop",
-            "b disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "a disposed",
+      "enter loop",
+      "body",
+      "exit loop",
+      "b disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-await-of', 'throw' in body (es2018)", async () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-await-of', 'throw' in body (es2018)", async () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1281,24 +1281,24 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        await main();
+    await main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-            "error",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+      "error",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-await-of', 'throw' in dispose (es2018)", async () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-await-of', 'throw' in dispose (es2018)", async () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1334,25 +1334,25 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        await main();
+    await main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "exit loop",
-            "a disposed",
-            "error",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "exit loop",
+      "a disposed",
+      "error",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-await-of', 'throw' in body and dispose (es2018)", async () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-await-of', 'throw' in body and dispose (es2018)", async () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1389,28 +1389,28 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-            { SuppressedError: FakeSuppressedError },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+      { SuppressedError: FakeSuppressedError },
+    );
 
-        await main();
+    await main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-            {
-                error: "dispose error",
-                suppressed: "body error",
-            },
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+      {
+        error: "dispose error",
+        suppressed: "body error",
+      },
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-await-of', 'return' in body (es2018)", async () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-await-of', 'return' in body (es2018)", async () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1440,22 +1440,22 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        await main();
+    await main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+    ]);
+  });
 
-    it("'using' in head of 'for-await-of', 'break' in body (es2018)", async () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-await-of', 'break' in body (es2018)", async () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1485,23 +1485,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        await main();
+    await main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' in head of 'for-await-of', 'continue' in body (es2018)", async () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' in head of 'for-await-of', 'continue' in body (es2018)", async () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function* g() {
@@ -1531,26 +1531,26 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after loop");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        await main();
+    await main();
 
-        assert.deepEqual(output, [
-            "before loop",
-            "enter loop",
-            "body",
-            "a disposed",
-            "enter loop",
-            "body",
-            "b disposed",
-            "after loop",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before loop",
+      "enter loop",
+      "body",
+      "a disposed",
+      "enter loop",
+      "body",
+      "b disposed",
+      "after loop",
+    ]);
+  });
 
-    it("'using' at top level of module (CommonJS)", () => {
-        const { output, x, y } = evaluator.evaluateTypeScript(
-            `
+  it("'using' at top level of module (CommonJS)", () => {
+    const { output, x, y } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
         output.push("before export x");
         export const x = 1;
@@ -1564,23 +1564,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
         export const y = 2;
         output.push("after export y");
         `,
-            { target: ts.ScriptTarget.ES2018, module: ts.ModuleKind.CommonJS },
-        );
+      { target: ts.ScriptTarget.ES2018, module: ts.ModuleKind.CommonJS },
+    );
 
-        assert.strictEqual(x, 1);
-        assert.strictEqual(y, 2);
-        assert.deepEqual(output, [
-            "before export x",
-            "before using",
-            "after using",
-            "after export y",
-            "disposed",
-        ]);
-    });
+    assert.strictEqual(x, 1);
+    assert.strictEqual(y, 2);
+    assert.deepEqual(output, [
+      "before export x",
+      "before using",
+      "after using",
+      "after export y",
+      "disposed",
+    ]);
+  });
 
-    it("'using' at top level of module (AMD)", () => {
-        const { output, x, y } = evaluator.evaluateTypeScript(
-            `
+  it("'using' at top level of module (AMD)", () => {
+    const { output, x, y } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
         output.push("before export x");
         export const x = 1;
@@ -1594,23 +1594,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
         export const y = 2;
         output.push("after export y");
         `,
-            { target: ts.ScriptTarget.ES2018, module: ts.ModuleKind.AMD, ignoreDeprecations: "6.0" },
-        );
+      { target: ts.ScriptTarget.ES2018, module: ts.ModuleKind.AMD, ignoreDeprecations: "6.0" },
+    );
 
-        assert.strictEqual(x, 1);
-        assert.strictEqual(y, 2);
-        assert.deepEqual(output, [
-            "before export x",
-            "before using",
-            "after using",
-            "after export y",
-            "disposed",
-        ]);
-    });
+    assert.strictEqual(x, 1);
+    assert.strictEqual(y, 2);
+    assert.deepEqual(output, [
+      "before export x",
+      "before using",
+      "after using",
+      "after export y",
+      "disposed",
+    ]);
+  });
 
-    it("'using' at top level of module (System)", () => {
-        const { output, x, y } = evaluator.evaluateTypeScript(
-            `
+  it("'using' at top level of module (System)", () => {
+    const { output, x, y } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
         output.push("before export x");
         export const x = 1;
@@ -1624,23 +1624,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
         export const y = 2;
         output.push("after export y");
         `,
-            { target: ts.ScriptTarget.ES2018, module: ts.ModuleKind.System, ignoreDeprecations: "6.0" },
-        );
+      { target: ts.ScriptTarget.ES2018, module: ts.ModuleKind.System, ignoreDeprecations: "6.0" },
+    );
 
-        assert.strictEqual(x, 1);
-        assert.strictEqual(y, 2);
-        assert.deepEqual(output, [
-            "before export x",
-            "before using",
-            "after using",
-            "after export y",
-            "disposed",
-        ]);
-    });
+    assert.strictEqual(x, 1);
+    assert.strictEqual(y, 2);
+    assert.deepEqual(output, [
+      "before export x",
+      "before using",
+      "after using",
+      "after export y",
+      "disposed",
+    ]);
+  });
 
-    it("'using' for 'null' value", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' for 'null' value", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function body() {
@@ -1658,23 +1658,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after block");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before block",
-            "enter block",
-            "body",
-            "exit block",
-            "after block",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before block",
+      "enter block",
+      "body",
+      "exit block",
+      "after block",
+    ]);
+  });
 
-    it("'using' for 'undefined' value", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' for 'undefined' value", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function body() {
@@ -1692,23 +1692,23 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after block");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before block",
-            "enter block",
-            "body",
-            "exit block",
-            "after block",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before block",
+      "enter block",
+      "body",
+      "exit block",
+      "after block",
+    ]);
+  });
 
-    it("'using' for non-disposable value", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' for non-disposable value", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function body() {
@@ -1726,19 +1726,19 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after block");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        assert.throws(main);
-        assert.deepEqual(output, [
-            "before block",
-            "enter block",
-        ]);
-    });
+    assert.throws(main);
+    assert.deepEqual(output, [
+      "before block",
+      "enter block",
+    ]);
+  });
 
-    it("'using' disposes in reverse order", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' disposes in reverse order", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         const disposable_1 = {
@@ -1767,25 +1767,25 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
             output.push("after block");
         }
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "before block",
-            "enter block",
-            "body",
-            "exit block",
-            "disposed 2",
-            "disposed 1",
-            "after block",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "before block",
+      "enter block",
+      "body",
+      "exit block",
+      "disposed 2",
+      "disposed 1",
+      "after block",
+    ]);
+  });
 
-    it("'using' for 'function' disposable resource ", () => {
-        const { main, output } = evaluator.evaluateTypeScript(
-            `
+  it("'using' for 'function' disposable resource ", () => {
+    const { main, output } = evaluator.evaluateTypeScript(
+      `
         export const output: any[] = [];
 
         function disposable() {
@@ -1800,30 +1800,30 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
         }
 
         `,
-            { target: ts.ScriptTarget.ES2018 },
-        );
+      { target: ts.ScriptTarget.ES2018 },
+    );
 
-        main();
+    main();
 
-        assert.deepEqual(output, [
-            "enter",
-            "exit",
-        ]);
-    });
+    assert.deepEqual(output, [
+      "enter",
+      "exit",
+    ]);
+  });
 
-    it("'using' with downlevel generators", () => {
-        abstract class Iterator {
-            return?(): void;
-            [evaluator.FakeSymbol.iterator]() {
-                return this;
-            }
-            [evaluator.FakeSymbol.dispose]() {
-                this.return?.();
-            }
-        }
+  it("'using' with downlevel generators", () => {
+    abstract class Iterator {
+      return?(): void;
+      [evaluator.FakeSymbol.iterator]() {
+        return this;
+      }
+      [evaluator.FakeSymbol.dispose]() {
+        this.return?.();
+      }
+    }
 
-        const { main } = evaluator.evaluateTypeScript(
-            `
+    const { main } = evaluator.evaluateTypeScript(
+      `
             let exited = false;
 
             function * f() {
@@ -1844,15 +1844,15 @@ describe("unittests:: evaluation:: usingDeclarations", () => {
                 return exited;
             }
         `,
-            {
-                target: ts.ScriptTarget.ES5,
-            },
-            {
-                Iterator,
-            },
-        );
+      {
+        target: ts.ScriptTarget.ES5,
+      },
+      {
+        Iterator,
+      },
+    );
 
-        const exited = main();
-        assert.isTrue(exited, "Expected 'using' to dispose generator");
-    });
+    const exited = main();
+    assert.isTrue(exited, "Expected 'using' to dispose generator");
+  });
 });

@@ -1,9 +1,9 @@
 {
-    "extends": "../tsconfig-base",
-    "compilerOptions": {
-    },
-    "references": [
-        { "path": "../compiler" }
-    ],
-    "include": ["**/*"]
+  "extends": "../tsconfig-base",
+  "compilerOptions": {
+  },
+  "references": [
+    { "path": "../compiler" }
+  ],
+  "include": ["**/*"]
 }

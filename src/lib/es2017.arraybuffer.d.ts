@@ -1,3 +1,3 @@
 interface ArrayBufferConstructor {
-    new (): ArrayBuffer;
+  new (): ArrayBuffer;
 }

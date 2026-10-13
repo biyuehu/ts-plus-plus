@@ -1,13 +1,13 @@
 import {
-    forEachNoEmitChanges,
-    forEachNoEmitDtsChanges,
-    forEachNoEmitTsc,
+  forEachNoEmitChanges,
+  forEachNoEmitDtsChanges,
+  forEachNoEmitTsc,
 } from "../helpers/noEmit.js";
 
 describe("unittests:: tsbuild:: noEmit::", () => {
-    forEachNoEmitChanges(["-b", "-v"]);
+  forEachNoEmitChanges(["-b", "-v"]);
 
-    forEachNoEmitTsc(["--b", "--v"]);
+  forEachNoEmitTsc(["--b", "--v"]);
 
-    forEachNoEmitDtsChanges(["-b", "--v"]);
+  forEachNoEmitDtsChanges(["-b", "--v"]);
 });

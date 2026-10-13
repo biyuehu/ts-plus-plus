@@ -1,12 +1,12 @@
 {
-    "extends": "../tsconfig-base",
-    "compilerOptions": {
-        "types": [
-            "node"
-        ]
-    },
-    "references": [
-        { "path": "../typescript" }
-    ],
-    "include": ["**/*"]
+  "extends": "../tsconfig-base",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  },
+  "references": [
+    { "path": "../typescript" }
+  ],
+  "include": ["**/*"]
 }

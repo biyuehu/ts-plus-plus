@@ -5,19 +5,19 @@ import * as ts from "../../_namespaces/ts.js";
 /** Default typescript and lib installs location for tests */
 export const tscTypeScriptTestLocation: string = getPathForTypeScriptTestLocation("tsc.js");
 export function getPathForTypeScriptTestLocation(fileName: string): string {
-    return ts.combinePaths(vfs.fourslashLibFolder, fileName);
+  return ts.combinePaths(vfs.fourslashLibFolder, fileName);
 }
 
 export function getTypeScriptLibTestLocation(libName: string): string {
-    return getPathForTypeScriptTestLocation(ts.libMap.get(libName) ?? `lib.${libName}.d.ts`);
+  return getPathForTypeScriptTestLocation(ts.libMap.get(libName) ?? `lib.${libName}.d.ts`);
 }
 
 export function getPathForTypeScriptTypingInstallerCacheTest(fileName: string) {
-    return `${harnessTypingInstallerCacheLocation}/${fileName}`;
+  return `${harnessTypingInstallerCacheLocation}/${fileName}`;
 }
 
 export function compilerOptionsToConfigJson(options: ts.CompilerOptions): object {
-    return ts.optionMapToObject(ts.serializeCompilerOptions(options));
+  return ts.optionMapToObject(ts.serializeCompilerOptions(options));
 }
 
 export const symbolLibContent = `
@@ -32,5 +32,5 @@ interface Symbol {
 `;
 
 export function getProjectConfigWithNodeNext(withNodeNext: boolean | undefined): object | undefined {
-    return withNodeNext ? { module: "nodenext", target: "es2015" } : undefined;
+  return withNodeNext ? { module: "nodenext", target: "es2015" } : undefined;
 }

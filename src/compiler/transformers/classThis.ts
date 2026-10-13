@@ -1,26 +1,26 @@
 import {
-    AssignmentExpression,
-    Block,
-    ClassLikeDeclaration,
-    ClassStaticBlockDeclaration,
-    EqualsToken,
-    ExpressionStatement,
-    getOrCreateEmitNode,
-    Identifier,
-    isAssignmentExpression,
-    isClassDeclaration,
-    isClassStaticBlockDeclaration,
-    isExpressionStatement,
-    isIdentifier,
-    Node,
-    NodeArray,
-    NodeFactory,
-    setSourceMapRange,
-    setTextRange,
-    some,
-    Statement,
-    SyntaxKind,
-    ThisExpression,
+  AssignmentExpression,
+  Block,
+  ClassLikeDeclaration,
+  ClassStaticBlockDeclaration,
+  EqualsToken,
+  ExpressionStatement,
+  getOrCreateEmitNode,
+  Identifier,
+  isAssignmentExpression,
+  isClassDeclaration,
+  isClassStaticBlockDeclaration,
+  isExpressionStatement,
+  isIdentifier,
+  Node,
+  NodeArray,
+  NodeFactory,
+  setSourceMapRange,
+  setTextRange,
+  some,
+  Statement,
+  SyntaxKind,
+  ThisExpression,
 } from "../_namespaces/ts.js";
 
 /**
@@ -31,37 +31,37 @@ import {
  * expression that has already had its `EmitFlags` set or may have been tracked to prevent substitution.
  */
 function createClassThisAssignmentBlock(factory: NodeFactory, classThis: Identifier, thisExpression = factory.createThis()): ClassThisAssignmentBlock {
-    // produces:
-    //
-    //  static { _classThis = this; }
-    //
+  // produces:
+  //
+  //  static { _classThis = this; }
+  //
 
-    const expression = factory.createAssignment(classThis, thisExpression);
-    const statement = factory.createExpressionStatement(expression);
-    const body = factory.createBlock([statement], /*multiLine*/ false);
-    const block = factory.createClassStaticBlockDeclaration(body);
+  const expression = factory.createAssignment(classThis, thisExpression);
+  const statement = factory.createExpressionStatement(expression);
+  const body = factory.createBlock([statement], /*multiLine*/ false);
+  const block = factory.createClassStaticBlockDeclaration(body);
 
-    // We use `emitNode.classThis` to indicate this is a `_classThis` assignment helper block
-    // and to stash the variable used for `_classThis`.
-    getOrCreateEmitNode(block).classThis = classThis;
+  // We use `emitNode.classThis` to indicate this is a `_classThis` assignment helper block
+  // and to stash the variable used for `_classThis`.
+  getOrCreateEmitNode(block).classThis = classThis;
 
-    return block as ClassThisAssignmentBlock;
+  return block as ClassThisAssignmentBlock;
 }
 
 /** @internal */
 export type ClassThisAssignmentBlock = ClassStaticBlockDeclaration & {
-    readonly body: Block & {
-        readonly statements:
-            & NodeArray<Statement>
-            & readonly [
-                ExpressionStatement & {
-                    readonly expression: AssignmentExpression<EqualsToken> & {
-                        readonly left: Identifier;
-                        readonly right: ThisExpression;
-                    };
-                },
-            ];
-    };
+  readonly body: Block & {
+    readonly statements:
+      & NodeArray<Statement>
+      & readonly [
+        ExpressionStatement & {
+          readonly expression: AssignmentExpression<EqualsToken> & {
+            readonly left: Identifier;
+            readonly right: ThisExpression;
+          };
+        },
+      ];
+  };
 };
 
 /**
@@ -70,16 +70,16 @@ export type ClassThisAssignmentBlock = ClassStaticBlockDeclaration & {
  * @internal
  */
 export function isClassThisAssignmentBlock(node: Node): node is ClassThisAssignmentBlock {
-    if (!isClassStaticBlockDeclaration(node) || node.body.statements.length !== 1) {
-        return false;
-    }
+  if (!isClassStaticBlockDeclaration(node) || node.body.statements.length !== 1) {
+    return false;
+  }
 
-    const statement = node.body.statements[0];
-    return isExpressionStatement(statement) &&
-        isAssignmentExpression(statement.expression, /*excludeCompoundAssignment*/ true) &&
-        isIdentifier(statement.expression.left) &&
-        node.emitNode?.classThis === statement.expression.left &&
-        statement.expression.right.kind === SyntaxKind.ThisKeyword;
+  const statement = node.body.statements[0];
+  return isExpressionStatement(statement) &&
+    isAssignmentExpression(statement.expression, /*excludeCompoundAssignment*/ true) &&
+    isIdentifier(statement.expression.left) &&
+    node.emitNode?.classThis === statement.expression.left &&
+    statement.expression.right.kind === SyntaxKind.ThisKeyword;
 }
 
 /**
@@ -88,7 +88,7 @@ export function isClassThisAssignmentBlock(node: Node): node is ClassThisAssignm
  * @internal
  */
 export function classHasClassThisAssignment(node: ClassLikeDeclaration): boolean {
-    return !!node.emitNode?.classThis && some(node.members, isClassThisAssignmentBlock);
+  return !!node.emitNode?.classThis && some(node.members, isClassThisAssignmentBlock);
 }
 
 /**
@@ -102,47 +102,47 @@ export function classHasClassThisAssignment(node: ClassLikeDeclaration): boolean
  */
 export function injectClassThisAssignmentIfMissing<T extends ClassLikeDeclaration>(factory: NodeFactory, node: T, classThis: Identifier, thisExpression?: ThisExpression): Extract<ClassLikeDeclaration, Pick<T, "kind">>;
 export function injectClassThisAssignmentIfMissing<T extends ClassLikeDeclaration>(factory: NodeFactory, node: T, classThis: Identifier, thisExpression?: ThisExpression) {
-    // given:
-    //
-    //  class C {
-    //  }
-    //
-    // produces:
-    //
-    //  class C {
-    //      static { _classThis = this; }
-    //  }
+  // given:
+  //
+  //  class C {
+  //  }
+  //
+  // produces:
+  //
+  //  class C {
+  //      static { _classThis = this; }
+  //  }
 
-    if (classHasClassThisAssignment(node)) {
-        return node;
-    }
+  if (classHasClassThisAssignment(node)) {
+    return node;
+  }
 
-    const staticBlock = createClassThisAssignmentBlock(factory, classThis, thisExpression);
-    if (node.name) {
-        setSourceMapRange(staticBlock.body.statements[0], node.name);
-    }
+  const staticBlock = createClassThisAssignmentBlock(factory, classThis, thisExpression);
+  if (node.name) {
+    setSourceMapRange(staticBlock.body.statements[0], node.name);
+  }
 
-    const members = factory.createNodeArray([staticBlock, ...node.members]);
-    setTextRange(members, node.members);
+  const members = factory.createNodeArray([staticBlock, ...node.members]);
+  setTextRange(members, node.members);
 
-    const updatedNode = isClassDeclaration(node) ?
-        factory.updateClassDeclaration(
-            node,
-            node.modifiers,
-            node.name,
-            node.typeParameters,
-            node.heritageClauses,
-            members,
-        ) :
-        factory.updateClassExpression(
-            node,
-            node.modifiers,
-            node.name,
-            node.typeParameters,
-            node.heritageClauses,
-            members,
-        );
+  const updatedNode = isClassDeclaration(node) ?
+    factory.updateClassDeclaration(
+      node,
+      node.modifiers,
+      node.name,
+      node.typeParameters,
+      node.heritageClauses,
+      members,
+    ) :
+    factory.updateClassExpression(
+      node,
+      node.modifiers,
+      node.name,
+      node.typeParameters,
+      node.heritageClauses,
+      members,
+    );
 
-    getOrCreateEmitNode(updatedNode).classThis = classThis;
-    return updatedNode;
+  getOrCreateEmitNode(updatedNode).classThis = classThis;
+  return updatedNode;
 }

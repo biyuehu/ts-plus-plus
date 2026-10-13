@@ -1,12 +1,12 @@
 {
-    "extends": "../tsconfig-base",
-    "compilerOptions": {
-    },
-    "references": [
-        { "path": "../compiler" },
-        { "path": "../jsTyping" },
-        { "path": "../services" },
-        { "path": "../server" }
-    ],
-    "include": ["**/*"]
+  "extends": "../tsconfig-base",
+  "compilerOptions": {
+  },
+  "references": [
+    { "path": "../compiler" },
+    { "path": "../jsTyping" },
+    { "path": "../services" },
+    { "path": "../server" }
+  ],
+  "include": ["**/*"]
 }

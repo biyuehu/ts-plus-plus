@@ -2,9 +2,9 @@
 /// <reference lib="decorators" />
 
 interface SymbolConstructor {
-    readonly metadata: unique symbol;
+  readonly metadata: unique symbol;
 }
 
 interface Function {
-    [Symbol.metadata]: DecoratorMetadata | null;
+  [Symbol.metadata]: DecoratorMetadata | null;
 }

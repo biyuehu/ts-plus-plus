@@ -1,19 +1,19 @@
 import {
-    hasProperty,
-    UnionToIntersection,
-    Version,
+  hasProperty,
+  UnionToIntersection,
+  Version,
 } from "./_namespaces/ts.js";
 import { deprecate } from "./deprecate.js";
 
 /** @internal */
 export interface DeprecationOptions {
-    message?: string;
-    error?: boolean;
-    since?: Version | string;
-    warnAfter?: Version | string;
-    errorAfter?: Version | string;
-    typeScriptVersion?: Version | string;
-    name?: string;
+  message?: string;
+  error?: boolean;
+  since?: Version | string;
+  warnAfter?: Version | string;
+  errorAfter?: Version | string;
+  typeScriptVersion?: Version | string;
+  name?: string;
 }
 
 // The following are deprecations for the public API. Deprecated exports are removed from the compiler itself
@@ -79,59 +79,59 @@ export type OverloadDeprecations<T extends OverloadDefinitions> = { [P in Overlo
 
 /** @internal @knipignore */
 export function createOverload<T extends OverloadDefinitions>(name: string, overloads: T, binder: OverloadBinders<T>, deprecations?: OverloadDeprecations<T>) {
-    Object.defineProperty(call, "name", { ...Object.getOwnPropertyDescriptor(call, "name"), value: name });
+  Object.defineProperty(call, "name", { ...Object.getOwnPropertyDescriptor(call, "name"), value: name });
 
-    if (deprecations) {
-        for (const key of Object.keys(deprecations)) {
-            const index = +key as (keyof T & number);
-            if (!isNaN(index) && hasProperty(overloads, `${index}`)) {
-                overloads[index] = deprecate(overloads[index], { ...deprecations[index], name });
-            }
-        }
+  if (deprecations) {
+    for (const key of Object.keys(deprecations)) {
+      const index = +key as (keyof T & number);
+      if (!isNaN(index) && hasProperty(overloads, `${index}`)) {
+        overloads[index] = deprecate(overloads[index], { ...deprecations[index], name });
+      }
     }
+  }
 
-    const bind = createBinder(overloads, binder);
-    return call as OverloadFunction<T>;
+  const bind = createBinder(overloads, binder);
+  return call as OverloadFunction<T>;
 
-    function call(...args: OverloadParameters<T>) {
-        const index = bind(args);
-        const fn = index !== undefined ? overloads[index] : undefined;
-        if (typeof fn === "function") {
-            return fn(...args);
-        }
-        throw new TypeError("Invalid arguments");
+  function call(...args: OverloadParameters<T>) {
+    const index = bind(args);
+    const fn = index !== undefined ? overloads[index] : undefined;
+    if (typeof fn === "function") {
+      return fn(...args);
     }
+    throw new TypeError("Invalid arguments");
+  }
 }
 
 function createBinder<T extends OverloadDefinitions>(overloads: T, binder: OverloadBinders<T>): OverloadBinder<T> {
-    return args => {
-        for (let i = 0; hasProperty(overloads, `${i}`) && hasProperty(binder, `${i}`); i++) {
-            const fn = binder[i];
-            if (fn(args)) {
-                return i as OverloadKeys<T>;
-            }
-        }
-    };
+  return args => {
+    for (let i = 0; hasProperty(overloads, `${i}`) && hasProperty(binder, `${i}`); i++) {
+      const fn = binder[i];
+      if (fn(args)) {
+        return i as OverloadKeys<T>;
+      }
+    }
+  };
 }
 
 /** @internal */
 export interface OverloadBuilder {
-    overload<T extends OverloadDefinitions>(overloads: T): BindableOverloadBuilder<T>;
+  overload<T extends OverloadDefinitions>(overloads: T): BindableOverloadBuilder<T>;
 }
 
 /** @internal */
 export interface BindableOverloadBuilder<T extends OverloadDefinitions> {
-    bind(binder: OverloadBinders<T>): BoundOverloadBuilder<T>;
+  bind(binder: OverloadBinders<T>): BoundOverloadBuilder<T>;
 }
 
 /** @internal */
 export interface FinishableOverloadBuilder<T extends OverloadDefinitions> {
-    finish(): OverloadFunction<T>;
+  finish(): OverloadFunction<T>;
 }
 
 /** @internal */
 export interface BoundOverloadBuilder<T extends OverloadDefinitions> extends FinishableOverloadBuilder<T> {
-    deprecate(deprecations: OverloadDeprecations<T>): FinishableOverloadBuilder<T>;
+  deprecate(deprecations: OverloadDeprecations<T>): FinishableOverloadBuilder<T>;
 }
 
 // NOTE: We only use this "builder" because we don't infer correctly when calling `createOverload` directly in < TS 4.7,
@@ -139,14 +139,14 @@ export interface BoundOverloadBuilder<T extends OverloadDefinitions> extends Fin
 
 /** @internal @knipignore */
 export function buildOverload(name: string): OverloadBuilder {
-    return {
-        overload: overloads => ({
-            bind: binder => ({
-                finish: () => createOverload(name, overloads, binder),
-                deprecate: deprecations => ({
-                    finish: () => createOverload(name, overloads, binder, deprecations),
-                }),
-            }),
+  return {
+    overload: overloads => ({
+      bind: binder => ({
+        finish: () => createOverload(name, overloads, binder),
+        deprecate: deprecations => ({
+          finish: () => createOverload(name, overloads, binder, deprecations),
         }),
-    };
+      }),
+    }),
+  };
 }

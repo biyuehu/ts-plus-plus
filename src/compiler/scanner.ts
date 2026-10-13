@@ -1,308 +1,308 @@
 import {
-    append,
-    arrayIsEqualTo,
-    binarySearch,
-    CharacterCodes,
-    CommentDirective,
-    CommentDirectiveType,
-    CommentKind,
-    CommentRange,
-    compareValues,
-    Debug,
-    DiagnosticMessage,
-    Diagnostics,
-    forEach,
-    getNameOfScriptTarget,
-    getSpellingSuggestion,
-    identity,
-    JSDocParsingMode,
-    JSDocSyntaxKind,
-    JsxTokenSyntaxKind,
-    KeywordSyntaxKind,
-    LanguageFeatureMinimumTarget,
-    LanguageVariant,
-    LanugageFeatures,
-    LineAndCharacter,
-    MapLike,
-    parsePseudoBigInt,
-    positionIsSynthesized,
-    PunctuationOrKeywordSyntaxKind,
-    RegularExpressionFlags,
-    ScriptKind,
-    ScriptTarget,
-    SourceFileLike,
-    SyntaxKind,
-    TextRange,
-    TokenFlags,
+  append,
+  arrayIsEqualTo,
+  binarySearch,
+  CharacterCodes,
+  CommentDirective,
+  CommentDirectiveType,
+  CommentKind,
+  CommentRange,
+  compareValues,
+  Debug,
+  DiagnosticMessage,
+  Diagnostics,
+  forEach,
+  getNameOfScriptTarget,
+  getSpellingSuggestion,
+  identity,
+  JSDocParsingMode,
+  JSDocSyntaxKind,
+  JsxTokenSyntaxKind,
+  KeywordSyntaxKind,
+  LanguageFeatureMinimumTarget,
+  LanguageVariant,
+  LanugageFeatures,
+  LineAndCharacter,
+  MapLike,
+  parsePseudoBigInt,
+  positionIsSynthesized,
+  PunctuationOrKeywordSyntaxKind,
+  RegularExpressionFlags,
+  ScriptKind,
+  ScriptTarget,
+  SourceFileLike,
+  SyntaxKind,
+  TextRange,
+  TokenFlags,
 } from "./_namespaces/ts.js";
 
 export type ErrorCallback = (message: DiagnosticMessage, length: number, arg0?: any) => void;
 
 /** @internal */
 export function tokenIsIdentifierOrKeyword(token: SyntaxKind): boolean {
-    return token >= SyntaxKind.Identifier;
+  return token >= SyntaxKind.Identifier;
 }
 
 /** @internal */
 export function tokenIsIdentifierOrKeywordOrGreaterThan(token: SyntaxKind): boolean {
-    return token === SyntaxKind.GreaterThanToken || tokenIsIdentifierOrKeyword(token);
+  return token === SyntaxKind.GreaterThanToken || tokenIsIdentifierOrKeyword(token);
 }
 
 export interface Scanner {
-    /** @deprecated use {@link getTokenFullStart} */
-    getStartPos(): number;
-    getToken(): SyntaxKind;
-    getTokenFullStart(): number;
-    getTokenStart(): number;
-    getTokenEnd(): number;
-    /** @deprecated use {@link getTokenEnd} */
-    getTextPos(): number;
-    /** @deprecated use {@link getTokenStart} */
-    getTokenPos(): number;
-    getTokenText(): string;
-    getTokenValue(): string;
-    hasUnicodeEscape(): boolean;
-    hasExtendedUnicodeEscape(): boolean;
-    hasPrecedingLineBreak(): boolean;
-    /** @internal */
-    hasPrecedingJSDocComment(): boolean;
-    /** @internal */
-    hasPrecedingJSDocLeadingAsterisks(): boolean;
-    isIdentifier(): boolean;
-    isReservedWord(): boolean;
-    isUnterminated(): boolean;
-    /** @internal */
-    getNumericLiteralFlags(): TokenFlags;
-    /** @internal */
-    getCommentDirectives(): CommentDirective[] | undefined;
-    /** @internal */
-    getTokenFlags(): TokenFlags;
-    reScanGreaterToken(): SyntaxKind;
-    reScanSlashToken(): SyntaxKind;
-    /** @internal */
-    reScanSlashToken(reportErrors?: boolean): SyntaxKind; // eslint-disable-line @typescript-eslint/unified-signatures
-    reScanAsteriskEqualsToken(): SyntaxKind;
-    reScanTemplateToken(isTaggedTemplate: boolean): SyntaxKind;
-    /** @deprecated use {@link reScanTemplateToken}(false) */
-    reScanTemplateHeadOrNoSubstitutionTemplate(): SyntaxKind;
-    scanJsxIdentifier(): SyntaxKind;
-    scanJsxAttributeValue(): SyntaxKind;
-    reScanJsxAttributeValue(): SyntaxKind;
-    reScanJsxToken(allowMultilineJsxText?: boolean): JsxTokenSyntaxKind;
-    reScanLessThanToken(): SyntaxKind;
-    reScanHashToken(): SyntaxKind;
-    reScanQuestionToken(): SyntaxKind;
-    reScanInvalidIdentifier(): SyntaxKind;
-    scanJsxToken(): JsxTokenSyntaxKind;
-    scanJsDocToken(): JSDocSyntaxKind;
-    /** @internal */
-    scanJSDocCommentTextToken(inBackticks: boolean): JSDocSyntaxKind | SyntaxKind.JSDocCommentTextToken;
-    scan(): SyntaxKind;
+  /** @deprecated use {@link getTokenFullStart} */
+  getStartPos(): number;
+  getToken(): SyntaxKind;
+  getTokenFullStart(): number;
+  getTokenStart(): number;
+  getTokenEnd(): number;
+  /** @deprecated use {@link getTokenEnd} */
+  getTextPos(): number;
+  /** @deprecated use {@link getTokenStart} */
+  getTokenPos(): number;
+  getTokenText(): string;
+  getTokenValue(): string;
+  hasUnicodeEscape(): boolean;
+  hasExtendedUnicodeEscape(): boolean;
+  hasPrecedingLineBreak(): boolean;
+  /** @internal */
+  hasPrecedingJSDocComment(): boolean;
+  /** @internal */
+  hasPrecedingJSDocLeadingAsterisks(): boolean;
+  isIdentifier(): boolean;
+  isReservedWord(): boolean;
+  isUnterminated(): boolean;
+  /** @internal */
+  getNumericLiteralFlags(): TokenFlags;
+  /** @internal */
+  getCommentDirectives(): CommentDirective[] | undefined;
+  /** @internal */
+  getTokenFlags(): TokenFlags;
+  reScanGreaterToken(): SyntaxKind;
+  reScanSlashToken(): SyntaxKind;
+  /** @internal */
+  reScanSlashToken(reportErrors?: boolean): SyntaxKind; // eslint-disable-line @typescript-eslint/unified-signatures
+  reScanAsteriskEqualsToken(): SyntaxKind;
+  reScanTemplateToken(isTaggedTemplate: boolean): SyntaxKind;
+  /** @deprecated use {@link reScanTemplateToken}(false) */
+  reScanTemplateHeadOrNoSubstitutionTemplate(): SyntaxKind;
+  scanJsxIdentifier(): SyntaxKind;
+  scanJsxAttributeValue(): SyntaxKind;
+  reScanJsxAttributeValue(): SyntaxKind;
+  reScanJsxToken(allowMultilineJsxText?: boolean): JsxTokenSyntaxKind;
+  reScanLessThanToken(): SyntaxKind;
+  reScanHashToken(): SyntaxKind;
+  reScanQuestionToken(): SyntaxKind;
+  reScanInvalidIdentifier(): SyntaxKind;
+  scanJsxToken(): JsxTokenSyntaxKind;
+  scanJsDocToken(): JSDocSyntaxKind;
+  /** @internal */
+  scanJSDocCommentTextToken(inBackticks: boolean): JSDocSyntaxKind | SyntaxKind.JSDocCommentTextToken;
+  scan(): SyntaxKind;
 
-    getText(): string;
-    /** @internal */
-    clearCommentDirectives(): void;
-    // Sets the text for the scanner to scan.  An optional subrange starting point and length
-    // can be provided to have the scanner only scan a portion of the text.
-    setText(text: string | undefined, start?: number, length?: number): void;
-    setOnError(onError: ErrorCallback | undefined): void;
-    setScriptTarget(scriptTarget: ScriptTarget): void;
-    setLanguageVariant(variant: LanguageVariant): void;
-    setScriptKind(scriptKind: ScriptKind): void;
-    setJSDocParsingMode(kind: JSDocParsingMode): void;
-    /** @deprecated use {@link resetTokenState} */
-    setTextPos(textPos: number): void;
-    resetTokenState(pos: number): void;
-    /** @internal */
-    setSkipJsDocLeadingAsterisks(skip: boolean): void;
-    // Invokes the provided callback then unconditionally restores the scanner to the state it
-    // was in immediately prior to invoking the callback.  The result of invoking the callback
-    // is returned from this function.
-    lookAhead<T>(callback: () => T): T;
+  getText(): string;
+  /** @internal */
+  clearCommentDirectives(): void;
+  // Sets the text for the scanner to scan.  An optional subrange starting point and length
+  // can be provided to have the scanner only scan a portion of the text.
+  setText(text: string | undefined, start?: number, length?: number): void;
+  setOnError(onError: ErrorCallback | undefined): void;
+  setScriptTarget(scriptTarget: ScriptTarget): void;
+  setLanguageVariant(variant: LanguageVariant): void;
+  setScriptKind(scriptKind: ScriptKind): void;
+  setJSDocParsingMode(kind: JSDocParsingMode): void;
+  /** @deprecated use {@link resetTokenState} */
+  setTextPos(textPos: number): void;
+  resetTokenState(pos: number): void;
+  /** @internal */
+  setSkipJsDocLeadingAsterisks(skip: boolean): void;
+  // Invokes the provided callback then unconditionally restores the scanner to the state it
+  // was in immediately prior to invoking the callback.  The result of invoking the callback
+  // is returned from this function.
+  lookAhead<T>(callback: () => T): T;
 
-    // Invokes the callback with the scanner set to scan the specified range. When the callback
-    // returns, the scanner is restored to the state it was in before scanRange was called.
-    scanRange<T>(start: number, length: number, callback: () => T): T;
+  // Invokes the callback with the scanner set to scan the specified range. When the callback
+  // returns, the scanner is restored to the state it was in before scanRange was called.
+  scanRange<T>(start: number, length: number, callback: () => T): T;
 
-    // Invokes the provided callback.  If the callback returns something falsy, then it restores
-    // the scanner to the state it was in immediately prior to invoking the callback.  If the
-    // callback returns something truthy, then the scanner state is not rolled back.  The result
-    // of invoking the callback is returned from this function.
-    tryScan<T>(callback: () => T): T;
+  // Invokes the provided callback.  If the callback returns something falsy, then it restores
+  // the scanner to the state it was in immediately prior to invoking the callback.  If the
+  // callback returns something truthy, then the scanner state is not rolled back.  The result
+  // of invoking the callback is returned from this function.
+  tryScan<T>(callback: () => T): T;
 }
 
 /** @internal */
 export const textToKeywordObj: MapLike<KeywordSyntaxKind> = {
-    abstract: SyntaxKind.AbstractKeyword,
-    accessor: SyntaxKind.AccessorKeyword,
-    any: SyntaxKind.AnyKeyword,
-    as: SyntaxKind.AsKeyword,
-    asserts: SyntaxKind.AssertsKeyword,
-    assert: SyntaxKind.AssertKeyword,
-    bigint: SyntaxKind.BigIntKeyword,
-    boolean: SyntaxKind.BooleanKeyword,
-    break: SyntaxKind.BreakKeyword,
-    case: SyntaxKind.CaseKeyword,
-    catch: SyntaxKind.CatchKeyword,
-    class: SyntaxKind.ClassKeyword,
-    continue: SyntaxKind.ContinueKeyword,
-    const: SyntaxKind.ConstKeyword,
-    ["" + "constructor"]: SyntaxKind.ConstructorKeyword,
-    debugger: SyntaxKind.DebuggerKeyword,
-    declare: SyntaxKind.DeclareKeyword,
-    default: SyntaxKind.DefaultKeyword,
-    defer: SyntaxKind.DeferKeyword,
-    delete: SyntaxKind.DeleteKeyword,
-    do: SyntaxKind.DoKeyword,
-    else: SyntaxKind.ElseKeyword,
-    enum: SyntaxKind.EnumKeyword,
-    export: SyntaxKind.ExportKeyword,
-    extends: SyntaxKind.ExtendsKeyword,
-    false: SyntaxKind.FalseKeyword,
-    finally: SyntaxKind.FinallyKeyword,
-    for: SyntaxKind.ForKeyword,
-    from: SyntaxKind.FromKeyword,
-    function: SyntaxKind.FunctionKeyword,
-    get: SyntaxKind.GetKeyword,
-    if: SyntaxKind.IfKeyword,
-    implements: SyntaxKind.ImplementsKeyword,
-    import: SyntaxKind.ImportKeyword,
-    in: SyntaxKind.InKeyword,
-    infer: SyntaxKind.InferKeyword,
-    instanceof: SyntaxKind.InstanceOfKeyword,
-    interface: SyntaxKind.InterfaceKeyword,
-    intrinsic: SyntaxKind.IntrinsicKeyword,
-    is: SyntaxKind.IsKeyword,
-    keyof: SyntaxKind.KeyOfKeyword,
-    let: SyntaxKind.LetKeyword,
-    module: SyntaxKind.ModuleKeyword,
-    namespace: SyntaxKind.NamespaceKeyword,
-    never: SyntaxKind.NeverKeyword,
-    new: SyntaxKind.NewKeyword,
-    null: SyntaxKind.NullKeyword,
-    number: SyntaxKind.NumberKeyword,
-    object: SyntaxKind.ObjectKeyword,
-    package: SyntaxKind.PackageKeyword,
-    private: SyntaxKind.PrivateKeyword,
-    protected: SyntaxKind.ProtectedKeyword,
-    public: SyntaxKind.PublicKeyword,
-    override: SyntaxKind.OverrideKeyword,
-    out: SyntaxKind.OutKeyword,
-    readonly: SyntaxKind.ReadonlyKeyword,
-    require: SyntaxKind.RequireKeyword,
-    global: SyntaxKind.GlobalKeyword,
-    return: SyntaxKind.ReturnKeyword,
-    satisfies: SyntaxKind.SatisfiesKeyword,
-    set: SyntaxKind.SetKeyword,
-    static: SyntaxKind.StaticKeyword,
-    string: SyntaxKind.StringKeyword,
-    super: SyntaxKind.SuperKeyword,
-    switch: SyntaxKind.SwitchKeyword,
-    symbol: SyntaxKind.SymbolKeyword,
-    this: SyntaxKind.ThisKeyword,
-    throw: SyntaxKind.ThrowKeyword,
-    true: SyntaxKind.TrueKeyword,
-    try: SyntaxKind.TryKeyword,
-    type: SyntaxKind.TypeKeyword,
-    typeof: SyntaxKind.TypeOfKeyword,
-    undefined: SyntaxKind.UndefinedKeyword,
-    unique: SyntaxKind.UniqueKeyword,
-    unknown: SyntaxKind.UnknownKeyword,
-    using: SyntaxKind.UsingKeyword,
-    var: SyntaxKind.VarKeyword,
-    void: SyntaxKind.VoidKeyword,
-    while: SyntaxKind.WhileKeyword,
-    with: SyntaxKind.WithKeyword,
-    yield: SyntaxKind.YieldKeyword,
-    async: SyntaxKind.AsyncKeyword,
-    await: SyntaxKind.AwaitKeyword,
-    of: SyntaxKind.OfKeyword,
+  abstract: SyntaxKind.AbstractKeyword,
+  accessor: SyntaxKind.AccessorKeyword,
+  any: SyntaxKind.AnyKeyword,
+  as: SyntaxKind.AsKeyword,
+  asserts: SyntaxKind.AssertsKeyword,
+  assert: SyntaxKind.AssertKeyword,
+  bigint: SyntaxKind.BigIntKeyword,
+  boolean: SyntaxKind.BooleanKeyword,
+  break: SyntaxKind.BreakKeyword,
+  case: SyntaxKind.CaseKeyword,
+  catch: SyntaxKind.CatchKeyword,
+  class: SyntaxKind.ClassKeyword,
+  continue: SyntaxKind.ContinueKeyword,
+  const: SyntaxKind.ConstKeyword,
+  ["" + "constructor"]: SyntaxKind.ConstructorKeyword,
+  debugger: SyntaxKind.DebuggerKeyword,
+  declare: SyntaxKind.DeclareKeyword,
+  default: SyntaxKind.DefaultKeyword,
+  defer: SyntaxKind.DeferKeyword,
+  delete: SyntaxKind.DeleteKeyword,
+  do: SyntaxKind.DoKeyword,
+  else: SyntaxKind.ElseKeyword,
+  enum: SyntaxKind.EnumKeyword,
+  export: SyntaxKind.ExportKeyword,
+  extends: SyntaxKind.ExtendsKeyword,
+  false: SyntaxKind.FalseKeyword,
+  finally: SyntaxKind.FinallyKeyword,
+  for: SyntaxKind.ForKeyword,
+  from: SyntaxKind.FromKeyword,
+  function: SyntaxKind.FunctionKeyword,
+  get: SyntaxKind.GetKeyword,
+  if: SyntaxKind.IfKeyword,
+  implements: SyntaxKind.ImplementsKeyword,
+  import: SyntaxKind.ImportKeyword,
+  in: SyntaxKind.InKeyword,
+  infer: SyntaxKind.InferKeyword,
+  instanceof: SyntaxKind.InstanceOfKeyword,
+  interface: SyntaxKind.InterfaceKeyword,
+  intrinsic: SyntaxKind.IntrinsicKeyword,
+  is: SyntaxKind.IsKeyword,
+  keyof: SyntaxKind.KeyOfKeyword,
+  let: SyntaxKind.LetKeyword,
+  module: SyntaxKind.ModuleKeyword,
+  namespace: SyntaxKind.NamespaceKeyword,
+  never: SyntaxKind.NeverKeyword,
+  new: SyntaxKind.NewKeyword,
+  null: SyntaxKind.NullKeyword,
+  number: SyntaxKind.NumberKeyword,
+  object: SyntaxKind.ObjectKeyword,
+  package: SyntaxKind.PackageKeyword,
+  private: SyntaxKind.PrivateKeyword,
+  protected: SyntaxKind.ProtectedKeyword,
+  public: SyntaxKind.PublicKeyword,
+  override: SyntaxKind.OverrideKeyword,
+  out: SyntaxKind.OutKeyword,
+  readonly: SyntaxKind.ReadonlyKeyword,
+  require: SyntaxKind.RequireKeyword,
+  global: SyntaxKind.GlobalKeyword,
+  return: SyntaxKind.ReturnKeyword,
+  satisfies: SyntaxKind.SatisfiesKeyword,
+  set: SyntaxKind.SetKeyword,
+  static: SyntaxKind.StaticKeyword,
+  string: SyntaxKind.StringKeyword,
+  super: SyntaxKind.SuperKeyword,
+  switch: SyntaxKind.SwitchKeyword,
+  symbol: SyntaxKind.SymbolKeyword,
+  this: SyntaxKind.ThisKeyword,
+  throw: SyntaxKind.ThrowKeyword,
+  true: SyntaxKind.TrueKeyword,
+  try: SyntaxKind.TryKeyword,
+  type: SyntaxKind.TypeKeyword,
+  typeof: SyntaxKind.TypeOfKeyword,
+  undefined: SyntaxKind.UndefinedKeyword,
+  unique: SyntaxKind.UniqueKeyword,
+  unknown: SyntaxKind.UnknownKeyword,
+  using: SyntaxKind.UsingKeyword,
+  var: SyntaxKind.VarKeyword,
+  void: SyntaxKind.VoidKeyword,
+  while: SyntaxKind.WhileKeyword,
+  with: SyntaxKind.WithKeyword,
+  yield: SyntaxKind.YieldKeyword,
+  async: SyntaxKind.AsyncKeyword,
+  await: SyntaxKind.AwaitKeyword,
+  of: SyntaxKind.OfKeyword,
 };
 
 const textToKeyword = new Map(Object.entries(textToKeywordObj));
 
 const textToToken = new Map(Object.entries({
-    ...textToKeywordObj,
-    "{": SyntaxKind.OpenBraceToken,
-    "}": SyntaxKind.CloseBraceToken,
-    "(": SyntaxKind.OpenParenToken,
-    ")": SyntaxKind.CloseParenToken,
-    "[": SyntaxKind.OpenBracketToken,
-    "]": SyntaxKind.CloseBracketToken,
-    ".": SyntaxKind.DotToken,
-    "...": SyntaxKind.DotDotDotToken,
-    ";": SyntaxKind.SemicolonToken,
-    ",": SyntaxKind.CommaToken,
-    "<": SyntaxKind.LessThanToken,
-    ">": SyntaxKind.GreaterThanToken,
-    "<=": SyntaxKind.LessThanEqualsToken,
-    ">=": SyntaxKind.GreaterThanEqualsToken,
-    "==": SyntaxKind.EqualsEqualsToken,
-    "!=": SyntaxKind.ExclamationEqualsToken,
-    "===": SyntaxKind.EqualsEqualsEqualsToken,
-    "!==": SyntaxKind.ExclamationEqualsEqualsToken,
-    "=>": SyntaxKind.EqualsGreaterThanToken,
-    "+": SyntaxKind.PlusToken,
-    "-": SyntaxKind.MinusToken,
-    "**": SyntaxKind.AsteriskAsteriskToken,
-    "*": SyntaxKind.AsteriskToken,
-    "/": SyntaxKind.SlashToken,
-    "%": SyntaxKind.PercentToken,
-    "++": SyntaxKind.PlusPlusToken,
-    "--": SyntaxKind.MinusMinusToken,
-    "<<": SyntaxKind.LessThanLessThanToken,
-    "</": SyntaxKind.LessThanSlashToken,
-    ">>": SyntaxKind.GreaterThanGreaterThanToken,
-    ">>>": SyntaxKind.GreaterThanGreaterThanGreaterThanToken,
-    "&": SyntaxKind.AmpersandToken,
-    "|": SyntaxKind.BarToken,
-    "^": SyntaxKind.CaretToken,
-    "!": SyntaxKind.ExclamationToken,
-    "~": SyntaxKind.TildeToken,
-    "&&": SyntaxKind.AmpersandAmpersandToken,
-    "||": SyntaxKind.BarBarToken,
-    "?": SyntaxKind.QuestionToken,
-    "??": SyntaxKind.QuestionQuestionToken,
-    "?.": SyntaxKind.QuestionDotToken,
-    ":": SyntaxKind.ColonToken,
-    "=": SyntaxKind.EqualsToken,
-    "+=": SyntaxKind.PlusEqualsToken,
-    "-=": SyntaxKind.MinusEqualsToken,
-    "*=": SyntaxKind.AsteriskEqualsToken,
-    "**=": SyntaxKind.AsteriskAsteriskEqualsToken,
-    "/=": SyntaxKind.SlashEqualsToken,
-    "%=": SyntaxKind.PercentEqualsToken,
-    "<<=": SyntaxKind.LessThanLessThanEqualsToken,
-    ">>=": SyntaxKind.GreaterThanGreaterThanEqualsToken,
-    ">>>=": SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken,
-    "&=": SyntaxKind.AmpersandEqualsToken,
-    "|=": SyntaxKind.BarEqualsToken,
-    "^=": SyntaxKind.CaretEqualsToken,
-    "||=": SyntaxKind.BarBarEqualsToken,
-    "&&=": SyntaxKind.AmpersandAmpersandEqualsToken,
-    "??=": SyntaxKind.QuestionQuestionEqualsToken,
-    "@": SyntaxKind.AtToken,
-    "#": SyntaxKind.HashToken,
-    "`": SyntaxKind.BacktickToken,
+  ...textToKeywordObj,
+  "{": SyntaxKind.OpenBraceToken,
+  "}": SyntaxKind.CloseBraceToken,
+  "(": SyntaxKind.OpenParenToken,
+  ")": SyntaxKind.CloseParenToken,
+  "[": SyntaxKind.OpenBracketToken,
+  "]": SyntaxKind.CloseBracketToken,
+  ".": SyntaxKind.DotToken,
+  "...": SyntaxKind.DotDotDotToken,
+  ";": SyntaxKind.SemicolonToken,
+  ",": SyntaxKind.CommaToken,
+  "<": SyntaxKind.LessThanToken,
+  ">": SyntaxKind.GreaterThanToken,
+  "<=": SyntaxKind.LessThanEqualsToken,
+  ">=": SyntaxKind.GreaterThanEqualsToken,
+  "==": SyntaxKind.EqualsEqualsToken,
+  "!=": SyntaxKind.ExclamationEqualsToken,
+  "===": SyntaxKind.EqualsEqualsEqualsToken,
+  "!==": SyntaxKind.ExclamationEqualsEqualsToken,
+  "=>": SyntaxKind.EqualsGreaterThanToken,
+  "+": SyntaxKind.PlusToken,
+  "-": SyntaxKind.MinusToken,
+  "**": SyntaxKind.AsteriskAsteriskToken,
+  "*": SyntaxKind.AsteriskToken,
+  "/": SyntaxKind.SlashToken,
+  "%": SyntaxKind.PercentToken,
+  "++": SyntaxKind.PlusPlusToken,
+  "--": SyntaxKind.MinusMinusToken,
+  "<<": SyntaxKind.LessThanLessThanToken,
+  "</": SyntaxKind.LessThanSlashToken,
+  ">>": SyntaxKind.GreaterThanGreaterThanToken,
+  ">>>": SyntaxKind.GreaterThanGreaterThanGreaterThanToken,
+  "&": SyntaxKind.AmpersandToken,
+  "|": SyntaxKind.BarToken,
+  "^": SyntaxKind.CaretToken,
+  "!": SyntaxKind.ExclamationToken,
+  "~": SyntaxKind.TildeToken,
+  "&&": SyntaxKind.AmpersandAmpersandToken,
+  "||": SyntaxKind.BarBarToken,
+  "?": SyntaxKind.QuestionToken,
+  "??": SyntaxKind.QuestionQuestionToken,
+  "?.": SyntaxKind.QuestionDotToken,
+  ":": SyntaxKind.ColonToken,
+  "=": SyntaxKind.EqualsToken,
+  "+=": SyntaxKind.PlusEqualsToken,
+  "-=": SyntaxKind.MinusEqualsToken,
+  "*=": SyntaxKind.AsteriskEqualsToken,
+  "**=": SyntaxKind.AsteriskAsteriskEqualsToken,
+  "/=": SyntaxKind.SlashEqualsToken,
+  "%=": SyntaxKind.PercentEqualsToken,
+  "<<=": SyntaxKind.LessThanLessThanEqualsToken,
+  ">>=": SyntaxKind.GreaterThanGreaterThanEqualsToken,
+  ">>>=": SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken,
+  "&=": SyntaxKind.AmpersandEqualsToken,
+  "|=": SyntaxKind.BarEqualsToken,
+  "^=": SyntaxKind.CaretEqualsToken,
+  "||=": SyntaxKind.BarBarEqualsToken,
+  "&&=": SyntaxKind.AmpersandAmpersandEqualsToken,
+  "??=": SyntaxKind.QuestionQuestionEqualsToken,
+  "@": SyntaxKind.AtToken,
+  "#": SyntaxKind.HashToken,
+  "`": SyntaxKind.BacktickToken,
 }));
 
 const charCodeToRegExpFlag = new Map<CharacterCodes, RegularExpressionFlags>([
-    [CharacterCodes.d, RegularExpressionFlags.HasIndices],
-    [CharacterCodes.g, RegularExpressionFlags.Global],
-    [CharacterCodes.i, RegularExpressionFlags.IgnoreCase],
-    [CharacterCodes.m, RegularExpressionFlags.Multiline],
-    [CharacterCodes.s, RegularExpressionFlags.DotAll],
-    [CharacterCodes.u, RegularExpressionFlags.Unicode],
-    [CharacterCodes.v, RegularExpressionFlags.UnicodeSets],
-    [CharacterCodes.y, RegularExpressionFlags.Sticky],
+  [CharacterCodes.d, RegularExpressionFlags.HasIndices],
+  [CharacterCodes.g, RegularExpressionFlags.Global],
+  [CharacterCodes.i, RegularExpressionFlags.IgnoreCase],
+  [CharacterCodes.m, RegularExpressionFlags.Multiline],
+  [CharacterCodes.s, RegularExpressionFlags.DotAll],
+  [CharacterCodes.u, RegularExpressionFlags.Unicode],
+  [CharacterCodes.v, RegularExpressionFlags.UnicodeSets],
+  [CharacterCodes.y, RegularExpressionFlags.Sticky],
 ]);
 
 const regExpFlagToFirstAvailableLanguageVersion = new Map<RegularExpressionFlags, typeof LanguageFeatureMinimumTarget[LanugageFeatures]>([
-    [RegularExpressionFlags.HasIndices, LanguageFeatureMinimumTarget.RegularExpressionFlagsHasIndices],
-    [RegularExpressionFlags.DotAll, LanguageFeatureMinimumTarget.RegularExpressionFlagsDotAll],
-    [RegularExpressionFlags.Unicode, LanguageFeatureMinimumTarget.RegularExpressionFlagsUnicode],
-    [RegularExpressionFlags.UnicodeSets, LanguageFeatureMinimumTarget.RegularExpressionFlagsUnicodeSets],
-    [RegularExpressionFlags.Sticky, LanguageFeatureMinimumTarget.RegularExpressionFlagsSticky],
+  [RegularExpressionFlags.HasIndices, LanguageFeatureMinimumTarget.RegularExpressionFlagsHasIndices],
+  [RegularExpressionFlags.DotAll, LanguageFeatureMinimumTarget.RegularExpressionFlagsDotAll],
+  [RegularExpressionFlags.Unicode, LanguageFeatureMinimumTarget.RegularExpressionFlagsUnicode],
+  [RegularExpressionFlags.UnicodeSets, LanguageFeatureMinimumTarget.RegularExpressionFlagsUnicodeSets],
+  [RegularExpressionFlags.Sticky, LanguageFeatureMinimumTarget.RegularExpressionFlagsSticky],
 ]);
 
 /*
@@ -356,54 +356,54 @@ const commentDirectiveRegExMultiLine = /^(?:\/|\*)*\s*@(ts-expect-error|ts-ignor
 const jsDocSeeOrLink = /@(?:see|link)/i;
 
 function lookupInUnicodeMap(code: number, map: readonly number[]): boolean {
-    // Bail out quickly if it couldn't possibly be in the map.
-    if (code < map[0]) {
-        return false;
-    }
-
-    // Perform binary search in one of the Unicode range maps
-    let lo = 0;
-    let hi: number = map.length;
-    let mid: number;
-
-    while (lo + 1 < hi) {
-        mid = lo + (hi - lo) / 2;
-        // mid has to be even to catch a range's beginning
-        mid -= mid % 2;
-        if (map[mid] <= code && code <= map[mid + 1]) {
-            return true;
-        }
-
-        if (code < map[mid]) {
-            hi = mid;
-        }
-        else {
-            lo = mid + 2;
-        }
-    }
-
+  // Bail out quickly if it couldn't possibly be in the map.
+  if (code < map[0]) {
     return false;
+  }
+
+  // Perform binary search in one of the Unicode range maps
+  let lo = 0;
+  let hi: number = map.length;
+  let mid: number;
+
+  while (lo + 1 < hi) {
+    mid = lo + (hi - lo) / 2;
+    // mid has to be even to catch a range's beginning
+    mid -= mid % 2;
+    if (map[mid] <= code && code <= map[mid + 1]) {
+      return true;
+    }
+
+    if (code < map[mid]) {
+      hi = mid;
+    }
+    else {
+      lo = mid + 2;
+    }
+  }
+
+  return false;
 }
 
 /** @internal */
 export function isUnicodeIdentifierStart(code: number, languageVersion: ScriptTarget | undefined): boolean {
-    return languageVersion! >= ScriptTarget.ES2015 ?
-        lookupInUnicodeMap(code, unicodeESNextIdentifierStart) :
-        lookupInUnicodeMap(code, unicodeES5IdentifierStart);
+  return languageVersion! >= ScriptTarget.ES2015 ?
+    lookupInUnicodeMap(code, unicodeESNextIdentifierStart) :
+    lookupInUnicodeMap(code, unicodeES5IdentifierStart);
 }
 
 function isUnicodeIdentifierPart(code: number, languageVersion: ScriptTarget | undefined) {
-    return languageVersion! >= ScriptTarget.ES2015 ?
-        lookupInUnicodeMap(code, unicodeESNextIdentifierPart) :
-        lookupInUnicodeMap(code, unicodeES5IdentifierPart);
+  return languageVersion! >= ScriptTarget.ES2015 ?
+    lookupInUnicodeMap(code, unicodeESNextIdentifierPart) :
+    lookupInUnicodeMap(code, unicodeES5IdentifierPart);
 }
 
 function makeReverseMap<T>(source: Map<T, number>): T[] {
-    const result: T[] = [];
-    source.forEach((value, name) => {
-        result[value] = name;
-    });
-    return result;
+  const result: T[] = [];
+  source.forEach((value, name) => {
+    result[value] = name;
+  });
+  return result;
 }
 
 const tokenStrings = makeReverseMap(textToToken);
@@ -412,105 +412,105 @@ const tokenStrings = makeReverseMap(textToToken);
 export function tokenToString(t: PunctuationOrKeywordSyntaxKind): string;
 export function tokenToString(t: SyntaxKind): string | undefined;
 export function tokenToString(t: SyntaxKind): string | undefined {
-    return tokenStrings[t];
+  return tokenStrings[t];
 }
 
 /** @internal */
 export function stringToToken(s: string): SyntaxKind | undefined {
-    return textToToken.get(s);
+  return textToToken.get(s);
 }
 
 const regExpFlagCharCodes = makeReverseMap(charCodeToRegExpFlag);
 
 /** @internal @knipignore */
 export function regularExpressionFlagToCharacterCode(f: RegularExpressionFlags): CharacterCodes | undefined {
-    return regExpFlagCharCodes[f];
+  return regExpFlagCharCodes[f];
 }
 
 /** @internal @knipignore */
 export function characterCodeToRegularExpressionFlag(ch: CharacterCodes): RegularExpressionFlags | undefined {
-    return charCodeToRegExpFlag.get(ch);
+  return charCodeToRegExpFlag.get(ch);
 }
 
 /** @internal */
 export function computeLineStarts(text: string): number[] {
-    const result: number[] = [];
-    let pos = 0;
-    let lineStart = 0;
-    while (pos < text.length) {
-        const ch = text.charCodeAt(pos);
-        pos++;
-        switch (ch) {
-            case CharacterCodes.carriageReturn:
-                if (text.charCodeAt(pos) === CharacterCodes.lineFeed) {
-                    pos++;
-                }
-            // falls through
-            case CharacterCodes.lineFeed:
-                result.push(lineStart);
-                lineStart = pos;
-                break;
-            default:
-                if (ch > CharacterCodes.maxAsciiCharacter && isLineBreak(ch)) {
-                    result.push(lineStart);
-                    lineStart = pos;
-                }
-                break;
+  const result: number[] = [];
+  let pos = 0;
+  let lineStart = 0;
+  while (pos < text.length) {
+    const ch = text.charCodeAt(pos);
+    pos++;
+    switch (ch) {
+      case CharacterCodes.carriageReturn:
+        if (text.charCodeAt(pos) === CharacterCodes.lineFeed) {
+          pos++;
         }
+      // falls through
+      case CharacterCodes.lineFeed:
+        result.push(lineStart);
+        lineStart = pos;
+        break;
+      default:
+        if (ch > CharacterCodes.maxAsciiCharacter && isLineBreak(ch)) {
+          result.push(lineStart);
+          lineStart = pos;
+        }
+        break;
     }
-    result.push(lineStart);
-    return result;
+  }
+  result.push(lineStart);
+  return result;
 }
 
 export function getPositionOfLineAndCharacter(sourceFile: SourceFileLike, line: number, character: number): number;
 /** @internal */
 export function getPositionOfLineAndCharacter(sourceFile: SourceFileLike, line: number, character: number, allowEdits?: true): number; // eslint-disable-line @typescript-eslint/unified-signatures
 export function getPositionOfLineAndCharacter(sourceFile: SourceFileLike, line: number, character: number, allowEdits?: true): number {
-    return sourceFile.getPositionOfLineAndCharacter ?
-        sourceFile.getPositionOfLineAndCharacter(line, character, allowEdits) :
-        computePositionOfLineAndCharacter(getLineStarts(sourceFile), line, character, sourceFile.text, allowEdits);
+  return sourceFile.getPositionOfLineAndCharacter ?
+    sourceFile.getPositionOfLineAndCharacter(line, character, allowEdits) :
+    computePositionOfLineAndCharacter(getLineStarts(sourceFile), line, character, sourceFile.text, allowEdits);
 }
 
 /** @internal */
 export function computePositionOfLineAndCharacter(lineStarts: readonly number[], line: number, character: number, debugText?: string, allowEdits?: true): number {
-    if (line < 0 || line >= lineStarts.length) {
-        if (allowEdits) {
-            // Clamp line to nearest allowable value
-            line = line < 0 ? 0 : line >= lineStarts.length ? lineStarts.length - 1 : line;
-        }
-        else {
-            Debug.fail(`Bad line number. Line: ${line}, lineStarts.length: ${lineStarts.length} , line map is correct? ${debugText !== undefined ? arrayIsEqualTo(lineStarts, computeLineStarts(debugText)) : "unknown"}`);
-        }
-    }
-
-    const res = lineStarts[line] + character;
+  if (line < 0 || line >= lineStarts.length) {
     if (allowEdits) {
-        // Clamp to nearest allowable values to allow the underlying to be edited without crashing (accuracy is lost, instead)
-        // TODO: Somehow track edits between file as it was during the creation of sourcemap we have and the current file and
-        // apply them to the computed position to improve accuracy
-        return res > lineStarts[line + 1] ? lineStarts[line + 1] : typeof debugText === "string" && res > debugText.length ? debugText.length : res;
+      // Clamp line to nearest allowable value
+      line = line < 0 ? 0 : line >= lineStarts.length ? lineStarts.length - 1 : line;
     }
-    if (line < lineStarts.length - 1) {
-        Debug.assert(res < lineStarts[line + 1]);
+    else {
+      Debug.fail(`Bad line number. Line: ${line}, lineStarts.length: ${lineStarts.length} , line map is correct? ${debugText !== undefined ? arrayIsEqualTo(lineStarts, computeLineStarts(debugText)) : "unknown"}`);
     }
-    else if (debugText !== undefined) {
-        Debug.assert(res <= debugText.length); // Allow single character overflow for trailing newline
-    }
-    return res;
+  }
+
+  const res = lineStarts[line] + character;
+  if (allowEdits) {
+    // Clamp to nearest allowable values to allow the underlying to be edited without crashing (accuracy is lost, instead)
+    // TODO: Somehow track edits between file as it was during the creation of sourcemap we have and the current file and
+    // apply them to the computed position to improve accuracy
+    return res > lineStarts[line + 1] ? lineStarts[line + 1] : typeof debugText === "string" && res > debugText.length ? debugText.length : res;
+  }
+  if (line < lineStarts.length - 1) {
+    Debug.assert(res < lineStarts[line + 1]);
+  }
+  else if (debugText !== undefined) {
+    Debug.assert(res <= debugText.length); // Allow single character overflow for trailing newline
+  }
+  return res;
 }
 
 /** @internal */
 export function getLineStarts(sourceFile: SourceFileLike): readonly number[] {
-    return sourceFile.lineMap || (sourceFile.lineMap = computeLineStarts(sourceFile.text));
+  return sourceFile.lineMap || (sourceFile.lineMap = computeLineStarts(sourceFile.text));
 }
 
 /** @internal */
 export function computeLineAndCharacterOfPosition(lineStarts: readonly number[], position: number): LineAndCharacter {
-    const lineNumber = computeLineOfPosition(lineStarts, position);
-    return {
-        line: lineNumber,
-        character: position - lineStarts[lineNumber],
-    };
+  const lineNumber = computeLineOfPosition(lineStarts, position);
+  return {
+    line: lineNumber,
+    character: position - lineStarts[lineNumber],
+  };
 }
 
 /**
@@ -518,219 +518,219 @@ export function computeLineAndCharacterOfPosition(lineStarts: readonly number[],
  * We assume the first line starts at position 0 and 'position' is non-negative.
  */
 export function computeLineOfPosition(lineStarts: readonly number[], position: number, lowerBound?: number): number {
-    let lineNumber = binarySearch(lineStarts, position, identity, compareValues, lowerBound);
-    if (lineNumber < 0) {
-        // If the actual position was not found,
-        // the binary search returns the 2's-complement of the next line start
-        // e.g. if the line starts at [5, 10, 23, 80] and the position requested was 20
-        // then the search will return -2.
-        //
-        // We want the index of the previous line start, so we subtract 1.
-        // Review 2's-complement if this is confusing.
-        lineNumber = ~lineNumber - 1;
-        Debug.assert(lineNumber !== -1, "position cannot precede the beginning of the file");
-    }
-    return lineNumber;
+  let lineNumber = binarySearch(lineStarts, position, identity, compareValues, lowerBound);
+  if (lineNumber < 0) {
+    // If the actual position was not found,
+    // the binary search returns the 2's-complement of the next line start
+    // e.g. if the line starts at [5, 10, 23, 80] and the position requested was 20
+    // then the search will return -2.
+    //
+    // We want the index of the previous line start, so we subtract 1.
+    // Review 2's-complement if this is confusing.
+    lineNumber = ~lineNumber - 1;
+    Debug.assert(lineNumber !== -1, "position cannot precede the beginning of the file");
+  }
+  return lineNumber;
 }
 
 /** @internal */
 export function getLinesBetweenPositions(sourceFile: SourceFileLike, pos1: number, pos2: number): number {
-    if (pos1 === pos2) return 0;
-    const lineStarts = getLineStarts(sourceFile);
-    const lower = Math.min(pos1, pos2);
-    const isNegative = lower === pos2;
-    const upper = isNegative ? pos1 : pos2;
-    const lowerLine = computeLineOfPosition(lineStarts, lower);
-    const upperLine = computeLineOfPosition(lineStarts, upper, lowerLine);
-    return isNegative ? lowerLine - upperLine : upperLine - lowerLine;
+  if (pos1 === pos2) return 0;
+  const lineStarts = getLineStarts(sourceFile);
+  const lower = Math.min(pos1, pos2);
+  const isNegative = lower === pos2;
+  const upper = isNegative ? pos1 : pos2;
+  const lowerLine = computeLineOfPosition(lineStarts, lower);
+  const upperLine = computeLineOfPosition(lineStarts, upper, lowerLine);
+  return isNegative ? lowerLine - upperLine : upperLine - lowerLine;
 }
 
 export function getLineAndCharacterOfPosition(sourceFile: SourceFileLike, position: number): LineAndCharacter {
-    return computeLineAndCharacterOfPosition(getLineStarts(sourceFile), position);
+  return computeLineAndCharacterOfPosition(getLineStarts(sourceFile), position);
 }
 
 export function isWhiteSpaceLike(ch: number): boolean {
-    return isWhiteSpaceSingleLine(ch) || isLineBreak(ch);
+  return isWhiteSpaceSingleLine(ch) || isLineBreak(ch);
 }
 
 /** Does not include line breaks. For that, see isWhiteSpaceLike. */
 export function isWhiteSpaceSingleLine(ch: number): boolean {
-    // Note: nextLine is in the Zs space, and should be considered to be a whitespace.
-    // It is explicitly not a line-break as it isn't in the exact set specified by EcmaScript.
-    return ch === CharacterCodes.space ||
-        ch === CharacterCodes.tab ||
-        ch === CharacterCodes.verticalTab ||
-        ch === CharacterCodes.formFeed ||
-        ch === CharacterCodes.nonBreakingSpace ||
-        ch === CharacterCodes.nextLine ||
-        ch === CharacterCodes.ogham ||
-        ch >= CharacterCodes.enQuad && ch <= CharacterCodes.zeroWidthSpace ||
-        ch === CharacterCodes.narrowNoBreakSpace ||
-        ch === CharacterCodes.mathematicalSpace ||
-        ch === CharacterCodes.ideographicSpace ||
-        ch === CharacterCodes.byteOrderMark;
+  // Note: nextLine is in the Zs space, and should be considered to be a whitespace.
+  // It is explicitly not a line-break as it isn't in the exact set specified by EcmaScript.
+  return ch === CharacterCodes.space ||
+    ch === CharacterCodes.tab ||
+    ch === CharacterCodes.verticalTab ||
+    ch === CharacterCodes.formFeed ||
+    ch === CharacterCodes.nonBreakingSpace ||
+    ch === CharacterCodes.nextLine ||
+    ch === CharacterCodes.ogham ||
+    ch >= CharacterCodes.enQuad && ch <= CharacterCodes.zeroWidthSpace ||
+    ch === CharacterCodes.narrowNoBreakSpace ||
+    ch === CharacterCodes.mathematicalSpace ||
+    ch === CharacterCodes.ideographicSpace ||
+    ch === CharacterCodes.byteOrderMark;
 }
 
 export function isLineBreak(ch: number): boolean {
-    // ES5 7.3:
-    // The ECMAScript line terminator characters are listed in Table 3.
-    //     Table 3: Line Terminator Characters
-    //     Code Unit Value     Name                    Formal Name
-    //     \u000A              Line Feed               <LF>
-    //     \u000D              Carriage Return         <CR>
-    //     \u2028              Line separator          <LS>
-    //     \u2029              Paragraph separator     <PS>
-    // Only the characters in Table 3 are treated as line terminators. Other new line or line
-    // breaking characters are treated as white space but not as line terminators.
+  // ES5 7.3:
+  // The ECMAScript line terminator characters are listed in Table 3.
+  //     Table 3: Line Terminator Characters
+  //     Code Unit Value     Name                    Formal Name
+  //     \u000A              Line Feed               <LF>
+  //     \u000D              Carriage Return         <CR>
+  //     \u2028              Line separator          <LS>
+  //     \u2029              Paragraph separator     <PS>
+  // Only the characters in Table 3 are treated as line terminators. Other new line or line
+  // breaking characters are treated as white space but not as line terminators.
 
-    return ch === CharacterCodes.lineFeed ||
-        ch === CharacterCodes.carriageReturn ||
-        ch === CharacterCodes.lineSeparator ||
-        ch === CharacterCodes.paragraphSeparator;
+  return ch === CharacterCodes.lineFeed ||
+    ch === CharacterCodes.carriageReturn ||
+    ch === CharacterCodes.lineSeparator ||
+    ch === CharacterCodes.paragraphSeparator;
 }
 
 function isDigit(ch: number): boolean {
-    return ch >= CharacterCodes._0 && ch <= CharacterCodes._9;
+  return ch >= CharacterCodes._0 && ch <= CharacterCodes._9;
 }
 
 function isHexDigit(ch: number): boolean {
-    return isDigit(ch) || ch >= CharacterCodes.A && ch <= CharacterCodes.F || ch >= CharacterCodes.a && ch <= CharacterCodes.f;
+  return isDigit(ch) || ch >= CharacterCodes.A && ch <= CharacterCodes.F || ch >= CharacterCodes.a && ch <= CharacterCodes.f;
 }
 
 function isASCIILetter(ch: number): boolean {
-    return ch >= CharacterCodes.A && ch <= CharacterCodes.Z || ch >= CharacterCodes.a && ch <= CharacterCodes.z;
+  return ch >= CharacterCodes.A && ch <= CharacterCodes.Z || ch >= CharacterCodes.a && ch <= CharacterCodes.z;
 }
 
 // Section 6.1.4
 function isWordCharacter(ch: number): boolean {
-    return isASCIILetter(ch) || isDigit(ch) || ch === CharacterCodes._;
+  return isASCIILetter(ch) || isDigit(ch) || ch === CharacterCodes._;
 }
 
 function isOctalDigit(ch: number): boolean {
-    return ch >= CharacterCodes._0 && ch <= CharacterCodes._7;
+  return ch >= CharacterCodes._0 && ch <= CharacterCodes._7;
 }
 
 export function couldStartTrivia(text: string, pos: number): boolean {
-    // Keep in sync with skipTrivia
-    const ch = text.charCodeAt(pos);
-    switch (ch) {
-        case CharacterCodes.carriageReturn:
-        case CharacterCodes.lineFeed:
-        case CharacterCodes.tab:
-        case CharacterCodes.verticalTab:
-        case CharacterCodes.formFeed:
-        case CharacterCodes.space:
-        case CharacterCodes.slash:
-        // starts of normal trivia
-        // falls through
-        case CharacterCodes.lessThan:
-        case CharacterCodes.bar:
-        case CharacterCodes.equals:
-        case CharacterCodes.greaterThan:
-            // Starts of conflict marker trivia
-            return true;
-        case CharacterCodes.hash:
-            // Only if its the beginning can we have #! trivia
-            return pos === 0;
-        default:
-            return ch > CharacterCodes.maxAsciiCharacter;
-    }
+  // Keep in sync with skipTrivia
+  const ch = text.charCodeAt(pos);
+  switch (ch) {
+    case CharacterCodes.carriageReturn:
+    case CharacterCodes.lineFeed:
+    case CharacterCodes.tab:
+    case CharacterCodes.verticalTab:
+    case CharacterCodes.formFeed:
+    case CharacterCodes.space:
+    case CharacterCodes.slash:
+    // starts of normal trivia
+    // falls through
+    case CharacterCodes.lessThan:
+    case CharacterCodes.bar:
+    case CharacterCodes.equals:
+    case CharacterCodes.greaterThan:
+      // Starts of conflict marker trivia
+      return true;
+    case CharacterCodes.hash:
+      // Only if its the beginning can we have #! trivia
+      return pos === 0;
+    default:
+      return ch > CharacterCodes.maxAsciiCharacter;
+  }
 }
 
 /** @internal */
 export function skipTrivia(text: string, pos: number, stopAfterLineBreak?: boolean, stopAtComments?: boolean, inJSDoc?: boolean): number {
-    if (positionIsSynthesized(pos)) {
-        return pos;
-    }
+  if (positionIsSynthesized(pos)) {
+    return pos;
+  }
 
-    let canConsumeStar = false;
-    // Keep in sync with couldStartTrivia
-    while (true) {
-        const ch = text.charCodeAt(pos);
-        switch (ch) {
-            case CharacterCodes.carriageReturn:
-                if (text.charCodeAt(pos + 1) === CharacterCodes.lineFeed) {
-                    pos++;
-                }
-            // falls through
-            case CharacterCodes.lineFeed:
-                pos++;
-                if (stopAfterLineBreak) {
-                    return pos;
-                }
-                canConsumeStar = !!inJSDoc;
-                continue;
-            case CharacterCodes.tab:
-            case CharacterCodes.verticalTab:
-            case CharacterCodes.formFeed:
-            case CharacterCodes.space:
-                pos++;
-                continue;
-            case CharacterCodes.slash:
-                if (stopAtComments) {
-                    break;
-                }
-                if (text.charCodeAt(pos + 1) === CharacterCodes.slash) {
-                    pos += 2;
-                    while (pos < text.length) {
-                        if (isLineBreak(text.charCodeAt(pos))) {
-                            break;
-                        }
-                        pos++;
-                    }
-                    canConsumeStar = false;
-                    continue;
-                }
-                if (text.charCodeAt(pos + 1) === CharacterCodes.asterisk) {
-                    pos += 2;
-                    while (pos < text.length) {
-                        if (text.charCodeAt(pos) === CharacterCodes.asterisk && text.charCodeAt(pos + 1) === CharacterCodes.slash) {
-                            pos += 2;
-                            break;
-                        }
-                        pos++;
-                    }
-                    canConsumeStar = false;
-                    continue;
-                }
-                break;
-
-            case CharacterCodes.lessThan:
-            case CharacterCodes.bar:
-            case CharacterCodes.equals:
-            case CharacterCodes.greaterThan:
-                if (isConflictMarkerTrivia(text, pos)) {
-                    pos = scanConflictMarkerTrivia(text, pos);
-                    canConsumeStar = false;
-                    continue;
-                }
-                break;
-
-            case CharacterCodes.hash:
-                if (pos === 0 && isShebangTrivia(text, pos)) {
-                    pos = scanShebangTrivia(text, pos);
-                    canConsumeStar = false;
-                    continue;
-                }
-                break;
-
-            case CharacterCodes.asterisk:
-                if (canConsumeStar) {
-                    pos++;
-                    canConsumeStar = false;
-                    continue;
-                }
-                break;
-
-            default:
-                if (ch > CharacterCodes.maxAsciiCharacter && (isWhiteSpaceLike(ch))) {
-                    pos++;
-                    continue;
-                }
-                break;
+  let canConsumeStar = false;
+  // Keep in sync with couldStartTrivia
+  while (true) {
+    const ch = text.charCodeAt(pos);
+    switch (ch) {
+      case CharacterCodes.carriageReturn:
+        if (text.charCodeAt(pos + 1) === CharacterCodes.lineFeed) {
+          pos++;
         }
-        return pos;
+      // falls through
+      case CharacterCodes.lineFeed:
+        pos++;
+        if (stopAfterLineBreak) {
+          return pos;
+        }
+        canConsumeStar = !!inJSDoc;
+        continue;
+      case CharacterCodes.tab:
+      case CharacterCodes.verticalTab:
+      case CharacterCodes.formFeed:
+      case CharacterCodes.space:
+        pos++;
+        continue;
+      case CharacterCodes.slash:
+        if (stopAtComments) {
+          break;
+        }
+        if (text.charCodeAt(pos + 1) === CharacterCodes.slash) {
+          pos += 2;
+          while (pos < text.length) {
+            if (isLineBreak(text.charCodeAt(pos))) {
+              break;
+            }
+            pos++;
+          }
+          canConsumeStar = false;
+          continue;
+        }
+        if (text.charCodeAt(pos + 1) === CharacterCodes.asterisk) {
+          pos += 2;
+          while (pos < text.length) {
+            if (text.charCodeAt(pos) === CharacterCodes.asterisk && text.charCodeAt(pos + 1) === CharacterCodes.slash) {
+              pos += 2;
+              break;
+            }
+            pos++;
+          }
+          canConsumeStar = false;
+          continue;
+        }
+        break;
+
+      case CharacterCodes.lessThan:
+      case CharacterCodes.bar:
+      case CharacterCodes.equals:
+      case CharacterCodes.greaterThan:
+        if (isConflictMarkerTrivia(text, pos)) {
+          pos = scanConflictMarkerTrivia(text, pos);
+          canConsumeStar = false;
+          continue;
+        }
+        break;
+
+      case CharacterCodes.hash:
+        if (pos === 0 && isShebangTrivia(text, pos)) {
+          pos = scanShebangTrivia(text, pos);
+          canConsumeStar = false;
+          continue;
+        }
+        break;
+
+      case CharacterCodes.asterisk:
+        if (canConsumeStar) {
+          pos++;
+          canConsumeStar = false;
+          continue;
+        }
+        break;
+
+      default:
+        if (ch > CharacterCodes.maxAsciiCharacter && (isWhiteSpaceLike(ch))) {
+          pos++;
+          continue;
+        }
+        break;
     }
+    return pos;
+  }
 }
 
 // All conflict markers consist of the same character repeated seven times.  If it is
@@ -738,69 +738,69 @@ export function skipTrivia(text: string, pos: number, stopAfterLineBreak?: boole
 const mergeConflictMarkerLength = "<<<<<<<".length;
 
 function isConflictMarkerTrivia(text: string, pos: number) {
-    Debug.assert(pos >= 0);
+  Debug.assert(pos >= 0);
 
-    // Conflict markers must be at the start of a line.
-    if (pos === 0 || isLineBreak(text.charCodeAt(pos - 1))) {
-        const ch = text.charCodeAt(pos);
+  // Conflict markers must be at the start of a line.
+  if (pos === 0 || isLineBreak(text.charCodeAt(pos - 1))) {
+    const ch = text.charCodeAt(pos);
 
-        if ((pos + mergeConflictMarkerLength) < text.length) {
-            for (let i = 0; i < mergeConflictMarkerLength; i++) {
-                if (text.charCodeAt(pos + i) !== ch) {
-                    return false;
-                }
-            }
-
-            return ch === CharacterCodes.equals ||
-                text.charCodeAt(pos + mergeConflictMarkerLength) === CharacterCodes.space;
+    if ((pos + mergeConflictMarkerLength) < text.length) {
+      for (let i = 0; i < mergeConflictMarkerLength; i++) {
+        if (text.charCodeAt(pos + i) !== ch) {
+          return false;
         }
-    }
+      }
 
-    return false;
+      return ch === CharacterCodes.equals ||
+        text.charCodeAt(pos + mergeConflictMarkerLength) === CharacterCodes.space;
+    }
+  }
+
+  return false;
 }
 
 function scanConflictMarkerTrivia(text: string, pos: number, error?: (diag: DiagnosticMessage, pos?: number, len?: number) => void) {
-    if (error) {
-        error(Diagnostics.Merge_conflict_marker_encountered, pos, mergeConflictMarkerLength);
+  if (error) {
+    error(Diagnostics.Merge_conflict_marker_encountered, pos, mergeConflictMarkerLength);
+  }
+
+  const ch = text.charCodeAt(pos);
+  const len = text.length;
+
+  if (ch === CharacterCodes.lessThan || ch === CharacterCodes.greaterThan) {
+    while (pos < len && !isLineBreak(text.charCodeAt(pos))) {
+      pos++;
     }
+  }
+  else {
+    Debug.assert(ch === CharacterCodes.bar || ch === CharacterCodes.equals);
+    // Consume everything from the start of a ||||||| or ======= marker to the start
+    // of the next ======= or >>>>>>> marker.
+    while (pos < len) {
+      const currentChar = text.charCodeAt(pos);
+      if ((currentChar === CharacterCodes.equals || currentChar === CharacterCodes.greaterThan) && currentChar !== ch && isConflictMarkerTrivia(text, pos)) {
+        break;
+      }
 
-    const ch = text.charCodeAt(pos);
-    const len = text.length;
-
-    if (ch === CharacterCodes.lessThan || ch === CharacterCodes.greaterThan) {
-        while (pos < len && !isLineBreak(text.charCodeAt(pos))) {
-            pos++;
-        }
+      pos++;
     }
-    else {
-        Debug.assert(ch === CharacterCodes.bar || ch === CharacterCodes.equals);
-        // Consume everything from the start of a ||||||| or ======= marker to the start
-        // of the next ======= or >>>>>>> marker.
-        while (pos < len) {
-            const currentChar = text.charCodeAt(pos);
-            if ((currentChar === CharacterCodes.equals || currentChar === CharacterCodes.greaterThan) && currentChar !== ch && isConflictMarkerTrivia(text, pos)) {
-                break;
-            }
+  }
 
-            pos++;
-        }
-    }
-
-    return pos;
+  return pos;
 }
 
 const shebangTriviaRegex = /^#!.*/;
 
 function isShebangTrivia(text: string, pos: number) {
-    // Shebangs check must only be done at the start of the file
-    Debug.assert(pos === 0);
-    return shebangTriviaRegex.test(text);
+  // Shebangs check must only be done at the start of the file
+  Debug.assert(pos === 0);
+  return shebangTriviaRegex.test(text);
 }
 
 function scanShebangTrivia(text: string, pos: number) {
-    const shebang = shebangTriviaRegex.exec(text)![0];
-    pos = pos + shebang.length;
-    return pos;
+  const shebang = shebangTriviaRegex.exec(text)![0];
+  pos = pos + shebang.length;
+  return pos;
 }
 
 /**
@@ -824,3247 +824,3247 @@ function scanShebangTrivia(text: string, pos: number) {
  *      return value of the callback.
  */
 function iterateCommentRanges<T, U>(reduce: boolean, text: string, pos: number, trailing: boolean, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean, state: T, memo: U | undefined) => U, state: T, initial?: U): U | undefined {
-    let pendingPos!: number;
-    let pendingEnd!: number;
-    let pendingKind!: CommentKind;
-    let pendingHasTrailingNewLine!: boolean;
-    let hasPendingCommentRange = false;
-    let collecting = trailing;
-    let accumulator = initial;
-    if (pos === 0) {
+  let pendingPos!: number;
+  let pendingEnd!: number;
+  let pendingKind!: CommentKind;
+  let pendingHasTrailingNewLine!: boolean;
+  let hasPendingCommentRange = false;
+  let collecting = trailing;
+  let accumulator = initial;
+  if (pos === 0) {
+    collecting = true;
+    const shebang = getShebang(text);
+    if (shebang) {
+      pos = shebang.length;
+    }
+  }
+  scan:
+  while (pos >= 0 && pos < text.length) {
+    const ch = text.charCodeAt(pos);
+    switch (ch) {
+      case CharacterCodes.carriageReturn:
+        if (text.charCodeAt(pos + 1) === CharacterCodes.lineFeed) {
+          pos++;
+        }
+      // falls through
+      case CharacterCodes.lineFeed:
+        pos++;
+        if (trailing) {
+          break scan;
+        }
+
         collecting = true;
-        const shebang = getShebang(text);
-        if (shebang) {
-            pos = shebang.length;
+        if (hasPendingCommentRange) {
+          pendingHasTrailingNewLine = true;
         }
-    }
-    scan:
-    while (pos >= 0 && pos < text.length) {
-        const ch = text.charCodeAt(pos);
-        switch (ch) {
-            case CharacterCodes.carriageReturn:
-                if (text.charCodeAt(pos + 1) === CharacterCodes.lineFeed) {
-                    pos++;
-                }
-            // falls through
-            case CharacterCodes.lineFeed:
-                pos++;
-                if (trailing) {
-                    break scan;
-                }
 
-                collecting = true;
-                if (hasPendingCommentRange) {
-                    pendingHasTrailingNewLine = true;
-                }
+        continue;
+      case CharacterCodes.tab:
+      case CharacterCodes.verticalTab:
+      case CharacterCodes.formFeed:
+      case CharacterCodes.space:
+        pos++;
+        continue;
+      case CharacterCodes.slash:
+        const nextChar = text.charCodeAt(pos + 1);
+        let hasTrailingNewLine = false;
+        if (nextChar === CharacterCodes.slash || nextChar === CharacterCodes.asterisk) {
+          const kind = nextChar === CharacterCodes.slash ? SyntaxKind.SingleLineCommentTrivia : SyntaxKind.MultiLineCommentTrivia;
+          const startPos = pos;
+          pos += 2;
+          if (nextChar === CharacterCodes.slash) {
+            while (pos < text.length) {
+              if (isLineBreak(text.charCodeAt(pos))) {
+                hasTrailingNewLine = true;
+                break;
+              }
+              pos++;
+            }
+          }
+          else {
+            while (pos < text.length) {
+              if (text.charCodeAt(pos) === CharacterCodes.asterisk && text.charCodeAt(pos + 1) === CharacterCodes.slash) {
+                pos += 2;
+                break;
+              }
+              pos++;
+            }
+          }
 
-                continue;
-            case CharacterCodes.tab:
-            case CharacterCodes.verticalTab:
-            case CharacterCodes.formFeed:
-            case CharacterCodes.space:
-                pos++;
-                continue;
-            case CharacterCodes.slash:
-                const nextChar = text.charCodeAt(pos + 1);
-                let hasTrailingNewLine = false;
-                if (nextChar === CharacterCodes.slash || nextChar === CharacterCodes.asterisk) {
-                    const kind = nextChar === CharacterCodes.slash ? SyntaxKind.SingleLineCommentTrivia : SyntaxKind.MultiLineCommentTrivia;
-                    const startPos = pos;
-                    pos += 2;
-                    if (nextChar === CharacterCodes.slash) {
-                        while (pos < text.length) {
-                            if (isLineBreak(text.charCodeAt(pos))) {
-                                hasTrailingNewLine = true;
-                                break;
-                            }
-                            pos++;
-                        }
-                    }
-                    else {
-                        while (pos < text.length) {
-                            if (text.charCodeAt(pos) === CharacterCodes.asterisk && text.charCodeAt(pos + 1) === CharacterCodes.slash) {
-                                pos += 2;
-                                break;
-                            }
-                            pos++;
-                        }
-                    }
+          if (collecting) {
+            if (hasPendingCommentRange) {
+              accumulator = cb(pendingPos, pendingEnd, pendingKind, pendingHasTrailingNewLine, state, accumulator);
+              if (!reduce && accumulator) {
+                // If we are not reducing and we have a truthy result, return it.
+                return accumulator;
+              }
+            }
 
-                    if (collecting) {
-                        if (hasPendingCommentRange) {
-                            accumulator = cb(pendingPos, pendingEnd, pendingKind, pendingHasTrailingNewLine, state, accumulator);
-                            if (!reduce && accumulator) {
-                                // If we are not reducing and we have a truthy result, return it.
-                                return accumulator;
-                            }
-                        }
+            pendingPos = startPos;
+            pendingEnd = pos;
+            pendingKind = kind;
+            pendingHasTrailingNewLine = hasTrailingNewLine;
+            hasPendingCommentRange = true;
+          }
 
-                        pendingPos = startPos;
-                        pendingEnd = pos;
-                        pendingKind = kind;
-                        pendingHasTrailingNewLine = hasTrailingNewLine;
-                        hasPendingCommentRange = true;
-                    }
-
-                    continue;
-                }
-                break scan;
-            default:
-                if (ch > CharacterCodes.maxAsciiCharacter && (isWhiteSpaceLike(ch))) {
-                    if (hasPendingCommentRange && isLineBreak(ch)) {
-                        pendingHasTrailingNewLine = true;
-                    }
-                    pos++;
-                    continue;
-                }
-                break scan;
+          continue;
         }
+        break scan;
+      default:
+        if (ch > CharacterCodes.maxAsciiCharacter && (isWhiteSpaceLike(ch))) {
+          if (hasPendingCommentRange && isLineBreak(ch)) {
+            pendingHasTrailingNewLine = true;
+          }
+          pos++;
+          continue;
+        }
+        break scan;
     }
+  }
 
-    if (hasPendingCommentRange) {
-        accumulator = cb(pendingPos, pendingEnd, pendingKind, pendingHasTrailingNewLine, state, accumulator);
-    }
+  if (hasPendingCommentRange) {
+    accumulator = cb(pendingPos, pendingEnd, pendingKind, pendingHasTrailingNewLine, state, accumulator);
+  }
 
-    return accumulator;
+  return accumulator;
 }
 
 export function forEachLeadingCommentRange<U>(text: string, pos: number, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean) => U): U | undefined;
 export function forEachLeadingCommentRange<T, U>(text: string, pos: number, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean, state: T) => U, state: T): U | undefined;
 export function forEachLeadingCommentRange<T, U>(text: string, pos: number, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean, state: T) => U, state?: T): U | undefined {
-    return iterateCommentRanges(/*reduce*/ false, text, pos, /*trailing*/ false, cb, state!);
+  return iterateCommentRanges(/*reduce*/ false, text, pos, /*trailing*/ false, cb, state!);
 }
 
 export function forEachTrailingCommentRange<U>(text: string, pos: number, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean) => U): U | undefined;
 export function forEachTrailingCommentRange<T, U>(text: string, pos: number, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean, state: T) => U, state: T): U | undefined;
 export function forEachTrailingCommentRange<T, U>(text: string, pos: number, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean, state: T) => U, state?: T): U | undefined {
-    return iterateCommentRanges(/*reduce*/ false, text, pos, /*trailing*/ true, cb, state!);
+  return iterateCommentRanges(/*reduce*/ false, text, pos, /*trailing*/ true, cb, state!);
 }
 
 export function reduceEachLeadingCommentRange<T, U>(text: string, pos: number, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean, state: T) => U, state: T, initial: U): U | undefined {
-    return iterateCommentRanges(/*reduce*/ true, text, pos, /*trailing*/ false, cb, state, initial);
+  return iterateCommentRanges(/*reduce*/ true, text, pos, /*trailing*/ false, cb, state, initial);
 }
 
 export function reduceEachTrailingCommentRange<T, U>(text: string, pos: number, cb: (pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean, state: T) => U, state: T, initial: U): U | undefined {
-    return iterateCommentRanges(/*reduce*/ true, text, pos, /*trailing*/ true, cb, state, initial);
+  return iterateCommentRanges(/*reduce*/ true, text, pos, /*trailing*/ true, cb, state, initial);
 }
 
 function appendCommentRange(pos: number, end: number, kind: CommentKind, hasTrailingNewLine: boolean, _state: any, comments: CommentRange[] = []) {
-    comments.push({ kind, pos, end, hasTrailingNewLine });
-    return comments;
+  comments.push({ kind, pos, end, hasTrailingNewLine });
+  return comments;
 }
 
 export function getLeadingCommentRanges(text: string, pos: number): CommentRange[] | undefined {
-    return reduceEachLeadingCommentRange(text, pos, appendCommentRange, /*state*/ undefined, /*initial*/ undefined);
+  return reduceEachLeadingCommentRange(text, pos, appendCommentRange, /*state*/ undefined, /*initial*/ undefined);
 }
 
 export function getTrailingCommentRanges(text: string, pos: number): CommentRange[] | undefined {
-    return reduceEachTrailingCommentRange(text, pos, appendCommentRange, /*state*/ undefined, /*initial*/ undefined);
+  return reduceEachTrailingCommentRange(text, pos, appendCommentRange, /*state*/ undefined, /*initial*/ undefined);
 }
 
 /** Optionally, get the shebang */
 export function getShebang(text: string): string | undefined {
-    const match = shebangTriviaRegex.exec(text);
-    if (match) {
-        return match[0];
-    }
+  const match = shebangTriviaRegex.exec(text);
+  if (match) {
+    return match[0];
+  }
 }
 
 export function isIdentifierStart(ch: number, languageVersion: ScriptTarget | undefined): boolean {
-    return isASCIILetter(ch) || ch === CharacterCodes.$ || ch === CharacterCodes._ ||
-        ch > CharacterCodes.maxAsciiCharacter && isUnicodeIdentifierStart(ch, languageVersion);
+  return isASCIILetter(ch) || ch === CharacterCodes.$ || ch === CharacterCodes._ ||
+    ch > CharacterCodes.maxAsciiCharacter && isUnicodeIdentifierStart(ch, languageVersion);
 }
 
 export function isIdentifierPart(ch: number, languageVersion: ScriptTarget | undefined, identifierVariant?: LanguageVariant): boolean {
-    return isWordCharacter(ch) || ch === CharacterCodes.$ ||
-        // "-" and ":" are valid in JSX Identifiers
-        (identifierVariant === LanguageVariant.JSX ? (ch === CharacterCodes.minus || ch === CharacterCodes.colon) : false) ||
-        ch > CharacterCodes.maxAsciiCharacter && isUnicodeIdentifierPart(ch, languageVersion);
+  return isWordCharacter(ch) || ch === CharacterCodes.$ ||
+    // "-" and ":" are valid in JSX Identifiers
+    (identifierVariant === LanguageVariant.JSX ? (ch === CharacterCodes.minus || ch === CharacterCodes.colon) : false) ||
+    ch > CharacterCodes.maxAsciiCharacter && isUnicodeIdentifierPart(ch, languageVersion);
 }
 
 /** @internal */
 export function isIdentifierText(name: string, languageVersion: ScriptTarget | undefined, identifierVariant?: LanguageVariant): boolean {
-    let ch = codePointAt(name, 0);
-    if (!isIdentifierStart(ch, languageVersion)) {
-        return false;
-    }
+  let ch = codePointAt(name, 0);
+  if (!isIdentifierStart(ch, languageVersion)) {
+    return false;
+  }
 
-    for (let i = charSize(ch); i < name.length; i += charSize(ch)) {
-        if (!isIdentifierPart(ch = codePointAt(name, i), languageVersion, identifierVariant)) {
-            return false;
-        }
+  for (let i = charSize(ch); i < name.length; i += charSize(ch)) {
+    if (!isIdentifierPart(ch = codePointAt(name, i), languageVersion, identifierVariant)) {
+      return false;
     }
+  }
 
-    return true;
+  return true;
 }
 
 const enum EscapeSequenceScanningFlags {
-    String = 1 << 0,
-    ReportErrors = 1 << 1,
+  String = 1 << 0,
+  ReportErrors = 1 << 1,
 
-    RegularExpression = 1 << 2,
-    AnnexB = 1 << 3,
-    AnyUnicodeMode = 1 << 4,
-    AtomEscape = 1 << 5,
+  RegularExpression = 1 << 2,
+  AnnexB = 1 << 3,
+  AnyUnicodeMode = 1 << 4,
+  AtomEscape = 1 << 5,
 
-    ReportInvalidEscapeErrors = RegularExpression | ReportErrors,
-    AllowExtendedUnicodeEscape = String | AnyUnicodeMode,
+  ReportInvalidEscapeErrors = RegularExpression | ReportErrors,
+  AllowExtendedUnicodeEscape = String | AnyUnicodeMode,
 }
 
 const enum ClassSetExpressionType {
-    Unknown,
-    ClassUnion,
-    ClassIntersection,
-    ClassSubtraction,
+  Unknown,
+  ClassUnion,
+  ClassIntersection,
+  ClassSubtraction,
 }
 
 // Creates a scanner over a (possibly unspecified) range of a piece of text.
 export function createScanner(
-    languageVersion: ScriptTarget,
-    skipTrivia: boolean,
-    languageVariant: LanguageVariant = LanguageVariant.Standard,
-    textInitial?: string,
-    onError?: ErrorCallback,
-    start?: number,
-    length?: number,
+  languageVersion: ScriptTarget,
+  skipTrivia: boolean,
+  languageVariant: LanguageVariant = LanguageVariant.Standard,
+  textInitial?: string,
+  onError?: ErrorCallback,
+  start?: number,
+  length?: number,
 ): Scanner {
+  // Why var? It avoids TDZ checks in the runtime which can be costly.
+  // See: https://github.com/microsoft/TypeScript/issues/52924
+  /* eslint-disable no-var */
+  var text = textInitial!;
+
+  // Current position (end position of text of current token)
+  var pos: number;
+
+  // end of text
+  var end: number;
+
+  // Start position of whitespace before current token
+  var fullStartPos: number;
+
+  // Start position of text of current token
+  var tokenStart: number;
+
+  var token: SyntaxKind;
+  var tokenValue!: string;
+  var tokenFlags: TokenFlags;
+
+  var commentDirectives: CommentDirective[] | undefined;
+  var skipJsDocLeadingAsterisks = 0;
+
+  var scriptKind = ScriptKind.Unknown;
+  var jsDocParsingMode = JSDocParsingMode.ParseAll;
+
+  setText(text, start, length);
+
+  var scanner: Scanner = {
+    getTokenFullStart: () => fullStartPos,
+    getStartPos: () => fullStartPos,
+    getTokenEnd: () => pos,
+    getTextPos: () => pos,
+    getToken: () => token,
+    getTokenStart: () => tokenStart,
+    getTokenPos: () => tokenStart,
+    getTokenText: () => text.substring(tokenStart, pos),
+    getTokenValue: () => tokenValue,
+    hasUnicodeEscape: () => (tokenFlags & TokenFlags.UnicodeEscape) !== 0,
+    hasExtendedUnicodeEscape: () => (tokenFlags & TokenFlags.ExtendedUnicodeEscape) !== 0,
+    hasPrecedingLineBreak: () => (tokenFlags & TokenFlags.PrecedingLineBreak) !== 0,
+    hasPrecedingJSDocComment: () => (tokenFlags & TokenFlags.PrecedingJSDocComment) !== 0,
+    hasPrecedingJSDocLeadingAsterisks: () => (tokenFlags & TokenFlags.PrecedingJSDocLeadingAsterisks) !== 0,
+    isIdentifier: () => token === SyntaxKind.Identifier || token > SyntaxKind.LastReservedWord,
+    isReservedWord: () => token >= SyntaxKind.FirstReservedWord && token <= SyntaxKind.LastReservedWord,
+    isUnterminated: () => (tokenFlags & TokenFlags.Unterminated) !== 0,
+    getCommentDirectives: () => commentDirectives,
+    getNumericLiteralFlags: () => tokenFlags & TokenFlags.NumericLiteralFlags,
+    getTokenFlags: () => tokenFlags,
+    reScanGreaterToken,
+    reScanAsteriskEqualsToken,
+    reScanSlashToken,
+    reScanTemplateToken,
+    reScanTemplateHeadOrNoSubstitutionTemplate,
+    scanJsxIdentifier,
+    scanJsxAttributeValue,
+    reScanJsxAttributeValue,
+    reScanJsxToken,
+    reScanLessThanToken,
+    reScanHashToken,
+    reScanQuestionToken,
+    reScanInvalidIdentifier,
+    scanJsxToken,
+    scanJsDocToken,
+    scanJSDocCommentTextToken,
+    scan,
+    getText,
+    clearCommentDirectives,
+    setText,
+    setScriptTarget,
+    setLanguageVariant,
+    setScriptKind,
+    setJSDocParsingMode,
+    setOnError,
+    resetTokenState,
+    setTextPos: resetTokenState,
+    setSkipJsDocLeadingAsterisks,
+    tryScan,
+    lookAhead,
+    scanRange,
+  };
+  /* eslint-enable no-var */
+
+  if (Debug.isDebugging) {
+    Object.defineProperty(scanner, "__debugShowCurrentPositionInText", {
+      get: () => {
+        const text = scanner.getText();
+        return text.slice(0, scanner.getTokenFullStart()) + "║" + text.slice(scanner.getTokenFullStart());
+      },
+    });
+  }
+
+  return scanner;
+
+  /**
+   * Returns the code point for the character at the given position within `text`. This
+   * should only be used when pos is guaranteed to be within the bounds of `text` as this
+   * function does not perform bounds checks.
+   */
+  function codePointUnchecked(pos: number) {
+    return codePointAt(text, pos);
+  }
+
+  /**
+   * Returns the code point for the character at the given position within `text`. If
+   * `pos` is outside the bounds set for `text`, `CharacterCodes.EOF` is returned instead.
+   */
+  function codePointChecked(pos: number) {
+    return pos >= 0 && pos < end ? codePointUnchecked(pos) : CharacterCodes.EOF;
+  }
+
+  /**
+   * Returns the char code for the character at the given position within `text`. This
+   * should only be used when pos is guaranteed to be within the bounds of `text` as this
+   * function does not perform bounds checks.
+   */
+  function charCodeUnchecked(pos: number) {
+    return text.charCodeAt(pos);
+  }
+
+  /**
+   * Returns the char code for the character at the given position within `text`. If
+   * `pos` is outside the bounds set for `text`, `CharacterCodes.EOF` is returned instead.
+   */
+  function charCodeChecked(pos: number) {
+    return pos >= 0 && pos < end ? charCodeUnchecked(pos) : CharacterCodes.EOF;
+  }
+
+  function error(message: DiagnosticMessage): void;
+  function error(message: DiagnosticMessage, errPos: number, length: number, arg0?: any): void;
+  function error(message: DiagnosticMessage, errPos: number = pos, length?: number, arg0?: any): void {
+    if (onError) {
+      const oldPos = pos;
+      pos = errPos;
+      onError(message, length || 0, arg0);
+      pos = oldPos;
+    }
+  }
+
+  function scanNumberFragment(): string {
+    let start = pos;
+    let allowSeparator = false;
+    let isPreviousTokenSeparator = false;
+    let result = "";
+    while (true) {
+      const ch = charCodeUnchecked(pos);
+      if (ch === CharacterCodes._) {
+        tokenFlags |= TokenFlags.ContainsSeparator;
+        if (allowSeparator) {
+          allowSeparator = false;
+          isPreviousTokenSeparator = true;
+          result += text.substring(start, pos);
+        }
+        else {
+          tokenFlags |= TokenFlags.ContainsInvalidSeparator;
+          if (isPreviousTokenSeparator) {
+            error(Diagnostics.Multiple_consecutive_numeric_separators_are_not_permitted, pos, 1);
+          }
+          else {
+            error(Diagnostics.Numeric_separators_are_not_allowed_here, pos, 1);
+          }
+        }
+        pos++;
+        start = pos;
+        continue;
+      }
+      if (isDigit(ch)) {
+        allowSeparator = true;
+        isPreviousTokenSeparator = false;
+        pos++;
+        continue;
+      }
+      break;
+    }
+    if (charCodeUnchecked(pos - 1) === CharacterCodes._) {
+      tokenFlags |= TokenFlags.ContainsInvalidSeparator;
+      error(Diagnostics.Numeric_separators_are_not_allowed_here, pos - 1, 1);
+    }
+    return result + text.substring(start, pos);
+  }
+
+  // Extract from Section 12.9.3
+  // NumericLiteral ::=
+  //     | DecimalLiteral
+  //     | DecimalBigIntegerLiteral
+  //     | NonDecimalIntegerLiteral 'n'?
+  //     | LegacyOctalIntegerLiteral
+  // DecimalBigIntegerLiteral ::=
+  //     | '0n'
+  //     | [1-9] DecimalDigits? 'n'
+  //     | [1-9] '_' DecimalDigits 'n'
+  // DecimalLiteral ::=
+  //     | DecimalIntegerLiteral '.' DecimalDigits? ExponentPart?
+  //     | '.' DecimalDigits ExponentPart?
+  //     | DecimalIntegerLiteral ExponentPart?
+  // DecimalIntegerLiteral ::=
+  //     | '0'
+  //     | [1-9] '_'? DecimalDigits
+  //     | NonOctalDecimalIntegerLiteral
+  // LegacyOctalIntegerLiteral ::= '0' [0-7]+
+  // NonOctalDecimalIntegerLiteral ::= '0' [0-7]* [89] [0-9]*
+  function scanNumber(): SyntaxKind {
+    let start = pos;
+    let mainFragment: string;
+    if (charCodeUnchecked(pos) === CharacterCodes._0) {
+      pos++;
+      if (charCodeUnchecked(pos) === CharacterCodes._) {
+        tokenFlags |= TokenFlags.ContainsSeparator | TokenFlags.ContainsInvalidSeparator;
+        error(Diagnostics.Numeric_separators_are_not_allowed_here, pos, 1);
+        // treat it as a normal number literal
+        pos--;
+        mainFragment = scanNumberFragment();
+      }
+      // Separators are not allowed in the below cases
+      else if (!scanDigits()) {
+        // NonOctalDecimalIntegerLiteral, emit error later
+        // Separators in decimal and exponent parts are still allowed according to the spec
+        tokenFlags |= TokenFlags.ContainsLeadingZero;
+        mainFragment = "" + +tokenValue;
+      }
+      else if (!tokenValue) {
+        // a single zero
+        mainFragment = "0";
+      }
+      else {
+        // LegacyOctalIntegerLiteral
+        tokenValue = "" + parseInt(tokenValue, 8);
+        tokenFlags |= TokenFlags.Octal;
+        const withMinus = token === SyntaxKind.MinusToken;
+        const literal = (withMinus ? "-" : "") + "0o" + (+tokenValue).toString(8);
+        if (withMinus) start--;
+        error(Diagnostics.Octal_literals_are_not_allowed_Use_the_syntax_0, start, pos - start, literal);
+        return SyntaxKind.NumericLiteral;
+      }
+    }
+    else {
+      mainFragment = scanNumberFragment();
+    }
+    let decimalFragment: string | undefined;
+    let scientificFragment: string | undefined;
+    if (charCodeUnchecked(pos) === CharacterCodes.dot) {
+      pos++;
+      decimalFragment = scanNumberFragment();
+    }
+    let end = pos;
+    if (charCodeUnchecked(pos) === CharacterCodes.E || charCodeUnchecked(pos) === CharacterCodes.e) {
+      pos++;
+      tokenFlags |= TokenFlags.Scientific;
+      if (charCodeUnchecked(pos) === CharacterCodes.plus || charCodeUnchecked(pos) === CharacterCodes.minus) pos++;
+      const preNumericPart = pos;
+      const finalFragment = scanNumberFragment();
+      if (!finalFragment) {
+        error(Diagnostics.Digit_expected);
+      }
+      else {
+        scientificFragment = text.substring(end, preNumericPart) + finalFragment;
+        end = pos;
+      }
+    }
+    let result: string;
+    if (tokenFlags & TokenFlags.ContainsSeparator) {
+      result = mainFragment;
+      if (decimalFragment) {
+        result += "." + decimalFragment;
+      }
+      if (scientificFragment) {
+        result += scientificFragment;
+      }
+    }
+    else {
+      result = text.substring(start, end); // No need to use all the fragments; no _ removal needed
+    }
+
+    if (tokenFlags & TokenFlags.ContainsLeadingZero) {
+      error(Diagnostics.Decimals_with_leading_zeros_are_not_allowed, start, end - start);
+      // if a literal has a leading zero, it must not be bigint
+      tokenValue = "" + +result;
+      return SyntaxKind.NumericLiteral;
+    }
+
+    if (decimalFragment !== undefined || tokenFlags & TokenFlags.Scientific) {
+      checkForIdentifierStartAfterNumericLiteral(start, decimalFragment === undefined && !!(tokenFlags & TokenFlags.Scientific));
+      // if value is not an integer, it can be safely coerced to a number
+      tokenValue = "" + +result;
+      return SyntaxKind.NumericLiteral;
+    }
+    else {
+      tokenValue = result;
+      const type = checkBigIntSuffix(); // if value is an integer, check whether it is a bigint
+      checkForIdentifierStartAfterNumericLiteral(start);
+      return type;
+    }
+  }
+
+  function checkForIdentifierStartAfterNumericLiteral(numericStart: number, isScientific?: boolean) {
+    if (!isIdentifierStart(codePointUnchecked(pos), languageVersion)) {
+      return;
+    }
+
+    const identifierStart = pos;
+    const { length } = scanIdentifierParts();
+
+    if (length === 1 && text[identifierStart] === "n") {
+      if (isScientific) {
+        error(Diagnostics.A_bigint_literal_cannot_use_exponential_notation, numericStart, identifierStart - numericStart + 1);
+      }
+      else {
+        error(Diagnostics.A_bigint_literal_must_be_an_integer, numericStart, identifierStart - numericStart + 1);
+      }
+    }
+    else {
+      error(Diagnostics.An_identifier_or_keyword_cannot_immediately_follow_a_numeric_literal, identifierStart, length);
+      pos = identifierStart;
+    }
+  }
+
+  function scanDigits(): boolean {
+    const start = pos;
+    let isOctal = true;
+    while (isDigit(charCodeChecked(pos))) {
+      if (!isOctalDigit(charCodeUnchecked(pos))) {
+        isOctal = false;
+      }
+      pos++;
+    }
+    tokenValue = text.substring(start, pos);
+    return isOctal;
+  }
+
+  /**
+   * Scans the given number of hexadecimal digits in the text,
+   * returning -1 if the given number is unavailable.
+   */
+  function scanExactNumberOfHexDigits(count: number, canHaveSeparators: boolean): number {
+    const valueString = scanHexDigits(/*minCount*/ count, /*scanAsManyAsPossible*/ false, canHaveSeparators);
+    return valueString ? parseInt(valueString, 16) : -1;
+  }
+
+  /**
+   * Scans as many hexadecimal digits as are available in the text,
+   * returning "" if the given number of digits was unavailable.
+   */
+  function scanMinimumNumberOfHexDigits(count: number, canHaveSeparators: boolean): string {
+    return scanHexDigits(/*minCount*/ count, /*scanAsManyAsPossible*/ true, canHaveSeparators);
+  }
+
+  function scanHexDigits(minCount: number, scanAsManyAsPossible: boolean, canHaveSeparators: boolean): string {
+    let valueChars: number[] = [];
+    let allowSeparator = false;
+    let isPreviousTokenSeparator = false;
+    while (valueChars.length < minCount || scanAsManyAsPossible) {
+      let ch = charCodeUnchecked(pos);
+      if (canHaveSeparators && ch === CharacterCodes._) {
+        tokenFlags |= TokenFlags.ContainsSeparator;
+        if (allowSeparator) {
+          allowSeparator = false;
+          isPreviousTokenSeparator = true;
+        }
+        else if (isPreviousTokenSeparator) {
+          error(Diagnostics.Multiple_consecutive_numeric_separators_are_not_permitted, pos, 1);
+        }
+        else {
+          error(Diagnostics.Numeric_separators_are_not_allowed_here, pos, 1);
+        }
+        pos++;
+        continue;
+      }
+      allowSeparator = canHaveSeparators;
+      if (ch >= CharacterCodes.A && ch <= CharacterCodes.F) {
+        ch += CharacterCodes.a - CharacterCodes.A; // standardize hex literals to lowercase
+      }
+      else if (
+        !((ch >= CharacterCodes._0 && ch <= CharacterCodes._9) ||
+          (ch >= CharacterCodes.a && ch <= CharacterCodes.f))
+      ) {
+        break;
+      }
+      valueChars.push(ch);
+      pos++;
+      isPreviousTokenSeparator = false;
+    }
+    if (valueChars.length < minCount) {
+      valueChars = [];
+    }
+    if (charCodeUnchecked(pos - 1) === CharacterCodes._) {
+      error(Diagnostics.Numeric_separators_are_not_allowed_here, pos - 1, 1);
+    }
+    return String.fromCharCode(...valueChars);
+  }
+
+  function scanString(jsxAttributeString = false): string {
+    const quote = charCodeUnchecked(pos);
+    pos++;
+    let result = "";
+    let start = pos;
+    while (true) {
+      if (pos >= end) {
+        result += text.substring(start, pos);
+        tokenFlags |= TokenFlags.Unterminated;
+        error(Diagnostics.Unterminated_string_literal);
+        break;
+      }
+      const ch = charCodeUnchecked(pos);
+      if (ch === quote) {
+        result += text.substring(start, pos);
+        pos++;
+        break;
+      }
+      if (ch === CharacterCodes.backslash && !jsxAttributeString) {
+        result += text.substring(start, pos);
+        result += scanEscapeSequence(EscapeSequenceScanningFlags.String | EscapeSequenceScanningFlags.ReportErrors);
+        start = pos;
+        continue;
+      }
+
+      if ((ch === CharacterCodes.lineFeed || ch === CharacterCodes.carriageReturn) && !jsxAttributeString) {
+        result += text.substring(start, pos);
+        tokenFlags |= TokenFlags.Unterminated;
+        error(Diagnostics.Unterminated_string_literal);
+        break;
+      }
+      pos++;
+    }
+    return result;
+  }
+
+  /**
+   * Sets the current 'tokenValue' and returns a NoSubstitutionTemplateLiteral or
+   * a literal component of a TemplateExpression.
+   */
+  function scanTemplateAndSetTokenValue(shouldEmitInvalidEscapeError: boolean): SyntaxKind {
+    const startedWithBacktick = charCodeUnchecked(pos) === CharacterCodes.backtick;
+
+    pos++;
+    let start = pos;
+    let contents = "";
+    let resultingToken: SyntaxKind;
+
+    while (true) {
+      if (pos >= end) {
+        contents += text.substring(start, pos);
+        tokenFlags |= TokenFlags.Unterminated;
+        error(Diagnostics.Unterminated_template_literal);
+        resultingToken = startedWithBacktick ? SyntaxKind.NoSubstitutionTemplateLiteral : SyntaxKind.TemplateTail;
+        break;
+      }
+
+      const currChar = charCodeUnchecked(pos);
+
+      // '`'
+      if (currChar === CharacterCodes.backtick) {
+        contents += text.substring(start, pos);
+        pos++;
+        resultingToken = startedWithBacktick ? SyntaxKind.NoSubstitutionTemplateLiteral : SyntaxKind.TemplateTail;
+        break;
+      }
+
+      // '${'
+      if (currChar === CharacterCodes.$ && pos + 1 < end && charCodeUnchecked(pos + 1) === CharacterCodes.openBrace) {
+        contents += text.substring(start, pos);
+        pos += 2;
+        resultingToken = startedWithBacktick ? SyntaxKind.TemplateHead : SyntaxKind.TemplateMiddle;
+        break;
+      }
+
+      // Escape character
+      if (currChar === CharacterCodes.backslash) {
+        contents += text.substring(start, pos);
+        contents += scanEscapeSequence(EscapeSequenceScanningFlags.String | (shouldEmitInvalidEscapeError ? EscapeSequenceScanningFlags.ReportErrors : 0));
+        start = pos;
+        continue;
+      }
+
+      // Speculated ECMAScript 6 Spec 11.8.6.1:
+      // <CR><LF> and <CR> LineTerminatorSequences are normalized to <LF> for Template Values
+      if (currChar === CharacterCodes.carriageReturn) {
+        contents += text.substring(start, pos);
+        pos++;
+
+        if (pos < end && charCodeUnchecked(pos) === CharacterCodes.lineFeed) {
+          pos++;
+        }
+
+        contents += "\n";
+        start = pos;
+        continue;
+      }
+
+      pos++;
+    }
+
+    Debug.assert(resultingToken !== undefined);
+
+    tokenValue = contents;
+    return resultingToken;
+  }
+
+  // Extract from Section A.1
+  // EscapeSequence ::=
+  //     | CharacterEscapeSequence
+  //     | 0 (?![0-9])
+  //     | LegacyOctalEscapeSequence
+  //     | NonOctalDecimalEscapeSequence
+  //     | HexEscapeSequence
+  //     | UnicodeEscapeSequence
+  // LegacyOctalEscapeSequence ::=
+  //     | '0' (?=[89])
+  //     | [1-7] (?![0-7])
+  //     | [0-3] [0-7] [0-7]?
+  //     | [4-7] [0-7]
+  // NonOctalDecimalEscapeSequence ::= [89]
+  function scanEscapeSequence(flags: EscapeSequenceScanningFlags): string {
+    const start = pos;
+    pos++;
+    if (pos >= end) {
+      error(Diagnostics.Unexpected_end_of_text);
+      return "";
+    }
+    const ch = charCodeUnchecked(pos);
+    pos++;
+    switch (ch) {
+      case CharacterCodes._0:
+        // Although '0' preceding any digit is treated as LegacyOctalEscapeSequence,
+        // '\08' should separately be interpreted as '\0' + '8'.
+        if (pos >= end || !isDigit(charCodeUnchecked(pos))) {
+          return "\0";
+        }
+      // '\01', '\011'
+      // falls through
+      case CharacterCodes._1:
+      case CharacterCodes._2:
+      case CharacterCodes._3:
+        // '\1', '\17', '\177'
+        if (pos < end && isOctalDigit(charCodeUnchecked(pos))) {
+          pos++;
+        }
+      // '\17', '\177'
+      // falls through
+      case CharacterCodes._4:
+      case CharacterCodes._5:
+      case CharacterCodes._6:
+      case CharacterCodes._7:
+        // '\4', '\47' but not '\477'
+        if (pos < end && isOctalDigit(charCodeUnchecked(pos))) {
+          pos++;
+        }
+        // '\47'
+        tokenFlags |= TokenFlags.ContainsInvalidEscape;
+        if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
+          const code = parseInt(text.substring(start + 1, pos), 8);
+          if (flags & EscapeSequenceScanningFlags.RegularExpression && !(flags & EscapeSequenceScanningFlags.AtomEscape) && ch !== CharacterCodes._0) {
+            error(Diagnostics.Octal_escape_sequences_and_backreferences_are_not_allowed_in_a_character_class_If_this_was_intended_as_an_escape_sequence_use_the_syntax_0_instead, start, pos - start, "\\x" + code.toString(16).padStart(2, "0"));
+          }
+          else {
+            error(Diagnostics.Octal_escape_sequences_are_not_allowed_Use_the_syntax_0, start, pos - start, "\\x" + code.toString(16).padStart(2, "0"));
+          }
+          return String.fromCharCode(code);
+        }
+        return text.substring(start, pos);
+      case CharacterCodes._8:
+      case CharacterCodes._9:
+        // the invalid '\8' and '\9'
+        tokenFlags |= TokenFlags.ContainsInvalidEscape;
+        if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
+          if (flags & EscapeSequenceScanningFlags.RegularExpression && !(flags & EscapeSequenceScanningFlags.AtomEscape)) {
+            error(Diagnostics.Decimal_escape_sequences_and_backreferences_are_not_allowed_in_a_character_class, start, pos - start);
+          }
+          else {
+            error(Diagnostics.Escape_sequence_0_is_not_allowed, start, pos - start, text.substring(start, pos));
+          }
+          return String.fromCharCode(ch);
+        }
+        return text.substring(start, pos);
+      case CharacterCodes.b:
+        return "\b";
+      case CharacterCodes.t:
+        return "\t";
+      case CharacterCodes.n:
+        return "\n";
+      case CharacterCodes.v:
+        return "\v";
+      case CharacterCodes.f:
+        return "\f";
+      case CharacterCodes.r:
+        return "\r";
+      case CharacterCodes.singleQuote:
+        return "'";
+      case CharacterCodes.doubleQuote:
+        return '"';
+      case CharacterCodes.u:
+        if (pos < end && charCodeUnchecked(pos) === CharacterCodes.openBrace) {
+          // '\u{DDDDDD}'
+          pos -= 2;
+          const result = scanExtendedUnicodeEscape(!!(flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors));
+          if (!(flags & EscapeSequenceScanningFlags.AllowExtendedUnicodeEscape)) {
+            tokenFlags |= TokenFlags.ContainsInvalidEscape;
+            if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
+              error(Diagnostics.Unicode_escape_sequences_are_only_available_when_the_Unicode_u_flag_or_the_Unicode_Sets_v_flag_is_set, start, pos - start);
+            }
+          }
+          return result;
+        }
+        // '\uDDDD'
+        for (; pos < start + 6; pos++) {
+          if (!(pos < end && isHexDigit(charCodeUnchecked(pos)))) {
+            tokenFlags |= TokenFlags.ContainsInvalidEscape;
+            if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
+              error(Diagnostics.Hexadecimal_digit_expected);
+            }
+            return text.substring(start, pos);
+          }
+        }
+        tokenFlags |= TokenFlags.UnicodeEscape;
+        const escapedValue = parseInt(text.substring(start + 2, pos), 16);
+        const escapedValueString = String.fromCharCode(escapedValue);
+        if (
+          flags & EscapeSequenceScanningFlags.AnyUnicodeMode && escapedValue >= 0xD800 && escapedValue <= 0xDBFF &&
+          pos + 6 < end && text.substring(pos, pos + 2) === "\\u" && charCodeUnchecked(pos + 2) !== CharacterCodes.openBrace
+        ) {
+          // For regular expressions in any Unicode mode, \u HexLeadSurrogate \u HexTrailSurrogate is treated as a single character
+          // for the purpose of determining whether a character class range is out of order
+          // https://tc39.es/ecma262/#prod-RegExpUnicodeEscapeSequence
+          const nextStart = pos;
+          let nextPos = pos + 2;
+          for (; nextPos < nextStart + 6; nextPos++) {
+            if (!isHexDigit(charCodeUnchecked(nextPos))) {
+              // leave the error to the next call
+              return escapedValueString;
+            }
+          }
+          const nextEscapedValue = parseInt(text.substring(nextStart + 2, nextPos), 16);
+          if (nextEscapedValue >= 0xDC00 && nextEscapedValue <= 0xDFFF) {
+            pos = nextPos;
+            return escapedValueString + String.fromCharCode(nextEscapedValue);
+          }
+        }
+        return escapedValueString;
+
+      case CharacterCodes.x:
+        // '\xDD'
+        for (; pos < start + 4; pos++) {
+          if (!(pos < end && isHexDigit(charCodeUnchecked(pos)))) {
+            tokenFlags |= TokenFlags.ContainsInvalidEscape;
+            if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
+              error(Diagnostics.Hexadecimal_digit_expected);
+            }
+            return text.substring(start, pos);
+          }
+        }
+        tokenFlags |= TokenFlags.HexEscape;
+        return String.fromCharCode(parseInt(text.substring(start + 2, pos), 16));
+
+      // when encountering a LineContinuation (i.e. a backslash and a line terminator sequence),
+      // the line terminator is interpreted to be "the empty code unit sequence".
+      case CharacterCodes.carriageReturn:
+        if (pos < end && charCodeUnchecked(pos) === CharacterCodes.lineFeed) {
+          pos++;
+        }
+      // falls through
+      case CharacterCodes.lineFeed:
+      case CharacterCodes.lineSeparator:
+      case CharacterCodes.paragraphSeparator:
+        return "";
+      default:
+        if (
+          flags & EscapeSequenceScanningFlags.AnyUnicodeMode
+          || flags & EscapeSequenceScanningFlags.RegularExpression
+            && !(flags & EscapeSequenceScanningFlags.AnnexB)
+            && isIdentifierPart(ch, languageVersion)
+        ) {
+          error(Diagnostics.This_character_cannot_be_escaped_in_a_regular_expression, pos - 2, 2);
+        }
+        return String.fromCharCode(ch);
+    }
+  }
+
+  function scanExtendedUnicodeEscape(shouldEmitInvalidEscapeError: boolean): string {
+    const start = pos;
+    pos += 3;
+    const escapedStart = pos;
+    const escapedValueString = scanMinimumNumberOfHexDigits(1, /*canHaveSeparators*/ false);
+    const escapedValue = escapedValueString ? parseInt(escapedValueString, 16) : -1;
+    let isInvalidExtendedEscape = false;
+
+    // Validate the value of the digit
+    if (escapedValue < 0) {
+      if (shouldEmitInvalidEscapeError) {
+        error(Diagnostics.Hexadecimal_digit_expected);
+      }
+      isInvalidExtendedEscape = true;
+    }
+    else if (escapedValue > 0x10FFFF) {
+      if (shouldEmitInvalidEscapeError) {
+        error(Diagnostics.An_extended_Unicode_escape_value_must_be_between_0x0_and_0x10FFFF_inclusive, escapedStart, pos - escapedStart);
+      }
+      isInvalidExtendedEscape = true;
+    }
+
+    if (pos >= end) {
+      if (shouldEmitInvalidEscapeError) {
+        error(Diagnostics.Unexpected_end_of_text);
+      }
+      isInvalidExtendedEscape = true;
+    }
+    else if (charCodeUnchecked(pos) === CharacterCodes.closeBrace) {
+      // Only swallow the following character up if it's a '}'.
+      pos++;
+    }
+    else {
+      if (shouldEmitInvalidEscapeError) {
+        error(Diagnostics.Unterminated_Unicode_escape_sequence);
+      }
+      isInvalidExtendedEscape = true;
+    }
+
+    if (isInvalidExtendedEscape) {
+      tokenFlags |= TokenFlags.ContainsInvalidEscape;
+      return text.substring(start, pos);
+    }
+
+    tokenFlags |= TokenFlags.ExtendedUnicodeEscape;
+    return utf16EncodeAsString(escapedValue);
+  }
+
+  // Current character is known to be a backslash. Check for Unicode escape of the form '\uXXXX'
+  // and return code point value if valid Unicode escape is found. Otherwise return -1.
+  function peekUnicodeEscape(): number {
+    if (pos + 5 < end && charCodeUnchecked(pos + 1) === CharacterCodes.u) {
+      const start = pos;
+      pos += 2;
+      const value = scanExactNumberOfHexDigits(4, /*canHaveSeparators*/ false);
+      pos = start;
+      return value;
+    }
+    return -1;
+  }
+
+  function peekExtendedUnicodeEscape(): number {
+    if (codePointUnchecked(pos + 1) === CharacterCodes.u && codePointUnchecked(pos + 2) === CharacterCodes.openBrace) {
+      const start = pos;
+      pos += 3;
+      const escapedValueString = scanMinimumNumberOfHexDigits(1, /*canHaveSeparators*/ false);
+      const escapedValue = escapedValueString ? parseInt(escapedValueString, 16) : -1;
+      pos = start;
+      return escapedValue;
+    }
+    return -1;
+  }
+
+  function scanIdentifierParts(): string {
+    let result = "";
+    let start = pos;
+    while (pos < end) {
+      let ch = codePointUnchecked(pos);
+      if (isIdentifierPart(ch, languageVersion)) {
+        pos += charSize(ch);
+      }
+      else if (ch === CharacterCodes.backslash) {
+        ch = peekExtendedUnicodeEscape();
+        if (ch >= 0 && isIdentifierPart(ch, languageVersion)) {
+          result += scanExtendedUnicodeEscape(/*shouldEmitInvalidEscapeError*/ true);
+          start = pos;
+          continue;
+        }
+        ch = peekUnicodeEscape();
+        if (!(ch >= 0 && isIdentifierPart(ch, languageVersion))) {
+          break;
+        }
+        tokenFlags |= TokenFlags.UnicodeEscape;
+        result += text.substring(start, pos);
+        result += utf16EncodeAsString(ch);
+        // Valid Unicode escape is always six characters
+        pos += 6;
+        start = pos;
+      }
+      else {
+        break;
+      }
+    }
+    result += text.substring(start, pos);
+    return result;
+  }
+
+  function getIdentifierToken(): SyntaxKind.Identifier | KeywordSyntaxKind {
+    // Reserved words are between 2 and 12 characters long and start with a lowercase letter
+    const len = tokenValue.length;
+    if (len >= 2 && len <= 12) {
+      const ch = tokenValue.charCodeAt(0);
+      if (ch >= CharacterCodes.a && ch <= CharacterCodes.z) {
+        const keyword = textToKeyword.get(tokenValue);
+        if (keyword !== undefined) {
+          return token = keyword;
+        }
+      }
+    }
+    return token = SyntaxKind.Identifier;
+  }
+
+  function scanBinaryOrOctalDigits(base: 2 | 8): string {
+    let value = "";
+    // For counting number of digits; Valid binaryIntegerLiteral must have at least one binary digit following B or b.
+    // Similarly valid octalIntegerLiteral must have at least one octal digit following o or O.
+    let separatorAllowed = false;
+    let isPreviousTokenSeparator = false;
+    while (true) {
+      const ch = charCodeUnchecked(pos);
+      // Numeric separators are allowed anywhere within a numeric literal, except not at the beginning, or following another separator
+      if (ch === CharacterCodes._) {
+        tokenFlags |= TokenFlags.ContainsSeparator;
+        if (separatorAllowed) {
+          separatorAllowed = false;
+          isPreviousTokenSeparator = true;
+        }
+        else if (isPreviousTokenSeparator) {
+          error(Diagnostics.Multiple_consecutive_numeric_separators_are_not_permitted, pos, 1);
+        }
+        else {
+          error(Diagnostics.Numeric_separators_are_not_allowed_here, pos, 1);
+        }
+        pos++;
+        continue;
+      }
+      separatorAllowed = true;
+      if (!isDigit(ch) || ch - CharacterCodes._0 >= base) {
+        break;
+      }
+      value += text[pos];
+      pos++;
+      isPreviousTokenSeparator = false;
+    }
+    if (charCodeUnchecked(pos - 1) === CharacterCodes._) {
+      // Literal ends with underscore - not allowed
+      error(Diagnostics.Numeric_separators_are_not_allowed_here, pos - 1, 1);
+    }
+    return value;
+  }
+
+  function checkBigIntSuffix(): SyntaxKind {
+    if (charCodeUnchecked(pos) === CharacterCodes.n) {
+      tokenValue += "n";
+      // Use base 10 instead of base 2 or base 8 for shorter literals
+      if (tokenFlags & TokenFlags.BinaryOrOctalSpecifier) {
+        tokenValue = parsePseudoBigInt(tokenValue) + "n";
+      }
+      pos++;
+      return SyntaxKind.BigIntLiteral;
+    }
+    else { // not a bigint, so can convert to number in simplified form
+      // Number() may not support 0b or 0o, so use parseInt() instead
+      const numericValue = tokenFlags & TokenFlags.BinarySpecifier
+        ? parseInt(tokenValue.slice(2), 2) // skip "0b"
+        : tokenFlags & TokenFlags.OctalSpecifier
+        ? parseInt(tokenValue.slice(2), 8) // skip "0o"
+        : +tokenValue;
+      tokenValue = "" + numericValue;
+      return SyntaxKind.NumericLiteral;
+    }
+  }
+
+  function scan(): SyntaxKind {
+    fullStartPos = pos;
+    tokenFlags = TokenFlags.None;
+    while (true) {
+      tokenStart = pos;
+      if (pos >= end) {
+        return token = SyntaxKind.EndOfFileToken;
+      }
+
+      const ch = codePointUnchecked(pos);
+      if (pos === 0) {
+        // Special handling for shebang
+        if (ch === CharacterCodes.hash && isShebangTrivia(text, pos)) {
+          pos = scanShebangTrivia(text, pos);
+          if (skipTrivia) {
+            continue;
+          }
+          else {
+            return token = SyntaxKind.ShebangTrivia;
+          }
+        }
+      }
+
+      switch (ch) {
+        case CharacterCodes.lineFeed:
+        case CharacterCodes.carriageReturn:
+          tokenFlags |= TokenFlags.PrecedingLineBreak;
+          if (skipTrivia) {
+            pos++;
+            continue;
+          }
+          else {
+            if (ch === CharacterCodes.carriageReturn && pos + 1 < end && charCodeUnchecked(pos + 1) === CharacterCodes.lineFeed) {
+              // consume both CR and LF
+              pos += 2;
+            }
+            else {
+              pos++;
+            }
+            return token = SyntaxKind.NewLineTrivia;
+          }
+        case CharacterCodes.tab:
+        case CharacterCodes.verticalTab:
+        case CharacterCodes.formFeed:
+        case CharacterCodes.space:
+        case CharacterCodes.nonBreakingSpace:
+        case CharacterCodes.ogham:
+        case CharacterCodes.enQuad:
+        case CharacterCodes.emQuad:
+        case CharacterCodes.enSpace:
+        case CharacterCodes.emSpace:
+        case CharacterCodes.threePerEmSpace:
+        case CharacterCodes.fourPerEmSpace:
+        case CharacterCodes.sixPerEmSpace:
+        case CharacterCodes.figureSpace:
+        case CharacterCodes.punctuationSpace:
+        case CharacterCodes.thinSpace:
+        case CharacterCodes.hairSpace:
+        case CharacterCodes.zeroWidthSpace:
+        case CharacterCodes.narrowNoBreakSpace:
+        case CharacterCodes.mathematicalSpace:
+        case CharacterCodes.ideographicSpace:
+        case CharacterCodes.byteOrderMark:
+          if (skipTrivia) {
+            pos++;
+            continue;
+          }
+          else {
+            while (pos < end && isWhiteSpaceSingleLine(charCodeUnchecked(pos))) {
+              pos++;
+            }
+            return token = SyntaxKind.WhitespaceTrivia;
+          }
+        case CharacterCodes.exclamation:
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
+              return pos += 3, token = SyntaxKind.ExclamationEqualsEqualsToken;
+            }
+            return pos += 2, token = SyntaxKind.ExclamationEqualsToken;
+          }
+          pos++;
+          return token = SyntaxKind.ExclamationToken;
+        case CharacterCodes.doubleQuote:
+        case CharacterCodes.singleQuote:
+          tokenValue = scanString();
+          return token = SyntaxKind.StringLiteral;
+        case CharacterCodes.backtick:
+          return token = scanTemplateAndSetTokenValue(/*shouldEmitInvalidEscapeError*/ false);
+        case CharacterCodes.percent:
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.PercentEqualsToken;
+          }
+          pos++;
+          return token = SyntaxKind.PercentToken;
+        case CharacterCodes.ampersand:
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.ampersand) {
+            if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
+              return pos += 3, token = SyntaxKind.AmpersandAmpersandEqualsToken;
+            }
+            return pos += 2, token = SyntaxKind.AmpersandAmpersandToken;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.AmpersandEqualsToken;
+          }
+          pos++;
+          return token = SyntaxKind.AmpersandToken;
+        case CharacterCodes.openParen:
+          pos++;
+          return token = SyntaxKind.OpenParenToken;
+        case CharacterCodes.closeParen:
+          pos++;
+          return token = SyntaxKind.CloseParenToken;
+        case CharacterCodes.asterisk:
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.AsteriskEqualsToken;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.asterisk) {
+            if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
+              return pos += 3, token = SyntaxKind.AsteriskAsteriskEqualsToken;
+            }
+            return pos += 2, token = SyntaxKind.AsteriskAsteriskToken;
+          }
+          pos++;
+          if (
+            skipJsDocLeadingAsterisks &&
+            (tokenFlags & TokenFlags.PrecedingJSDocLeadingAsterisks) === 0 &&
+            (tokenFlags & TokenFlags.PrecedingLineBreak)
+          ) {
+            // decoration at the start of a JSDoc comment line
+            tokenFlags |= TokenFlags.PrecedingJSDocLeadingAsterisks;
+            continue;
+          }
+          return token = SyntaxKind.AsteriskToken;
+        case CharacterCodes.plus:
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.plus) {
+            return pos += 2, token = SyntaxKind.PlusPlusToken;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.PlusEqualsToken;
+          }
+          pos++;
+          return token = SyntaxKind.PlusToken;
+        case CharacterCodes.comma:
+          pos++;
+          return token = SyntaxKind.CommaToken;
+        case CharacterCodes.minus:
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.minus) {
+            return pos += 2, token = SyntaxKind.MinusMinusToken;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.MinusEqualsToken;
+          }
+          pos++;
+          return token = SyntaxKind.MinusToken;
+        case CharacterCodes.dot:
+          if (isDigit(charCodeUnchecked(pos + 1))) {
+            scanNumber();
+            return token = SyntaxKind.NumericLiteral;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.dot && charCodeUnchecked(pos + 2) === CharacterCodes.dot) {
+            return pos += 3, token = SyntaxKind.DotDotDotToken;
+          }
+          pos++;
+          return token = SyntaxKind.DotToken;
+        case CharacterCodes.slash:
+          // Single-line comment
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.slash) {
+            pos += 2;
+
+            while (pos < end) {
+              if (isLineBreak(charCodeUnchecked(pos))) {
+                break;
+              }
+              pos++;
+            }
+
+            commentDirectives = appendIfCommentDirective(
+              commentDirectives,
+              text.slice(tokenStart, pos),
+              commentDirectiveRegExSingleLine,
+              tokenStart,
+            );
+
+            if (skipTrivia) {
+              continue;
+            }
+            else {
+              return token = SyntaxKind.SingleLineCommentTrivia;
+            }
+          }
+          // Multi-line comment
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.asterisk) {
+            pos += 2;
+            const isJSDoc = charCodeUnchecked(pos) === CharacterCodes.asterisk && charCodeUnchecked(pos + 1) !== CharacterCodes.slash;
+
+            let commentClosed = false;
+            let lastLineStart = tokenStart;
+            while (pos < end) {
+              const ch = charCodeUnchecked(pos);
+
+              if (ch === CharacterCodes.asterisk && charCodeUnchecked(pos + 1) === CharacterCodes.slash) {
+                pos += 2;
+                commentClosed = true;
+                break;
+              }
+
+              pos++;
+
+              if (isLineBreak(ch)) {
+                lastLineStart = pos;
+                tokenFlags |= TokenFlags.PrecedingLineBreak;
+              }
+            }
+
+            if (isJSDoc && shouldParseJSDoc()) {
+              tokenFlags |= TokenFlags.PrecedingJSDocComment;
+            }
+
+            commentDirectives = appendIfCommentDirective(commentDirectives, text.slice(lastLineStart, pos), commentDirectiveRegExMultiLine, lastLineStart);
+
+            if (!commentClosed) {
+              error(Diagnostics.Asterisk_Slash_expected);
+            }
+
+            if (skipTrivia) {
+              continue;
+            }
+            else {
+              if (!commentClosed) {
+                tokenFlags |= TokenFlags.Unterminated;
+              }
+              return token = SyntaxKind.MultiLineCommentTrivia;
+            }
+          }
+
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.SlashEqualsToken;
+          }
+
+          pos++;
+          return token = SyntaxKind.SlashToken;
+
+        case CharacterCodes._0:
+          if (pos + 2 < end && (charCodeUnchecked(pos + 1) === CharacterCodes.X || charCodeUnchecked(pos + 1) === CharacterCodes.x)) {
+            pos += 2;
+            tokenValue = scanMinimumNumberOfHexDigits(1, /*canHaveSeparators*/ true);
+            if (!tokenValue) {
+              error(Diagnostics.Hexadecimal_digit_expected);
+              tokenValue = "0";
+            }
+            tokenValue = "0x" + tokenValue;
+            tokenFlags |= TokenFlags.HexSpecifier;
+            return token = checkBigIntSuffix();
+          }
+          else if (pos + 2 < end && (charCodeUnchecked(pos + 1) === CharacterCodes.B || charCodeUnchecked(pos + 1) === CharacterCodes.b)) {
+            pos += 2;
+            tokenValue = scanBinaryOrOctalDigits(/* base */ 2);
+            if (!tokenValue) {
+              error(Diagnostics.Binary_digit_expected);
+              tokenValue = "0";
+            }
+            tokenValue = "0b" + tokenValue;
+            tokenFlags |= TokenFlags.BinarySpecifier;
+            return token = checkBigIntSuffix();
+          }
+          else if (pos + 2 < end && (charCodeUnchecked(pos + 1) === CharacterCodes.O || charCodeUnchecked(pos + 1) === CharacterCodes.o)) {
+            pos += 2;
+            tokenValue = scanBinaryOrOctalDigits(/* base */ 8);
+            if (!tokenValue) {
+              error(Diagnostics.Octal_digit_expected);
+              tokenValue = "0";
+            }
+            tokenValue = "0o" + tokenValue;
+            tokenFlags |= TokenFlags.OctalSpecifier;
+            return token = checkBigIntSuffix();
+          }
+        // falls through
+        case CharacterCodes._1:
+        case CharacterCodes._2:
+        case CharacterCodes._3:
+        case CharacterCodes._4:
+        case CharacterCodes._5:
+        case CharacterCodes._6:
+        case CharacterCodes._7:
+        case CharacterCodes._8:
+        case CharacterCodes._9:
+          return token = scanNumber();
+        case CharacterCodes.colon:
+          pos++;
+          return token = SyntaxKind.ColonToken;
+        case CharacterCodes.semicolon:
+          pos++;
+          return token = SyntaxKind.SemicolonToken;
+        case CharacterCodes.lessThan:
+          if (isConflictMarkerTrivia(text, pos)) {
+            pos = scanConflictMarkerTrivia(text, pos, error);
+            if (skipTrivia) {
+              continue;
+            }
+            else {
+              return token = SyntaxKind.ConflictMarkerTrivia;
+            }
+          }
+
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.lessThan) {
+            if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
+              return pos += 3, token = SyntaxKind.LessThanLessThanEqualsToken;
+            }
+            return pos += 2, token = SyntaxKind.LessThanLessThanToken;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.LessThanEqualsToken;
+          }
+          if (
+            languageVariant === LanguageVariant.JSX &&
+            charCodeUnchecked(pos + 1) === CharacterCodes.slash &&
+            charCodeUnchecked(pos + 2) !== CharacterCodes.asterisk
+          ) {
+            return pos += 2, token = SyntaxKind.LessThanSlashToken;
+          }
+          pos++;
+          return token = SyntaxKind.LessThanToken;
+        case CharacterCodes.equals:
+          if (isConflictMarkerTrivia(text, pos)) {
+            pos = scanConflictMarkerTrivia(text, pos, error);
+            if (skipTrivia) {
+              continue;
+            }
+            else {
+              return token = SyntaxKind.ConflictMarkerTrivia;
+            }
+          }
+
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
+              return pos += 3, token = SyntaxKind.EqualsEqualsEqualsToken;
+            }
+            return pos += 2, token = SyntaxKind.EqualsEqualsToken;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.greaterThan) {
+            return pos += 2, token = SyntaxKind.EqualsGreaterThanToken;
+          }
+          pos++;
+          return token = SyntaxKind.EqualsToken;
+        case CharacterCodes.greaterThan:
+          if (isConflictMarkerTrivia(text, pos)) {
+            pos = scanConflictMarkerTrivia(text, pos, error);
+            if (skipTrivia) {
+              continue;
+            }
+            else {
+              return token = SyntaxKind.ConflictMarkerTrivia;
+            }
+          }
+
+          pos++;
+          return token = SyntaxKind.GreaterThanToken;
+        case CharacterCodes.question:
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.dot && !isDigit(charCodeUnchecked(pos + 2))) {
+            return pos += 2, token = SyntaxKind.QuestionDotToken;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.question) {
+            if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
+              return pos += 3, token = SyntaxKind.QuestionQuestionEqualsToken;
+            }
+            return pos += 2, token = SyntaxKind.QuestionQuestionToken;
+          }
+          pos++;
+          return token = SyntaxKind.QuestionToken;
+        case CharacterCodes.openBracket:
+          pos++;
+          return token = SyntaxKind.OpenBracketToken;
+        case CharacterCodes.closeBracket:
+          pos++;
+          return token = SyntaxKind.CloseBracketToken;
+        case CharacterCodes.caret:
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.CaretEqualsToken;
+          }
+          pos++;
+          return token = SyntaxKind.CaretToken;
+        case CharacterCodes.openBrace:
+          pos++;
+          return token = SyntaxKind.OpenBraceToken;
+        case CharacterCodes.bar:
+          if (isConflictMarkerTrivia(text, pos)) {
+            pos = scanConflictMarkerTrivia(text, pos, error);
+            if (skipTrivia) {
+              continue;
+            }
+            else {
+              return token = SyntaxKind.ConflictMarkerTrivia;
+            }
+          }
+
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.bar) {
+            if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
+              return pos += 3, token = SyntaxKind.BarBarEqualsToken;
+            }
+            return pos += 2, token = SyntaxKind.BarBarToken;
+          }
+          if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+            return pos += 2, token = SyntaxKind.BarEqualsToken;
+          }
+          pos++;
+          return token = SyntaxKind.BarToken;
+        case CharacterCodes.closeBrace:
+          pos++;
+          return token = SyntaxKind.CloseBraceToken;
+        case CharacterCodes.tilde:
+          pos++;
+          return token = SyntaxKind.TildeToken;
+        case CharacterCodes.at:
+          pos++;
+          return token = SyntaxKind.AtToken;
+        case CharacterCodes.backslash:
+          const extendedCookedChar = peekExtendedUnicodeEscape();
+          if (extendedCookedChar >= 0 && isIdentifierStart(extendedCookedChar, languageVersion)) {
+            tokenValue = scanExtendedUnicodeEscape(/*shouldEmitInvalidEscapeError*/ true) + scanIdentifierParts();
+            return token = getIdentifierToken();
+          }
+
+          const cookedChar = peekUnicodeEscape();
+          if (cookedChar >= 0 && isIdentifierStart(cookedChar, languageVersion)) {
+            pos += 6;
+            tokenFlags |= TokenFlags.UnicodeEscape;
+            tokenValue = String.fromCharCode(cookedChar) + scanIdentifierParts();
+            return token = getIdentifierToken();
+          }
+
+          error(Diagnostics.Invalid_character);
+          pos++;
+          return token = SyntaxKind.Unknown;
+        case CharacterCodes.hash:
+          if (pos !== 0 && text[pos + 1] === "!") {
+            error(Diagnostics.can_only_be_used_at_the_start_of_a_file, pos, 2);
+            pos++;
+            return token = SyntaxKind.Unknown;
+          }
+
+          const charAfterHash = codePointUnchecked(pos + 1);
+          if (charAfterHash === CharacterCodes.backslash) {
+            pos++;
+            const extendedCookedChar = peekExtendedUnicodeEscape();
+            if (extendedCookedChar >= 0 && isIdentifierStart(extendedCookedChar, languageVersion)) {
+              tokenValue = "#" + scanExtendedUnicodeEscape(/*shouldEmitInvalidEscapeError*/ true) + scanIdentifierParts();
+              return token = SyntaxKind.PrivateIdentifier;
+            }
+
+            const cookedChar = peekUnicodeEscape();
+            if (cookedChar >= 0 && isIdentifierStart(cookedChar, languageVersion)) {
+              pos += 6;
+              tokenFlags |= TokenFlags.UnicodeEscape;
+              tokenValue = "#" + String.fromCharCode(cookedChar) + scanIdentifierParts();
+              return token = SyntaxKind.PrivateIdentifier;
+            }
+            pos--;
+          }
+
+          if (isIdentifierStart(charAfterHash, languageVersion)) {
+            pos++;
+            // We're relying on scanIdentifier's behavior and adjusting the token kind after the fact.
+            // Notably absent from this block is the fact that calling a function named "scanIdentifier",
+            // but identifiers don't include '#', and that function doesn't deal with it at all.
+            // This works because 'scanIdentifier' tries to reuse source characters and builds up substrings;
+            // however, it starts at the 'tokenPos' which includes the '#', and will "accidentally" prepend the '#' for us.
+            scanIdentifier(charAfterHash, languageVersion);
+          }
+          else {
+            tokenValue = "#";
+            error(Diagnostics.Invalid_character, pos++, charSize(ch));
+          }
+          return token = SyntaxKind.PrivateIdentifier;
+        case CharacterCodes.replacementCharacter:
+          error(Diagnostics.File_appears_to_be_binary, 0, 0);
+          pos = end;
+          return token = SyntaxKind.NonTextFileMarkerTrivia;
+        default:
+          const identifierKind = scanIdentifier(ch, languageVersion);
+          if (identifierKind) {
+            return token = identifierKind;
+          }
+          else if (isWhiteSpaceSingleLine(ch)) {
+            pos += charSize(ch);
+            continue;
+          }
+          else if (isLineBreak(ch)) {
+            tokenFlags |= TokenFlags.PrecedingLineBreak;
+            pos += charSize(ch);
+            continue;
+          }
+          const size = charSize(ch);
+          error(Diagnostics.Invalid_character, pos, size);
+          pos += size;
+          return token = SyntaxKind.Unknown;
+      }
+    }
+  }
+
+  function shouldParseJSDoc() {
+    switch (jsDocParsingMode) {
+      case JSDocParsingMode.ParseAll:
+        return true;
+      case JSDocParsingMode.ParseNone:
+        return false;
+    }
+
+    if (scriptKind !== ScriptKind.TS && scriptKind !== ScriptKind.TSX) {
+      // If outside of TS, we need JSDoc to get any type info.
+      return true;
+    }
+
+    if (jsDocParsingMode === JSDocParsingMode.ParseForTypeInfo) {
+      // If we're in TS, but we don't need to produce reliable errors,
+      // we don't need to parse to find @see or @link.
+      return false;
+    }
+
+    return jsDocSeeOrLink.test(text.slice(fullStartPos, pos));
+  }
+
+  function reScanInvalidIdentifier(): SyntaxKind {
+    Debug.assert(token === SyntaxKind.Unknown, "'reScanInvalidIdentifier' should only be called when the current token is 'SyntaxKind.Unknown'.");
+    pos = tokenStart = fullStartPos;
+    tokenFlags = 0;
+    const ch = codePointUnchecked(pos);
+    const identifierKind = scanIdentifier(ch, ScriptTarget.ESNext);
+    if (identifierKind) {
+      return token = identifierKind;
+    }
+    pos += charSize(ch);
+    return token; // Still `SyntaxKind.Unknown`
+  }
+
+  function scanIdentifier(startCharacter: number, languageVersion: ScriptTarget) {
+    let ch = startCharacter;
+    if (isIdentifierStart(ch, languageVersion)) {
+      pos += charSize(ch);
+      while (pos < end && isIdentifierPart(ch = codePointUnchecked(pos), languageVersion)) pos += charSize(ch);
+      tokenValue = text.substring(tokenStart, pos);
+      if (ch === CharacterCodes.backslash) {
+        tokenValue += scanIdentifierParts();
+      }
+      return getIdentifierToken();
+    }
+  }
+
+  function reScanGreaterToken(): SyntaxKind {
+    if (token === SyntaxKind.GreaterThanToken) {
+      if (charCodeUnchecked(pos) === CharacterCodes.greaterThan) {
+        if (charCodeUnchecked(pos + 1) === CharacterCodes.greaterThan) {
+          if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
+            return pos += 3, token = SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken;
+          }
+          return pos += 2, token = SyntaxKind.GreaterThanGreaterThanGreaterThanToken;
+        }
+        if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
+          return pos += 2, token = SyntaxKind.GreaterThanGreaterThanEqualsToken;
+        }
+        pos++;
+        return token = SyntaxKind.GreaterThanGreaterThanToken;
+      }
+      if (charCodeUnchecked(pos) === CharacterCodes.equals) {
+        pos++;
+        return token = SyntaxKind.GreaterThanEqualsToken;
+      }
+    }
+    return token;
+  }
+
+  function reScanAsteriskEqualsToken(): SyntaxKind {
+    Debug.assert(token === SyntaxKind.AsteriskEqualsToken, "'reScanAsteriskEqualsToken' should only be called on a '*='");
+    pos = tokenStart + 1;
+    return token = SyntaxKind.EqualsToken;
+  }
+
+  function reScanSlashToken(reportErrors?: boolean): SyntaxKind {
+    if (token === SyntaxKind.SlashToken || token === SyntaxKind.SlashEqualsToken) {
+      // Quickly get to the end of regex such that we know the flags
+      const startOfRegExpBody = tokenStart + 1;
+      pos = startOfRegExpBody;
+      let inEscape = false;
+      let namedCaptureGroups = false;
+      // Although nested character classes are allowed in Unicode Sets mode,
+      // an unescaped slash is nevertheless invalid even in a character class in any Unicode mode.
+      // This is indicated by Section 12.9.5 Regular Expression Literals of the specification,
+      // where nested character classes are not considered at all. (A `[` RegularExpressionClassChar
+      // does nothing in a RegularExpressionClass, and a `]` always closes the class.)
+      // Additionally, parsing nested character classes will misinterpret regexes like `/[[]/`
+      // as unterminated, consuming characters beyond the slash. (This even applies to `/[[]/v`,
+      // which should be parsed as a well-terminated regex with an incomplete character class.)
+      // Thus we must not handle nested character classes in the first pass.
+      let inCharacterClass = false;
+      while (true) {
+        // If we reach the end of a file, or hit a newline, then this is an unterminated
+        // regex.  Report error and return what we have so far.
+        const ch = charCodeChecked(pos);
+        if (ch === CharacterCodes.EOF || isLineBreak(ch)) {
+          tokenFlags |= TokenFlags.Unterminated;
+          break;
+        }
+
+        if (inEscape) {
+          // Parsing an escape character;
+          // reset the flag and just advance to the next char.
+          inEscape = false;
+        }
+        else if (ch === CharacterCodes.slash && !inCharacterClass) {
+          // A slash within a character class is permissible,
+          // but in general it signals the end of the regexp literal.
+          break;
+        }
+        else if (ch === CharacterCodes.openBracket) {
+          inCharacterClass = true;
+        }
+        else if (ch === CharacterCodes.backslash) {
+          inEscape = true;
+        }
+        else if (ch === CharacterCodes.closeBracket) {
+          inCharacterClass = false;
+        }
+        else if (
+          !inCharacterClass
+          && ch === CharacterCodes.openParen
+          && charCodeChecked(pos + 1) === CharacterCodes.question
+          && charCodeChecked(pos + 2) === CharacterCodes.lessThan
+          && charCodeChecked(pos + 3) !== CharacterCodes.equals
+          && charCodeChecked(pos + 3) !== CharacterCodes.exclamation
+        ) {
+          namedCaptureGroups = true;
+        }
+        pos++;
+      }
+      const endOfRegExpBody = pos;
+      if (tokenFlags & TokenFlags.Unterminated) {
+        // Search for the nearest unbalanced bracket for better recovery. Since the expression is
+        // invalid anyways, we take nested square brackets into consideration for the best guess.
+        pos = startOfRegExpBody;
+        inEscape = false;
+        let characterClassDepth = 0;
+        let inDecimalQuantifier = false;
+        let groupDepth = 0;
+        while (pos < endOfRegExpBody) {
+          const ch = charCodeUnchecked(pos);
+          if (inEscape) {
+            inEscape = false;
+          }
+          else if (ch === CharacterCodes.backslash) {
+            inEscape = true;
+          }
+          else if (ch === CharacterCodes.openBracket) {
+            characterClassDepth++;
+          }
+          else if (ch === CharacterCodes.closeBracket && characterClassDepth) {
+            characterClassDepth--;
+          }
+          else if (!characterClassDepth) {
+            if (ch === CharacterCodes.openBrace) {
+              inDecimalQuantifier = true;
+            }
+            else if (ch === CharacterCodes.closeBrace && inDecimalQuantifier) {
+              inDecimalQuantifier = false;
+            }
+            else if (!inDecimalQuantifier) {
+              if (ch === CharacterCodes.openParen) {
+                groupDepth++;
+              }
+              else if (ch === CharacterCodes.closeParen && groupDepth) {
+                groupDepth--;
+              }
+              else if (ch === CharacterCodes.closeParen || ch === CharacterCodes.closeBracket || ch === CharacterCodes.closeBrace) {
+                // We encountered an unbalanced bracket outside a character class. Treat this position as the end of regex.
+                break;
+              }
+            }
+          }
+          pos++;
+        }
+        // Whitespaces and semicolons at the end are not likely to be part of the regex
+        while (isWhiteSpaceLike(charCodeChecked(pos - 1)) || charCodeChecked(pos - 1) === CharacterCodes.semicolon) pos--;
+        error(Diagnostics.Unterminated_regular_expression_literal, tokenStart, pos - tokenStart);
+      }
+      else {
+        // Consume the slash character
+        pos++;
+        let regExpFlags = RegularExpressionFlags.None;
+        while (true) {
+          const ch = codePointChecked(pos);
+          if (ch === CharacterCodes.EOF || !isIdentifierPart(ch, languageVersion)) {
+            break;
+          }
+          const size = charSize(ch);
+          if (reportErrors) {
+            const flag = characterCodeToRegularExpressionFlag(ch);
+            if (flag === undefined) {
+              error(Diagnostics.Unknown_regular_expression_flag, pos, size);
+            }
+            else if (regExpFlags & flag) {
+              error(Diagnostics.Duplicate_regular_expression_flag, pos, size);
+            }
+            else if (((regExpFlags | flag) & RegularExpressionFlags.AnyUnicodeMode) === RegularExpressionFlags.AnyUnicodeMode) {
+              error(Diagnostics.The_Unicode_u_flag_and_the_Unicode_Sets_v_flag_cannot_be_set_simultaneously, pos, size);
+            }
+            else {
+              regExpFlags |= flag;
+              checkRegularExpressionFlagAvailability(flag, size);
+            }
+          }
+          pos += size;
+        }
+        if (reportErrors) {
+          scanRange(startOfRegExpBody, endOfRegExpBody - startOfRegExpBody, () => {
+            scanRegularExpressionWorker(regExpFlags, /*annexB*/ true, namedCaptureGroups);
+          });
+        }
+      }
+      tokenValue = text.substring(tokenStart, pos);
+      token = SyntaxKind.RegularExpressionLiteral;
+    }
+    return token;
+  }
+
+  function scanRegularExpressionWorker(regExpFlags: RegularExpressionFlags, annexB: boolean, namedCaptureGroups: boolean) {
     // Why var? It avoids TDZ checks in the runtime which can be costly.
     // See: https://github.com/microsoft/TypeScript/issues/52924
     /* eslint-disable no-var */
-    var text = textInitial!;
 
-    // Current position (end position of text of current token)
-    var pos: number;
+    /** Grammar parameter */
+    var unicodeSetsMode = !!(regExpFlags & RegularExpressionFlags.UnicodeSets);
+    /** Grammar parameter */
+    var anyUnicodeMode = !!(regExpFlags & RegularExpressionFlags.AnyUnicodeMode);
 
-    // end of text
-    var end: number;
+    // Regular expressions are checked more strictly when either in 'u' or 'v' mode, or
+    // when not using the looser interpretation of the syntax from ECMA-262 Annex B.
+    var anyUnicodeModeOrNonAnnexB = anyUnicodeMode || !annexB;
 
-    // Start position of whitespace before current token
-    var fullStartPos: number;
+    /** @see {scanClassSetExpression} */
+    var mayContainStrings = false;
 
-    // Start position of text of current token
-    var tokenStart: number;
-
-    var token: SyntaxKind;
-    var tokenValue!: string;
-    var tokenFlags: TokenFlags;
-
-    var commentDirectives: CommentDirective[] | undefined;
-    var skipJsDocLeadingAsterisks = 0;
-
-    var scriptKind = ScriptKind.Unknown;
-    var jsDocParsingMode = JSDocParsingMode.ParseAll;
-
-    setText(text, start, length);
-
-    var scanner: Scanner = {
-        getTokenFullStart: () => fullStartPos,
-        getStartPos: () => fullStartPos,
-        getTokenEnd: () => pos,
-        getTextPos: () => pos,
-        getToken: () => token,
-        getTokenStart: () => tokenStart,
-        getTokenPos: () => tokenStart,
-        getTokenText: () => text.substring(tokenStart, pos),
-        getTokenValue: () => tokenValue,
-        hasUnicodeEscape: () => (tokenFlags & TokenFlags.UnicodeEscape) !== 0,
-        hasExtendedUnicodeEscape: () => (tokenFlags & TokenFlags.ExtendedUnicodeEscape) !== 0,
-        hasPrecedingLineBreak: () => (tokenFlags & TokenFlags.PrecedingLineBreak) !== 0,
-        hasPrecedingJSDocComment: () => (tokenFlags & TokenFlags.PrecedingJSDocComment) !== 0,
-        hasPrecedingJSDocLeadingAsterisks: () => (tokenFlags & TokenFlags.PrecedingJSDocLeadingAsterisks) !== 0,
-        isIdentifier: () => token === SyntaxKind.Identifier || token > SyntaxKind.LastReservedWord,
-        isReservedWord: () => token >= SyntaxKind.FirstReservedWord && token <= SyntaxKind.LastReservedWord,
-        isUnterminated: () => (tokenFlags & TokenFlags.Unterminated) !== 0,
-        getCommentDirectives: () => commentDirectives,
-        getNumericLiteralFlags: () => tokenFlags & TokenFlags.NumericLiteralFlags,
-        getTokenFlags: () => tokenFlags,
-        reScanGreaterToken,
-        reScanAsteriskEqualsToken,
-        reScanSlashToken,
-        reScanTemplateToken,
-        reScanTemplateHeadOrNoSubstitutionTemplate,
-        scanJsxIdentifier,
-        scanJsxAttributeValue,
-        reScanJsxAttributeValue,
-        reScanJsxToken,
-        reScanLessThanToken,
-        reScanHashToken,
-        reScanQuestionToken,
-        reScanInvalidIdentifier,
-        scanJsxToken,
-        scanJsDocToken,
-        scanJSDocCommentTextToken,
-        scan,
-        getText,
-        clearCommentDirectives,
-        setText,
-        setScriptTarget,
-        setLanguageVariant,
-        setScriptKind,
-        setJSDocParsingMode,
-        setOnError,
-        resetTokenState,
-        setTextPos: resetTokenState,
-        setSkipJsDocLeadingAsterisks,
-        tryScan,
-        lookAhead,
-        scanRange,
-    };
+    /** The number of all (named and unnamed) capturing groups defined in the regex. */
+    var numberOfCapturingGroups = 0;
+    /** All named capturing groups defined in the regex. */
+    var groupSpecifiers: Set<string> | undefined;
+    /** All references to named capturing groups in the regex. */
+    var groupNameReferences: (TextRange & { name: string; })[] | undefined;
+    /** All numeric backreferences within the regex. */
+    var decimalEscapes: (TextRange & { value: number; })[] | undefined;
+    /** A stack of scopes for named capturing groups. @see {scanGroupName} */
+    var namedCapturingGroupsScopeStack: (Set<string> | undefined)[] = [];
+    var topNamedCapturingGroupsScope: Set<string> | undefined;
     /* eslint-enable no-var */
-
-    if (Debug.isDebugging) {
-        Object.defineProperty(scanner, "__debugShowCurrentPositionInText", {
-            get: () => {
-                const text = scanner.getText();
-                return text.slice(0, scanner.getTokenFullStart()) + "║" + text.slice(scanner.getTokenFullStart());
-            },
-        });
-    }
-
-    return scanner;
-
-    /**
-     * Returns the code point for the character at the given position within `text`. This
-     * should only be used when pos is guaranteed to be within the bounds of `text` as this
-     * function does not perform bounds checks.
-     */
-    function codePointUnchecked(pos: number) {
-        return codePointAt(text, pos);
-    }
-
-    /**
-     * Returns the code point for the character at the given position within `text`. If
-     * `pos` is outside the bounds set for `text`, `CharacterCodes.EOF` is returned instead.
-     */
-    function codePointChecked(pos: number) {
-        return pos >= 0 && pos < end ? codePointUnchecked(pos) : CharacterCodes.EOF;
-    }
-
-    /**
-     * Returns the char code for the character at the given position within `text`. This
-     * should only be used when pos is guaranteed to be within the bounds of `text` as this
-     * function does not perform bounds checks.
-     */
-    function charCodeUnchecked(pos: number) {
-        return text.charCodeAt(pos);
-    }
-
-    /**
-     * Returns the char code for the character at the given position within `text`. If
-     * `pos` is outside the bounds set for `text`, `CharacterCodes.EOF` is returned instead.
-     */
-    function charCodeChecked(pos: number) {
-        return pos >= 0 && pos < end ? charCodeUnchecked(pos) : CharacterCodes.EOF;
-    }
-
-    function error(message: DiagnosticMessage): void;
-    function error(message: DiagnosticMessage, errPos: number, length: number, arg0?: any): void;
-    function error(message: DiagnosticMessage, errPos: number = pos, length?: number, arg0?: any): void {
-        if (onError) {
-            const oldPos = pos;
-            pos = errPos;
-            onError(message, length || 0, arg0);
-            pos = oldPos;
+    // Disjunction ::= Alternative ('|' Alternative)*
+    function scanDisjunction(isInGroup: boolean) {
+      while (true) {
+        namedCapturingGroupsScopeStack.push(topNamedCapturingGroupsScope);
+        topNamedCapturingGroupsScope = undefined;
+        scanAlternative(isInGroup);
+        topNamedCapturingGroupsScope = namedCapturingGroupsScopeStack.pop();
+        if (charCodeChecked(pos) !== CharacterCodes.bar) {
+          return;
         }
+        pos++;
+      }
     }
 
-    function scanNumberFragment(): string {
-        let start = pos;
-        let allowSeparator = false;
-        let isPreviousTokenSeparator = false;
-        let result = "";
-        while (true) {
-            const ch = charCodeUnchecked(pos);
-            if (ch === CharacterCodes._) {
-                tokenFlags |= TokenFlags.ContainsSeparator;
-                if (allowSeparator) {
-                    allowSeparator = false;
-                    isPreviousTokenSeparator = true;
-                    result += text.substring(start, pos);
+    // Alternative ::= Term*
+    // Term ::=
+    //     | Assertion
+    //     | Atom Quantifier?
+    // Assertion ::=
+    //     | '^'
+    //     | '$'
+    //     | '\b'
+    //     | '\B'
+    //     | '(?=' Disjunction ')'
+    //     | '(?!' Disjunction ')'
+    //     | '(?<=' Disjunction ')'
+    //     | '(?<!' Disjunction ')'
+    // Quantifier ::= QuantifierPrefix '?'?
+    // QuantifierPrefix ::=
+    //     | '*'
+    //     | '+'
+    //     | '?'
+    //     | '{' DecimalDigits (',' DecimalDigits?)? '}'
+    // Atom ::=
+    //     | PatternCharacter
+    //     | '.'
+    //     | '\' AtomEscape
+    //     | CharacterClass
+    //     | '(?<' RegExpIdentifierName '>' Disjunction ')'
+    //     | '(?' RegularExpressionFlags ('-' RegularExpressionFlags)? ':' Disjunction ')'
+    // CharacterClass ::= unicodeMode
+    //     ? '[' ClassRanges ']'
+    //     : '[' ClassSetExpression ']'
+    function scanAlternative(isInGroup: boolean) {
+      let isPreviousTermQuantifiable = false;
+      while (true) {
+        const start = pos;
+        const ch = charCodeChecked(pos);
+        switch (ch) {
+          case CharacterCodes.EOF:
+            return;
+          case CharacterCodes.caret:
+          case CharacterCodes.$:
+            pos++;
+            isPreviousTermQuantifiable = false;
+            break;
+          case CharacterCodes.backslash:
+            pos++;
+            switch (charCodeChecked(pos)) {
+              case CharacterCodes.b:
+              case CharacterCodes.B:
+                pos++;
+                isPreviousTermQuantifiable = false;
+                break;
+              default:
+                scanAtomEscape();
+                isPreviousTermQuantifiable = true;
+                break;
+            }
+            break;
+          case CharacterCodes.openParen:
+            pos++;
+            if (charCodeChecked(pos) === CharacterCodes.question) {
+              pos++;
+              switch (charCodeChecked(pos)) {
+                case CharacterCodes.equals:
+                case CharacterCodes.exclamation:
+                  pos++;
+                  // In Annex B, `(?=Disjunction)` and `(?!Disjunction)` are quantifiable
+                  isPreviousTermQuantifiable = !anyUnicodeModeOrNonAnnexB;
+                  break;
+                case CharacterCodes.lessThan:
+                  const groupNameStart = pos;
+                  pos++;
+                  switch (charCodeChecked(pos)) {
+                    case CharacterCodes.equals:
+                    case CharacterCodes.exclamation:
+                      pos++;
+                      isPreviousTermQuantifiable = false;
+                      break;
+                    default:
+                      scanGroupName(/*isReference*/ false);
+                      scanExpectedChar(CharacterCodes.greaterThan);
+                      if (languageVersion < ScriptTarget.ES2018) {
+                        error(Diagnostics.Named_capturing_groups_are_only_available_when_targeting_ES2018_or_later, groupNameStart, pos - groupNameStart);
+                      }
+                      numberOfCapturingGroups++;
+                      isPreviousTermQuantifiable = true;
+                      break;
+                  }
+                  break;
+                default:
+                  const start = pos;
+                  const setFlags = scanPatternModifiers(RegularExpressionFlags.None);
+                  if (charCodeChecked(pos) === CharacterCodes.minus) {
+                    pos++;
+                    scanPatternModifiers(setFlags);
+                    if (pos === start + 1) {
+                      error(Diagnostics.Subpattern_flags_must_be_present_when_there_is_a_minus_sign, start, pos - start);
+                    }
+                  }
+                  scanExpectedChar(CharacterCodes.colon);
+                  isPreviousTermQuantifiable = true;
+                  break;
+              }
+            }
+            else {
+              numberOfCapturingGroups++;
+              isPreviousTermQuantifiable = true;
+            }
+            scanDisjunction(/*isInGroup*/ true);
+            scanExpectedChar(CharacterCodes.closeParen);
+            break;
+          case CharacterCodes.openBrace:
+            pos++;
+            const digitsStart = pos;
+            scanDigits();
+            const min = tokenValue;
+            if (!anyUnicodeModeOrNonAnnexB && !min) {
+              isPreviousTermQuantifiable = true;
+              break;
+            }
+            if (charCodeChecked(pos) === CharacterCodes.comma) {
+              pos++;
+              scanDigits();
+              const max = tokenValue;
+              if (!min) {
+                if (max || charCodeChecked(pos) === CharacterCodes.closeBrace) {
+                  error(Diagnostics.Incomplete_quantifier_Digit_expected, digitsStart, 0);
                 }
                 else {
-                    tokenFlags |= TokenFlags.ContainsInvalidSeparator;
-                    if (isPreviousTokenSeparator) {
-                        error(Diagnostics.Multiple_consecutive_numeric_separators_are_not_permitted, pos, 1);
-                    }
-                    else {
-                        error(Diagnostics.Numeric_separators_are_not_allowed_here, pos, 1);
-                    }
+                  error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, start, 1, String.fromCharCode(ch));
+                  isPreviousTermQuantifiable = true;
+                  break;
                 }
-                pos++;
-                start = pos;
-                continue;
+              }
+              else if (max && Number.parseInt(min) > Number.parseInt(max) && (anyUnicodeModeOrNonAnnexB || charCodeChecked(pos) === CharacterCodes.closeBrace)) {
+                error(Diagnostics.Numbers_out_of_order_in_quantifier, digitsStart, pos - digitsStart);
+              }
             }
-            if (isDigit(ch)) {
-                allowSeparator = true;
-                isPreviousTokenSeparator = false;
+            else if (!min) {
+              if (anyUnicodeModeOrNonAnnexB) {
+                error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, start, 1, String.fromCharCode(ch));
+              }
+              isPreviousTermQuantifiable = true;
+              break;
+            }
+            if (charCodeChecked(pos) !== CharacterCodes.closeBrace) {
+              if (anyUnicodeModeOrNonAnnexB) {
+                error(Diagnostics._0_expected, pos, 0, String.fromCharCode(CharacterCodes.closeBrace));
+                pos--;
+              }
+              else {
+                isPreviousTermQuantifiable = true;
+                break;
+              }
+            }
+          // falls through
+          case CharacterCodes.asterisk:
+          case CharacterCodes.plus:
+          case CharacterCodes.question:
+            pos++;
+            if (charCodeChecked(pos) === CharacterCodes.question) {
+              // Non-greedy
+              pos++;
+            }
+            if (!isPreviousTermQuantifiable) {
+              error(Diagnostics.There_is_nothing_available_for_repetition, start, pos - start);
+            }
+            isPreviousTermQuantifiable = false;
+            break;
+          case CharacterCodes.dot:
+            pos++;
+            isPreviousTermQuantifiable = true;
+            break;
+          case CharacterCodes.openBracket:
+            pos++;
+            if (unicodeSetsMode) {
+              scanClassSetExpression();
+            }
+            else {
+              scanClassRanges();
+            }
+            scanExpectedChar(CharacterCodes.closeBracket);
+            isPreviousTermQuantifiable = true;
+            break;
+          case CharacterCodes.closeParen:
+            if (isInGroup) {
+              return;
+            }
+          // falls through
+          case CharacterCodes.closeBracket:
+          case CharacterCodes.closeBrace:
+            if (anyUnicodeModeOrNonAnnexB || ch === CharacterCodes.closeParen) {
+              error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
+            }
+            pos++;
+            isPreviousTermQuantifiable = true;
+            break;
+          case CharacterCodes.slash:
+          case CharacterCodes.bar:
+            return;
+          default:
+            scanSourceCharacter();
+            isPreviousTermQuantifiable = true;
+            break;
+        }
+      }
+    }
+
+    function scanPatternModifiers(currFlags: RegularExpressionFlags): RegularExpressionFlags {
+      while (true) {
+        const ch = codePointChecked(pos);
+        if (ch === CharacterCodes.EOF || !isIdentifierPart(ch, languageVersion)) {
+          break;
+        }
+        const size = charSize(ch);
+        const flag = characterCodeToRegularExpressionFlag(ch);
+        if (flag === undefined) {
+          error(Diagnostics.Unknown_regular_expression_flag, pos, size);
+        }
+        else if (currFlags & flag) {
+          error(Diagnostics.Duplicate_regular_expression_flag, pos, size);
+        }
+        else if (!(flag & RegularExpressionFlags.Modifiers)) {
+          error(Diagnostics.This_regular_expression_flag_cannot_be_toggled_within_a_subpattern, pos, size);
+        }
+        else {
+          currFlags |= flag;
+          checkRegularExpressionFlagAvailability(flag, size);
+        }
+        pos += size;
+      }
+      return currFlags;
+    }
+
+    // AtomEscape ::=
+    //     | DecimalEscape
+    //     | CharacterClassEscape
+    //     | CharacterEscape
+    //     | 'k<' RegExpIdentifierName '>'
+    function scanAtomEscape() {
+      Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.backslash);
+      switch (charCodeChecked(pos)) {
+        case CharacterCodes.k:
+          pos++;
+          if (charCodeChecked(pos) === CharacterCodes.lessThan) {
+            pos++;
+            scanGroupName(/*isReference*/ true);
+            scanExpectedChar(CharacterCodes.greaterThan);
+          }
+          else if (anyUnicodeModeOrNonAnnexB || namedCaptureGroups) {
+            error(Diagnostics.k_must_be_followed_by_a_capturing_group_name_enclosed_in_angle_brackets, pos - 2, 2);
+          }
+          break;
+        case CharacterCodes.q:
+          if (unicodeSetsMode) {
+            pos++;
+            error(Diagnostics.q_is_only_available_inside_character_class, pos - 2, 2);
+            break;
+          }
+        // falls through
+        default:
+          // The scanEscapeSequence call in scanCharacterEscape must return non-empty strings
+          // since there must not be line breaks in a regex literal
+          Debug.assert(scanCharacterClassEscape() || scanDecimalEscape() || scanCharacterEscape(/*atomEscape*/ true));
+          break;
+      }
+    }
+
+    // DecimalEscape ::= [1-9] [0-9]*
+    function scanDecimalEscape(): boolean {
+      Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.backslash);
+      const ch = charCodeChecked(pos);
+      if (ch >= CharacterCodes._1 && ch <= CharacterCodes._9) {
+        const start = pos;
+        scanDigits();
+        decimalEscapes = append(decimalEscapes, { pos: start, end: pos, value: +tokenValue });
+        return true;
+      }
+      return false;
+    }
+
+    // CharacterEscape ::=
+    //     | `c` ControlLetter
+    //     | IdentityEscape
+    //     | (Other sequences handled by `scanEscapeSequence`)
+    // IdentityEscape ::=
+    //     | '^' | '$' | '/' | '\' | '.' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|'
+    //     | [~UnicodeMode] (any other non-identifier characters)
+    function scanCharacterEscape(atomEscape: boolean): string {
+      Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.backslash);
+      let ch = charCodeChecked(pos);
+      switch (ch) {
+        case CharacterCodes.EOF:
+          error(Diagnostics.Undetermined_character_escape, pos - 1, 1);
+          return "\\";
+        case CharacterCodes.c:
+          pos++;
+          ch = charCodeChecked(pos);
+          if (isASCIILetter(ch)) {
+            pos++;
+            return String.fromCharCode(ch & 0x1f);
+          }
+          if (anyUnicodeModeOrNonAnnexB) {
+            error(Diagnostics.c_must_be_followed_by_an_ASCII_letter, pos - 2, 2);
+          }
+          else if (atomEscape) {
+            // Annex B treats
+            //
+            //  ExtendedAtom : `\` [lookahead = `c`]
+            //
+            // as the single character `\` when `c` isn't followed by a valid control character
+            pos--;
+            return "\\";
+          }
+          return String.fromCharCode(ch);
+        case CharacterCodes.caret:
+        case CharacterCodes.$:
+        case CharacterCodes.slash:
+        case CharacterCodes.backslash:
+        case CharacterCodes.dot:
+        case CharacterCodes.asterisk:
+        case CharacterCodes.plus:
+        case CharacterCodes.question:
+        case CharacterCodes.openParen:
+        case CharacterCodes.closeParen:
+        case CharacterCodes.openBracket:
+        case CharacterCodes.closeBracket:
+        case CharacterCodes.openBrace:
+        case CharacterCodes.closeBrace:
+        case CharacterCodes.bar:
+          pos++;
+          return String.fromCharCode(ch);
+        default:
+          pos--;
+          return scanEscapeSequence(
+            EscapeSequenceScanningFlags.RegularExpression
+              | (annexB ? EscapeSequenceScanningFlags.AnnexB : 0)
+              | (anyUnicodeMode ? EscapeSequenceScanningFlags.AnyUnicodeMode : 0)
+              | (atomEscape ? EscapeSequenceScanningFlags.AtomEscape : 0),
+          );
+      }
+    }
+
+    function scanGroupName(isReference: boolean) {
+      Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.lessThan);
+      tokenStart = pos;
+      scanIdentifier(codePointChecked(pos), languageVersion);
+      if (pos === tokenStart) {
+        error(Diagnostics.Expected_a_capturing_group_name);
+      }
+      else if (isReference) {
+        groupNameReferences = append(groupNameReferences, { pos: tokenStart, end: pos, name: tokenValue });
+      }
+      else if (topNamedCapturingGroupsScope?.has(tokenValue) || namedCapturingGroupsScopeStack.some(group => group?.has(tokenValue))) {
+        error(Diagnostics.Named_capturing_groups_with_the_same_name_must_be_mutually_exclusive_to_each_other, tokenStart, pos - tokenStart);
+      }
+      else {
+        topNamedCapturingGroupsScope ??= new Set();
+        topNamedCapturingGroupsScope.add(tokenValue);
+        groupSpecifiers ??= new Set();
+        groupSpecifiers.add(tokenValue);
+      }
+    }
+
+    function isClassContentExit(ch: number) {
+      return ch === CharacterCodes.closeBracket || ch === CharacterCodes.EOF || pos >= end;
+    }
+
+    // ClassRanges ::= '^'? (ClassAtom ('-' ClassAtom)?)*
+    function scanClassRanges() {
+      Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.openBracket);
+      if (charCodeChecked(pos) === CharacterCodes.caret) {
+        // character complement
+        pos++;
+      }
+      while (true) {
+        const ch = charCodeChecked(pos);
+        if (isClassContentExit(ch)) {
+          return;
+        }
+        const minStart = pos;
+        const minCharacter = scanClassAtom();
+        if (charCodeChecked(pos) === CharacterCodes.minus) {
+          pos++;
+          const ch = charCodeChecked(pos);
+          if (isClassContentExit(ch)) {
+            return;
+          }
+          if (!minCharacter && anyUnicodeModeOrNonAnnexB) {
+            error(Diagnostics.A_character_class_range_must_not_be_bounded_by_another_character_class, minStart, pos - 1 - minStart);
+          }
+          const maxStart = pos;
+          const maxCharacter = scanClassAtom();
+          if (!maxCharacter && anyUnicodeModeOrNonAnnexB) {
+            error(Diagnostics.A_character_class_range_must_not_be_bounded_by_another_character_class, maxStart, pos - maxStart);
+            continue;
+          }
+          if (!minCharacter) {
+            continue;
+          }
+          const minCharacterValue = codePointAt(minCharacter, 0);
+          const maxCharacterValue = codePointAt(maxCharacter, 0);
+          if (
+            minCharacter.length === charSize(minCharacterValue) &&
+            maxCharacter.length === charSize(maxCharacterValue) &&
+            minCharacterValue > maxCharacterValue
+          ) {
+            error(Diagnostics.Range_out_of_order_in_character_class, minStart, pos - minStart);
+          }
+        }
+      }
+    }
+
+    // Static Semantics: MayContainStrings
+    //     ClassUnion: ClassSetOperands.some(ClassSetOperand => ClassSetOperand.MayContainStrings)
+    //     ClassIntersection: ClassSetOperands.every(ClassSetOperand => ClassSetOperand.MayContainStrings)
+    //     ClassSubtraction: ClassSetOperands[0].MayContainStrings
+    //     ClassSetOperand:
+    //         || ClassStringDisjunctionContents.MayContainStrings
+    //         || CharacterClassEscape.UnicodePropertyValueExpression.LoneUnicodePropertyNameOrValue.MayContainStrings
+    //     ClassStringDisjunctionContents: ClassStrings.some(ClassString => ClassString.ClassSetCharacters.length !== 1)
+    //     LoneUnicodePropertyNameOrValue: isBinaryUnicodePropertyOfStrings(LoneUnicodePropertyNameOrValue)
+
+    // ClassSetExpression ::= '^'? (ClassUnion | ClassIntersection | ClassSubtraction)
+    // ClassUnion ::= (ClassSetRange | ClassSetOperand)*
+    // ClassIntersection ::= ClassSetOperand ('&&' ClassSetOperand)+
+    // ClassSubtraction ::= ClassSetOperand ('--' ClassSetOperand)+
+    // ClassSetRange ::= ClassSetCharacter '-' ClassSetCharacter
+    function scanClassSetExpression() {
+      Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.openBracket);
+      let isCharacterComplement = false;
+      if (charCodeChecked(pos) === CharacterCodes.caret) {
+        pos++;
+        isCharacterComplement = true;
+      }
+      let expressionMayContainStrings = false;
+      let ch = charCodeChecked(pos);
+      if (isClassContentExit(ch)) {
+        return;
+      }
+      let start = pos;
+      let operand!: string;
+      switch (text.slice(pos, pos + 2)) { // TODO: don't use slice
+        case "--":
+        case "&&":
+          error(Diagnostics.Expected_a_class_set_operand);
+          mayContainStrings = false;
+          break;
+        default:
+          operand = scanClassSetOperand();
+          break;
+      }
+      switch (charCodeChecked(pos)) {
+        case CharacterCodes.minus:
+          if (charCodeChecked(pos + 1) === CharacterCodes.minus) {
+            if (isCharacterComplement && mayContainStrings) {
+              error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, start, pos - start);
+            }
+            expressionMayContainStrings = mayContainStrings;
+            scanClassSetSubExpression(ClassSetExpressionType.ClassSubtraction);
+            mayContainStrings = !isCharacterComplement && expressionMayContainStrings;
+            return;
+          }
+          break;
+        case CharacterCodes.ampersand:
+          if (charCodeChecked(pos + 1) === CharacterCodes.ampersand) {
+            scanClassSetSubExpression(ClassSetExpressionType.ClassIntersection);
+            if (isCharacterComplement && mayContainStrings) {
+              error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, start, pos - start);
+            }
+            expressionMayContainStrings = mayContainStrings;
+            mayContainStrings = !isCharacterComplement && expressionMayContainStrings;
+            return;
+          }
+          else {
+            error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
+          }
+          break;
+        default:
+          if (isCharacterComplement && mayContainStrings) {
+            error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, start, pos - start);
+          }
+          expressionMayContainStrings = mayContainStrings;
+          break;
+      }
+      while (true) {
+        ch = charCodeChecked(pos);
+        if (ch === CharacterCodes.EOF) {
+          break;
+        }
+        switch (ch) {
+          case CharacterCodes.minus:
+            pos++;
+            ch = charCodeChecked(pos);
+            if (isClassContentExit(ch)) {
+              mayContainStrings = !isCharacterComplement && expressionMayContainStrings;
+              return;
+            }
+            if (ch === CharacterCodes.minus) {
+              pos++;
+              error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 2, 2);
+              start = pos - 2;
+              operand = text.slice(start, pos);
+              continue;
+            }
+            else {
+              if (!operand) {
+                error(Diagnostics.A_character_class_range_must_not_be_bounded_by_another_character_class, start, pos - 1 - start);
+              }
+              const secondStart = pos;
+              const secondOperand = scanClassSetOperand();
+              if (isCharacterComplement && mayContainStrings) {
+                error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, secondStart, pos - secondStart);
+              }
+              expressionMayContainStrings ||= mayContainStrings;
+              if (!secondOperand) {
+                error(Diagnostics.A_character_class_range_must_not_be_bounded_by_another_character_class, secondStart, pos - secondStart);
+                break;
+              }
+              if (!operand) {
+                break;
+              }
+              const minCharacterValue = codePointAt(operand, 0);
+              const maxCharacterValue = codePointAt(secondOperand, 0);
+              if (
+                operand.length === charSize(minCharacterValue) &&
+                secondOperand.length === charSize(maxCharacterValue) &&
+                minCharacterValue > maxCharacterValue
+              ) {
+                error(Diagnostics.Range_out_of_order_in_character_class, start, pos - start);
+              }
+            }
+            break;
+          case CharacterCodes.ampersand:
+            start = pos;
+            pos++;
+            if (charCodeChecked(pos) === CharacterCodes.ampersand) {
+              pos++;
+              error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 2, 2);
+              if (charCodeChecked(pos) === CharacterCodes.ampersand) {
+                error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
                 pos++;
-                continue;
+              }
+            }
+            else {
+              error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos - 1, 1, String.fromCharCode(ch));
+            }
+            operand = text.slice(start, pos);
+            continue;
+        }
+        if (isClassContentExit(charCodeChecked(pos))) {
+          break;
+        }
+        start = pos;
+        switch (text.slice(pos, pos + 2)) { // TODO: don't use slice
+          case "--":
+          case "&&":
+            error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos, 2);
+            pos += 2;
+            operand = text.slice(start, pos);
+            break;
+          default:
+            operand = scanClassSetOperand();
+            break;
+        }
+      }
+      mayContainStrings = !isCharacterComplement && expressionMayContainStrings;
+    }
+
+    function scanClassSetSubExpression(expressionType: ClassSetExpressionType) {
+      let expressionMayContainStrings = mayContainStrings;
+      while (true) {
+        let ch = charCodeChecked(pos);
+        if (isClassContentExit(ch)) {
+          break;
+        }
+        // Provide user-friendly diagnostic messages
+        switch (ch) {
+          case CharacterCodes.minus:
+            pos++;
+            if (charCodeChecked(pos) === CharacterCodes.minus) {
+              pos++;
+              if (expressionType !== ClassSetExpressionType.ClassSubtraction) {
+                error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 2, 2);
+              }
+            }
+            else {
+              error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 1, 1);
+            }
+            break;
+          case CharacterCodes.ampersand:
+            pos++;
+            if (charCodeChecked(pos) === CharacterCodes.ampersand) {
+              pos++;
+              if (expressionType !== ClassSetExpressionType.ClassIntersection) {
+                error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 2, 2);
+              }
+              if (charCodeChecked(pos) === CharacterCodes.ampersand) {
+                error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
+                pos++;
+              }
+            }
+            else {
+              error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos - 1, 1, String.fromCharCode(ch));
+            }
+            break;
+          default:
+            switch (expressionType) {
+              case ClassSetExpressionType.ClassSubtraction:
+                error(Diagnostics._0_expected, pos, 0, "--");
+                break;
+              case ClassSetExpressionType.ClassIntersection:
+                error(Diagnostics._0_expected, pos, 0, "&&");
+                break;
+              default:
+                break;
             }
             break;
         }
-        if (charCodeUnchecked(pos - 1) === CharacterCodes._) {
-            tokenFlags |= TokenFlags.ContainsInvalidSeparator;
-            error(Diagnostics.Numeric_separators_are_not_allowed_here, pos - 1, 1);
+        ch = charCodeChecked(pos);
+        if (isClassContentExit(ch)) {
+          error(Diagnostics.Expected_a_class_set_operand);
+          break;
         }
-        return result + text.substring(start, pos);
+        scanClassSetOperand();
+        // Used only if expressionType is Intersection
+        expressionMayContainStrings &&= mayContainStrings;
+      }
+      mayContainStrings = expressionMayContainStrings;
     }
 
-    // Extract from Section 12.9.3
-    // NumericLiteral ::=
-    //     | DecimalLiteral
-    //     | DecimalBigIntegerLiteral
-    //     | NonDecimalIntegerLiteral 'n'?
-    //     | LegacyOctalIntegerLiteral
-    // DecimalBigIntegerLiteral ::=
-    //     | '0n'
-    //     | [1-9] DecimalDigits? 'n'
-    //     | [1-9] '_' DecimalDigits 'n'
-    // DecimalLiteral ::=
-    //     | DecimalIntegerLiteral '.' DecimalDigits? ExponentPart?
-    //     | '.' DecimalDigits ExponentPart?
-    //     | DecimalIntegerLiteral ExponentPart?
-    // DecimalIntegerLiteral ::=
-    //     | '0'
-    //     | [1-9] '_'? DecimalDigits
-    //     | NonOctalDecimalIntegerLiteral
-    // LegacyOctalIntegerLiteral ::= '0' [0-7]+
-    // NonOctalDecimalIntegerLiteral ::= '0' [0-7]* [89] [0-9]*
-    function scanNumber(): SyntaxKind {
-        let start = pos;
-        let mainFragment: string;
-        if (charCodeUnchecked(pos) === CharacterCodes._0) {
-            pos++;
-            if (charCodeUnchecked(pos) === CharacterCodes._) {
-                tokenFlags |= TokenFlags.ContainsSeparator | TokenFlags.ContainsInvalidSeparator;
-                error(Diagnostics.Numeric_separators_are_not_allowed_here, pos, 1);
-                // treat it as a normal number literal
-                pos--;
-                mainFragment = scanNumberFragment();
-            }
-            // Separators are not allowed in the below cases
-            else if (!scanDigits()) {
-                // NonOctalDecimalIntegerLiteral, emit error later
-                // Separators in decimal and exponent parts are still allowed according to the spec
-                tokenFlags |= TokenFlags.ContainsLeadingZero;
-                mainFragment = "" + +tokenValue;
-            }
-            else if (!tokenValue) {
-                // a single zero
-                mainFragment = "0";
-            }
-            else {
-                // LegacyOctalIntegerLiteral
-                tokenValue = "" + parseInt(tokenValue, 8);
-                tokenFlags |= TokenFlags.Octal;
-                const withMinus = token === SyntaxKind.MinusToken;
-                const literal = (withMinus ? "-" : "") + "0o" + (+tokenValue).toString(8);
-                if (withMinus) start--;
-                error(Diagnostics.Octal_literals_are_not_allowed_Use_the_syntax_0, start, pos - start, literal);
-                return SyntaxKind.NumericLiteral;
-            }
-        }
-        else {
-            mainFragment = scanNumberFragment();
-        }
-        let decimalFragment: string | undefined;
-        let scientificFragment: string | undefined;
-        if (charCodeUnchecked(pos) === CharacterCodes.dot) {
-            pos++;
-            decimalFragment = scanNumberFragment();
-        }
-        let end = pos;
-        if (charCodeUnchecked(pos) === CharacterCodes.E || charCodeUnchecked(pos) === CharacterCodes.e) {
-            pos++;
-            tokenFlags |= TokenFlags.Scientific;
-            if (charCodeUnchecked(pos) === CharacterCodes.plus || charCodeUnchecked(pos) === CharacterCodes.minus) pos++;
-            const preNumericPart = pos;
-            const finalFragment = scanNumberFragment();
-            if (!finalFragment) {
-                error(Diagnostics.Digit_expected);
-            }
-            else {
-                scientificFragment = text.substring(end, preNumericPart) + finalFragment;
-                end = pos;
-            }
-        }
-        let result: string;
-        if (tokenFlags & TokenFlags.ContainsSeparator) {
-            result = mainFragment;
-            if (decimalFragment) {
-                result += "." + decimalFragment;
-            }
-            if (scientificFragment) {
-                result += scientificFragment;
-            }
-        }
-        else {
-            result = text.substring(start, end); // No need to use all the fragments; no _ removal needed
-        }
-
-        if (tokenFlags & TokenFlags.ContainsLeadingZero) {
-            error(Diagnostics.Decimals_with_leading_zeros_are_not_allowed, start, end - start);
-            // if a literal has a leading zero, it must not be bigint
-            tokenValue = "" + +result;
-            return SyntaxKind.NumericLiteral;
-        }
-
-        if (decimalFragment !== undefined || tokenFlags & TokenFlags.Scientific) {
-            checkForIdentifierStartAfterNumericLiteral(start, decimalFragment === undefined && !!(tokenFlags & TokenFlags.Scientific));
-            // if value is not an integer, it can be safely coerced to a number
-            tokenValue = "" + +result;
-            return SyntaxKind.NumericLiteral;
-        }
-        else {
-            tokenValue = result;
-            const type = checkBigIntSuffix(); // if value is an integer, check whether it is a bigint
-            checkForIdentifierStartAfterNumericLiteral(start);
-            return type;
-        }
-    }
-
-    function checkForIdentifierStartAfterNumericLiteral(numericStart: number, isScientific?: boolean) {
-        if (!isIdentifierStart(codePointUnchecked(pos), languageVersion)) {
-            return;
-        }
-
-        const identifierStart = pos;
-        const { length } = scanIdentifierParts();
-
-        if (length === 1 && text[identifierStart] === "n") {
-            if (isScientific) {
-                error(Diagnostics.A_bigint_literal_cannot_use_exponential_notation, numericStart, identifierStart - numericStart + 1);
-            }
-            else {
-                error(Diagnostics.A_bigint_literal_must_be_an_integer, numericStart, identifierStart - numericStart + 1);
-            }
-        }
-        else {
-            error(Diagnostics.An_identifier_or_keyword_cannot_immediately_follow_a_numeric_literal, identifierStart, length);
-            pos = identifierStart;
-        }
-    }
-
-    function scanDigits(): boolean {
-        const start = pos;
-        let isOctal = true;
-        while (isDigit(charCodeChecked(pos))) {
-            if (!isOctalDigit(charCodeUnchecked(pos))) {
-                isOctal = false;
-            }
-            pos++;
-        }
-        tokenValue = text.substring(start, pos);
-        return isOctal;
-    }
-
-    /**
-     * Scans the given number of hexadecimal digits in the text,
-     * returning -1 if the given number is unavailable.
-     */
-    function scanExactNumberOfHexDigits(count: number, canHaveSeparators: boolean): number {
-        const valueString = scanHexDigits(/*minCount*/ count, /*scanAsManyAsPossible*/ false, canHaveSeparators);
-        return valueString ? parseInt(valueString, 16) : -1;
-    }
-
-    /**
-     * Scans as many hexadecimal digits as are available in the text,
-     * returning "" if the given number of digits was unavailable.
-     */
-    function scanMinimumNumberOfHexDigits(count: number, canHaveSeparators: boolean): string {
-        return scanHexDigits(/*minCount*/ count, /*scanAsManyAsPossible*/ true, canHaveSeparators);
-    }
-
-    function scanHexDigits(minCount: number, scanAsManyAsPossible: boolean, canHaveSeparators: boolean): string {
-        let valueChars: number[] = [];
-        let allowSeparator = false;
-        let isPreviousTokenSeparator = false;
-        while (valueChars.length < minCount || scanAsManyAsPossible) {
-            let ch = charCodeUnchecked(pos);
-            if (canHaveSeparators && ch === CharacterCodes._) {
-                tokenFlags |= TokenFlags.ContainsSeparator;
-                if (allowSeparator) {
-                    allowSeparator = false;
-                    isPreviousTokenSeparator = true;
-                }
-                else if (isPreviousTokenSeparator) {
-                    error(Diagnostics.Multiple_consecutive_numeric_separators_are_not_permitted, pos, 1);
-                }
-                else {
-                    error(Diagnostics.Numeric_separators_are_not_allowed_here, pos, 1);
-                }
-                pos++;
-                continue;
-            }
-            allowSeparator = canHaveSeparators;
-            if (ch >= CharacterCodes.A && ch <= CharacterCodes.F) {
-                ch += CharacterCodes.a - CharacterCodes.A; // standardize hex literals to lowercase
-            }
-            else if (
-                !((ch >= CharacterCodes._0 && ch <= CharacterCodes._9) ||
-                    (ch >= CharacterCodes.a && ch <= CharacterCodes.f))
-            ) {
-                break;
-            }
-            valueChars.push(ch);
-            pos++;
-            isPreviousTokenSeparator = false;
-        }
-        if (valueChars.length < minCount) {
-            valueChars = [];
-        }
-        if (charCodeUnchecked(pos - 1) === CharacterCodes._) {
-            error(Diagnostics.Numeric_separators_are_not_allowed_here, pos - 1, 1);
-        }
-        return String.fromCharCode(...valueChars);
-    }
-
-    function scanString(jsxAttributeString = false): string {
-        const quote = charCodeUnchecked(pos);
-        pos++;
-        let result = "";
-        let start = pos;
-        while (true) {
-            if (pos >= end) {
-                result += text.substring(start, pos);
-                tokenFlags |= TokenFlags.Unterminated;
-                error(Diagnostics.Unterminated_string_literal);
-                break;
-            }
-            const ch = charCodeUnchecked(pos);
-            if (ch === quote) {
-                result += text.substring(start, pos);
-                pos++;
-                break;
-            }
-            if (ch === CharacterCodes.backslash && !jsxAttributeString) {
-                result += text.substring(start, pos);
-                result += scanEscapeSequence(EscapeSequenceScanningFlags.String | EscapeSequenceScanningFlags.ReportErrors);
-                start = pos;
-                continue;
-            }
-
-            if ((ch === CharacterCodes.lineFeed || ch === CharacterCodes.carriageReturn) && !jsxAttributeString) {
-                result += text.substring(start, pos);
-                tokenFlags |= TokenFlags.Unterminated;
-                error(Diagnostics.Unterminated_string_literal);
-                break;
-            }
-            pos++;
-        }
-        return result;
-    }
-
-    /**
-     * Sets the current 'tokenValue' and returns a NoSubstitutionTemplateLiteral or
-     * a literal component of a TemplateExpression.
-     */
-    function scanTemplateAndSetTokenValue(shouldEmitInvalidEscapeError: boolean): SyntaxKind {
-        const startedWithBacktick = charCodeUnchecked(pos) === CharacterCodes.backtick;
-
-        pos++;
-        let start = pos;
-        let contents = "";
-        let resultingToken: SyntaxKind;
-
-        while (true) {
-            if (pos >= end) {
-                contents += text.substring(start, pos);
-                tokenFlags |= TokenFlags.Unterminated;
-                error(Diagnostics.Unterminated_template_literal);
-                resultingToken = startedWithBacktick ? SyntaxKind.NoSubstitutionTemplateLiteral : SyntaxKind.TemplateTail;
-                break;
-            }
-
-            const currChar = charCodeUnchecked(pos);
-
-            // '`'
-            if (currChar === CharacterCodes.backtick) {
-                contents += text.substring(start, pos);
-                pos++;
-                resultingToken = startedWithBacktick ? SyntaxKind.NoSubstitutionTemplateLiteral : SyntaxKind.TemplateTail;
-                break;
-            }
-
-            // '${'
-            if (currChar === CharacterCodes.$ && pos + 1 < end && charCodeUnchecked(pos + 1) === CharacterCodes.openBrace) {
-                contents += text.substring(start, pos);
-                pos += 2;
-                resultingToken = startedWithBacktick ? SyntaxKind.TemplateHead : SyntaxKind.TemplateMiddle;
-                break;
-            }
-
-            // Escape character
-            if (currChar === CharacterCodes.backslash) {
-                contents += text.substring(start, pos);
-                contents += scanEscapeSequence(EscapeSequenceScanningFlags.String | (shouldEmitInvalidEscapeError ? EscapeSequenceScanningFlags.ReportErrors : 0));
-                start = pos;
-                continue;
-            }
-
-            // Speculated ECMAScript 6 Spec 11.8.6.1:
-            // <CR><LF> and <CR> LineTerminatorSequences are normalized to <LF> for Template Values
-            if (currChar === CharacterCodes.carriageReturn) {
-                contents += text.substring(start, pos);
-                pos++;
-
-                if (pos < end && charCodeUnchecked(pos) === CharacterCodes.lineFeed) {
-                    pos++;
-                }
-
-                contents += "\n";
-                start = pos;
-                continue;
-            }
-
-            pos++;
-        }
-
-        Debug.assert(resultingToken !== undefined);
-
-        tokenValue = contents;
-        return resultingToken;
-    }
-
-    // Extract from Section A.1
-    // EscapeSequence ::=
-    //     | CharacterEscapeSequence
-    //     | 0 (?![0-9])
-    //     | LegacyOctalEscapeSequence
-    //     | NonOctalDecimalEscapeSequence
-    //     | HexEscapeSequence
-    //     | UnicodeEscapeSequence
-    // LegacyOctalEscapeSequence ::=
-    //     | '0' (?=[89])
-    //     | [1-7] (?![0-7])
-    //     | [0-3] [0-7] [0-7]?
-    //     | [4-7] [0-7]
-    // NonOctalDecimalEscapeSequence ::= [89]
-    function scanEscapeSequence(flags: EscapeSequenceScanningFlags): string {
-        const start = pos;
-        pos++;
-        if (pos >= end) {
-            error(Diagnostics.Unexpected_end_of_text);
+    // ClassSetOperand ::=
+    //     | '[' ClassSetExpression ']'
+    //     | '\' CharacterClassEscape
+    //     | '\q{' ClassStringDisjunctionContents '}'
+    //     | ClassSetCharacter
+    function scanClassSetOperand(): string {
+      mayContainStrings = false;
+      switch (charCodeChecked(pos)) {
+        case CharacterCodes.EOF:
+          return "";
+        case CharacterCodes.openBracket:
+          pos++;
+          scanClassSetExpression();
+          scanExpectedChar(CharacterCodes.closeBracket);
+          return "";
+        case CharacterCodes.backslash:
+          pos++;
+          if (scanCharacterClassEscape()) {
             return "";
+          }
+          else if (charCodeChecked(pos) === CharacterCodes.q) {
+            pos++;
+            if (charCodeChecked(pos) === CharacterCodes.openBrace) {
+              pos++;
+              scanClassStringDisjunctionContents();
+              scanExpectedChar(CharacterCodes.closeBrace);
+              return "";
+            }
+            else {
+              error(Diagnostics.q_must_be_followed_by_string_alternatives_enclosed_in_braces, pos - 2, 2);
+              return "q";
+            }
+          }
+          pos--;
+        // falls through
+        default:
+          return scanClassSetCharacter();
+      }
+    }
+
+    // ClassStringDisjunctionContents ::= ClassSetCharacter* ('|' ClassSetCharacter*)*
+    function scanClassStringDisjunctionContents() {
+      Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.openBrace);
+      let characterCount = 0;
+      while (true) {
+        const ch = charCodeChecked(pos);
+        switch (ch) {
+          case CharacterCodes.EOF:
+            return;
+          case CharacterCodes.closeBrace:
+            if (characterCount !== 1) {
+              mayContainStrings = true;
+            }
+            return;
+          case CharacterCodes.bar:
+            if (characterCount !== 1) {
+              mayContainStrings = true;
+            }
+            pos++;
+            start = pos;
+            characterCount = 0;
+            break;
+          default:
+            scanClassSetCharacter();
+            characterCount++;
+            break;
         }
-        const ch = charCodeUnchecked(pos);
+      }
+    }
+
+    // ClassSetCharacter ::=
+    //     | SourceCharacter -- ClassSetSyntaxCharacter -- ClassSetReservedDoublePunctuator
+    //     | '\' (CharacterEscape | ClassSetReservedPunctuator | 'b')
+    function scanClassSetCharacter(): string {
+      const ch = charCodeChecked(pos);
+      if (ch === CharacterCodes.EOF) {
+        // no need to report an error, the initial scan will already have reported that the RegExp is unterminated.
+        return "";
+      }
+      if (ch === CharacterCodes.backslash) {
         pos++;
+        const ch = charCodeChecked(pos);
         switch (ch) {
-            case CharacterCodes._0:
-                // Although '0' preceding any digit is treated as LegacyOctalEscapeSequence,
-                // '\08' should separately be interpreted as '\0' + '8'.
-                if (pos >= end || !isDigit(charCodeUnchecked(pos))) {
-                    return "\0";
-                }
-            // '\01', '\011'
-            // falls through
-            case CharacterCodes._1:
-            case CharacterCodes._2:
-            case CharacterCodes._3:
-                // '\1', '\17', '\177'
-                if (pos < end && isOctalDigit(charCodeUnchecked(pos))) {
-                    pos++;
-                }
-            // '\17', '\177'
-            // falls through
-            case CharacterCodes._4:
-            case CharacterCodes._5:
-            case CharacterCodes._6:
-            case CharacterCodes._7:
-                // '\4', '\47' but not '\477'
-                if (pos < end && isOctalDigit(charCodeUnchecked(pos))) {
-                    pos++;
-                }
-                // '\47'
-                tokenFlags |= TokenFlags.ContainsInvalidEscape;
-                if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
-                    const code = parseInt(text.substring(start + 1, pos), 8);
-                    if (flags & EscapeSequenceScanningFlags.RegularExpression && !(flags & EscapeSequenceScanningFlags.AtomEscape) && ch !== CharacterCodes._0) {
-                        error(Diagnostics.Octal_escape_sequences_and_backreferences_are_not_allowed_in_a_character_class_If_this_was_intended_as_an_escape_sequence_use_the_syntax_0_instead, start, pos - start, "\\x" + code.toString(16).padStart(2, "0"));
-                    }
-                    else {
-                        error(Diagnostics.Octal_escape_sequences_are_not_allowed_Use_the_syntax_0, start, pos - start, "\\x" + code.toString(16).padStart(2, "0"));
-                    }
-                    return String.fromCharCode(code);
-                }
-                return text.substring(start, pos);
-            case CharacterCodes._8:
-            case CharacterCodes._9:
-                // the invalid '\8' and '\9'
-                tokenFlags |= TokenFlags.ContainsInvalidEscape;
-                if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
-                    if (flags & EscapeSequenceScanningFlags.RegularExpression && !(flags & EscapeSequenceScanningFlags.AtomEscape)) {
-                        error(Diagnostics.Decimal_escape_sequences_and_backreferences_are_not_allowed_in_a_character_class, start, pos - start);
-                    }
-                    else {
-                        error(Diagnostics.Escape_sequence_0_is_not_allowed, start, pos - start, text.substring(start, pos));
-                    }
-                    return String.fromCharCode(ch);
-                }
-                return text.substring(start, pos);
-            case CharacterCodes.b:
-                return "\b";
-            case CharacterCodes.t:
-                return "\t";
-            case CharacterCodes.n:
-                return "\n";
-            case CharacterCodes.v:
-                return "\v";
-            case CharacterCodes.f:
-                return "\f";
-            case CharacterCodes.r:
-                return "\r";
-            case CharacterCodes.singleQuote:
-                return "'";
-            case CharacterCodes.doubleQuote:
-                return '"';
-            case CharacterCodes.u:
-                if (pos < end && charCodeUnchecked(pos) === CharacterCodes.openBrace) {
-                    // '\u{DDDDDD}'
-                    pos -= 2;
-                    const result = scanExtendedUnicodeEscape(!!(flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors));
-                    if (!(flags & EscapeSequenceScanningFlags.AllowExtendedUnicodeEscape)) {
-                        tokenFlags |= TokenFlags.ContainsInvalidEscape;
-                        if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
-                            error(Diagnostics.Unicode_escape_sequences_are_only_available_when_the_Unicode_u_flag_or_the_Unicode_Sets_v_flag_is_set, start, pos - start);
-                        }
-                    }
-                    return result;
-                }
-                // '\uDDDD'
-                for (; pos < start + 6; pos++) {
-                    if (!(pos < end && isHexDigit(charCodeUnchecked(pos)))) {
-                        tokenFlags |= TokenFlags.ContainsInvalidEscape;
-                        if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
-                            error(Diagnostics.Hexadecimal_digit_expected);
-                        }
-                        return text.substring(start, pos);
-                    }
-                }
-                tokenFlags |= TokenFlags.UnicodeEscape;
-                const escapedValue = parseInt(text.substring(start + 2, pos), 16);
-                const escapedValueString = String.fromCharCode(escapedValue);
-                if (
-                    flags & EscapeSequenceScanningFlags.AnyUnicodeMode && escapedValue >= 0xD800 && escapedValue <= 0xDBFF &&
-                    pos + 6 < end && text.substring(pos, pos + 2) === "\\u" && charCodeUnchecked(pos + 2) !== CharacterCodes.openBrace
-                ) {
-                    // For regular expressions in any Unicode mode, \u HexLeadSurrogate \u HexTrailSurrogate is treated as a single character
-                    // for the purpose of determining whether a character class range is out of order
-                    // https://tc39.es/ecma262/#prod-RegExpUnicodeEscapeSequence
-                    const nextStart = pos;
-                    let nextPos = pos + 2;
-                    for (; nextPos < nextStart + 6; nextPos++) {
-                        if (!isHexDigit(charCodeUnchecked(nextPos))) {
-                            // leave the error to the next call
-                            return escapedValueString;
-                        }
-                    }
-                    const nextEscapedValue = parseInt(text.substring(nextStart + 2, nextPos), 16);
-                    if (nextEscapedValue >= 0xDC00 && nextEscapedValue <= 0xDFFF) {
-                        pos = nextPos;
-                        return escapedValueString + String.fromCharCode(nextEscapedValue);
-                    }
-                }
-                return escapedValueString;
-
-            case CharacterCodes.x:
-                // '\xDD'
-                for (; pos < start + 4; pos++) {
-                    if (!(pos < end && isHexDigit(charCodeUnchecked(pos)))) {
-                        tokenFlags |= TokenFlags.ContainsInvalidEscape;
-                        if (flags & EscapeSequenceScanningFlags.ReportInvalidEscapeErrors) {
-                            error(Diagnostics.Hexadecimal_digit_expected);
-                        }
-                        return text.substring(start, pos);
-                    }
-                }
-                tokenFlags |= TokenFlags.HexEscape;
-                return String.fromCharCode(parseInt(text.substring(start + 2, pos), 16));
-
-            // when encountering a LineContinuation (i.e. a backslash and a line terminator sequence),
-            // the line terminator is interpreted to be "the empty code unit sequence".
-            case CharacterCodes.carriageReturn:
-                if (pos < end && charCodeUnchecked(pos) === CharacterCodes.lineFeed) {
-                    pos++;
-                }
-            // falls through
-            case CharacterCodes.lineFeed:
-            case CharacterCodes.lineSeparator:
-            case CharacterCodes.paragraphSeparator:
-                return "";
-            default:
-                if (
-                    flags & EscapeSequenceScanningFlags.AnyUnicodeMode
-                    || flags & EscapeSequenceScanningFlags.RegularExpression
-                        && !(flags & EscapeSequenceScanningFlags.AnnexB)
-                        && isIdentifierPart(ch, languageVersion)
-                ) {
-                    error(Diagnostics.This_character_cannot_be_escaped_in_a_regular_expression, pos - 2, 2);
-                }
-                return String.fromCharCode(ch);
-        }
-    }
-
-    function scanExtendedUnicodeEscape(shouldEmitInvalidEscapeError: boolean): string {
-        const start = pos;
-        pos += 3;
-        const escapedStart = pos;
-        const escapedValueString = scanMinimumNumberOfHexDigits(1, /*canHaveSeparators*/ false);
-        const escapedValue = escapedValueString ? parseInt(escapedValueString, 16) : -1;
-        let isInvalidExtendedEscape = false;
-
-        // Validate the value of the digit
-        if (escapedValue < 0) {
-            if (shouldEmitInvalidEscapeError) {
-                error(Diagnostics.Hexadecimal_digit_expected);
-            }
-            isInvalidExtendedEscape = true;
-        }
-        else if (escapedValue > 0x10FFFF) {
-            if (shouldEmitInvalidEscapeError) {
-                error(Diagnostics.An_extended_Unicode_escape_value_must_be_between_0x0_and_0x10FFFF_inclusive, escapedStart, pos - escapedStart);
-            }
-            isInvalidExtendedEscape = true;
-        }
-
-        if (pos >= end) {
-            if (shouldEmitInvalidEscapeError) {
-                error(Diagnostics.Unexpected_end_of_text);
-            }
-            isInvalidExtendedEscape = true;
-        }
-        else if (charCodeUnchecked(pos) === CharacterCodes.closeBrace) {
-            // Only swallow the following character up if it's a '}'.
+          case CharacterCodes.b:
             pos++;
+            return "\b";
+          case CharacterCodes.ampersand:
+          case CharacterCodes.minus:
+          case CharacterCodes.exclamation:
+          case CharacterCodes.hash:
+          case CharacterCodes.percent:
+          case CharacterCodes.comma:
+          case CharacterCodes.colon:
+          case CharacterCodes.semicolon:
+          case CharacterCodes.lessThan:
+          case CharacterCodes.equals:
+          case CharacterCodes.greaterThan:
+          case CharacterCodes.at:
+          case CharacterCodes.backtick:
+          case CharacterCodes.tilde:
+            pos++;
+            return String.fromCharCode(ch);
+          default:
+            return scanCharacterEscape(/*atomEscape*/ false);
         }
-        else {
-            if (shouldEmitInvalidEscapeError) {
-                error(Diagnostics.Unterminated_Unicode_escape_sequence);
-            }
-            isInvalidExtendedEscape = true;
-        }
-
-        if (isInvalidExtendedEscape) {
-            tokenFlags |= TokenFlags.ContainsInvalidEscape;
-            return text.substring(start, pos);
-        }
-
-        tokenFlags |= TokenFlags.ExtendedUnicodeEscape;
-        return utf16EncodeAsString(escapedValue);
-    }
-
-    // Current character is known to be a backslash. Check for Unicode escape of the form '\uXXXX'
-    // and return code point value if valid Unicode escape is found. Otherwise return -1.
-    function peekUnicodeEscape(): number {
-        if (pos + 5 < end && charCodeUnchecked(pos + 1) === CharacterCodes.u) {
-            const start = pos;
+      }
+      else if (ch === charCodeChecked(pos + 1)) {
+        switch (ch) {
+          case CharacterCodes.ampersand:
+          case CharacterCodes.exclamation:
+          case CharacterCodes.hash:
+          case CharacterCodes.percent:
+          case CharacterCodes.asterisk:
+          case CharacterCodes.plus:
+          case CharacterCodes.comma:
+          case CharacterCodes.dot:
+          case CharacterCodes.colon:
+          case CharacterCodes.semicolon:
+          case CharacterCodes.lessThan:
+          case CharacterCodes.equals:
+          case CharacterCodes.greaterThan:
+          case CharacterCodes.question:
+          case CharacterCodes.at:
+          case CharacterCodes.backtick:
+          case CharacterCodes.tilde:
+            error(Diagnostics.A_character_class_must_not_contain_a_reserved_double_punctuator_Did_you_mean_to_escape_it_with_backslash, pos, 2);
             pos += 2;
-            const value = scanExactNumberOfHexDigits(4, /*canHaveSeparators*/ false);
-            pos = start;
-            return value;
+            return text.substring(pos - 2, pos);
         }
-        return -1;
+      }
+      switch (ch) {
+        case CharacterCodes.slash:
+        case CharacterCodes.openParen:
+        case CharacterCodes.closeParen:
+        case CharacterCodes.openBracket:
+        case CharacterCodes.closeBracket:
+        case CharacterCodes.openBrace:
+        case CharacterCodes.closeBrace:
+        case CharacterCodes.minus:
+        case CharacterCodes.bar:
+          error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
+          pos++;
+          return String.fromCharCode(ch);
+      }
+      return scanSourceCharacter();
     }
 
-    function peekExtendedUnicodeEscape(): number {
-        if (codePointUnchecked(pos + 1) === CharacterCodes.u && codePointUnchecked(pos + 2) === CharacterCodes.openBrace) {
-            const start = pos;
-            pos += 3;
-            const escapedValueString = scanMinimumNumberOfHexDigits(1, /*canHaveSeparators*/ false);
-            const escapedValue = escapedValueString ? parseInt(escapedValueString, 16) : -1;
-            pos = start;
-            return escapedValue;
-        }
-        return -1;
-    }
-
-    function scanIdentifierParts(): string {
-        let result = "";
-        let start = pos;
-        while (pos < end) {
-            let ch = codePointUnchecked(pos);
-            if (isIdentifierPart(ch, languageVersion)) {
-                pos += charSize(ch);
-            }
-            else if (ch === CharacterCodes.backslash) {
-                ch = peekExtendedUnicodeEscape();
-                if (ch >= 0 && isIdentifierPart(ch, languageVersion)) {
-                    result += scanExtendedUnicodeEscape(/*shouldEmitInvalidEscapeError*/ true);
-                    start = pos;
-                    continue;
-                }
-                ch = peekUnicodeEscape();
-                if (!(ch >= 0 && isIdentifierPart(ch, languageVersion))) {
-                    break;
-                }
-                tokenFlags |= TokenFlags.UnicodeEscape;
-                result += text.substring(start, pos);
-                result += utf16EncodeAsString(ch);
-                // Valid Unicode escape is always six characters
-                pos += 6;
-                start = pos;
-            }
-            else {
-                break;
-            }
-        }
-        result += text.substring(start, pos);
-        return result;
-    }
-
-    function getIdentifierToken(): SyntaxKind.Identifier | KeywordSyntaxKind {
-        // Reserved words are between 2 and 12 characters long and start with a lowercase letter
-        const len = tokenValue.length;
-        if (len >= 2 && len <= 12) {
-            const ch = tokenValue.charCodeAt(0);
-            if (ch >= CharacterCodes.a && ch <= CharacterCodes.z) {
-                const keyword = textToKeyword.get(tokenValue);
-                if (keyword !== undefined) {
-                    return token = keyword;
-                }
-            }
-        }
-        return token = SyntaxKind.Identifier;
-    }
-
-    function scanBinaryOrOctalDigits(base: 2 | 8): string {
-        let value = "";
-        // For counting number of digits; Valid binaryIntegerLiteral must have at least one binary digit following B or b.
-        // Similarly valid octalIntegerLiteral must have at least one octal digit following o or O.
-        let separatorAllowed = false;
-        let isPreviousTokenSeparator = false;
-        while (true) {
-            const ch = charCodeUnchecked(pos);
-            // Numeric separators are allowed anywhere within a numeric literal, except not at the beginning, or following another separator
-            if (ch === CharacterCodes._) {
-                tokenFlags |= TokenFlags.ContainsSeparator;
-                if (separatorAllowed) {
-                    separatorAllowed = false;
-                    isPreviousTokenSeparator = true;
-                }
-                else if (isPreviousTokenSeparator) {
-                    error(Diagnostics.Multiple_consecutive_numeric_separators_are_not_permitted, pos, 1);
-                }
-                else {
-                    error(Diagnostics.Numeric_separators_are_not_allowed_here, pos, 1);
-                }
-                pos++;
-                continue;
-            }
-            separatorAllowed = true;
-            if (!isDigit(ch) || ch - CharacterCodes._0 >= base) {
-                break;
-            }
-            value += text[pos];
-            pos++;
-            isPreviousTokenSeparator = false;
-        }
-        if (charCodeUnchecked(pos - 1) === CharacterCodes._) {
-            // Literal ends with underscore - not allowed
-            error(Diagnostics.Numeric_separators_are_not_allowed_here, pos - 1, 1);
-        }
-        return value;
-    }
-
-    function checkBigIntSuffix(): SyntaxKind {
-        if (charCodeUnchecked(pos) === CharacterCodes.n) {
-            tokenValue += "n";
-            // Use base 10 instead of base 2 or base 8 for shorter literals
-            if (tokenFlags & TokenFlags.BinaryOrOctalSpecifier) {
-                tokenValue = parsePseudoBigInt(tokenValue) + "n";
-            }
-            pos++;
-            return SyntaxKind.BigIntLiteral;
-        }
-        else { // not a bigint, so can convert to number in simplified form
-            // Number() may not support 0b or 0o, so use parseInt() instead
-            const numericValue = tokenFlags & TokenFlags.BinarySpecifier
-                ? parseInt(tokenValue.slice(2), 2) // skip "0b"
-                : tokenFlags & TokenFlags.OctalSpecifier
-                ? parseInt(tokenValue.slice(2), 8) // skip "0o"
-                : +tokenValue;
-            tokenValue = "" + numericValue;
-            return SyntaxKind.NumericLiteral;
-        }
-    }
-
-    function scan(): SyntaxKind {
-        fullStartPos = pos;
-        tokenFlags = TokenFlags.None;
-        while (true) {
-            tokenStart = pos;
-            if (pos >= end) {
-                return token = SyntaxKind.EndOfFileToken;
-            }
-
-            const ch = codePointUnchecked(pos);
-            if (pos === 0) {
-                // Special handling for shebang
-                if (ch === CharacterCodes.hash && isShebangTrivia(text, pos)) {
-                    pos = scanShebangTrivia(text, pos);
-                    if (skipTrivia) {
-                        continue;
-                    }
-                    else {
-                        return token = SyntaxKind.ShebangTrivia;
-                    }
-                }
-            }
-
-            switch (ch) {
-                case CharacterCodes.lineFeed:
-                case CharacterCodes.carriageReturn:
-                    tokenFlags |= TokenFlags.PrecedingLineBreak;
-                    if (skipTrivia) {
-                        pos++;
-                        continue;
-                    }
-                    else {
-                        if (ch === CharacterCodes.carriageReturn && pos + 1 < end && charCodeUnchecked(pos + 1) === CharacterCodes.lineFeed) {
-                            // consume both CR and LF
-                            pos += 2;
-                        }
-                        else {
-                            pos++;
-                        }
-                        return token = SyntaxKind.NewLineTrivia;
-                    }
-                case CharacterCodes.tab:
-                case CharacterCodes.verticalTab:
-                case CharacterCodes.formFeed:
-                case CharacterCodes.space:
-                case CharacterCodes.nonBreakingSpace:
-                case CharacterCodes.ogham:
-                case CharacterCodes.enQuad:
-                case CharacterCodes.emQuad:
-                case CharacterCodes.enSpace:
-                case CharacterCodes.emSpace:
-                case CharacterCodes.threePerEmSpace:
-                case CharacterCodes.fourPerEmSpace:
-                case CharacterCodes.sixPerEmSpace:
-                case CharacterCodes.figureSpace:
-                case CharacterCodes.punctuationSpace:
-                case CharacterCodes.thinSpace:
-                case CharacterCodes.hairSpace:
-                case CharacterCodes.zeroWidthSpace:
-                case CharacterCodes.narrowNoBreakSpace:
-                case CharacterCodes.mathematicalSpace:
-                case CharacterCodes.ideographicSpace:
-                case CharacterCodes.byteOrderMark:
-                    if (skipTrivia) {
-                        pos++;
-                        continue;
-                    }
-                    else {
-                        while (pos < end && isWhiteSpaceSingleLine(charCodeUnchecked(pos))) {
-                            pos++;
-                        }
-                        return token = SyntaxKind.WhitespaceTrivia;
-                    }
-                case CharacterCodes.exclamation:
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
-                            return pos += 3, token = SyntaxKind.ExclamationEqualsEqualsToken;
-                        }
-                        return pos += 2, token = SyntaxKind.ExclamationEqualsToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.ExclamationToken;
-                case CharacterCodes.doubleQuote:
-                case CharacterCodes.singleQuote:
-                    tokenValue = scanString();
-                    return token = SyntaxKind.StringLiteral;
-                case CharacterCodes.backtick:
-                    return token = scanTemplateAndSetTokenValue(/*shouldEmitInvalidEscapeError*/ false);
-                case CharacterCodes.percent:
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.PercentEqualsToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.PercentToken;
-                case CharacterCodes.ampersand:
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.ampersand) {
-                        if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
-                            return pos += 3, token = SyntaxKind.AmpersandAmpersandEqualsToken;
-                        }
-                        return pos += 2, token = SyntaxKind.AmpersandAmpersandToken;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.AmpersandEqualsToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.AmpersandToken;
-                case CharacterCodes.openParen:
-                    pos++;
-                    return token = SyntaxKind.OpenParenToken;
-                case CharacterCodes.closeParen:
-                    pos++;
-                    return token = SyntaxKind.CloseParenToken;
-                case CharacterCodes.asterisk:
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.AsteriskEqualsToken;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.asterisk) {
-                        if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
-                            return pos += 3, token = SyntaxKind.AsteriskAsteriskEqualsToken;
-                        }
-                        return pos += 2, token = SyntaxKind.AsteriskAsteriskToken;
-                    }
-                    pos++;
-                    if (
-                        skipJsDocLeadingAsterisks &&
-                        (tokenFlags & TokenFlags.PrecedingJSDocLeadingAsterisks) === 0 &&
-                        (tokenFlags & TokenFlags.PrecedingLineBreak)
-                    ) {
-                        // decoration at the start of a JSDoc comment line
-                        tokenFlags |= TokenFlags.PrecedingJSDocLeadingAsterisks;
-                        continue;
-                    }
-                    return token = SyntaxKind.AsteriskToken;
-                case CharacterCodes.plus:
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.plus) {
-                        return pos += 2, token = SyntaxKind.PlusPlusToken;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.PlusEqualsToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.PlusToken;
-                case CharacterCodes.comma:
-                    pos++;
-                    return token = SyntaxKind.CommaToken;
-                case CharacterCodes.minus:
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.minus) {
-                        return pos += 2, token = SyntaxKind.MinusMinusToken;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.MinusEqualsToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.MinusToken;
-                case CharacterCodes.dot:
-                    if (isDigit(charCodeUnchecked(pos + 1))) {
-                        scanNumber();
-                        return token = SyntaxKind.NumericLiteral;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.dot && charCodeUnchecked(pos + 2) === CharacterCodes.dot) {
-                        return pos += 3, token = SyntaxKind.DotDotDotToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.DotToken;
-                case CharacterCodes.slash:
-                    // Single-line comment
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.slash) {
-                        pos += 2;
-
-                        while (pos < end) {
-                            if (isLineBreak(charCodeUnchecked(pos))) {
-                                break;
-                            }
-                            pos++;
-                        }
-
-                        commentDirectives = appendIfCommentDirective(
-                            commentDirectives,
-                            text.slice(tokenStart, pos),
-                            commentDirectiveRegExSingleLine,
-                            tokenStart,
-                        );
-
-                        if (skipTrivia) {
-                            continue;
-                        }
-                        else {
-                            return token = SyntaxKind.SingleLineCommentTrivia;
-                        }
-                    }
-                    // Multi-line comment
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.asterisk) {
-                        pos += 2;
-                        const isJSDoc = charCodeUnchecked(pos) === CharacterCodes.asterisk && charCodeUnchecked(pos + 1) !== CharacterCodes.slash;
-
-                        let commentClosed = false;
-                        let lastLineStart = tokenStart;
-                        while (pos < end) {
-                            const ch = charCodeUnchecked(pos);
-
-                            if (ch === CharacterCodes.asterisk && charCodeUnchecked(pos + 1) === CharacterCodes.slash) {
-                                pos += 2;
-                                commentClosed = true;
-                                break;
-                            }
-
-                            pos++;
-
-                            if (isLineBreak(ch)) {
-                                lastLineStart = pos;
-                                tokenFlags |= TokenFlags.PrecedingLineBreak;
-                            }
-                        }
-
-                        if (isJSDoc && shouldParseJSDoc()) {
-                            tokenFlags |= TokenFlags.PrecedingJSDocComment;
-                        }
-
-                        commentDirectives = appendIfCommentDirective(commentDirectives, text.slice(lastLineStart, pos), commentDirectiveRegExMultiLine, lastLineStart);
-
-                        if (!commentClosed) {
-                            error(Diagnostics.Asterisk_Slash_expected);
-                        }
-
-                        if (skipTrivia) {
-                            continue;
-                        }
-                        else {
-                            if (!commentClosed) {
-                                tokenFlags |= TokenFlags.Unterminated;
-                            }
-                            return token = SyntaxKind.MultiLineCommentTrivia;
-                        }
-                    }
-
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.SlashEqualsToken;
-                    }
-
-                    pos++;
-                    return token = SyntaxKind.SlashToken;
-
-                case CharacterCodes._0:
-                    if (pos + 2 < end && (charCodeUnchecked(pos + 1) === CharacterCodes.X || charCodeUnchecked(pos + 1) === CharacterCodes.x)) {
-                        pos += 2;
-                        tokenValue = scanMinimumNumberOfHexDigits(1, /*canHaveSeparators*/ true);
-                        if (!tokenValue) {
-                            error(Diagnostics.Hexadecimal_digit_expected);
-                            tokenValue = "0";
-                        }
-                        tokenValue = "0x" + tokenValue;
-                        tokenFlags |= TokenFlags.HexSpecifier;
-                        return token = checkBigIntSuffix();
-                    }
-                    else if (pos + 2 < end && (charCodeUnchecked(pos + 1) === CharacterCodes.B || charCodeUnchecked(pos + 1) === CharacterCodes.b)) {
-                        pos += 2;
-                        tokenValue = scanBinaryOrOctalDigits(/* base */ 2);
-                        if (!tokenValue) {
-                            error(Diagnostics.Binary_digit_expected);
-                            tokenValue = "0";
-                        }
-                        tokenValue = "0b" + tokenValue;
-                        tokenFlags |= TokenFlags.BinarySpecifier;
-                        return token = checkBigIntSuffix();
-                    }
-                    else if (pos + 2 < end && (charCodeUnchecked(pos + 1) === CharacterCodes.O || charCodeUnchecked(pos + 1) === CharacterCodes.o)) {
-                        pos += 2;
-                        tokenValue = scanBinaryOrOctalDigits(/* base */ 8);
-                        if (!tokenValue) {
-                            error(Diagnostics.Octal_digit_expected);
-                            tokenValue = "0";
-                        }
-                        tokenValue = "0o" + tokenValue;
-                        tokenFlags |= TokenFlags.OctalSpecifier;
-                        return token = checkBigIntSuffix();
-                    }
-                // falls through
-                case CharacterCodes._1:
-                case CharacterCodes._2:
-                case CharacterCodes._3:
-                case CharacterCodes._4:
-                case CharacterCodes._5:
-                case CharacterCodes._6:
-                case CharacterCodes._7:
-                case CharacterCodes._8:
-                case CharacterCodes._9:
-                    return token = scanNumber();
-                case CharacterCodes.colon:
-                    pos++;
-                    return token = SyntaxKind.ColonToken;
-                case CharacterCodes.semicolon:
-                    pos++;
-                    return token = SyntaxKind.SemicolonToken;
-                case CharacterCodes.lessThan:
-                    if (isConflictMarkerTrivia(text, pos)) {
-                        pos = scanConflictMarkerTrivia(text, pos, error);
-                        if (skipTrivia) {
-                            continue;
-                        }
-                        else {
-                            return token = SyntaxKind.ConflictMarkerTrivia;
-                        }
-                    }
-
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.lessThan) {
-                        if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
-                            return pos += 3, token = SyntaxKind.LessThanLessThanEqualsToken;
-                        }
-                        return pos += 2, token = SyntaxKind.LessThanLessThanToken;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.LessThanEqualsToken;
-                    }
-                    if (
-                        languageVariant === LanguageVariant.JSX &&
-                        charCodeUnchecked(pos + 1) === CharacterCodes.slash &&
-                        charCodeUnchecked(pos + 2) !== CharacterCodes.asterisk
-                    ) {
-                        return pos += 2, token = SyntaxKind.LessThanSlashToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.LessThanToken;
-                case CharacterCodes.equals:
-                    if (isConflictMarkerTrivia(text, pos)) {
-                        pos = scanConflictMarkerTrivia(text, pos, error);
-                        if (skipTrivia) {
-                            continue;
-                        }
-                        else {
-                            return token = SyntaxKind.ConflictMarkerTrivia;
-                        }
-                    }
-
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
-                            return pos += 3, token = SyntaxKind.EqualsEqualsEqualsToken;
-                        }
-                        return pos += 2, token = SyntaxKind.EqualsEqualsToken;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.greaterThan) {
-                        return pos += 2, token = SyntaxKind.EqualsGreaterThanToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.EqualsToken;
-                case CharacterCodes.greaterThan:
-                    if (isConflictMarkerTrivia(text, pos)) {
-                        pos = scanConflictMarkerTrivia(text, pos, error);
-                        if (skipTrivia) {
-                            continue;
-                        }
-                        else {
-                            return token = SyntaxKind.ConflictMarkerTrivia;
-                        }
-                    }
-
-                    pos++;
-                    return token = SyntaxKind.GreaterThanToken;
-                case CharacterCodes.question:
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.dot && !isDigit(charCodeUnchecked(pos + 2))) {
-                        return pos += 2, token = SyntaxKind.QuestionDotToken;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.question) {
-                        if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
-                            return pos += 3, token = SyntaxKind.QuestionQuestionEqualsToken;
-                        }
-                        return pos += 2, token = SyntaxKind.QuestionQuestionToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.QuestionToken;
-                case CharacterCodes.openBracket:
-                    pos++;
-                    return token = SyntaxKind.OpenBracketToken;
-                case CharacterCodes.closeBracket:
-                    pos++;
-                    return token = SyntaxKind.CloseBracketToken;
-                case CharacterCodes.caret:
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.CaretEqualsToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.CaretToken;
-                case CharacterCodes.openBrace:
-                    pos++;
-                    return token = SyntaxKind.OpenBraceToken;
-                case CharacterCodes.bar:
-                    if (isConflictMarkerTrivia(text, pos)) {
-                        pos = scanConflictMarkerTrivia(text, pos, error);
-                        if (skipTrivia) {
-                            continue;
-                        }
-                        else {
-                            return token = SyntaxKind.ConflictMarkerTrivia;
-                        }
-                    }
-
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.bar) {
-                        if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
-                            return pos += 3, token = SyntaxKind.BarBarEqualsToken;
-                        }
-                        return pos += 2, token = SyntaxKind.BarBarToken;
-                    }
-                    if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                        return pos += 2, token = SyntaxKind.BarEqualsToken;
-                    }
-                    pos++;
-                    return token = SyntaxKind.BarToken;
-                case CharacterCodes.closeBrace:
-                    pos++;
-                    return token = SyntaxKind.CloseBraceToken;
-                case CharacterCodes.tilde:
-                    pos++;
-                    return token = SyntaxKind.TildeToken;
-                case CharacterCodes.at:
-                    pos++;
-                    return token = SyntaxKind.AtToken;
-                case CharacterCodes.backslash:
-                    const extendedCookedChar = peekExtendedUnicodeEscape();
-                    if (extendedCookedChar >= 0 && isIdentifierStart(extendedCookedChar, languageVersion)) {
-                        tokenValue = scanExtendedUnicodeEscape(/*shouldEmitInvalidEscapeError*/ true) + scanIdentifierParts();
-                        return token = getIdentifierToken();
-                    }
-
-                    const cookedChar = peekUnicodeEscape();
-                    if (cookedChar >= 0 && isIdentifierStart(cookedChar, languageVersion)) {
-                        pos += 6;
-                        tokenFlags |= TokenFlags.UnicodeEscape;
-                        tokenValue = String.fromCharCode(cookedChar) + scanIdentifierParts();
-                        return token = getIdentifierToken();
-                    }
-
-                    error(Diagnostics.Invalid_character);
-                    pos++;
-                    return token = SyntaxKind.Unknown;
-                case CharacterCodes.hash:
-                    if (pos !== 0 && text[pos + 1] === "!") {
-                        error(Diagnostics.can_only_be_used_at_the_start_of_a_file, pos, 2);
-                        pos++;
-                        return token = SyntaxKind.Unknown;
-                    }
-
-                    const charAfterHash = codePointUnchecked(pos + 1);
-                    if (charAfterHash === CharacterCodes.backslash) {
-                        pos++;
-                        const extendedCookedChar = peekExtendedUnicodeEscape();
-                        if (extendedCookedChar >= 0 && isIdentifierStart(extendedCookedChar, languageVersion)) {
-                            tokenValue = "#" + scanExtendedUnicodeEscape(/*shouldEmitInvalidEscapeError*/ true) + scanIdentifierParts();
-                            return token = SyntaxKind.PrivateIdentifier;
-                        }
-
-                        const cookedChar = peekUnicodeEscape();
-                        if (cookedChar >= 0 && isIdentifierStart(cookedChar, languageVersion)) {
-                            pos += 6;
-                            tokenFlags |= TokenFlags.UnicodeEscape;
-                            tokenValue = "#" + String.fromCharCode(cookedChar) + scanIdentifierParts();
-                            return token = SyntaxKind.PrivateIdentifier;
-                        }
-                        pos--;
-                    }
-
-                    if (isIdentifierStart(charAfterHash, languageVersion)) {
-                        pos++;
-                        // We're relying on scanIdentifier's behavior and adjusting the token kind after the fact.
-                        // Notably absent from this block is the fact that calling a function named "scanIdentifier",
-                        // but identifiers don't include '#', and that function doesn't deal with it at all.
-                        // This works because 'scanIdentifier' tries to reuse source characters and builds up substrings;
-                        // however, it starts at the 'tokenPos' which includes the '#', and will "accidentally" prepend the '#' for us.
-                        scanIdentifier(charAfterHash, languageVersion);
-                    }
-                    else {
-                        tokenValue = "#";
-                        error(Diagnostics.Invalid_character, pos++, charSize(ch));
-                    }
-                    return token = SyntaxKind.PrivateIdentifier;
-                case CharacterCodes.replacementCharacter:
-                    error(Diagnostics.File_appears_to_be_binary, 0, 0);
-                    pos = end;
-                    return token = SyntaxKind.NonTextFileMarkerTrivia;
-                default:
-                    const identifierKind = scanIdentifier(ch, languageVersion);
-                    if (identifierKind) {
-                        return token = identifierKind;
-                    }
-                    else if (isWhiteSpaceSingleLine(ch)) {
-                        pos += charSize(ch);
-                        continue;
-                    }
-                    else if (isLineBreak(ch)) {
-                        tokenFlags |= TokenFlags.PrecedingLineBreak;
-                        pos += charSize(ch);
-                        continue;
-                    }
-                    const size = charSize(ch);
-                    error(Diagnostics.Invalid_character, pos, size);
-                    pos += size;
-                    return token = SyntaxKind.Unknown;
-            }
-        }
-    }
-
-    function shouldParseJSDoc() {
-        switch (jsDocParsingMode) {
-            case JSDocParsingMode.ParseAll:
-                return true;
-            case JSDocParsingMode.ParseNone:
-                return false;
-        }
-
-        if (scriptKind !== ScriptKind.TS && scriptKind !== ScriptKind.TSX) {
-            // If outside of TS, we need JSDoc to get any type info.
-            return true;
-        }
-
-        if (jsDocParsingMode === JSDocParsingMode.ParseForTypeInfo) {
-            // If we're in TS, but we don't need to produce reliable errors,
-            // we don't need to parse to find @see or @link.
-            return false;
-        }
-
-        return jsDocSeeOrLink.test(text.slice(fullStartPos, pos));
-    }
-
-    function reScanInvalidIdentifier(): SyntaxKind {
-        Debug.assert(token === SyntaxKind.Unknown, "'reScanInvalidIdentifier' should only be called when the current token is 'SyntaxKind.Unknown'.");
-        pos = tokenStart = fullStartPos;
-        tokenFlags = 0;
-        const ch = codePointUnchecked(pos);
-        const identifierKind = scanIdentifier(ch, ScriptTarget.ESNext);
-        if (identifierKind) {
-            return token = identifierKind;
-        }
-        pos += charSize(ch);
-        return token; // Still `SyntaxKind.Unknown`
-    }
-
-    function scanIdentifier(startCharacter: number, languageVersion: ScriptTarget) {
-        let ch = startCharacter;
-        if (isIdentifierStart(ch, languageVersion)) {
-            pos += charSize(ch);
-            while (pos < end && isIdentifierPart(ch = codePointUnchecked(pos), languageVersion)) pos += charSize(ch);
-            tokenValue = text.substring(tokenStart, pos);
-            if (ch === CharacterCodes.backslash) {
-                tokenValue += scanIdentifierParts();
-            }
-            return getIdentifierToken();
-        }
-    }
-
-    function reScanGreaterToken(): SyntaxKind {
-        if (token === SyntaxKind.GreaterThanToken) {
-            if (charCodeUnchecked(pos) === CharacterCodes.greaterThan) {
-                if (charCodeUnchecked(pos + 1) === CharacterCodes.greaterThan) {
-                    if (charCodeUnchecked(pos + 2) === CharacterCodes.equals) {
-                        return pos += 3, token = SyntaxKind.GreaterThanGreaterThanGreaterThanEqualsToken;
-                    }
-                    return pos += 2, token = SyntaxKind.GreaterThanGreaterThanGreaterThanToken;
-                }
-                if (charCodeUnchecked(pos + 1) === CharacterCodes.equals) {
-                    return pos += 2, token = SyntaxKind.GreaterThanGreaterThanEqualsToken;
-                }
-                pos++;
-                return token = SyntaxKind.GreaterThanGreaterThanToken;
-            }
-            if (charCodeUnchecked(pos) === CharacterCodes.equals) {
-                pos++;
-                return token = SyntaxKind.GreaterThanEqualsToken;
-            }
-        }
-        return token;
-    }
-
-    function reScanAsteriskEqualsToken(): SyntaxKind {
-        Debug.assert(token === SyntaxKind.AsteriskEqualsToken, "'reScanAsteriskEqualsToken' should only be called on a '*='");
-        pos = tokenStart + 1;
-        return token = SyntaxKind.EqualsToken;
-    }
-
-    function reScanSlashToken(reportErrors?: boolean): SyntaxKind {
-        if (token === SyntaxKind.SlashToken || token === SyntaxKind.SlashEqualsToken) {
-            // Quickly get to the end of regex such that we know the flags
-            const startOfRegExpBody = tokenStart + 1;
-            pos = startOfRegExpBody;
-            let inEscape = false;
-            let namedCaptureGroups = false;
-            // Although nested character classes are allowed in Unicode Sets mode,
-            // an unescaped slash is nevertheless invalid even in a character class in any Unicode mode.
-            // This is indicated by Section 12.9.5 Regular Expression Literals of the specification,
-            // where nested character classes are not considered at all. (A `[` RegularExpressionClassChar
-            // does nothing in a RegularExpressionClass, and a `]` always closes the class.)
-            // Additionally, parsing nested character classes will misinterpret regexes like `/[[]/`
-            // as unterminated, consuming characters beyond the slash. (This even applies to `/[[]/v`,
-            // which should be parsed as a well-terminated regex with an incomplete character class.)
-            // Thus we must not handle nested character classes in the first pass.
-            let inCharacterClass = false;
-            while (true) {
-                // If we reach the end of a file, or hit a newline, then this is an unterminated
-                // regex.  Report error and return what we have so far.
-                const ch = charCodeChecked(pos);
-                if (ch === CharacterCodes.EOF || isLineBreak(ch)) {
-                    tokenFlags |= TokenFlags.Unterminated;
-                    break;
-                }
-
-                if (inEscape) {
-                    // Parsing an escape character;
-                    // reset the flag and just advance to the next char.
-                    inEscape = false;
-                }
-                else if (ch === CharacterCodes.slash && !inCharacterClass) {
-                    // A slash within a character class is permissible,
-                    // but in general it signals the end of the regexp literal.
-                    break;
-                }
-                else if (ch === CharacterCodes.openBracket) {
-                    inCharacterClass = true;
-                }
-                else if (ch === CharacterCodes.backslash) {
-                    inEscape = true;
-                }
-                else if (ch === CharacterCodes.closeBracket) {
-                    inCharacterClass = false;
-                }
-                else if (
-                    !inCharacterClass
-                    && ch === CharacterCodes.openParen
-                    && charCodeChecked(pos + 1) === CharacterCodes.question
-                    && charCodeChecked(pos + 2) === CharacterCodes.lessThan
-                    && charCodeChecked(pos + 3) !== CharacterCodes.equals
-                    && charCodeChecked(pos + 3) !== CharacterCodes.exclamation
-                ) {
-                    namedCaptureGroups = true;
-                }
-                pos++;
-            }
-            const endOfRegExpBody = pos;
-            if (tokenFlags & TokenFlags.Unterminated) {
-                // Search for the nearest unbalanced bracket for better recovery. Since the expression is
-                // invalid anyways, we take nested square brackets into consideration for the best guess.
-                pos = startOfRegExpBody;
-                inEscape = false;
-                let characterClassDepth = 0;
-                let inDecimalQuantifier = false;
-                let groupDepth = 0;
-                while (pos < endOfRegExpBody) {
-                    const ch = charCodeUnchecked(pos);
-                    if (inEscape) {
-                        inEscape = false;
-                    }
-                    else if (ch === CharacterCodes.backslash) {
-                        inEscape = true;
-                    }
-                    else if (ch === CharacterCodes.openBracket) {
-                        characterClassDepth++;
-                    }
-                    else if (ch === CharacterCodes.closeBracket && characterClassDepth) {
-                        characterClassDepth--;
-                    }
-                    else if (!characterClassDepth) {
-                        if (ch === CharacterCodes.openBrace) {
-                            inDecimalQuantifier = true;
-                        }
-                        else if (ch === CharacterCodes.closeBrace && inDecimalQuantifier) {
-                            inDecimalQuantifier = false;
-                        }
-                        else if (!inDecimalQuantifier) {
-                            if (ch === CharacterCodes.openParen) {
-                                groupDepth++;
-                            }
-                            else if (ch === CharacterCodes.closeParen && groupDepth) {
-                                groupDepth--;
-                            }
-                            else if (ch === CharacterCodes.closeParen || ch === CharacterCodes.closeBracket || ch === CharacterCodes.closeBrace) {
-                                // We encountered an unbalanced bracket outside a character class. Treat this position as the end of regex.
-                                break;
-                            }
-                        }
-                    }
-                    pos++;
-                }
-                // Whitespaces and semicolons at the end are not likely to be part of the regex
-                while (isWhiteSpaceLike(charCodeChecked(pos - 1)) || charCodeChecked(pos - 1) === CharacterCodes.semicolon) pos--;
-                error(Diagnostics.Unterminated_regular_expression_literal, tokenStart, pos - tokenStart);
-            }
-            else {
-                // Consume the slash character
-                pos++;
-                let regExpFlags = RegularExpressionFlags.None;
-                while (true) {
-                    const ch = codePointChecked(pos);
-                    if (ch === CharacterCodes.EOF || !isIdentifierPart(ch, languageVersion)) {
-                        break;
-                    }
-                    const size = charSize(ch);
-                    if (reportErrors) {
-                        const flag = characterCodeToRegularExpressionFlag(ch);
-                        if (flag === undefined) {
-                            error(Diagnostics.Unknown_regular_expression_flag, pos, size);
-                        }
-                        else if (regExpFlags & flag) {
-                            error(Diagnostics.Duplicate_regular_expression_flag, pos, size);
-                        }
-                        else if (((regExpFlags | flag) & RegularExpressionFlags.AnyUnicodeMode) === RegularExpressionFlags.AnyUnicodeMode) {
-                            error(Diagnostics.The_Unicode_u_flag_and_the_Unicode_Sets_v_flag_cannot_be_set_simultaneously, pos, size);
-                        }
-                        else {
-                            regExpFlags |= flag;
-                            checkRegularExpressionFlagAvailability(flag, size);
-                        }
-                    }
-                    pos += size;
-                }
-                if (reportErrors) {
-                    scanRange(startOfRegExpBody, endOfRegExpBody - startOfRegExpBody, () => {
-                        scanRegularExpressionWorker(regExpFlags, /*annexB*/ true, namedCaptureGroups);
-                    });
-                }
-            }
-            tokenValue = text.substring(tokenStart, pos);
-            token = SyntaxKind.RegularExpressionLiteral;
-        }
-        return token;
-    }
-
-    function scanRegularExpressionWorker(regExpFlags: RegularExpressionFlags, annexB: boolean, namedCaptureGroups: boolean) {
-        // Why var? It avoids TDZ checks in the runtime which can be costly.
-        // See: https://github.com/microsoft/TypeScript/issues/52924
-        /* eslint-disable no-var */
-
-        /** Grammar parameter */
-        var unicodeSetsMode = !!(regExpFlags & RegularExpressionFlags.UnicodeSets);
-        /** Grammar parameter */
-        var anyUnicodeMode = !!(regExpFlags & RegularExpressionFlags.AnyUnicodeMode);
-
-        // Regular expressions are checked more strictly when either in 'u' or 'v' mode, or
-        // when not using the looser interpretation of the syntax from ECMA-262 Annex B.
-        var anyUnicodeModeOrNonAnnexB = anyUnicodeMode || !annexB;
-
-        /** @see {scanClassSetExpression} */
-        var mayContainStrings = false;
-
-        /** The number of all (named and unnamed) capturing groups defined in the regex. */
-        var numberOfCapturingGroups = 0;
-        /** All named capturing groups defined in the regex. */
-        var groupSpecifiers: Set<string> | undefined;
-        /** All references to named capturing groups in the regex. */
-        var groupNameReferences: (TextRange & { name: string; })[] | undefined;
-        /** All numeric backreferences within the regex. */
-        var decimalEscapes: (TextRange & { value: number; })[] | undefined;
-        /** A stack of scopes for named capturing groups. @see {scanGroupName} */
-        var namedCapturingGroupsScopeStack: (Set<string> | undefined)[] = [];
-        var topNamedCapturingGroupsScope: Set<string> | undefined;
-        /* eslint-enable no-var */
-        // Disjunction ::= Alternative ('|' Alternative)*
-        function scanDisjunction(isInGroup: boolean) {
-            while (true) {
-                namedCapturingGroupsScopeStack.push(topNamedCapturingGroupsScope);
-                topNamedCapturingGroupsScope = undefined;
-                scanAlternative(isInGroup);
-                topNamedCapturingGroupsScope = namedCapturingGroupsScopeStack.pop();
-                if (charCodeChecked(pos) !== CharacterCodes.bar) {
-                    return;
-                }
-                pos++;
-            }
-        }
-
-        // Alternative ::= Term*
-        // Term ::=
-        //     | Assertion
-        //     | Atom Quantifier?
-        // Assertion ::=
-        //     | '^'
-        //     | '$'
-        //     | '\b'
-        //     | '\B'
-        //     | '(?=' Disjunction ')'
-        //     | '(?!' Disjunction ')'
-        //     | '(?<=' Disjunction ')'
-        //     | '(?<!' Disjunction ')'
-        // Quantifier ::= QuantifierPrefix '?'?
-        // QuantifierPrefix ::=
-        //     | '*'
-        //     | '+'
-        //     | '?'
-        //     | '{' DecimalDigits (',' DecimalDigits?)? '}'
-        // Atom ::=
-        //     | PatternCharacter
-        //     | '.'
-        //     | '\' AtomEscape
-        //     | CharacterClass
-        //     | '(?<' RegExpIdentifierName '>' Disjunction ')'
-        //     | '(?' RegularExpressionFlags ('-' RegularExpressionFlags)? ':' Disjunction ')'
-        // CharacterClass ::= unicodeMode
-        //     ? '[' ClassRanges ']'
-        //     : '[' ClassSetExpression ']'
-        function scanAlternative(isInGroup: boolean) {
-            let isPreviousTermQuantifiable = false;
-            while (true) {
-                const start = pos;
-                const ch = charCodeChecked(pos);
-                switch (ch) {
-                    case CharacterCodes.EOF:
-                        return;
-                    case CharacterCodes.caret:
-                    case CharacterCodes.$:
-                        pos++;
-                        isPreviousTermQuantifiable = false;
-                        break;
-                    case CharacterCodes.backslash:
-                        pos++;
-                        switch (charCodeChecked(pos)) {
-                            case CharacterCodes.b:
-                            case CharacterCodes.B:
-                                pos++;
-                                isPreviousTermQuantifiable = false;
-                                break;
-                            default:
-                                scanAtomEscape();
-                                isPreviousTermQuantifiable = true;
-                                break;
-                        }
-                        break;
-                    case CharacterCodes.openParen:
-                        pos++;
-                        if (charCodeChecked(pos) === CharacterCodes.question) {
-                            pos++;
-                            switch (charCodeChecked(pos)) {
-                                case CharacterCodes.equals:
-                                case CharacterCodes.exclamation:
-                                    pos++;
-                                    // In Annex B, `(?=Disjunction)` and `(?!Disjunction)` are quantifiable
-                                    isPreviousTermQuantifiable = !anyUnicodeModeOrNonAnnexB;
-                                    break;
-                                case CharacterCodes.lessThan:
-                                    const groupNameStart = pos;
-                                    pos++;
-                                    switch (charCodeChecked(pos)) {
-                                        case CharacterCodes.equals:
-                                        case CharacterCodes.exclamation:
-                                            pos++;
-                                            isPreviousTermQuantifiable = false;
-                                            break;
-                                        default:
-                                            scanGroupName(/*isReference*/ false);
-                                            scanExpectedChar(CharacterCodes.greaterThan);
-                                            if (languageVersion < ScriptTarget.ES2018) {
-                                                error(Diagnostics.Named_capturing_groups_are_only_available_when_targeting_ES2018_or_later, groupNameStart, pos - groupNameStart);
-                                            }
-                                            numberOfCapturingGroups++;
-                                            isPreviousTermQuantifiable = true;
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    const start = pos;
-                                    const setFlags = scanPatternModifiers(RegularExpressionFlags.None);
-                                    if (charCodeChecked(pos) === CharacterCodes.minus) {
-                                        pos++;
-                                        scanPatternModifiers(setFlags);
-                                        if (pos === start + 1) {
-                                            error(Diagnostics.Subpattern_flags_must_be_present_when_there_is_a_minus_sign, start, pos - start);
-                                        }
-                                    }
-                                    scanExpectedChar(CharacterCodes.colon);
-                                    isPreviousTermQuantifiable = true;
-                                    break;
-                            }
-                        }
-                        else {
-                            numberOfCapturingGroups++;
-                            isPreviousTermQuantifiable = true;
-                        }
-                        scanDisjunction(/*isInGroup*/ true);
-                        scanExpectedChar(CharacterCodes.closeParen);
-                        break;
-                    case CharacterCodes.openBrace:
-                        pos++;
-                        const digitsStart = pos;
-                        scanDigits();
-                        const min = tokenValue;
-                        if (!anyUnicodeModeOrNonAnnexB && !min) {
-                            isPreviousTermQuantifiable = true;
-                            break;
-                        }
-                        if (charCodeChecked(pos) === CharacterCodes.comma) {
-                            pos++;
-                            scanDigits();
-                            const max = tokenValue;
-                            if (!min) {
-                                if (max || charCodeChecked(pos) === CharacterCodes.closeBrace) {
-                                    error(Diagnostics.Incomplete_quantifier_Digit_expected, digitsStart, 0);
-                                }
-                                else {
-                                    error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, start, 1, String.fromCharCode(ch));
-                                    isPreviousTermQuantifiable = true;
-                                    break;
-                                }
-                            }
-                            else if (max && Number.parseInt(min) > Number.parseInt(max) && (anyUnicodeModeOrNonAnnexB || charCodeChecked(pos) === CharacterCodes.closeBrace)) {
-                                error(Diagnostics.Numbers_out_of_order_in_quantifier, digitsStart, pos - digitsStart);
-                            }
-                        }
-                        else if (!min) {
-                            if (anyUnicodeModeOrNonAnnexB) {
-                                error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, start, 1, String.fromCharCode(ch));
-                            }
-                            isPreviousTermQuantifiable = true;
-                            break;
-                        }
-                        if (charCodeChecked(pos) !== CharacterCodes.closeBrace) {
-                            if (anyUnicodeModeOrNonAnnexB) {
-                                error(Diagnostics._0_expected, pos, 0, String.fromCharCode(CharacterCodes.closeBrace));
-                                pos--;
-                            }
-                            else {
-                                isPreviousTermQuantifiable = true;
-                                break;
-                            }
-                        }
-                    // falls through
-                    case CharacterCodes.asterisk:
-                    case CharacterCodes.plus:
-                    case CharacterCodes.question:
-                        pos++;
-                        if (charCodeChecked(pos) === CharacterCodes.question) {
-                            // Non-greedy
-                            pos++;
-                        }
-                        if (!isPreviousTermQuantifiable) {
-                            error(Diagnostics.There_is_nothing_available_for_repetition, start, pos - start);
-                        }
-                        isPreviousTermQuantifiable = false;
-                        break;
-                    case CharacterCodes.dot:
-                        pos++;
-                        isPreviousTermQuantifiable = true;
-                        break;
-                    case CharacterCodes.openBracket:
-                        pos++;
-                        if (unicodeSetsMode) {
-                            scanClassSetExpression();
-                        }
-                        else {
-                            scanClassRanges();
-                        }
-                        scanExpectedChar(CharacterCodes.closeBracket);
-                        isPreviousTermQuantifiable = true;
-                        break;
-                    case CharacterCodes.closeParen:
-                        if (isInGroup) {
-                            return;
-                        }
-                    // falls through
-                    case CharacterCodes.closeBracket:
-                    case CharacterCodes.closeBrace:
-                        if (anyUnicodeModeOrNonAnnexB || ch === CharacterCodes.closeParen) {
-                            error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
-                        }
-                        pos++;
-                        isPreviousTermQuantifiable = true;
-                        break;
-                    case CharacterCodes.slash:
-                    case CharacterCodes.bar:
-                        return;
-                    default:
-                        scanSourceCharacter();
-                        isPreviousTermQuantifiable = true;
-                        break;
-                }
-            }
-        }
-
-        function scanPatternModifiers(currFlags: RegularExpressionFlags): RegularExpressionFlags {
-            while (true) {
-                const ch = codePointChecked(pos);
-                if (ch === CharacterCodes.EOF || !isIdentifierPart(ch, languageVersion)) {
-                    break;
-                }
-                const size = charSize(ch);
-                const flag = characterCodeToRegularExpressionFlag(ch);
-                if (flag === undefined) {
-                    error(Diagnostics.Unknown_regular_expression_flag, pos, size);
-                }
-                else if (currFlags & flag) {
-                    error(Diagnostics.Duplicate_regular_expression_flag, pos, size);
-                }
-                else if (!(flag & RegularExpressionFlags.Modifiers)) {
-                    error(Diagnostics.This_regular_expression_flag_cannot_be_toggled_within_a_subpattern, pos, size);
-                }
-                else {
-                    currFlags |= flag;
-                    checkRegularExpressionFlagAvailability(flag, size);
-                }
-                pos += size;
-            }
-            return currFlags;
-        }
-
-        // AtomEscape ::=
-        //     | DecimalEscape
-        //     | CharacterClassEscape
-        //     | CharacterEscape
-        //     | 'k<' RegExpIdentifierName '>'
-        function scanAtomEscape() {
-            Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.backslash);
-            switch (charCodeChecked(pos)) {
-                case CharacterCodes.k:
-                    pos++;
-                    if (charCodeChecked(pos) === CharacterCodes.lessThan) {
-                        pos++;
-                        scanGroupName(/*isReference*/ true);
-                        scanExpectedChar(CharacterCodes.greaterThan);
-                    }
-                    else if (anyUnicodeModeOrNonAnnexB || namedCaptureGroups) {
-                        error(Diagnostics.k_must_be_followed_by_a_capturing_group_name_enclosed_in_angle_brackets, pos - 2, 2);
-                    }
-                    break;
-                case CharacterCodes.q:
-                    if (unicodeSetsMode) {
-                        pos++;
-                        error(Diagnostics.q_is_only_available_inside_character_class, pos - 2, 2);
-                        break;
-                    }
-                // falls through
-                default:
-                    // The scanEscapeSequence call in scanCharacterEscape must return non-empty strings
-                    // since there must not be line breaks in a regex literal
-                    Debug.assert(scanCharacterClassEscape() || scanDecimalEscape() || scanCharacterEscape(/*atomEscape*/ true));
-                    break;
-            }
-        }
-
-        // DecimalEscape ::= [1-9] [0-9]*
-        function scanDecimalEscape(): boolean {
-            Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.backslash);
-            const ch = charCodeChecked(pos);
-            if (ch >= CharacterCodes._1 && ch <= CharacterCodes._9) {
-                const start = pos;
-                scanDigits();
-                decimalEscapes = append(decimalEscapes, { pos: start, end: pos, value: +tokenValue });
-                return true;
-            }
-            return false;
-        }
-
-        // CharacterEscape ::=
-        //     | `c` ControlLetter
-        //     | IdentityEscape
-        //     | (Other sequences handled by `scanEscapeSequence`)
-        // IdentityEscape ::=
-        //     | '^' | '$' | '/' | '\' | '.' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|'
-        //     | [~UnicodeMode] (any other non-identifier characters)
-        function scanCharacterEscape(atomEscape: boolean): string {
-            Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.backslash);
-            let ch = charCodeChecked(pos);
-            switch (ch) {
-                case CharacterCodes.EOF:
-                    error(Diagnostics.Undetermined_character_escape, pos - 1, 1);
-                    return "\\";
-                case CharacterCodes.c:
-                    pos++;
-                    ch = charCodeChecked(pos);
-                    if (isASCIILetter(ch)) {
-                        pos++;
-                        return String.fromCharCode(ch & 0x1f);
-                    }
-                    if (anyUnicodeModeOrNonAnnexB) {
-                        error(Diagnostics.c_must_be_followed_by_an_ASCII_letter, pos - 2, 2);
-                    }
-                    else if (atomEscape) {
-                        // Annex B treats
-                        //
-                        //  ExtendedAtom : `\` [lookahead = `c`]
-                        //
-                        // as the single character `\` when `c` isn't followed by a valid control character
-                        pos--;
-                        return "\\";
-                    }
-                    return String.fromCharCode(ch);
-                case CharacterCodes.caret:
-                case CharacterCodes.$:
-                case CharacterCodes.slash:
-                case CharacterCodes.backslash:
-                case CharacterCodes.dot:
-                case CharacterCodes.asterisk:
-                case CharacterCodes.plus:
-                case CharacterCodes.question:
-                case CharacterCodes.openParen:
-                case CharacterCodes.closeParen:
-                case CharacterCodes.openBracket:
-                case CharacterCodes.closeBracket:
-                case CharacterCodes.openBrace:
-                case CharacterCodes.closeBrace:
-                case CharacterCodes.bar:
-                    pos++;
-                    return String.fromCharCode(ch);
-                default:
-                    pos--;
-                    return scanEscapeSequence(
-                        EscapeSequenceScanningFlags.RegularExpression
-                            | (annexB ? EscapeSequenceScanningFlags.AnnexB : 0)
-                            | (anyUnicodeMode ? EscapeSequenceScanningFlags.AnyUnicodeMode : 0)
-                            | (atomEscape ? EscapeSequenceScanningFlags.AtomEscape : 0),
-                    );
-            }
-        }
-
-        function scanGroupName(isReference: boolean) {
-            Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.lessThan);
-            tokenStart = pos;
-            scanIdentifier(codePointChecked(pos), languageVersion);
-            if (pos === tokenStart) {
-                error(Diagnostics.Expected_a_capturing_group_name);
-            }
-            else if (isReference) {
-                groupNameReferences = append(groupNameReferences, { pos: tokenStart, end: pos, name: tokenValue });
-            }
-            else if (topNamedCapturingGroupsScope?.has(tokenValue) || namedCapturingGroupsScopeStack.some(group => group?.has(tokenValue))) {
-                error(Diagnostics.Named_capturing_groups_with_the_same_name_must_be_mutually_exclusive_to_each_other, tokenStart, pos - tokenStart);
-            }
-            else {
-                topNamedCapturingGroupsScope ??= new Set();
-                topNamedCapturingGroupsScope.add(tokenValue);
-                groupSpecifiers ??= new Set();
-                groupSpecifiers.add(tokenValue);
-            }
-        }
-
-        function isClassContentExit(ch: number) {
-            return ch === CharacterCodes.closeBracket || ch === CharacterCodes.EOF || pos >= end;
-        }
-
-        // ClassRanges ::= '^'? (ClassAtom ('-' ClassAtom)?)*
-        function scanClassRanges() {
-            Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.openBracket);
-            if (charCodeChecked(pos) === CharacterCodes.caret) {
-                // character complement
-                pos++;
-            }
-            while (true) {
-                const ch = charCodeChecked(pos);
-                if (isClassContentExit(ch)) {
-                    return;
-                }
-                const minStart = pos;
-                const minCharacter = scanClassAtom();
-                if (charCodeChecked(pos) === CharacterCodes.minus) {
-                    pos++;
-                    const ch = charCodeChecked(pos);
-                    if (isClassContentExit(ch)) {
-                        return;
-                    }
-                    if (!minCharacter && anyUnicodeModeOrNonAnnexB) {
-                        error(Diagnostics.A_character_class_range_must_not_be_bounded_by_another_character_class, minStart, pos - 1 - minStart);
-                    }
-                    const maxStart = pos;
-                    const maxCharacter = scanClassAtom();
-                    if (!maxCharacter && anyUnicodeModeOrNonAnnexB) {
-                        error(Diagnostics.A_character_class_range_must_not_be_bounded_by_another_character_class, maxStart, pos - maxStart);
-                        continue;
-                    }
-                    if (!minCharacter) {
-                        continue;
-                    }
-                    const minCharacterValue = codePointAt(minCharacter, 0);
-                    const maxCharacterValue = codePointAt(maxCharacter, 0);
-                    if (
-                        minCharacter.length === charSize(minCharacterValue) &&
-                        maxCharacter.length === charSize(maxCharacterValue) &&
-                        minCharacterValue > maxCharacterValue
-                    ) {
-                        error(Diagnostics.Range_out_of_order_in_character_class, minStart, pos - minStart);
-                    }
-                }
-            }
-        }
-
-        // Static Semantics: MayContainStrings
-        //     ClassUnion: ClassSetOperands.some(ClassSetOperand => ClassSetOperand.MayContainStrings)
-        //     ClassIntersection: ClassSetOperands.every(ClassSetOperand => ClassSetOperand.MayContainStrings)
-        //     ClassSubtraction: ClassSetOperands[0].MayContainStrings
-        //     ClassSetOperand:
-        //         || ClassStringDisjunctionContents.MayContainStrings
-        //         || CharacterClassEscape.UnicodePropertyValueExpression.LoneUnicodePropertyNameOrValue.MayContainStrings
-        //     ClassStringDisjunctionContents: ClassStrings.some(ClassString => ClassString.ClassSetCharacters.length !== 1)
-        //     LoneUnicodePropertyNameOrValue: isBinaryUnicodePropertyOfStrings(LoneUnicodePropertyNameOrValue)
-
-        // ClassSetExpression ::= '^'? (ClassUnion | ClassIntersection | ClassSubtraction)
-        // ClassUnion ::= (ClassSetRange | ClassSetOperand)*
-        // ClassIntersection ::= ClassSetOperand ('&&' ClassSetOperand)+
-        // ClassSubtraction ::= ClassSetOperand ('--' ClassSetOperand)+
-        // ClassSetRange ::= ClassSetCharacter '-' ClassSetCharacter
-        function scanClassSetExpression() {
-            Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.openBracket);
-            let isCharacterComplement = false;
-            if (charCodeChecked(pos) === CharacterCodes.caret) {
-                pos++;
-                isCharacterComplement = true;
-            }
-            let expressionMayContainStrings = false;
-            let ch = charCodeChecked(pos);
-            if (isClassContentExit(ch)) {
-                return;
-            }
-            let start = pos;
-            let operand!: string;
-            switch (text.slice(pos, pos + 2)) { // TODO: don't use slice
-                case "--":
-                case "&&":
-                    error(Diagnostics.Expected_a_class_set_operand);
-                    mayContainStrings = false;
-                    break;
-                default:
-                    operand = scanClassSetOperand();
-                    break;
-            }
-            switch (charCodeChecked(pos)) {
-                case CharacterCodes.minus:
-                    if (charCodeChecked(pos + 1) === CharacterCodes.minus) {
-                        if (isCharacterComplement && mayContainStrings) {
-                            error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, start, pos - start);
-                        }
-                        expressionMayContainStrings = mayContainStrings;
-                        scanClassSetSubExpression(ClassSetExpressionType.ClassSubtraction);
-                        mayContainStrings = !isCharacterComplement && expressionMayContainStrings;
-                        return;
-                    }
-                    break;
-                case CharacterCodes.ampersand:
-                    if (charCodeChecked(pos + 1) === CharacterCodes.ampersand) {
-                        scanClassSetSubExpression(ClassSetExpressionType.ClassIntersection);
-                        if (isCharacterComplement && mayContainStrings) {
-                            error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, start, pos - start);
-                        }
-                        expressionMayContainStrings = mayContainStrings;
-                        mayContainStrings = !isCharacterComplement && expressionMayContainStrings;
-                        return;
-                    }
-                    else {
-                        error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
-                    }
-                    break;
-                default:
-                    if (isCharacterComplement && mayContainStrings) {
-                        error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, start, pos - start);
-                    }
-                    expressionMayContainStrings = mayContainStrings;
-                    break;
-            }
-            while (true) {
-                ch = charCodeChecked(pos);
-                if (ch === CharacterCodes.EOF) {
-                    break;
-                }
-                switch (ch) {
-                    case CharacterCodes.minus:
-                        pos++;
-                        ch = charCodeChecked(pos);
-                        if (isClassContentExit(ch)) {
-                            mayContainStrings = !isCharacterComplement && expressionMayContainStrings;
-                            return;
-                        }
-                        if (ch === CharacterCodes.minus) {
-                            pos++;
-                            error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 2, 2);
-                            start = pos - 2;
-                            operand = text.slice(start, pos);
-                            continue;
-                        }
-                        else {
-                            if (!operand) {
-                                error(Diagnostics.A_character_class_range_must_not_be_bounded_by_another_character_class, start, pos - 1 - start);
-                            }
-                            const secondStart = pos;
-                            const secondOperand = scanClassSetOperand();
-                            if (isCharacterComplement && mayContainStrings) {
-                                error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, secondStart, pos - secondStart);
-                            }
-                            expressionMayContainStrings ||= mayContainStrings;
-                            if (!secondOperand) {
-                                error(Diagnostics.A_character_class_range_must_not_be_bounded_by_another_character_class, secondStart, pos - secondStart);
-                                break;
-                            }
-                            if (!operand) {
-                                break;
-                            }
-                            const minCharacterValue = codePointAt(operand, 0);
-                            const maxCharacterValue = codePointAt(secondOperand, 0);
-                            if (
-                                operand.length === charSize(minCharacterValue) &&
-                                secondOperand.length === charSize(maxCharacterValue) &&
-                                minCharacterValue > maxCharacterValue
-                            ) {
-                                error(Diagnostics.Range_out_of_order_in_character_class, start, pos - start);
-                            }
-                        }
-                        break;
-                    case CharacterCodes.ampersand:
-                        start = pos;
-                        pos++;
-                        if (charCodeChecked(pos) === CharacterCodes.ampersand) {
-                            pos++;
-                            error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 2, 2);
-                            if (charCodeChecked(pos) === CharacterCodes.ampersand) {
-                                error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
-                                pos++;
-                            }
-                        }
-                        else {
-                            error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos - 1, 1, String.fromCharCode(ch));
-                        }
-                        operand = text.slice(start, pos);
-                        continue;
-                }
-                if (isClassContentExit(charCodeChecked(pos))) {
-                    break;
-                }
-                start = pos;
-                switch (text.slice(pos, pos + 2)) { // TODO: don't use slice
-                    case "--":
-                    case "&&":
-                        error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos, 2);
-                        pos += 2;
-                        operand = text.slice(start, pos);
-                        break;
-                    default:
-                        operand = scanClassSetOperand();
-                        break;
-                }
-            }
-            mayContainStrings = !isCharacterComplement && expressionMayContainStrings;
-        }
-
-        function scanClassSetSubExpression(expressionType: ClassSetExpressionType) {
-            let expressionMayContainStrings = mayContainStrings;
-            while (true) {
-                let ch = charCodeChecked(pos);
-                if (isClassContentExit(ch)) {
-                    break;
-                }
-                // Provide user-friendly diagnostic messages
-                switch (ch) {
-                    case CharacterCodes.minus:
-                        pos++;
-                        if (charCodeChecked(pos) === CharacterCodes.minus) {
-                            pos++;
-                            if (expressionType !== ClassSetExpressionType.ClassSubtraction) {
-                                error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 2, 2);
-                            }
-                        }
-                        else {
-                            error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 1, 1);
-                        }
-                        break;
-                    case CharacterCodes.ampersand:
-                        pos++;
-                        if (charCodeChecked(pos) === CharacterCodes.ampersand) {
-                            pos++;
-                            if (expressionType !== ClassSetExpressionType.ClassIntersection) {
-                                error(Diagnostics.Operators_must_not_be_mixed_within_a_character_class_Wrap_it_in_a_nested_class_instead, pos - 2, 2);
-                            }
-                            if (charCodeChecked(pos) === CharacterCodes.ampersand) {
-                                error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
-                                pos++;
-                            }
-                        }
-                        else {
-                            error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos - 1, 1, String.fromCharCode(ch));
-                        }
-                        break;
-                    default:
-                        switch (expressionType) {
-                            case ClassSetExpressionType.ClassSubtraction:
-                                error(Diagnostics._0_expected, pos, 0, "--");
-                                break;
-                            case ClassSetExpressionType.ClassIntersection:
-                                error(Diagnostics._0_expected, pos, 0, "&&");
-                                break;
-                            default:
-                                break;
-                        }
-                        break;
-                }
-                ch = charCodeChecked(pos);
-                if (isClassContentExit(ch)) {
-                    error(Diagnostics.Expected_a_class_set_operand);
-                    break;
-                }
-                scanClassSetOperand();
-                // Used only if expressionType is Intersection
-                expressionMayContainStrings &&= mayContainStrings;
-            }
-            mayContainStrings = expressionMayContainStrings;
-        }
-
-        // ClassSetOperand ::=
-        //     | '[' ClassSetExpression ']'
-        //     | '\' CharacterClassEscape
-        //     | '\q{' ClassStringDisjunctionContents '}'
-        //     | ClassSetCharacter
-        function scanClassSetOperand(): string {
-            mayContainStrings = false;
-            switch (charCodeChecked(pos)) {
-                case CharacterCodes.EOF:
-                    return "";
-                case CharacterCodes.openBracket:
-                    pos++;
-                    scanClassSetExpression();
-                    scanExpectedChar(CharacterCodes.closeBracket);
-                    return "";
-                case CharacterCodes.backslash:
-                    pos++;
-                    if (scanCharacterClassEscape()) {
-                        return "";
-                    }
-                    else if (charCodeChecked(pos) === CharacterCodes.q) {
-                        pos++;
-                        if (charCodeChecked(pos) === CharacterCodes.openBrace) {
-                            pos++;
-                            scanClassStringDisjunctionContents();
-                            scanExpectedChar(CharacterCodes.closeBrace);
-                            return "";
-                        }
-                        else {
-                            error(Diagnostics.q_must_be_followed_by_string_alternatives_enclosed_in_braces, pos - 2, 2);
-                            return "q";
-                        }
-                    }
-                    pos--;
-                // falls through
-                default:
-                    return scanClassSetCharacter();
-            }
-        }
-
-        // ClassStringDisjunctionContents ::= ClassSetCharacter* ('|' ClassSetCharacter*)*
-        function scanClassStringDisjunctionContents() {
-            Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.openBrace);
-            let characterCount = 0;
-            while (true) {
-                const ch = charCodeChecked(pos);
-                switch (ch) {
-                    case CharacterCodes.EOF:
-                        return;
-                    case CharacterCodes.closeBrace:
-                        if (characterCount !== 1) {
-                            mayContainStrings = true;
-                        }
-                        return;
-                    case CharacterCodes.bar:
-                        if (characterCount !== 1) {
-                            mayContainStrings = true;
-                        }
-                        pos++;
-                        start = pos;
-                        characterCount = 0;
-                        break;
-                    default:
-                        scanClassSetCharacter();
-                        characterCount++;
-                        break;
-                }
-            }
-        }
-
-        // ClassSetCharacter ::=
-        //     | SourceCharacter -- ClassSetSyntaxCharacter -- ClassSetReservedDoublePunctuator
-        //     | '\' (CharacterEscape | ClassSetReservedPunctuator | 'b')
-        function scanClassSetCharacter(): string {
-            const ch = charCodeChecked(pos);
-            if (ch === CharacterCodes.EOF) {
-                // no need to report an error, the initial scan will already have reported that the RegExp is unterminated.
-                return "";
-            }
-            if (ch === CharacterCodes.backslash) {
-                pos++;
-                const ch = charCodeChecked(pos);
-                switch (ch) {
-                    case CharacterCodes.b:
-                        pos++;
-                        return "\b";
-                    case CharacterCodes.ampersand:
-                    case CharacterCodes.minus:
-                    case CharacterCodes.exclamation:
-                    case CharacterCodes.hash:
-                    case CharacterCodes.percent:
-                    case CharacterCodes.comma:
-                    case CharacterCodes.colon:
-                    case CharacterCodes.semicolon:
-                    case CharacterCodes.lessThan:
-                    case CharacterCodes.equals:
-                    case CharacterCodes.greaterThan:
-                    case CharacterCodes.at:
-                    case CharacterCodes.backtick:
-                    case CharacterCodes.tilde:
-                        pos++;
-                        return String.fromCharCode(ch);
-                    default:
-                        return scanCharacterEscape(/*atomEscape*/ false);
-                }
-            }
-            else if (ch === charCodeChecked(pos + 1)) {
-                switch (ch) {
-                    case CharacterCodes.ampersand:
-                    case CharacterCodes.exclamation:
-                    case CharacterCodes.hash:
-                    case CharacterCodes.percent:
-                    case CharacterCodes.asterisk:
-                    case CharacterCodes.plus:
-                    case CharacterCodes.comma:
-                    case CharacterCodes.dot:
-                    case CharacterCodes.colon:
-                    case CharacterCodes.semicolon:
-                    case CharacterCodes.lessThan:
-                    case CharacterCodes.equals:
-                    case CharacterCodes.greaterThan:
-                    case CharacterCodes.question:
-                    case CharacterCodes.at:
-                    case CharacterCodes.backtick:
-                    case CharacterCodes.tilde:
-                        error(Diagnostics.A_character_class_must_not_contain_a_reserved_double_punctuator_Did_you_mean_to_escape_it_with_backslash, pos, 2);
-                        pos += 2;
-                        return text.substring(pos - 2, pos);
-                }
-            }
-            switch (ch) {
-                case CharacterCodes.slash:
-                case CharacterCodes.openParen:
-                case CharacterCodes.closeParen:
-                case CharacterCodes.openBracket:
-                case CharacterCodes.closeBracket:
-                case CharacterCodes.openBrace:
-                case CharacterCodes.closeBrace:
-                case CharacterCodes.minus:
-                case CharacterCodes.bar:
-                    error(Diagnostics.Unexpected_0_Did_you_mean_to_escape_it_with_backslash, pos, 1, String.fromCharCode(ch));
-                    pos++;
-                    return String.fromCharCode(ch);
-            }
-            return scanSourceCharacter();
-        }
-
-        // ClassAtom ::=
-        //     | SourceCharacter but not one of '\' or ']'
-        //     | '\' ClassEscape
-        // ClassEscape ::=
-        //     | 'b'
-        //     | '-'
-        //     | CharacterClassEscape
-        //     | CharacterEscape
-        function scanClassAtom(): string {
-            if (charCodeChecked(pos) === CharacterCodes.backslash) {
-                pos++;
-                const ch = charCodeChecked(pos);
-                switch (ch) {
-                    case CharacterCodes.b:
-                        pos++;
-                        return "\b";
-                    case CharacterCodes.minus:
-                        pos++;
-                        return String.fromCharCode(ch);
-                    default:
-                        if (scanCharacterClassEscape()) {
-                            return "";
-                        }
-                        return scanCharacterEscape(/*atomEscape*/ false);
-                }
-            }
-            else {
-                return scanSourceCharacter();
-            }
-        }
-
-        // CharacterClassEscape ::=
-        //     | 'd' | 'D' | 's' | 'S' | 'w' | 'W'
-        //     | [+UnicodeMode] ('P' | 'p') '{' UnicodePropertyValueExpression '}'
-        function scanCharacterClassEscape(): boolean {
-            Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.backslash);
-            let isCharacterComplement = false;
-            const start = pos - 1;
-            const ch = charCodeChecked(pos);
-            switch (ch) {
-                case CharacterCodes.d:
-                case CharacterCodes.D:
-                case CharacterCodes.s:
-                case CharacterCodes.S:
-                case CharacterCodes.w:
-                case CharacterCodes.W:
-                    pos++;
-                    return true;
-                case CharacterCodes.P:
-                    isCharacterComplement = true;
-                // falls through
-                case CharacterCodes.p:
-                    pos++;
-                    if (charCodeChecked(pos) === CharacterCodes.openBrace) {
-                        pos++;
-                        const propertyNameOrValueStart = pos;
-                        const propertyNameOrValue = scanWordCharacters();
-                        if (charCodeChecked(pos) === CharacterCodes.equals) {
-                            const propertyName = nonBinaryUnicodeProperties.get(propertyNameOrValue);
-                            if (pos === propertyNameOrValueStart) {
-                                error(Diagnostics.Expected_a_Unicode_property_name);
-                            }
-                            else if (propertyName === undefined) {
-                                error(Diagnostics.Unknown_Unicode_property_name, propertyNameOrValueStart, pos - propertyNameOrValueStart);
-                                const suggestion = getSpellingSuggestion(propertyNameOrValue, nonBinaryUnicodeProperties.keys(), identity);
-                                if (suggestion) {
-                                    error(Diagnostics.Did_you_mean_0, propertyNameOrValueStart, pos - propertyNameOrValueStart, suggestion);
-                                }
-                            }
-                            pos++;
-                            const propertyValueStart = pos;
-                            const propertyValue = scanWordCharacters();
-                            if (pos === propertyValueStart) {
-                                error(Diagnostics.Expected_a_Unicode_property_value);
-                            }
-                            else if (propertyName !== undefined && !valuesOfNonBinaryUnicodeProperties[propertyName].has(propertyValue)) {
-                                error(Diagnostics.Unknown_Unicode_property_value, propertyValueStart, pos - propertyValueStart);
-                                const suggestion = getSpellingSuggestion(propertyValue, valuesOfNonBinaryUnicodeProperties[propertyName], identity);
-                                if (suggestion) {
-                                    error(Diagnostics.Did_you_mean_0, propertyValueStart, pos - propertyValueStart, suggestion);
-                                }
-                            }
-                        }
-                        else {
-                            if (pos === propertyNameOrValueStart) {
-                                error(Diagnostics.Expected_a_Unicode_property_name_or_value);
-                            }
-                            else if (binaryUnicodePropertiesOfStrings.has(propertyNameOrValue)) {
-                                if (!unicodeSetsMode) {
-                                    error(Diagnostics.Any_Unicode_property_that_would_possibly_match_more_than_a_single_character_is_only_available_when_the_Unicode_Sets_v_flag_is_set, propertyNameOrValueStart, pos - propertyNameOrValueStart);
-                                }
-                                else if (isCharacterComplement) {
-                                    error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, propertyNameOrValueStart, pos - propertyNameOrValueStart);
-                                }
-                                else {
-                                    mayContainStrings = true;
-                                }
-                            }
-                            else if (!valuesOfNonBinaryUnicodeProperties.General_Category.has(propertyNameOrValue) && !binaryUnicodeProperties.has(propertyNameOrValue)) {
-                                error(Diagnostics.Unknown_Unicode_property_name_or_value, propertyNameOrValueStart, pos - propertyNameOrValueStart);
-                                const suggestion = getSpellingSuggestion(propertyNameOrValue, [...valuesOfNonBinaryUnicodeProperties.General_Category, ...binaryUnicodeProperties, ...binaryUnicodePropertiesOfStrings], identity);
-                                if (suggestion) {
-                                    error(Diagnostics.Did_you_mean_0, propertyNameOrValueStart, pos - propertyNameOrValueStart, suggestion);
-                                }
-                            }
-                        }
-                        scanExpectedChar(CharacterCodes.closeBrace);
-                        if (!anyUnicodeMode) {
-                            error(Diagnostics.Unicode_property_value_expressions_are_only_available_when_the_Unicode_u_flag_or_the_Unicode_Sets_v_flag_is_set, start, pos - start);
-                        }
-                    }
-                    else if (anyUnicodeModeOrNonAnnexB) {
-                        error(Diagnostics._0_must_be_followed_by_a_Unicode_property_value_expression_enclosed_in_braces, pos - 2, 2, String.fromCharCode(ch));
-                    }
-                    else {
-                        pos--;
-                        return false;
-                    }
-                    return true;
-            }
-            return false;
-        }
-
-        function scanWordCharacters(): string {
-            let value = "";
-            while (true) {
-                const ch = charCodeChecked(pos);
-                if (ch === CharacterCodes.EOF || !isWordCharacter(ch)) {
-                    break;
-                }
-                value += String.fromCharCode(ch);
-                pos++;
-            }
-            return value;
-        }
-
-        function scanSourceCharacter(): string {
-            const size = anyUnicodeMode ? charSize(codePointChecked(pos)) : 1;
-            pos += size;
-            return size > 0 ? text.substring(pos - size, pos) : "";
-        }
-
-        function scanExpectedChar(ch: CharacterCodes) {
-            if (charCodeChecked(pos) === ch) {
-                pos++;
-            }
-            else {
-                error(Diagnostics._0_expected, pos, 0, String.fromCharCode(ch));
-            }
-        }
-
-        scanDisjunction(/*isInGroup*/ false);
-
-        forEach(groupNameReferences, reference => {
-            if (!groupSpecifiers?.has(reference.name)) {
-                error(Diagnostics.There_is_no_capturing_group_named_0_in_this_regular_expression, reference.pos, reference.end - reference.pos, reference.name);
-                if (groupSpecifiers) {
-                    const suggestion = getSpellingSuggestion(reference.name, groupSpecifiers, identity);
-                    if (suggestion) {
-                        error(Diagnostics.Did_you_mean_0, reference.pos, reference.end - reference.pos, suggestion);
-                    }
-                }
-            }
-        });
-        forEach(decimalEscapes, escape => {
-            // Although a DecimalEscape with a value greater than the number of capturing groups
-            // is treated as either a LegacyOctalEscapeSequence or an IdentityEscape in Annex B,
-            // an error is nevertheless reported since it's most likely a mistake.
-            if (escape.value > numberOfCapturingGroups) {
-                if (numberOfCapturingGroups) {
-                    error(Diagnostics.This_backreference_refers_to_a_group_that_does_not_exist_There_are_only_0_capturing_groups_in_this_regular_expression, escape.pos, escape.end - escape.pos, numberOfCapturingGroups);
-                }
-                else {
-                    error(Diagnostics.This_backreference_refers_to_a_group_that_does_not_exist_There_are_no_capturing_groups_in_this_regular_expression, escape.pos, escape.end - escape.pos);
-                }
-            }
-        });
-    }
-
-    function checkRegularExpressionFlagAvailability(flag: RegularExpressionFlags, size: number) {
-        const availableFrom = regExpFlagToFirstAvailableLanguageVersion.get(flag);
-        if (availableFrom && languageVersion < availableFrom) {
-            error(Diagnostics.This_regular_expression_flag_is_only_available_when_targeting_0_or_later, pos, size, getNameOfScriptTarget(availableFrom));
-        }
-    }
-
-    function appendIfCommentDirective(
-        commentDirectives: CommentDirective[] | undefined,
-        text: string,
-        commentDirectiveRegEx: RegExp,
-        lineStart: number,
-    ) {
-        const type = getDirectiveFromComment(text.trimStart(), commentDirectiveRegEx);
-        if (type === undefined) {
-            return commentDirectives;
-        }
-
-        return append(
-            commentDirectives,
-            {
-                range: { pos: lineStart, end: pos },
-                type,
-            },
-        );
-    }
-
-    function getDirectiveFromComment(text: string, commentDirectiveRegEx: RegExp) {
-        const match = commentDirectiveRegEx.exec(text);
-        if (!match) {
-            return undefined;
-        }
-
-        switch (match[1]) {
-            case "ts-expect-error":
-                return CommentDirectiveType.ExpectError;
-
-            case "ts-ignore":
-                return CommentDirectiveType.Ignore;
-        }
-
-        return undefined;
-    }
-
-    /**
-     * Unconditionally back up and scan a template expression portion.
-     */
-    function reScanTemplateToken(isTaggedTemplate: boolean): SyntaxKind {
-        pos = tokenStart;
-        return token = scanTemplateAndSetTokenValue(!isTaggedTemplate);
-    }
-
-    function reScanTemplateHeadOrNoSubstitutionTemplate(): SyntaxKind {
-        pos = tokenStart;
-        return token = scanTemplateAndSetTokenValue(/*shouldEmitInvalidEscapeError*/ true);
-    }
-
-    function reScanJsxToken(allowMultilineJsxText = true): JsxTokenSyntaxKind {
-        pos = tokenStart = fullStartPos;
-        return token = scanJsxToken(allowMultilineJsxText);
-    }
-
-    function reScanLessThanToken(): SyntaxKind {
-        if (token === SyntaxKind.LessThanLessThanToken) {
-            pos = tokenStart + 1;
-            return token = SyntaxKind.LessThanToken;
-        }
-        return token;
-    }
-
-    function reScanHashToken(): SyntaxKind {
-        if (token === SyntaxKind.PrivateIdentifier) {
-            pos = tokenStart + 1;
-            return token = SyntaxKind.HashToken;
-        }
-        return token;
-    }
-
-    function reScanQuestionToken(): SyntaxKind {
-        Debug.assert(token === SyntaxKind.QuestionQuestionToken, "'reScanQuestionToken' should only be called on a '??'");
-        pos = tokenStart + 1;
-        return token = SyntaxKind.QuestionToken;
-    }
-
-    function scanJsxToken(allowMultilineJsxText = true): JsxTokenSyntaxKind {
-        fullStartPos = tokenStart = pos;
-
-        if (pos >= end) {
-            return token = SyntaxKind.EndOfFileToken;
-        }
-
-        let char = charCodeUnchecked(pos);
-        if (char === CharacterCodes.lessThan) {
-            if (charCodeUnchecked(pos + 1) === CharacterCodes.slash) {
-                pos += 2;
-                return token = SyntaxKind.LessThanSlashToken;
-            }
-            pos++;
-            return token = SyntaxKind.LessThanToken;
-        }
-
-        if (char === CharacterCodes.openBrace) {
-            pos++;
-            return token = SyntaxKind.OpenBraceToken;
-        }
-
-        // First non-whitespace character on this line.
-        let firstNonWhitespace = 0;
-
-        // These initial values are special because the first line is:
-        // firstNonWhitespace = 0 to indicate that we want leading whitespace,
-
-        while (pos < end) {
-            char = charCodeUnchecked(pos);
-            if (char === CharacterCodes.openBrace) {
-                break;
-            }
-            if (char === CharacterCodes.lessThan) {
-                if (isConflictMarkerTrivia(text, pos)) {
-                    pos = scanConflictMarkerTrivia(text, pos, error);
-                    return token = SyntaxKind.ConflictMarkerTrivia;
-                }
-                break;
-            }
-            if (char === CharacterCodes.greaterThan) {
-                error(Diagnostics.Unexpected_token_Did_you_mean_or_gt, pos, 1);
-            }
-            if (char === CharacterCodes.closeBrace) {
-                error(Diagnostics.Unexpected_token_Did_you_mean_or_rbrace, pos, 1);
-            }
-
-            // FirstNonWhitespace is 0, then we only see whitespaces so far. If we see a linebreak, we want to ignore that whitespaces.
-            // i.e (- : whitespace)
-            //      <div>----
-            //      </div> becomes <div></div>
-            //
-            //      <div>----</div> becomes <div>----</div>
-            if (isLineBreak(char) && firstNonWhitespace === 0) {
-                firstNonWhitespace = -1;
-            }
-            else if (!allowMultilineJsxText && isLineBreak(char) && firstNonWhitespace > 0) {
-                // Stop JsxText on each line during formatting. This allows the formatter to
-                // indent each line correctly.
-                break;
-            }
-            else if (!isWhiteSpaceLike(char)) {
-                firstNonWhitespace = pos;
-            }
-
-            pos++;
-        }
-
-        tokenValue = text.substring(fullStartPos, pos);
-
-        return firstNonWhitespace === -1 ? SyntaxKind.JsxTextAllWhiteSpaces : SyntaxKind.JsxText;
-    }
-
-    // Scans a JSX identifier; these differ from normal identifiers in that
-    // they allow dashes
-    function scanJsxIdentifier(): SyntaxKind {
-        if (tokenIsIdentifierOrKeyword(token)) {
-            // An identifier or keyword has already been parsed - check for a `-` or a single instance of `:` and then append it and
-            // everything after it to the token
-            // Do note that this means that `scanJsxIdentifier` effectively _mutates_ the visible token without advancing to a new token
-            // Any caller should be expecting this behavior and should only read the pos or token value after calling it.
-            while (pos < end) {
-                const ch = charCodeUnchecked(pos);
-                if (ch === CharacterCodes.minus) {
-                    tokenValue += "-";
-                    pos++;
-                    continue;
-                }
-                const oldPos = pos;
-                tokenValue += scanIdentifierParts(); // reuse `scanIdentifierParts` so unicode escapes are handled
-                if (pos === oldPos) {
-                    break;
-                }
-            }
-            return getIdentifierToken();
-        }
-        return token;
-    }
-
-    function scanJsxAttributeValue(): SyntaxKind {
-        fullStartPos = pos;
-
-        switch (charCodeUnchecked(pos)) {
-            case CharacterCodes.doubleQuote:
-            case CharacterCodes.singleQuote:
-                tokenValue = scanString(/*jsxAttributeString*/ true);
-                return token = SyntaxKind.StringLiteral;
-            default:
-                // If this scans anything other than `{`, it's a parse error.
-                return scan();
-        }
-    }
-
-    function reScanJsxAttributeValue(): SyntaxKind {
-        pos = tokenStart = fullStartPos;
-        return scanJsxAttributeValue();
-    }
-
-    function scanJSDocCommentTextToken(inBackticks: boolean): JSDocSyntaxKind | SyntaxKind.JSDocCommentTextToken {
-        fullStartPos = tokenStart = pos;
-        tokenFlags = TokenFlags.None;
-        if (pos >= end) {
-            return token = SyntaxKind.EndOfFileToken;
-        }
-        for (let ch = charCodeUnchecked(pos); pos < end && (!isLineBreak(ch) && ch !== CharacterCodes.backtick); ch = codePointUnchecked(++pos)) {
-            if (!inBackticks) {
-                if (ch === CharacterCodes.openBrace) {
-                    break;
-                }
-                else if (
-                    ch === CharacterCodes.at
-                    && pos - 1 >= 0 && isWhiteSpaceSingleLine(charCodeUnchecked(pos - 1))
-                    && !(pos + 1 < end && isWhiteSpaceLike(charCodeUnchecked(pos + 1)))
-                ) {
-                    // @ doesn't start a new tag inside ``, and elsewhere, only after whitespace and before non-whitespace
-                    break;
-                }
-            }
-        }
-        if (pos === tokenStart) {
-            return scanJsDocToken();
-        }
-        tokenValue = text.substring(tokenStart, pos);
-        return token = SyntaxKind.JSDocCommentTextToken;
-    }
-
-    function scanJsDocToken(): JSDocSyntaxKind {
-        fullStartPos = tokenStart = pos;
-        tokenFlags = TokenFlags.None;
-        if (pos >= end) {
-            return token = SyntaxKind.EndOfFileToken;
-        }
-
-        const ch = codePointUnchecked(pos);
-        pos += charSize(ch);
+    // ClassAtom ::=
+    //     | SourceCharacter but not one of '\' or ']'
+    //     | '\' ClassEscape
+    // ClassEscape ::=
+    //     | 'b'
+    //     | '-'
+    //     | CharacterClassEscape
+    //     | CharacterEscape
+    function scanClassAtom(): string {
+      if (charCodeChecked(pos) === CharacterCodes.backslash) {
+        pos++;
+        const ch = charCodeChecked(pos);
         switch (ch) {
-            case CharacterCodes.tab:
-            case CharacterCodes.verticalTab:
-            case CharacterCodes.formFeed:
-            case CharacterCodes.space:
-                while (pos < end && isWhiteSpaceSingleLine(charCodeUnchecked(pos))) {
-                    pos++;
-                }
-                return token = SyntaxKind.WhitespaceTrivia;
-            case CharacterCodes.at:
-                return token = SyntaxKind.AtToken;
-            case CharacterCodes.carriageReturn:
-                if (charCodeUnchecked(pos) === CharacterCodes.lineFeed) {
-                    pos++;
-                }
-                // falls through
-            case CharacterCodes.lineFeed:
-                tokenFlags |= TokenFlags.PrecedingLineBreak;
-                return token = SyntaxKind.NewLineTrivia;
-            case CharacterCodes.asterisk:
-                return token = SyntaxKind.AsteriskToken;
-            case CharacterCodes.openBrace:
-                return token = SyntaxKind.OpenBraceToken;
-            case CharacterCodes.closeBrace:
-                return token = SyntaxKind.CloseBraceToken;
-            case CharacterCodes.openBracket:
-                return token = SyntaxKind.OpenBracketToken;
-            case CharacterCodes.closeBracket:
-                return token = SyntaxKind.CloseBracketToken;
-            case CharacterCodes.openParen:
-                return token = SyntaxKind.OpenParenToken;
-            case CharacterCodes.closeParen:
-                return token = SyntaxKind.CloseParenToken;
-            case CharacterCodes.lessThan:
-                return token = SyntaxKind.LessThanToken;
-            case CharacterCodes.greaterThan:
-                return token = SyntaxKind.GreaterThanToken;
-            case CharacterCodes.equals:
-                return token = SyntaxKind.EqualsToken;
-            case CharacterCodes.comma:
-                return token = SyntaxKind.CommaToken;
-            case CharacterCodes.dot:
-                return token = SyntaxKind.DotToken;
-            case CharacterCodes.backtick:
-                return token = SyntaxKind.BacktickToken;
-            case CharacterCodes.hash:
-                return token = SyntaxKind.HashToken;
-            case CharacterCodes.backslash:
-                pos--;
-                const extendedCookedChar = peekExtendedUnicodeEscape();
-                if (extendedCookedChar >= 0 && isIdentifierStart(extendedCookedChar, languageVersion)) {
-                    tokenValue = scanExtendedUnicodeEscape(/*shouldEmitInvalidEscapeError*/ true) + scanIdentifierParts();
-                    return token = getIdentifierToken();
-                }
-
-                const cookedChar = peekUnicodeEscape();
-                if (cookedChar >= 0 && isIdentifierStart(cookedChar, languageVersion)) {
-                    pos += 6;
-                    tokenFlags |= TokenFlags.UnicodeEscape;
-                    tokenValue = String.fromCharCode(cookedChar) + scanIdentifierParts();
-                    return token = getIdentifierToken();
-                }
-                pos++;
-                return token = SyntaxKind.Unknown;
-        }
-
-        if (isIdentifierStart(ch, languageVersion)) {
-            let char = ch;
-            while (pos < end && isIdentifierPart(char = codePointUnchecked(pos), languageVersion) || char === CharacterCodes.minus) pos += charSize(char);
-            tokenValue = text.substring(tokenStart, pos);
-            if (char === CharacterCodes.backslash) {
-                tokenValue += scanIdentifierParts();
+          case CharacterCodes.b:
+            pos++;
+            return "\b";
+          case CharacterCodes.minus:
+            pos++;
+            return String.fromCharCode(ch);
+          default:
+            if (scanCharacterClassEscape()) {
+              return "";
             }
-            return token = getIdentifierToken();
+            return scanCharacterEscape(/*atomEscape*/ false);
+        }
+      }
+      else {
+        return scanSourceCharacter();
+      }
+    }
+
+    // CharacterClassEscape ::=
+    //     | 'd' | 'D' | 's' | 'S' | 'w' | 'W'
+    //     | [+UnicodeMode] ('P' | 'p') '{' UnicodePropertyValueExpression '}'
+    function scanCharacterClassEscape(): boolean {
+      Debug.assertEqual(charCodeUnchecked(pos - 1), CharacterCodes.backslash);
+      let isCharacterComplement = false;
+      const start = pos - 1;
+      const ch = charCodeChecked(pos);
+      switch (ch) {
+        case CharacterCodes.d:
+        case CharacterCodes.D:
+        case CharacterCodes.s:
+        case CharacterCodes.S:
+        case CharacterCodes.w:
+        case CharacterCodes.W:
+          pos++;
+          return true;
+        case CharacterCodes.P:
+          isCharacterComplement = true;
+        // falls through
+        case CharacterCodes.p:
+          pos++;
+          if (charCodeChecked(pos) === CharacterCodes.openBrace) {
+            pos++;
+            const propertyNameOrValueStart = pos;
+            const propertyNameOrValue = scanWordCharacters();
+            if (charCodeChecked(pos) === CharacterCodes.equals) {
+              const propertyName = nonBinaryUnicodeProperties.get(propertyNameOrValue);
+              if (pos === propertyNameOrValueStart) {
+                error(Diagnostics.Expected_a_Unicode_property_name);
+              }
+              else if (propertyName === undefined) {
+                error(Diagnostics.Unknown_Unicode_property_name, propertyNameOrValueStart, pos - propertyNameOrValueStart);
+                const suggestion = getSpellingSuggestion(propertyNameOrValue, nonBinaryUnicodeProperties.keys(), identity);
+                if (suggestion) {
+                  error(Diagnostics.Did_you_mean_0, propertyNameOrValueStart, pos - propertyNameOrValueStart, suggestion);
+                }
+              }
+              pos++;
+              const propertyValueStart = pos;
+              const propertyValue = scanWordCharacters();
+              if (pos === propertyValueStart) {
+                error(Diagnostics.Expected_a_Unicode_property_value);
+              }
+              else if (propertyName !== undefined && !valuesOfNonBinaryUnicodeProperties[propertyName].has(propertyValue)) {
+                error(Diagnostics.Unknown_Unicode_property_value, propertyValueStart, pos - propertyValueStart);
+                const suggestion = getSpellingSuggestion(propertyValue, valuesOfNonBinaryUnicodeProperties[propertyName], identity);
+                if (suggestion) {
+                  error(Diagnostics.Did_you_mean_0, propertyValueStart, pos - propertyValueStart, suggestion);
+                }
+              }
+            }
+            else {
+              if (pos === propertyNameOrValueStart) {
+                error(Diagnostics.Expected_a_Unicode_property_name_or_value);
+              }
+              else if (binaryUnicodePropertiesOfStrings.has(propertyNameOrValue)) {
+                if (!unicodeSetsMode) {
+                  error(Diagnostics.Any_Unicode_property_that_would_possibly_match_more_than_a_single_character_is_only_available_when_the_Unicode_Sets_v_flag_is_set, propertyNameOrValueStart, pos - propertyNameOrValueStart);
+                }
+                else if (isCharacterComplement) {
+                  error(Diagnostics.Anything_that_would_possibly_match_more_than_a_single_character_is_invalid_inside_a_negated_character_class, propertyNameOrValueStart, pos - propertyNameOrValueStart);
+                }
+                else {
+                  mayContainStrings = true;
+                }
+              }
+              else if (!valuesOfNonBinaryUnicodeProperties.General_Category.has(propertyNameOrValue) && !binaryUnicodeProperties.has(propertyNameOrValue)) {
+                error(Diagnostics.Unknown_Unicode_property_name_or_value, propertyNameOrValueStart, pos - propertyNameOrValueStart);
+                const suggestion = getSpellingSuggestion(propertyNameOrValue, [...valuesOfNonBinaryUnicodeProperties.General_Category, ...binaryUnicodeProperties, ...binaryUnicodePropertiesOfStrings], identity);
+                if (suggestion) {
+                  error(Diagnostics.Did_you_mean_0, propertyNameOrValueStart, pos - propertyNameOrValueStart, suggestion);
+                }
+              }
+            }
+            scanExpectedChar(CharacterCodes.closeBrace);
+            if (!anyUnicodeMode) {
+              error(Diagnostics.Unicode_property_value_expressions_are_only_available_when_the_Unicode_u_flag_or_the_Unicode_Sets_v_flag_is_set, start, pos - start);
+            }
+          }
+          else if (anyUnicodeModeOrNonAnnexB) {
+            error(Diagnostics._0_must_be_followed_by_a_Unicode_property_value_expression_enclosed_in_braces, pos - 2, 2, String.fromCharCode(ch));
+          }
+          else {
+            pos--;
+            return false;
+          }
+          return true;
+      }
+      return false;
+    }
+
+    function scanWordCharacters(): string {
+      let value = "";
+      while (true) {
+        const ch = charCodeChecked(pos);
+        if (ch === CharacterCodes.EOF || !isWordCharacter(ch)) {
+          break;
+        }
+        value += String.fromCharCode(ch);
+        pos++;
+      }
+      return value;
+    }
+
+    function scanSourceCharacter(): string {
+      const size = anyUnicodeMode ? charSize(codePointChecked(pos)) : 1;
+      pos += size;
+      return size > 0 ? text.substring(pos - size, pos) : "";
+    }
+
+    function scanExpectedChar(ch: CharacterCodes) {
+      if (charCodeChecked(pos) === ch) {
+        pos++;
+      }
+      else {
+        error(Diagnostics._0_expected, pos, 0, String.fromCharCode(ch));
+      }
+    }
+
+    scanDisjunction(/*isInGroup*/ false);
+
+    forEach(groupNameReferences, reference => {
+      if (!groupSpecifiers?.has(reference.name)) {
+        error(Diagnostics.There_is_no_capturing_group_named_0_in_this_regular_expression, reference.pos, reference.end - reference.pos, reference.name);
+        if (groupSpecifiers) {
+          const suggestion = getSpellingSuggestion(reference.name, groupSpecifiers, identity);
+          if (suggestion) {
+            error(Diagnostics.Did_you_mean_0, reference.pos, reference.end - reference.pos, suggestion);
+          }
+        }
+      }
+    });
+    forEach(decimalEscapes, escape => {
+      // Although a DecimalEscape with a value greater than the number of capturing groups
+      // is treated as either a LegacyOctalEscapeSequence or an IdentityEscape in Annex B,
+      // an error is nevertheless reported since it's most likely a mistake.
+      if (escape.value > numberOfCapturingGroups) {
+        if (numberOfCapturingGroups) {
+          error(Diagnostics.This_backreference_refers_to_a_group_that_does_not_exist_There_are_only_0_capturing_groups_in_this_regular_expression, escape.pos, escape.end - escape.pos, numberOfCapturingGroups);
         }
         else {
-            return token = SyntaxKind.Unknown;
+          error(Diagnostics.This_backreference_refers_to_a_group_that_does_not_exist_There_are_no_capturing_groups_in_this_regular_expression, escape.pos, escape.end - escape.pos);
         }
+      }
+    });
+  }
+
+  function checkRegularExpressionFlagAvailability(flag: RegularExpressionFlags, size: number) {
+    const availableFrom = regExpFlagToFirstAvailableLanguageVersion.get(flag);
+    if (availableFrom && languageVersion < availableFrom) {
+      error(Diagnostics.This_regular_expression_flag_is_only_available_when_targeting_0_or_later, pos, size, getNameOfScriptTarget(availableFrom));
+    }
+  }
+
+  function appendIfCommentDirective(
+    commentDirectives: CommentDirective[] | undefined,
+    text: string,
+    commentDirectiveRegEx: RegExp,
+    lineStart: number,
+  ) {
+    const type = getDirectiveFromComment(text.trimStart(), commentDirectiveRegEx);
+    if (type === undefined) {
+      return commentDirectives;
     }
 
-    function speculationHelper<T>(callback: () => T, isLookahead: boolean): T {
-        const savePos = pos;
-        const saveStartPos = fullStartPos;
-        const saveTokenPos = tokenStart;
-        const saveToken = token;
-        const saveTokenValue = tokenValue;
-        const saveTokenFlags = tokenFlags;
-        const result = callback();
+    return append(
+      commentDirectives,
+      {
+        range: { pos: lineStart, end: pos },
+        type,
+      },
+    );
+  }
 
-        // If our callback returned something 'falsy' or we're just looking ahead,
-        // then unconditionally restore us to where we were.
-        if (!result || isLookahead) {
-            pos = savePos;
-            fullStartPos = saveStartPos;
-            tokenStart = saveTokenPos;
-            token = saveToken;
-            tokenValue = saveTokenValue;
-            tokenFlags = saveTokenFlags;
+  function getDirectiveFromComment(text: string, commentDirectiveRegEx: RegExp) {
+    const match = commentDirectiveRegEx.exec(text);
+    if (!match) {
+      return undefined;
+    }
+
+    switch (match[1]) {
+      case "ts-expect-error":
+        return CommentDirectiveType.ExpectError;
+
+      case "ts-ignore":
+        return CommentDirectiveType.Ignore;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Unconditionally back up and scan a template expression portion.
+   */
+  function reScanTemplateToken(isTaggedTemplate: boolean): SyntaxKind {
+    pos = tokenStart;
+    return token = scanTemplateAndSetTokenValue(!isTaggedTemplate);
+  }
+
+  function reScanTemplateHeadOrNoSubstitutionTemplate(): SyntaxKind {
+    pos = tokenStart;
+    return token = scanTemplateAndSetTokenValue(/*shouldEmitInvalidEscapeError*/ true);
+  }
+
+  function reScanJsxToken(allowMultilineJsxText = true): JsxTokenSyntaxKind {
+    pos = tokenStart = fullStartPos;
+    return token = scanJsxToken(allowMultilineJsxText);
+  }
+
+  function reScanLessThanToken(): SyntaxKind {
+    if (token === SyntaxKind.LessThanLessThanToken) {
+      pos = tokenStart + 1;
+      return token = SyntaxKind.LessThanToken;
+    }
+    return token;
+  }
+
+  function reScanHashToken(): SyntaxKind {
+    if (token === SyntaxKind.PrivateIdentifier) {
+      pos = tokenStart + 1;
+      return token = SyntaxKind.HashToken;
+    }
+    return token;
+  }
+
+  function reScanQuestionToken(): SyntaxKind {
+    Debug.assert(token === SyntaxKind.QuestionQuestionToken, "'reScanQuestionToken' should only be called on a '??'");
+    pos = tokenStart + 1;
+    return token = SyntaxKind.QuestionToken;
+  }
+
+  function scanJsxToken(allowMultilineJsxText = true): JsxTokenSyntaxKind {
+    fullStartPos = tokenStart = pos;
+
+    if (pos >= end) {
+      return token = SyntaxKind.EndOfFileToken;
+    }
+
+    let char = charCodeUnchecked(pos);
+    if (char === CharacterCodes.lessThan) {
+      if (charCodeUnchecked(pos + 1) === CharacterCodes.slash) {
+        pos += 2;
+        return token = SyntaxKind.LessThanSlashToken;
+      }
+      pos++;
+      return token = SyntaxKind.LessThanToken;
+    }
+
+    if (char === CharacterCodes.openBrace) {
+      pos++;
+      return token = SyntaxKind.OpenBraceToken;
+    }
+
+    // First non-whitespace character on this line.
+    let firstNonWhitespace = 0;
+
+    // These initial values are special because the first line is:
+    // firstNonWhitespace = 0 to indicate that we want leading whitespace,
+
+    while (pos < end) {
+      char = charCodeUnchecked(pos);
+      if (char === CharacterCodes.openBrace) {
+        break;
+      }
+      if (char === CharacterCodes.lessThan) {
+        if (isConflictMarkerTrivia(text, pos)) {
+          pos = scanConflictMarkerTrivia(text, pos, error);
+          return token = SyntaxKind.ConflictMarkerTrivia;
         }
-        return result;
+        break;
+      }
+      if (char === CharacterCodes.greaterThan) {
+        error(Diagnostics.Unexpected_token_Did_you_mean_or_gt, pos, 1);
+      }
+      if (char === CharacterCodes.closeBrace) {
+        error(Diagnostics.Unexpected_token_Did_you_mean_or_rbrace, pos, 1);
+      }
+
+      // FirstNonWhitespace is 0, then we only see whitespaces so far. If we see a linebreak, we want to ignore that whitespaces.
+      // i.e (- : whitespace)
+      //      <div>----
+      //      </div> becomes <div></div>
+      //
+      //      <div>----</div> becomes <div>----</div>
+      if (isLineBreak(char) && firstNonWhitespace === 0) {
+        firstNonWhitespace = -1;
+      }
+      else if (!allowMultilineJsxText && isLineBreak(char) && firstNonWhitespace > 0) {
+        // Stop JsxText on each line during formatting. This allows the formatter to
+        // indent each line correctly.
+        break;
+      }
+      else if (!isWhiteSpaceLike(char)) {
+        firstNonWhitespace = pos;
+      }
+
+      pos++;
     }
 
-    function scanRange<T>(start: number, length: number, callback: () => T): T {
-        const saveEnd = end;
-        const savePos = pos;
-        const saveStartPos = fullStartPos;
-        const saveTokenPos = tokenStart;
-        const saveToken = token;
-        const saveTokenValue = tokenValue;
-        const saveTokenFlags = tokenFlags;
-        const saveErrorExpectations = commentDirectives;
+    tokenValue = text.substring(fullStartPos, pos);
 
-        setText(text, start, length);
-        const result = callback();
+    return firstNonWhitespace === -1 ? SyntaxKind.JsxTextAllWhiteSpaces : SyntaxKind.JsxText;
+  }
 
-        end = saveEnd;
-        pos = savePos;
-        fullStartPos = saveStartPos;
-        tokenStart = saveTokenPos;
-        token = saveToken;
-        tokenValue = saveTokenValue;
-        tokenFlags = saveTokenFlags;
-        commentDirectives = saveErrorExpectations;
+  // Scans a JSX identifier; these differ from normal identifiers in that
+  // they allow dashes
+  function scanJsxIdentifier(): SyntaxKind {
+    if (tokenIsIdentifierOrKeyword(token)) {
+      // An identifier or keyword has already been parsed - check for a `-` or a single instance of `:` and then append it and
+      // everything after it to the token
+      // Do note that this means that `scanJsxIdentifier` effectively _mutates_ the visible token without advancing to a new token
+      // Any caller should be expecting this behavior and should only read the pos or token value after calling it.
+      while (pos < end) {
+        const ch = charCodeUnchecked(pos);
+        if (ch === CharacterCodes.minus) {
+          tokenValue += "-";
+          pos++;
+          continue;
+        }
+        const oldPos = pos;
+        tokenValue += scanIdentifierParts(); // reuse `scanIdentifierParts` so unicode escapes are handled
+        if (pos === oldPos) {
+          break;
+        }
+      }
+      return getIdentifierToken();
+    }
+    return token;
+  }
 
-        return result;
+  function scanJsxAttributeValue(): SyntaxKind {
+    fullStartPos = pos;
+
+    switch (charCodeUnchecked(pos)) {
+      case CharacterCodes.doubleQuote:
+      case CharacterCodes.singleQuote:
+        tokenValue = scanString(/*jsxAttributeString*/ true);
+        return token = SyntaxKind.StringLiteral;
+      default:
+        // If this scans anything other than `{`, it's a parse error.
+        return scan();
+    }
+  }
+
+  function reScanJsxAttributeValue(): SyntaxKind {
+    pos = tokenStart = fullStartPos;
+    return scanJsxAttributeValue();
+  }
+
+  function scanJSDocCommentTextToken(inBackticks: boolean): JSDocSyntaxKind | SyntaxKind.JSDocCommentTextToken {
+    fullStartPos = tokenStart = pos;
+    tokenFlags = TokenFlags.None;
+    if (pos >= end) {
+      return token = SyntaxKind.EndOfFileToken;
+    }
+    for (let ch = charCodeUnchecked(pos); pos < end && (!isLineBreak(ch) && ch !== CharacterCodes.backtick); ch = codePointUnchecked(++pos)) {
+      if (!inBackticks) {
+        if (ch === CharacterCodes.openBrace) {
+          break;
+        }
+        else if (
+          ch === CharacterCodes.at
+          && pos - 1 >= 0 && isWhiteSpaceSingleLine(charCodeUnchecked(pos - 1))
+          && !(pos + 1 < end && isWhiteSpaceLike(charCodeUnchecked(pos + 1)))
+        ) {
+          // @ doesn't start a new tag inside ``, and elsewhere, only after whitespace and before non-whitespace
+          break;
+        }
+      }
+    }
+    if (pos === tokenStart) {
+      return scanJsDocToken();
+    }
+    tokenValue = text.substring(tokenStart, pos);
+    return token = SyntaxKind.JSDocCommentTextToken;
+  }
+
+  function scanJsDocToken(): JSDocSyntaxKind {
+    fullStartPos = tokenStart = pos;
+    tokenFlags = TokenFlags.None;
+    if (pos >= end) {
+      return token = SyntaxKind.EndOfFileToken;
     }
 
-    function lookAhead<T>(callback: () => T): T {
-        return speculationHelper(callback, /*isLookahead*/ true);
+    const ch = codePointUnchecked(pos);
+    pos += charSize(ch);
+    switch (ch) {
+      case CharacterCodes.tab:
+      case CharacterCodes.verticalTab:
+      case CharacterCodes.formFeed:
+      case CharacterCodes.space:
+        while (pos < end && isWhiteSpaceSingleLine(charCodeUnchecked(pos))) {
+          pos++;
+        }
+        return token = SyntaxKind.WhitespaceTrivia;
+      case CharacterCodes.at:
+        return token = SyntaxKind.AtToken;
+      case CharacterCodes.carriageReturn:
+        if (charCodeUnchecked(pos) === CharacterCodes.lineFeed) {
+          pos++;
+        }
+        // falls through
+      case CharacterCodes.lineFeed:
+        tokenFlags |= TokenFlags.PrecedingLineBreak;
+        return token = SyntaxKind.NewLineTrivia;
+      case CharacterCodes.asterisk:
+        return token = SyntaxKind.AsteriskToken;
+      case CharacterCodes.openBrace:
+        return token = SyntaxKind.OpenBraceToken;
+      case CharacterCodes.closeBrace:
+        return token = SyntaxKind.CloseBraceToken;
+      case CharacterCodes.openBracket:
+        return token = SyntaxKind.OpenBracketToken;
+      case CharacterCodes.closeBracket:
+        return token = SyntaxKind.CloseBracketToken;
+      case CharacterCodes.openParen:
+        return token = SyntaxKind.OpenParenToken;
+      case CharacterCodes.closeParen:
+        return token = SyntaxKind.CloseParenToken;
+      case CharacterCodes.lessThan:
+        return token = SyntaxKind.LessThanToken;
+      case CharacterCodes.greaterThan:
+        return token = SyntaxKind.GreaterThanToken;
+      case CharacterCodes.equals:
+        return token = SyntaxKind.EqualsToken;
+      case CharacterCodes.comma:
+        return token = SyntaxKind.CommaToken;
+      case CharacterCodes.dot:
+        return token = SyntaxKind.DotToken;
+      case CharacterCodes.backtick:
+        return token = SyntaxKind.BacktickToken;
+      case CharacterCodes.hash:
+        return token = SyntaxKind.HashToken;
+      case CharacterCodes.backslash:
+        pos--;
+        const extendedCookedChar = peekExtendedUnicodeEscape();
+        if (extendedCookedChar >= 0 && isIdentifierStart(extendedCookedChar, languageVersion)) {
+          tokenValue = scanExtendedUnicodeEscape(/*shouldEmitInvalidEscapeError*/ true) + scanIdentifierParts();
+          return token = getIdentifierToken();
+        }
+
+        const cookedChar = peekUnicodeEscape();
+        if (cookedChar >= 0 && isIdentifierStart(cookedChar, languageVersion)) {
+          pos += 6;
+          tokenFlags |= TokenFlags.UnicodeEscape;
+          tokenValue = String.fromCharCode(cookedChar) + scanIdentifierParts();
+          return token = getIdentifierToken();
+        }
+        pos++;
+        return token = SyntaxKind.Unknown;
     }
 
-    function tryScan<T>(callback: () => T): T {
-        return speculationHelper(callback, /*isLookahead*/ false);
+    if (isIdentifierStart(ch, languageVersion)) {
+      let char = ch;
+      while (pos < end && isIdentifierPart(char = codePointUnchecked(pos), languageVersion) || char === CharacterCodes.minus) pos += charSize(char);
+      tokenValue = text.substring(tokenStart, pos);
+      if (char === CharacterCodes.backslash) {
+        tokenValue += scanIdentifierParts();
+      }
+      return token = getIdentifierToken();
     }
+    else {
+      return token = SyntaxKind.Unknown;
+    }
+  }
 
-    function getText(): string {
-        return text;
-    }
+  function speculationHelper<T>(callback: () => T, isLookahead: boolean): T {
+    const savePos = pos;
+    const saveStartPos = fullStartPos;
+    const saveTokenPos = tokenStart;
+    const saveToken = token;
+    const saveTokenValue = tokenValue;
+    const saveTokenFlags = tokenFlags;
+    const result = callback();
 
-    function clearCommentDirectives() {
-        commentDirectives = undefined;
+    // If our callback returned something 'falsy' or we're just looking ahead,
+    // then unconditionally restore us to where we were.
+    if (!result || isLookahead) {
+      pos = savePos;
+      fullStartPos = saveStartPos;
+      tokenStart = saveTokenPos;
+      token = saveToken;
+      tokenValue = saveTokenValue;
+      tokenFlags = saveTokenFlags;
     }
+    return result;
+  }
 
-    function setText(newText: string | undefined, start: number | undefined, length: number | undefined) {
-        text = newText || "";
-        end = length === undefined ? text.length : start! + length;
-        resetTokenState(start || 0);
-    }
+  function scanRange<T>(start: number, length: number, callback: () => T): T {
+    const saveEnd = end;
+    const savePos = pos;
+    const saveStartPos = fullStartPos;
+    const saveTokenPos = tokenStart;
+    const saveToken = token;
+    const saveTokenValue = tokenValue;
+    const saveTokenFlags = tokenFlags;
+    const saveErrorExpectations = commentDirectives;
 
-    function setOnError(errorCallback: ErrorCallback | undefined) {
-        onError = errorCallback;
-    }
+    setText(text, start, length);
+    const result = callback();
 
-    function setScriptTarget(scriptTarget: ScriptTarget) {
-        languageVersion = scriptTarget;
-    }
+    end = saveEnd;
+    pos = savePos;
+    fullStartPos = saveStartPos;
+    tokenStart = saveTokenPos;
+    token = saveToken;
+    tokenValue = saveTokenValue;
+    tokenFlags = saveTokenFlags;
+    commentDirectives = saveErrorExpectations;
 
-    function setLanguageVariant(variant: LanguageVariant) {
-        languageVariant = variant;
-    }
+    return result;
+  }
 
-    function setScriptKind(kind: ScriptKind) {
-        scriptKind = kind;
-    }
+  function lookAhead<T>(callback: () => T): T {
+    return speculationHelper(callback, /*isLookahead*/ true);
+  }
 
-    function setJSDocParsingMode(kind: JSDocParsingMode) {
-        jsDocParsingMode = kind;
-    }
+  function tryScan<T>(callback: () => T): T {
+    return speculationHelper(callback, /*isLookahead*/ false);
+  }
 
-    function resetTokenState(position: number) {
-        Debug.assert(position >= 0);
-        pos = position;
-        fullStartPos = position;
-        tokenStart = position;
-        token = SyntaxKind.Unknown;
-        tokenValue = undefined!;
-        tokenFlags = TokenFlags.None;
-    }
+  function getText(): string {
+    return text;
+  }
 
-    function setSkipJsDocLeadingAsterisks(skip: boolean) {
-        skipJsDocLeadingAsterisks += skip ? 1 : -1;
-    }
+  function clearCommentDirectives() {
+    commentDirectives = undefined;
+  }
+
+  function setText(newText: string | undefined, start: number | undefined, length: number | undefined) {
+    text = newText || "";
+    end = length === undefined ? text.length : start! + length;
+    resetTokenState(start || 0);
+  }
+
+  function setOnError(errorCallback: ErrorCallback | undefined) {
+    onError = errorCallback;
+  }
+
+  function setScriptTarget(scriptTarget: ScriptTarget) {
+    languageVersion = scriptTarget;
+  }
+
+  function setLanguageVariant(variant: LanguageVariant) {
+    languageVariant = variant;
+  }
+
+  function setScriptKind(kind: ScriptKind) {
+    scriptKind = kind;
+  }
+
+  function setJSDocParsingMode(kind: JSDocParsingMode) {
+    jsDocParsingMode = kind;
+  }
+
+  function resetTokenState(position: number) {
+    Debug.assert(position >= 0);
+    pos = position;
+    fullStartPos = position;
+    tokenStart = position;
+    token = SyntaxKind.Unknown;
+    tokenValue = undefined!;
+    tokenFlags = TokenFlags.None;
+  }
+
+  function setSkipJsDocLeadingAsterisks(skip: boolean) {
+    skipJsDocLeadingAsterisks += skip ? 1 : -1;
+  }
 }
 
 function codePointAt(s: string, i: number): number {
-    // TODO(jakebailey): this is wrong and should have ?? 0; but all users are okay with it
-    return s.codePointAt(i)!;
+  // TODO(jakebailey): this is wrong and should have ?? 0; but all users are okay with it
+  return s.codePointAt(i)!;
 }
 
 function charSize(ch: number) {
-    if (ch >= 0x10000) {
-        return 2;
-    }
-    if (ch === CharacterCodes.EOF) {
-        return 0;
-    }
-    return 1;
+  if (ch >= 0x10000) {
+    return 2;
+  }
+  if (ch === CharacterCodes.EOF) {
+    return 0;
+  }
+  return 1;
 }
 
 // Derived from the 10.1.1 UTF16Encoding of the ES6 Spec.
 function utf16EncodeAsStringFallback(codePoint: number) {
-    Debug.assert(0x0 <= codePoint && codePoint <= 0x10FFFF);
+  Debug.assert(0x0 <= codePoint && codePoint <= 0x10FFFF);
 
-    if (codePoint <= 65535) {
-        return String.fromCharCode(codePoint);
-    }
+  if (codePoint <= 65535) {
+    return String.fromCharCode(codePoint);
+  }
 
-    const codeUnit1 = Math.floor((codePoint - 65536) / 1024) + 0xD800;
-    const codeUnit2 = ((codePoint - 65536) % 1024) + 0xDC00;
+  const codeUnit1 = Math.floor((codePoint - 65536) / 1024) + 0xD800;
+  const codeUnit2 = ((codePoint - 65536) % 1024) + 0xDC00;
 
-    return String.fromCharCode(codeUnit1, codeUnit2);
+  return String.fromCharCode(codeUnit1, codeUnit2);
 }
 
 const utf16EncodeAsStringWorker: (codePoint: number) => string = (String as any).fromCodePoint ? codePoint => (String as any).fromCodePoint(codePoint) : utf16EncodeAsStringFallback;
 
 /** @internal */
 export function utf16EncodeAsString(codePoint: number): string {
-    return utf16EncodeAsStringWorker(codePoint);
+  return utf16EncodeAsStringWorker(codePoint);
 }
 
 // Table 66: Non-binary Unicode property aliases and their canonical property names

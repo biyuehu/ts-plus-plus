@@ -1,7 +1,7 @@
 import { createRequire } from "module";
 import {
-    __importDefault,
-    __importStar,
+  __importDefault,
+  __importStar,
 } from "tslib";
 import { pathToFileURL } from "url";
 
@@ -18,37 +18,37 @@ console.log(`Testing ${typescript}...`);
 // See: https://github.com/microsoft/TypeScript/pull/51474#issuecomment-1310871623
 /** @type {[fn: (() => Promise<any>), shouldSucceed: boolean][]} */
 const fns = [
-    [() => require(typescript).version, true],
-    [() => require(typescript).default.version, false],
-    [() => __importDefault(require(typescript)).version, false],
-    [() => __importDefault(require(typescript)).default.version, true],
-    [() => __importStar(require(typescript)).version, true],
-    [() => __importStar(require(typescript)).default.version, true],
-    [async () => (await import(resolvedTypeScript)).version, true],
-    [async () => (await import(resolvedTypeScript)).default.version, true],
+  [() => require(typescript).version, true],
+  [() => require(typescript).default.version, false],
+  [() => __importDefault(require(typescript)).version, false],
+  [() => __importDefault(require(typescript)).default.version, true],
+  [() => __importStar(require(typescript)).version, true],
+  [() => __importStar(require(typescript)).default.version, true],
+  [async () => (await import(resolvedTypeScript)).version, true],
+  [async () => (await import(resolvedTypeScript)).default.version, true],
 ];
 
 for (const [fn, shouldSucceed] of fns) {
-    let success = false;
-    try {
-        success = !!(await fn());
-    }
-    catch {
-        // Ignore
-    }
-    const status = success ? "succeeded" : "failed";
-    if (success === shouldSucceed) {
-        console.log(`${fn.toString()} ${status} as expected.`);
-    }
-    else {
-        console.log(`${fn.toString()} unexpectedly ${status}.`);
-        process.exitCode = 1;
-    }
+  let success = false;
+  try {
+    success = !!(await fn());
+  }
+  catch {
+    // Ignore
+  }
+  const status = success ? "succeeded" : "failed";
+  if (success === shouldSucceed) {
+    console.log(`${fn.toString()} ${status} as expected.`);
+  }
+  else {
+    console.log(`${fn.toString()} unexpectedly ${status}.`);
+    process.exitCode = 1;
+  }
 }
 
 if (process.exitCode) {
-    console.log("fail");
+  console.log("fail");
 }
 else {
-    console.log("ok");
+  console.log("ok");
 }

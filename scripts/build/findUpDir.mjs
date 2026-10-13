@@ -1,8 +1,8 @@
 import { existsSync } from "fs";
 import {
-    dirname,
-    join,
-    resolve,
+  dirname,
+  join,
+  resolve,
 } from "path";
 import url from "url";
 
@@ -17,14 +17,14 @@ const __dirname = dirname(__filename);
  * @returns {string}
  */
 export function findUpFile(name) {
-    let dir = __dirname;
-    while (true) {
-        const fullPath = join(dir, name);
-        if (existsSync(fullPath)) return fullPath;
-        const up = resolve(dir, "..");
-        if (up === dir) return name; // it'll fail anyway
-        dir = up;
-    }
+  let dir = __dirname;
+  while (true) {
+    const fullPath = join(dir, name);
+    if (existsSync(fullPath)) return fullPath;
+    const up = resolve(dir, "..");
+    if (up === dir) return name; // it'll fail anyway
+    dir = up;
+  }
 }
 
 /** @type {string | undefined} */

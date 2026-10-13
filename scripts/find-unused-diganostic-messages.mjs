@@ -11,21 +11,21 @@ const startOfDiags = diags.split("export const Diagnostics")[1];
 /** @type {string[]} */
 const missingNames = [];
 startOfDiags.split(EOL).forEach(line => {
-    if (!line.includes(":")) return;
-    const diagName = line.split(":")[0].trim();
+  if (!line.includes(":")) return;
+  const diagName = line.split(":")[0].trim();
 
-    try {
-        execSync(`grep -rnw 'src' -e 'Diagnostics.${diagName}'`).toString();
-        process.stdout.write(".");
-    }
-    catch {
-        missingNames.push(diagName);
-        process.stdout.write("x");
-    }
+  try {
+    execSync(`grep -rnw 'src' -e 'Diagnostics.${diagName}'`).toString();
+    process.stdout.write(".");
+  }
+  catch {
+    missingNames.push(diagName);
+    process.stdout.write("x");
+  }
 });
 
 if (missingNames.length) {
-    process.exitCode = 1;
-    console.log("Could not find usage of these diagnostics in the codebase:");
-    console.log(missingNames);
+  process.exitCode = 1;
+  console.log("Could not find usage of these diagnostics in the codebase:");
+  console.log(missingNames);
 }

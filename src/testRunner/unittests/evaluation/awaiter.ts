@@ -1,9 +1,9 @@
 import * as evaluator from "../../_namespaces/evaluator.js";
 
 describe("unittests:: evaluation:: awaiter", () => {
-    // NOTE: This could break if the ECMAScript spec ever changes the timing behavior for Promises (again)
-    it("await (es5)", async () => {
-        const result = evaluator.evaluateTypeScript(`
+  // NOTE: This could break if the ECMAScript spec ever changes the timing behavior for Promises (again)
+  it("await (es5)", async () => {
+    const result = evaluator.evaluateTypeScript(`
         async function a(msg: string) {
             await Promise.resolve();
             output.push(msg);
@@ -20,7 +20,7 @@ describe("unittests:: evaluation:: awaiter", () => {
             await Promise.all([p1, p2]);
         }
         `);
-        await result.main();
-        assert.deepEqual(result.output, ["1", "2"]);
-    });
+    await result.main();
+    assert.deepEqual(result.output, ["1", "2"]);
+  });
 });

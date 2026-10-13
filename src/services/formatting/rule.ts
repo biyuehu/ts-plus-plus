@@ -1,16 +1,16 @@
 import { FormattingContext } from "../_namespaces/ts.formatting.js";
 import {
-    emptyArray,
-    SyntaxKind,
+  emptyArray,
+  SyntaxKind,
 } from "../_namespaces/ts.js";
 
 /** @internal */
 export interface Rule {
-    // Used for debugging to identify each rule based on the property name it's assigned to.
-    readonly debugName: string;
-    readonly context: readonly ContextPredicate[];
-    readonly action: RuleAction;
-    readonly flags: RuleFlags;
+  // Used for debugging to identify each rule based on the property name it's assigned to.
+  readonly debugName: string;
+  readonly context: readonly ContextPredicate[];
+  readonly action: RuleAction;
+  readonly flags: RuleFlags;
 }
 
 /** @internal */
@@ -37,12 +37,12 @@ export const enum RuleAction {
 
 /** @internal */
 export const enum RuleFlags {
-    None,
-    CanDeleteNewLines,
+  None,
+  CanDeleteNewLines,
 }
 
 /** @internal */
 export interface TokenRange {
-    readonly tokens: readonly SyntaxKind[];
-    readonly isSpecific: boolean;
+  readonly tokens: readonly SyntaxKind[];
+  readonly isSpecific: boolean;
 }
