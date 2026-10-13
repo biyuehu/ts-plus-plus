@@ -12,6 +12,8 @@
 //     ↓
 //   Eq / Refl 把“相等”表示为类型和证明
 //     ↓
+//   J 对相等证明做 path induction
+//     ↓
 //   Sigma 把数据和依赖它的证明放在一起
 
 // -----------------------------------------------------------------------------
@@ -57,7 +59,8 @@ export type TwoVector: Type1 =
   (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
 
 // TS 调用桥接会把 (N: Nat) 投影成 N extends number，
-// 因此运行时数字字面量也能成为结果类型的索引。
+// 并只接受非负安全整数的字面量类型，避免负数、小数或宽泛 number
+// 越过 MLTT 的 Nat 边界。
 export type VectorBuilder: Type1 =
   (A: Type0) ->
   (value: A) ->
@@ -66,6 +69,9 @@ export type VectorBuilder: Type1 =
 
 export declare const buildVector: VectorBuilder;
 export const pair = buildVector("item", 2); // Vector<2, string>
+// buildVector("item", -1); // 错误：-1 不是 Nat
+// declare let dynamicLength: number;
+// buildVector("item", dynamicLength); // 错误：动态 number 不能证明自己是 Nat
 
 // -----------------------------------------------------------------------------
 // 3. NatAdd：受限但可预测的类型级计算
@@ -102,6 +108,21 @@ export type NatZeroComputation: Type1 =
   (successorCase: (N: Nat) -> (previous: P<N>) -> P<Succ<N>>) ->
   Eq<P<Zero>, NatElim<P, zeroCase, successorCase, Zero>, zeroCase>;
 
+// Lam + Ann 也能构造闭合的 motive 和递归分支，因此 NatElim 不必依赖外层 Pi。
+export type ClosedNatElimComputation: Type0 = Eq<
+  Nat,
+  NatElim<
+    Ann<Lam<(value: Nat) -> Nat>, (value: Nat) -> Type0>,
+    Zero,
+    Ann<
+      Lam<(value: Nat) -> Lam<(previous: Nat) -> Succ<previous>>>,
+      (value: Nat) -> (previous: Nat) -> Nat
+    >,
+    Succ<Zero>
+  >,
+  Succ<Zero>
+>;
+
 // -----------------------------------------------------------------------------
 // 5. Eq 和 Refl：命题也是类型
 // -----------------------------------------------------------------------------
@@ -121,8 +142,55 @@ export type ReflexivityProof: Type1 =
 
 // propositions-as-types 的心智模型：命题 <-> 类型，证明 <-> 该类型的值。
 
+// 不含自由 binder 的 MLTT 类型现在也可以直接出现在类型别名右侧。
+export type ZeroEqualsZero: Type0 = Eq<Nat, Zero, Zero>;
+
 // -----------------------------------------------------------------------------
-// 6. Sigma：第二项的类型依赖第一项
+// 6. J：从反身情况推广到任意相等证明
+// -----------------------------------------------------------------------------
+//
+// Motive 描述要对 left、right 和它们的相等证明建立什么结论；
+// reflexivityCase 只需处理 value = value。J（path induction）把这个结果
+// 推广到任意 proof: Eq<Nat, left, right>。
+
+export type PathInduction: Type1 =
+  (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) ->
+  (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) ->
+  (left: Nat) ->
+  (right: Nat) ->
+  (proof: Eq<Nat, left, right>) ->
+  Motive<left, right, proof>;
+
+// proof 是 Refl 时，J 会计算为 reflexivityCase<value>。
+export type PathInductionComputation: Type1 =
+  (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) ->
+  (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) ->
+  (value: Nat) ->
+  Eq<
+    Motive<value, value, Refl<Nat, value>>,
+    J<Nat, Motive, reflexivityCase, value, value, Refl<Nat, value>>,
+    reflexivityCase<value>
+  >;
+
+// Lam 写 term-level lambda，Ann 给它显式类型；因此闭合的 J 计算也能直接出现。
+export type ClosedPathComputation: Type0 = Eq<
+  Nat,
+  J<
+    Nat,
+    Ann<
+      Lam<(left: Nat) -> Lam<(right: Nat) -> Lam<(proof: Eq<Nat, left, right>) -> Nat>>>,
+      (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0
+    >,
+    Ann<Lam<(value: Nat) -> Zero>, (value: Nat) -> Nat>,
+    Zero,
+    Zero,
+    Refl<Nat, Zero>
+  >,
+  Zero
+>;
+
+// -----------------------------------------------------------------------------
+// 7. Sigma：第二项的类型依赖第一项
 // -----------------------------------------------------------------------------
 //
 // 普通 tuple [A, B] 的第二项类型 B 是固定的。
@@ -149,3 +217,7 @@ export type SigmaSecondComputation: Type0 =
 
 // First<Pair<...>> 归约为 N，Second<Pair<...>> 归约为 Refl<Nat, N>。
 // 这些是 MLTT 内核的计算规则，不是字符串替换。
+
+// 闭合的 Sigma 类型也可以脱离 Pi 上下文直接声明。
+export type SingletonNat: Type0 =
+  Sigma<(value: Nat) -> Eq<Nat, value, Zero>>;

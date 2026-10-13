@@ -51,12 +51,12 @@ tspp --init
 | `newtypeDeclarations` | `newtype` 名义类型声明与对应构造器 | 无 | 是 | 否（生成运行时构造器） |
 | `dataDeclarations` | `data` 可辨识联合声明与对应变体构造器 | 无 | 是 | 否（生成运行时变体值与构造器） |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |
-| `dependentFunctionTypes` | 返回类型可以依赖参数的 Pi 类型 | `typeUniverses` | 是 | 是 |
+| `dependentFunctionTypes` | Pi 类型，以及显式的 `Lam`/`Ann` MLTT 项 | `typeUniverses` | 是 | 是 |
 | `dependentFunctionInterop` | Pi 类型与 TypeScript 泛型函数之间的赋值和调用 | `dependentFunctionTypes` | 是 | 是 |
 | `naturalNumbers` | `Nat`、`Zero`、`Succ` 类型级自然数 | `dependentFunctionTypes` | 是 | 是 |
 | `naturalNumberAddition` | 可归约的 `NatAdd` 类型级加法 | `naturalNumbers` | 是 | 是 |
 | `naturalNumberElimination` | `NatElim` 依赖消去器 | `naturalNumbers` | 是 | 是 |
-| `identityTypes` | `Eq`、`Refl` 相等类型与证明 | `dependentFunctionTypes` | 是 | 是 |
+| `identityTypes` | `Eq`、`Refl`，以及 `J` 路径归纳 | `dependentFunctionTypes` | 是 | 是 |
 | `sigmaTypes` | `Sigma`、`Pair`、`First`、`Second` 依赖对及投影 | `dependentFunctionTypes` | 是 | 是 |
 
 自动生成的配置是与编译器版本对应的权威特性说明。本项目仍处于实验阶段；表中的结论描述当前实现，不是对未来新增特性的永久承诺。

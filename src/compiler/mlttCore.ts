@@ -9,7 +9,7 @@
  * @internal
  */
 
-export type MlttTerm = MlttUniverse | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttNatElim | MlttIdentityType | MlttRefl | MlttSigma | MlttPair | MlttFirst | MlttSecond | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
+export type MlttTerm = MlttUniverse | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttNatElim | MlttIdentityType | MlttRefl | MlttIdentityElim | MlttSigma | MlttPair | MlttFirst | MlttSecond | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
 
 export interface MlttUniverse {
   readonly kind: "universe";
@@ -63,6 +63,17 @@ export interface MlttRefl {
   readonly term: MlttTerm;
 }
 
+/** Path induction (the J eliminator) for the identity type. */
+export interface MlttIdentityElim {
+  readonly kind: "identity-elim";
+  readonly type: MlttTerm;
+  readonly motive: MlttTerm;
+  readonly reflexivityCase: MlttTerm;
+  readonly left: MlttTerm;
+  readonly right: MlttTerm;
+  readonly equality: MlttTerm;
+}
+
 /** A dependent pair type. The bound first component is variable zero in the codomain. */
 export interface MlttSigma {
   readonly kind: "sigma";
@@ -105,6 +116,8 @@ export interface MlttPi {
 export interface MlttLambda {
   readonly kind: "lambda";
   readonly parameterName: string;
+  /** Optional surface annotation, checked against the expected Pi domain. */
+  readonly parameterType?: MlttTerm;
   /** The bound parameter is variable zero in the body. */
   readonly body: MlttTerm;
 }
@@ -185,6 +198,17 @@ export function mlttRefl(type: MlttTerm, term: MlttTerm): MlttRefl {
   return { kind: "refl", type, term };
 }
 
+export function mlttIdentityElim(
+  type: MlttTerm,
+  motive: MlttTerm,
+  reflexivityCase: MlttTerm,
+  left: MlttTerm,
+  right: MlttTerm,
+  equality: MlttTerm,
+): MlttIdentityElim {
+  return { kind: "identity-elim", type, motive, reflexivityCase, left, right, equality };
+}
+
 export function mlttSigma(parameterName: string, domain: MlttTerm, codomain: MlttTerm): MlttSigma {
   return { kind: "sigma", parameterName, domain, codomain };
 }
@@ -212,8 +236,8 @@ export function mlttPi(parameterName: string, domain: MlttTerm, codomain: MlttTe
   return { kind: "pi", parameterName, domain, codomain };
 }
 
-export function mlttLambda(parameterName: string, body: MlttTerm): MlttLambda {
-  return { kind: "lambda", parameterName, body };
+export function mlttLambda(parameterName: string, body: MlttTerm, parameterType?: MlttTerm): MlttLambda {
+  return { kind: "lambda", parameterName, parameterType, body };
 }
 
 export function mlttApplication(functionTerm: MlttTerm, argument: MlttTerm): MlttApplication {
@@ -227,11 +251,11 @@ export function mlttAnnotation(term: MlttTerm, type: MlttTerm): MlttAnnotation {
 export function mlttExternal(
   key: string,
   displayName: string,
-  arguments_: readonly MlttTerm[],
+  termArguments: readonly MlttTerm[],
   type: MlttTerm,
   identity?: unknown,
 ): MlttExternal {
-  return { kind: "external", key, displayName, arguments: arguments_, type, identity };
+  return { kind: "external", key, displayName, arguments: termArguments, type, identity };
 }
 
 /** Infer the type of a core term. Lambdas require an expected type or an annotation. */
@@ -292,6 +316,49 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
       inferMlttUniverseLevel(term.type, context);
       checkMlttType(term.term, term.type, context);
       return mlttIdentityType(term.type, term.term, term.term);
+
+    case "identity-elim": {
+      inferMlttUniverseLevel(term.type, context);
+      checkMlttType(term.left, term.type, context);
+      checkMlttType(term.right, term.type, context);
+      checkMlttType(term.equality, mlttIdentityType(term.type, term.left, term.right), context);
+
+      const motiveType = weakHeadNormalizeMltt(inferMlttType(term.motive, context));
+      if (motiveType.kind !== "pi" || !areMlttTermsDefinitionallyEqual(motiveType.domain, term.type)) {
+        throw new MlttTypeError("type-mismatch", "Expected the identity eliminator motive to abstract over the left endpoint.");
+      }
+      const motiveAtLeftType = weakHeadNormalizeMltt(motiveType.codomain);
+      if (motiveAtLeftType.kind !== "pi" || !areMlttTermsDefinitionallyEqual(motiveAtLeftType.domain, shiftMlttTerm(term.type, 1))) {
+        throw new MlttTypeError("type-mismatch", "Expected the identity eliminator motive to abstract over the right endpoint.");
+      }
+      const motiveAtEndpointsType = weakHeadNormalizeMltt(motiveAtLeftType.codomain);
+      const expectedEqualityDomain = mlttIdentityType(shiftMlttTerm(term.type, 2), mlttVariable(1), mlttVariable(0));
+      if (motiveAtEndpointsType.kind !== "pi" || !areMlttTermsDefinitionallyEqual(motiveAtEndpointsType.domain, expectedEqualityDomain)) {
+        throw new MlttTypeError("type-mismatch", "Expected the identity eliminator motive to abstract over an equality proof.");
+      }
+      if (weakHeadNormalizeMltt(motiveAtEndpointsType.codomain).kind !== "universe") {
+        throw new MlttTypeError("expected-type", "Expected the identity eliminator motive to return a type.");
+      }
+
+      const shiftedType = shiftMlttTerm(term.type, 1);
+      const shiftedMotive = shiftMlttTerm(term.motive, 1);
+      const variable = mlttVariable(0);
+      const reflexivityResult = mlttApplication(
+        mlttApplication(
+          mlttApplication(shiftedMotive, variable),
+          variable,
+        ),
+        mlttRefl(shiftedType, variable),
+      );
+      checkMlttType(term.reflexivityCase, mlttPi("value", term.type, reflexivityResult), context);
+      return mlttApplication(
+        mlttApplication(
+          mlttApplication(term.motive, term.left),
+          term.right,
+        ),
+        term.equality,
+      );
+    }
 
     case "sigma": {
       const domainLevel = inferMlttUniverseLevel(term.domain, context);
@@ -367,6 +434,12 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
 export function checkMlttType(term: MlttTerm, expectedType: MlttTerm, context: MlttContext = []): void {
   const normalizedExpected = weakHeadNormalizeMltt(expectedType);
   if (term.kind === "lambda" && normalizedExpected.kind === "pi") {
+    if (term.parameterType && !areMlttTermsDefinitionallyEqual(term.parameterType, normalizedExpected.domain)) {
+      throw new MlttTypeError(
+        "type-mismatch",
+        `Lambda parameter annotation ${printMlttTerm(term.parameterType)} does not match expected domain ${printMlttTerm(normalizedExpected.domain)}.`,
+      );
+    }
     checkMlttType(term.body, normalizedExpected.codomain, extendContext(context, normalizedExpected.domain));
     return;
   }
@@ -417,6 +490,16 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
         ? current
         : mlttNatElim(current.motive, current.zeroCase, current.successorCase, scrutinee);
     }
+    if (current.kind === "identity-elim") {
+      const equality = weakHeadNormalizeMltt(current.equality);
+      if (equality.kind === "refl") {
+        current = mlttApplication(current.reflexivityCase, equality.term);
+        continue;
+      }
+      return equality === current.equality
+        ? current
+        : mlttIdentityElim(current.type, current.motive, current.reflexivityCase, current.left, current.right, equality);
+    }
     if (current.kind === "first" || current.kind === "second") {
       const pair = weakHeadNormalizeMltt(current.pair);
       if (pair.kind === "pair") {
@@ -459,6 +542,15 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
       return mlttIdentityType(normalizeMlttTerm(head.type), normalizeMlttTerm(head.left), normalizeMlttTerm(head.right));
     case "refl":
       return mlttRefl(normalizeMlttTerm(head.type), normalizeMlttTerm(head.term));
+    case "identity-elim":
+      return mlttIdentityElim(
+        normalizeMlttTerm(head.type),
+        normalizeMlttTerm(head.motive),
+        normalizeMlttTerm(head.reflexivityCase),
+        normalizeMlttTerm(head.left),
+        normalizeMlttTerm(head.right),
+        normalizeMlttTerm(head.equality),
+      );
     case "sigma":
       return mlttSigma(head.parameterName, normalizeMlttTerm(head.domain), normalizeMlttTerm(head.codomain));
     case "pair":
@@ -470,7 +562,7 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
     case "pi":
       return mlttPi(head.parameterName, normalizeMlttTerm(head.domain), normalizeMlttTerm(head.codomain));
     case "lambda":
-      return mlttLambda(head.parameterName, normalizeMlttTerm(head.body));
+      return mlttLambda(head.parameterName, normalizeMlttTerm(head.body), head.parameterType && normalizeMlttTerm(head.parameterType));
     case "application":
       return mlttApplication(normalizeMlttTerm(head.functionTerm), normalizeMlttTerm(head.argument));
     case "annotation":
@@ -481,7 +573,7 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
   }
 }
 
-/** Definitional equality currently consists of alpha and beta equality. */
+/** Definitional equality includes alpha/beta equality and the computation rules of the built-in eliminators. */
 export function areMlttTermsDefinitionallyEqual(
   left: MlttTerm,
   right: MlttTerm,
@@ -531,6 +623,15 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
       );
     case "refl":
       return mlttRefl(shiftMlttTerm(term.type, amount, cutoff), shiftMlttTerm(term.term, amount, cutoff));
+    case "identity-elim":
+      return mlttIdentityElim(
+        shiftMlttTerm(term.type, amount, cutoff),
+        shiftMlttTerm(term.motive, amount, cutoff),
+        shiftMlttTerm(term.reflexivityCase, amount, cutoff),
+        shiftMlttTerm(term.left, amount, cutoff),
+        shiftMlttTerm(term.right, amount, cutoff),
+        shiftMlttTerm(term.equality, amount, cutoff),
+      );
     case "sigma":
       return mlttSigma(term.parameterName, shiftMlttTerm(term.domain, amount, cutoff), shiftMlttTerm(term.codomain, amount, cutoff + 1));
     case "pair":
@@ -548,7 +649,11 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
     case "pi":
       return mlttPi(term.parameterName, shiftMlttTerm(term.domain, amount, cutoff), shiftMlttTerm(term.codomain, amount, cutoff + 1));
     case "lambda":
-      return mlttLambda(term.parameterName, shiftMlttTerm(term.body, amount, cutoff + 1));
+      return mlttLambda(
+        term.parameterName,
+        shiftMlttTerm(term.body, amount, cutoff + 1),
+        term.parameterType && shiftMlttTerm(term.parameterType, amount, cutoff),
+      );
     case "application":
       return mlttApplication(shiftMlttTerm(term.functionTerm, amount, cutoff), shiftMlttTerm(term.argument, amount, cutoff));
     case "annotation":
@@ -595,6 +700,15 @@ function substituteMltt(term: MlttTerm, variableIndex: number, replacement: Mltt
         substituteMltt(term.type, variableIndex, replacement, binderDepth),
         substituteMltt(term.term, variableIndex, replacement, binderDepth),
       );
+    case "identity-elim":
+      return mlttIdentityElim(
+        substituteMltt(term.type, variableIndex, replacement, binderDepth),
+        substituteMltt(term.motive, variableIndex, replacement, binderDepth),
+        substituteMltt(term.reflexivityCase, variableIndex, replacement, binderDepth),
+        substituteMltt(term.left, variableIndex, replacement, binderDepth),
+        substituteMltt(term.right, variableIndex, replacement, binderDepth),
+        substituteMltt(term.equality, variableIndex, replacement, binderDepth),
+      );
     case "sigma":
       return mlttSigma(
         term.parameterName,
@@ -620,7 +734,11 @@ function substituteMltt(term: MlttTerm, variableIndex: number, replacement: Mltt
         substituteMltt(term.codomain, variableIndex, replacement, binderDepth + 1),
       );
     case "lambda":
-      return mlttLambda(term.parameterName, substituteMltt(term.body, variableIndex, replacement, binderDepth + 1));
+      return mlttLambda(
+        term.parameterName,
+        substituteMltt(term.body, variableIndex, replacement, binderDepth + 1),
+        term.parameterType && substituteMltt(term.parameterType, variableIndex, replacement, binderDepth),
+      );
     case "application":
       return mlttApplication(
         substituteMltt(term.functionTerm, variableIndex, replacement, binderDepth),
@@ -682,6 +800,15 @@ function structurallyEqualMlttTerms(
       return structurallyEqualMlttTerms(left.type, rightRefl.type, compareExternal) &&
         structurallyEqualMlttTerms(left.term, rightRefl.term, compareExternal);
     }
+    case "identity-elim": {
+      const rightElim = right as MlttIdentityElim;
+      return structurallyEqualMlttTerms(left.type, rightElim.type, compareExternal) &&
+        structurallyEqualMlttTerms(left.motive, rightElim.motive, compareExternal) &&
+        structurallyEqualMlttTerms(left.reflexivityCase, rightElim.reflexivityCase, compareExternal) &&
+        structurallyEqualMlttTerms(left.left, rightElim.left, compareExternal) &&
+        structurallyEqualMlttTerms(left.right, rightElim.right, compareExternal) &&
+        structurallyEqualMlttTerms(left.equality, rightElim.equality, compareExternal);
+    }
     case "sigma": {
       const rightSigma = right as MlttSigma;
       return structurallyEqualMlttTerms(left.domain, rightSigma.domain, compareExternal) &&
@@ -741,6 +868,8 @@ function printMlttTermWorker(term: MlttTerm, names: readonly string[]): string {
       return `Eq<${printMlttTermWorker(term.type, names)}, ${printMlttTermWorker(term.left, names)}, ${printMlttTermWorker(term.right, names)}>`;
     case "refl":
       return `Refl<${printMlttTermWorker(term.type, names)}, ${printMlttTermWorker(term.term, names)}>`;
+    case "identity-elim":
+      return `J<${printMlttTermWorker(term.type, names)}, ${printMlttTermWorker(term.motive, names)}, ${printMlttTermWorker(term.reflexivityCase, names)}, ${printMlttTermWorker(term.left, names)}, ${printMlttTermWorker(term.right, names)}, ${printMlttTermWorker(term.equality, names)}>`;
     case "sigma": {
       const name = freshName(term.parameterName, names);
       return `Sigma<(${name}: ${printMlttTermWorker(term.domain, names)}) -> ${printMlttTermWorker(term.codomain, [name, ...names])}>`;

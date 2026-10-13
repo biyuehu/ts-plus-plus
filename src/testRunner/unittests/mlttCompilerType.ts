@@ -131,6 +131,27 @@ describe("unittests:: MLTT compiler type", () => {
     assert.isTrue(naturalsChecker.isTypeAssignableTo(twoVector, computedTwoVector));
   });
 
+  it("rejects non-natural TypeScript values at Nat call boundaries", () => {
+    const invalidNaturals = createProgram(
+      "/invalid-natural-calls.tspp",
+      `
+      type Vector<N extends number> = { length: N };
+      type Builder: Type0 = (N: Nat) -> Vector<N>;
+      declare const build: Builder;
+      declare let dynamicNumber: number;
+      build(-1);
+      build(1.5);
+      build(9007199254740992);
+      build(dynamicNumber);
+      build(3);
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const diagnostics = invalidNaturals.getSemanticDiagnostics();
+    assert.deepEqual(diagnostics.map(diagnostic => diagnostic.code), [18077, 18077, 18077, 18077]);
+  });
+
   it("checks that Succ is applied to a natural number", () => {
     const invalid = createProgram(
       "/invalid-nat.tspp",
@@ -161,6 +182,100 @@ describe("unittests:: MLTT compiler type", () => {
     );
 
     assert.isEmpty(proofs.getSemanticDiagnostics());
+  });
+
+  it("exposes path induction and its reflexivity computation rule", () => {
+    const pathInduction = createProgram(
+      "/path-induction.tspp",
+      `
+      type PathInduction: Type1 =
+        (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) ->
+        (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) ->
+        (left: Nat) ->
+        (right: Nat) ->
+        (proof: Eq<Nat, left, right>) ->
+        Motive<left, right, proof>;
+
+      type PathInductionComputed: Type1 =
+        (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) ->
+        (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) ->
+        (value: Nat) ->
+        Eq<
+          Motive<value, value, Refl<Nat, value>>,
+          J<Nat, Motive, reflexivityCase, value, value, Refl<Nat, value>>,
+          reflexivityCase<value>
+        >;
+
+      type ClosedJComputation: Type0 = Eq<
+        Nat,
+        J<
+          Nat,
+          Ann<
+            Lam<(left: Nat) -> Lam<(right: Nat) -> Lam<(proof: Eq<Nat, left, right>) -> Nat>>>,
+            (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0
+          >,
+          Ann<Lam<(value: Nat) -> Zero>, (value: Nat) -> Nat>,
+          Zero,
+          Zero,
+          Refl<Nat, Zero>
+        >,
+        Zero
+      >;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    assert.isEmpty(pathInduction.getSemanticDiagnostics());
+  });
+
+  it("allows closed MLTT types outside a Pi surface context", () => {
+    const standalone = createProgram(
+      "/standalone-mltt.tspp",
+      `
+      type ZeroEqualsZero: Type0 = Eq<Nat, Zero, Zero>;
+      type SingletonNat: Type0 = Sigma<(value: Nat) -> Eq<Nat, value, Zero>>;
+      type ReducedFirst: Type0 = Eq<
+        Nat,
+        First<Pair<Sigma<(value: Nat) -> Eq<Nat, value, Zero>>, Zero, Refl<Nat, Zero>>>,
+        Zero
+      >;
+      type ClosedNatElim: Type0 = Eq<
+        Nat,
+        NatElim<
+          Ann<Lam<(value: Nat) -> Nat>, (value: Nat) -> Type0>,
+          Zero,
+          Ann<
+            Lam<(value: Nat) -> Lam<(previous: Nat) -> Succ<previous>>>,
+            (value: Nat) -> (previous: Nat) -> Nat
+          >,
+          Succ<Zero>
+        >,
+        Succ<Zero>
+      >;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const diagnostics = standalone.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+  });
+
+  it("checks Lam binder annotations against Ann Pi domains", () => {
+    const invalidLambda = createProgram(
+      "/invalid-lambda.tspp",
+      `
+      type Invalid: Type0 =
+        (expected: (value: Nat) -> Nat) ->
+        Eq<
+          (value: Nat) -> Nat,
+          Ann<Lam<(value: string) -> value>, (value: Nat) -> Nat>,
+          expected
+        >;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    assert.match(invalidLambda.getSemanticDiagnostics()[0].messageText.toString(), /Lambda parameter annotation string does not match expected domain Nat/);
   });
 
   it("exposes Sigma types, pair construction, and projections", () => {

@@ -43,7 +43,7 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     name: "dependentFunctionTypes",
     dependencies: ["typeUniverses"],
     initComments: [
-      "获得：返回类型可以依赖参数的 Pi 类型。",
+      "获得：返回类型可以依赖参数的 Pi 类型，以及显式 Lam/Ann MLTT 项。",
       "影响：TS超集=是；透明擦除=是。",
     ],
   },
@@ -83,7 +83,7 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     name: "identityTypes",
     dependencies: ["dependentFunctionTypes"],
     initComments: [
-      "获得：Eq、Refl 相等类型与证明。",
+      "获得：Eq、Refl 相等类型与证明，以及 J path induction。",
       "影响：TS超集=是；透明擦除=是。",
     ],
   },

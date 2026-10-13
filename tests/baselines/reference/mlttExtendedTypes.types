@@ -1,0 +1,141 @@
+//// [tests/cases/compiler/mlttExtendedTypes.ts] ////
+
+=== mlttExtendedTypes.tspp ===
+export type ZeroEqualsZero: Type0 = Eq<Nat, Zero, Zero>;
+>ZeroEqualsZero : Eq<Nat, Zero, Zero>
+>               :                    
+
+export type SingletonNat: Type0 = Sigma<(value: Nat) -> Eq<Nat, value, Zero>>;
+>SingletonNat : Sigma<(value: Nat) -> Eq<Nat, value, Zero>>
+>             :                                            
+
+export type PathInduction: Type1 =
+>PathInduction : (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) -> (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) -> (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Motive<left, right, proof>
+>              :                                                                                                                                                                                                                                                           
+
+  (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) ->
+  (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) ->
+  (left: Nat) ->
+  (right: Nat) ->
+  (proof: Eq<Nat, left, right>) ->
+  Motive<left, right, proof>;
+
+export type PathInductionComputed: Type1 =
+>PathInductionComputed : (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) -> (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) -> (value: Nat) -> Eq<Motive<value, value, Refl<Nat, value>>, J<Nat, Motive, reflexivityCase, value, value, Refl<Nat, value>>, reflexivityCase<value>>
+>                      :                                                                                                                                                                                                                                                                                                                    
+
+  (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) ->
+  (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) ->
+  (value: Nat) ->
+  Eq<
+    Motive<value, value, Refl<Nat, value>>,
+    J<Nat, Motive, reflexivityCase, value, value, Refl<Nat, value>>,
+    reflexivityCase<value>
+  >;
+
+export type ClosedJComputation: Type0 = Eq<
+>ClosedJComputation : Eq<Nat, J<Nat, Ann<Lam<(left: Nat) -> Lam<(right: Nat) -> Lam<(proof: Eq<Nat, left, right>) -> Nat>>>, (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0>, Ann<Lam<(value: Nat) -> Zero>, (value: Nat) -> Nat>, Zero, Zero, Refl<Nat, Zero>>, Zero>
+>                   :                                                                                                                                                                                                                                                                        
+
+  Nat,
+  J<
+    Nat,
+    Ann<
+      Lam<(left: Nat) -> Lam<(right: Nat) -> Lam<(proof: Eq<Nat, left, right>) -> Nat>>>,
+      (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0
+    >,
+    Ann<Lam<(value: Nat) -> Zero>, (value: Nat) -> Nat>,
+    Zero,
+    Zero,
+    Refl<Nat, Zero>
+  >,
+  Zero
+>;
+
+export type ClosedNatElim: Type0 = Eq<
+>ClosedNatElim : Eq<Nat, NatElim<Ann<Lam<(value: Nat) -> Nat>, (value: Nat) -> Type0>, Zero, Ann<Lam<(value: Nat) -> Lam<(previous: Nat) -> Succ<previous>>>, (value: Nat) -> (previous: Nat) -> Nat>, Succ<Zero>>, Succ<Zero>>
+>              :                                                                                                                                                                                                               
+
+  Nat,
+  NatElim<
+    Ann<Lam<(value: Nat) -> Nat>, (value: Nat) -> Type0>,
+    Zero,
+    Ann<
+      Lam<(value: Nat) -> Lam<(previous: Nat) -> Succ<previous>>>,
+      (value: Nat) -> (previous: Nat) -> Nat
+    >,
+    Succ<Zero>
+  >,
+  Succ<Zero>
+>;
+
+type Indexed<N extends number> = { readonly index: N };
+>Indexed : Indexed<N>
+>        : ^^^^^^^^^^
+>index : N
+>      : ^
+
+export type BuildIndexed: Type0 = (index: Nat) -> Indexed<index>;
+>BuildIndexed : (index: Nat) -> Indexed<index>
+>             :                               
+
+export declare const buildIndexed: BuildIndexed;
+>buildIndexed : (index: Nat) -> Indexed<index>
+>             :                               
+
+export const valid = buildIndexed(3);
+>valid : Indexed<3>
+>      : ^^^^^^^^^^
+>buildIndexed(3) : Indexed<3>
+>                : ^^^^^^^^^^
+>buildIndexed : (index: Nat) -> Indexed<index>
+>             :                               
+>3 : 3
+>  : ^
+
+export const negative = buildIndexed(-1);
+>negative : Indexed<-1>
+>         : ^^^^^^^^^^^
+>buildIndexed(-1) : Indexed<-1>
+>                 : ^^^^^^^^^^^
+>buildIndexed : (index: Nat) -> Indexed<index>
+>             :                               
+>-1 : -1
+>   : ^^
+>1 : 1
+>  : ^
+
+export const fractional = buildIndexed(1.5);
+>fractional : Indexed<1.5>
+>           : ^^^^^^^^^^^^
+>buildIndexed(1.5) : Indexed<1.5>
+>                  : ^^^^^^^^^^^^
+>buildIndexed : (index: Nat) -> Indexed<index>
+>             :                               
+>1.5 : 1.5
+>    : ^^^
+
+export const unsafeInteger = buildIndexed(9007199254740992);
+>unsafeInteger : Indexed<9007199254740992>
+>              : ^^^^^^^^^^^^^^^^^^^^^^^^^
+>buildIndexed(9007199254740992) : Indexed<9007199254740992>
+>                               : ^^^^^^^^^^^^^^^^^^^^^^^^^
+>buildIndexed : (index: Nat) -> Indexed<index>
+>             :                               
+>9007199254740992 : 9007199254740992
+>                 : ^^^^^^^^^^^^^^^^
+
+declare let dynamicNumber: number;
+>dynamicNumber : number
+>              : ^^^^^^
+
+export const dynamic = buildIndexed(dynamicNumber);
+>dynamic : Indexed<number>
+>        : ^^^^^^^^^^^^^^^
+>buildIndexed(dynamicNumber) : Indexed<number>
+>                            : ^^^^^^^^^^^^^^^
+>buildIndexed : (index: Nat) -> Indexed<index>
+>             :                               
+>dynamicNumber : number
+>              : ^^^^^^
+

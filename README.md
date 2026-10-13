@@ -51,12 +51,12 @@ Current features:
 | `newtypeDeclarations` | `newtype` nominal type declarations and their constructors | — | Yes | No (emits runtime constructors) |
 | `dataDeclarations` | `data` discriminated unions and variant constructors | — | Yes | No (emits runtime variant values and constructors) |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
-| `dependentFunctionTypes` | Pi types whose result can depend on a parameter | `typeUniverses` | Yes | Yes |
+| `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
 | `naturalNumbers` | `Nat`, `Zero`, and `Succ` type-level naturals | `dependentFunctionTypes` | Yes | Yes |
 | `naturalNumberAddition` | Reducible `NatAdd` | `naturalNumbers` | Yes | Yes |
 | `naturalNumberElimination` | The dependent `NatElim` eliminator | `naturalNumbers` | Yes | Yes |
-| `identityTypes` | `Eq` and `Refl` equality types and proofs | `dependentFunctionTypes` | Yes | Yes |
+| `identityTypes` | `Eq`, `Refl`, and `J` path induction | `dependentFunctionTypes` | Yes | Yes |
 | `sigmaTypes` | `Sigma`, `Pair`, `First`, and `Second` | `dependentFunctionTypes` | Yes | Yes |
 
 The generated configuration is the authoritative, compiler-version-specific feature guide. The project is still experimental; these classifications describe the listed implementation, not a permanent promise about future features.

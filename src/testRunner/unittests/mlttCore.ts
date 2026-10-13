@@ -81,6 +81,39 @@ describe("unittests:: MLTT core", () => {
     assert.doesNotThrow(() => mltt.checkMlttType(reflexivity, equality));
   });
 
+  it("checks and computes identity elimination", () => {
+    const motiveType = mltt.mlttPi(
+      "left",
+      mltt.mlttNatType(),
+      mltt.mlttPi(
+        "right",
+        mltt.mlttNatType(),
+        mltt.mlttPi(
+          "proof",
+          mltt.mlttIdentityType(mltt.mlttNatType(), mltt.mlttVariable(1), mltt.mlttVariable(0)),
+          type0,
+        ),
+      ),
+    );
+    const motive = mltt.mlttAnnotation(
+      mltt.mlttLambda("left", mltt.mlttLambda("right", mltt.mlttLambda("proof", mltt.mlttNatType()))),
+      motiveType,
+    );
+    const reflexivityCase = mltt.mlttLambda("value", mltt.mlttZero());
+    const equality = mltt.mlttRefl(mltt.mlttNatType(), mltt.mlttZero());
+    const eliminated = mltt.mlttIdentityElim(
+      mltt.mlttNatType(),
+      motive,
+      reflexivityCase,
+      mltt.mlttZero(),
+      mltt.mlttZero(),
+      equality,
+    );
+
+    assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(mltt.inferMlttType(eliminated), mltt.mlttNatType()));
+    assert.deepEqual(mltt.normalizeMlttTerm(eliminated), mltt.mlttZero());
+  });
+
   it("forms dependent pairs and reduces both projections", () => {
     const sigma = mltt.mlttSigma(
       "n",
@@ -175,5 +208,14 @@ describe("unittests:: MLTT core", () => {
   it("rejects unbound variables and unannotated lambdas", () => {
     assertMlttError(() => mltt.inferMlttType(mltt.mlttVariable(0)), "unbound-variable");
     assertMlttError(() => mltt.inferMlttType(polymorphicIdentity), "cannot-infer-lambda");
+  });
+
+  it("checks explicit lambda parameter annotations", () => {
+    const stringType = mltt.mlttExternal("string", "string", [], type0);
+    const annotatedLambda = mltt.mlttLambda("value", mltt.mlttVariable(0), stringType);
+    assertMlttError(
+      () => mltt.checkMlttType(annotatedLambda, mltt.mlttPi("value", mltt.mlttNatType(), mltt.mlttNatType())),
+      "type-mismatch",
+    );
   });
 });

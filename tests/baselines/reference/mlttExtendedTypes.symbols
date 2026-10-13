@@ -1,0 +1,262 @@
+//// [tests/cases/compiler/mlttExtendedTypes.ts] ////
+
+=== mlttExtendedTypes.tspp ===
+export type ZeroEqualsZero: Type0 = Eq<Nat, Zero, Zero>;
+>ZeroEqualsZero : Symbol(ZeroEqualsZero, Decl(mlttExtendedTypes.tspp, 0, 0))
+>Eq : Symbol(Eq)
+>Nat : Symbol(Nat)
+>Zero : Symbol(Zero)
+>Zero : Symbol(Zero)
+
+export type SingletonNat: Type0 = Sigma<(value: Nat) -> Eq<Nat, value, Zero>>;
+>SingletonNat : Symbol(SingletonNat, Decl(mlttExtendedTypes.tspp, 0, 56))
+>Sigma : Symbol(Sigma)
+>Nat : Symbol(Nat)
+>Eq : Symbol(Eq)
+>Nat : Symbol(Nat)
+>value : Symbol(value)
+>Zero : Symbol(Zero)
+
+export type PathInduction: Type1 =
+>PathInduction : Symbol(PathInduction, Decl(mlttExtendedTypes.tspp, 1, 78))
+
+  (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) ->
+>Nat : Symbol(Nat)
+>Nat : Symbol(Nat)
+>Eq : Symbol(Eq)
+>Nat : Symbol(Nat)
+>left : Symbol(left)
+>right : Symbol(right)
+>Type0 : Symbol(Type0)
+
+  (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) ->
+>Nat : Symbol(Nat)
+>Motive : Symbol(Motive)
+>value : Symbol(value)
+>value : Symbol(value)
+>Refl : Symbol(Refl)
+>Nat : Symbol(Nat)
+>value : Symbol(value)
+
+  (left: Nat) ->
+>Nat : Symbol(Nat)
+
+  (right: Nat) ->
+>Nat : Symbol(Nat)
+
+  (proof: Eq<Nat, left, right>) ->
+>Eq : Symbol(Eq)
+>Nat : Symbol(Nat)
+>left : Symbol(left)
+>right : Symbol(right)
+
+  Motive<left, right, proof>;
+>Motive : Symbol(Motive)
+>left : Symbol(left)
+>right : Symbol(right)
+>proof : Symbol(proof)
+
+export type PathInductionComputed: Type1 =
+>PathInductionComputed : Symbol(PathInductionComputed, Decl(mlttExtendedTypes.tspp, 9, 29))
+
+  (Motive: (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0) ->
+>Nat : Symbol(Nat)
+>Nat : Symbol(Nat)
+>Eq : Symbol(Eq)
+>Nat : Symbol(Nat)
+>left : Symbol(left)
+>right : Symbol(right)
+>Type0 : Symbol(Type0)
+
+  (reflexivityCase: (value: Nat) -> Motive<value, value, Refl<Nat, value>>) ->
+>Nat : Symbol(Nat)
+>Motive : Symbol(Motive)
+>value : Symbol(value)
+>value : Symbol(value)
+>Refl : Symbol(Refl)
+>Nat : Symbol(Nat)
+>value : Symbol(value)
+
+  (value: Nat) ->
+>Nat : Symbol(Nat)
+
+  Eq<
+>Eq : Symbol(Eq)
+
+    Motive<value, value, Refl<Nat, value>>,
+>Motive : Symbol(Motive)
+>value : Symbol(value)
+>value : Symbol(value)
+>Refl : Symbol(Refl)
+>Nat : Symbol(Nat)
+>value : Symbol(value)
+
+    J<Nat, Motive, reflexivityCase, value, value, Refl<Nat, value>>,
+>J : Symbol(J)
+>Nat : Symbol(Nat)
+>Motive : Symbol(Motive)
+>reflexivityCase : Symbol(reflexivityCase)
+>value : Symbol(value)
+>value : Symbol(value)
+>Refl : Symbol(Refl)
+>Nat : Symbol(Nat)
+>value : Symbol(value)
+
+    reflexivityCase<value>
+>reflexivityCase : Symbol(reflexivityCase)
+>value : Symbol(value)
+
+  >;
+
+export type ClosedJComputation: Type0 = Eq<
+>ClosedJComputation : Symbol(ClosedJComputation, Decl(mlttExtendedTypes.tspp, 19, 4))
+>Eq : Symbol(Eq)
+
+  Nat,
+>Nat : Symbol(Nat)
+
+  J<
+>J : Symbol(J)
+
+    Nat,
+>Nat : Symbol(Nat)
+
+    Ann<
+>Ann : Symbol(Ann)
+
+      Lam<(left: Nat) -> Lam<(right: Nat) -> Lam<(proof: Eq<Nat, left, right>) -> Nat>>>,
+>Lam : Symbol(Lam)
+>Nat : Symbol(Nat)
+>Lam : Symbol(Lam)
+>Nat : Symbol(Nat)
+>Lam : Symbol(Lam)
+>Eq : Symbol(Eq)
+>Nat : Symbol(Nat)
+>left : Symbol(left)
+>right : Symbol(right)
+>Nat : Symbol(Nat)
+
+      (left: Nat) -> (right: Nat) -> (proof: Eq<Nat, left, right>) -> Type0
+>Nat : Symbol(Nat)
+>Nat : Symbol(Nat)
+>Eq : Symbol(Eq)
+>Nat : Symbol(Nat)
+>left : Symbol(left)
+>right : Symbol(right)
+>Type0 : Symbol(Type0)
+
+    >,
+    Ann<Lam<(value: Nat) -> Zero>, (value: Nat) -> Nat>,
+>Ann : Symbol(Ann)
+>Lam : Symbol(Lam)
+>Nat : Symbol(Nat)
+>Zero : Symbol(Zero)
+>Nat : Symbol(Nat)
+>Nat : Symbol(Nat)
+
+    Zero,
+>Zero : Symbol(Zero)
+
+    Zero,
+>Zero : Symbol(Zero)
+
+    Refl<Nat, Zero>
+>Refl : Symbol(Refl)
+>Nat : Symbol(Nat)
+>Zero : Symbol(Zero)
+
+  >,
+  Zero
+>Zero : Symbol(Zero)
+
+>;
+
+export type ClosedNatElim: Type0 = Eq<
+>ClosedNatElim : Symbol(ClosedNatElim, Decl(mlttExtendedTypes.tspp, 35, 2))
+>Eq : Symbol(Eq)
+
+  Nat,
+>Nat : Symbol(Nat)
+
+  NatElim<
+>NatElim : Symbol(NatElim)
+
+    Ann<Lam<(value: Nat) -> Nat>, (value: Nat) -> Type0>,
+>Ann : Symbol(Ann)
+>Lam : Symbol(Lam)
+>Nat : Symbol(Nat)
+>Nat : Symbol(Nat)
+>Nat : Symbol(Nat)
+>Type0 : Symbol(Type0)
+
+    Zero,
+>Zero : Symbol(Zero)
+
+    Ann<
+>Ann : Symbol(Ann)
+
+      Lam<(value: Nat) -> Lam<(previous: Nat) -> Succ<previous>>>,
+>Lam : Symbol(Lam)
+>Nat : Symbol(Nat)
+>Lam : Symbol(Lam)
+>Nat : Symbol(Nat)
+>Succ : Symbol(Succ)
+>previous : Symbol(previous)
+
+      (value: Nat) -> (previous: Nat) -> Nat
+>Nat : Symbol(Nat)
+>Nat : Symbol(Nat)
+>Nat : Symbol(Nat)
+
+    >,
+    Succ<Zero>
+>Succ : Symbol(Succ)
+>Zero : Symbol(Zero)
+
+  >,
+  Succ<Zero>
+>Succ : Symbol(Succ)
+>Zero : Symbol(Zero)
+
+>;
+
+type Indexed<N extends number> = { readonly index: N };
+>Indexed : Symbol(Indexed, Decl(mlttExtendedTypes.tspp, 49, 2))
+>N : Symbol(N, Decl(mlttExtendedTypes.tspp, 51, 13))
+>index : Symbol(index, Decl(mlttExtendedTypes.tspp, 51, 34))
+>N : Symbol(N, Decl(mlttExtendedTypes.tspp, 51, 13))
+
+export type BuildIndexed: Type0 = (index: Nat) -> Indexed<index>;
+>BuildIndexed : Symbol(BuildIndexed, Decl(mlttExtendedTypes.tspp, 51, 55))
+>Nat : Symbol(Nat)
+>Indexed : Symbol(Indexed, Decl(mlttExtendedTypes.tspp, 49, 2))
+>index : Symbol(index)
+
+export declare const buildIndexed: BuildIndexed;
+>buildIndexed : Symbol(buildIndexed, Decl(mlttExtendedTypes.tspp, 53, 20))
+>BuildIndexed : Symbol(BuildIndexed, Decl(mlttExtendedTypes.tspp, 51, 55))
+
+export const valid = buildIndexed(3);
+>valid : Symbol(valid, Decl(mlttExtendedTypes.tspp, 55, 12))
+>buildIndexed : Symbol(buildIndexed, Decl(mlttExtendedTypes.tspp, 53, 20))
+
+export const negative = buildIndexed(-1);
+>negative : Symbol(negative, Decl(mlttExtendedTypes.tspp, 56, 12))
+>buildIndexed : Symbol(buildIndexed, Decl(mlttExtendedTypes.tspp, 53, 20))
+
+export const fractional = buildIndexed(1.5);
+>fractional : Symbol(fractional, Decl(mlttExtendedTypes.tspp, 57, 12))
+>buildIndexed : Symbol(buildIndexed, Decl(mlttExtendedTypes.tspp, 53, 20))
+
+export const unsafeInteger = buildIndexed(9007199254740992);
+>unsafeInteger : Symbol(unsafeInteger, Decl(mlttExtendedTypes.tspp, 58, 12))
+>buildIndexed : Symbol(buildIndexed, Decl(mlttExtendedTypes.tspp, 53, 20))
+
+declare let dynamicNumber: number;
+>dynamicNumber : Symbol(dynamicNumber, Decl(mlttExtendedTypes.tspp, 59, 11))
+
+export const dynamic = buildIndexed(dynamicNumber);
+>dynamic : Symbol(dynamic, Decl(mlttExtendedTypes.tspp, 60, 12))
+>buildIndexed : Symbol(buildIndexed, Decl(mlttExtendedTypes.tspp, 53, 20))
+>dynamicNumber : Symbol(dynamicNumber, Decl(mlttExtendedTypes.tspp, 59, 11))
+
