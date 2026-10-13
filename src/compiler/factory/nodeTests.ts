@@ -47,7 +47,6 @@ import {
   DefaultClause,
   DefaultKeyword,
   DeleteExpression,
-  DependentFunctionTypeNode,
   DoStatement,
   DotDotDotToken,
   ElementAccessExpression,
@@ -413,11 +412,6 @@ export function isTypeParameterDeclaration(node: Node): node is TypeParameterDec
 
 export function isKindNode(node: Node): node is KindNode {
   return node.kind === SyntaxKind.TypeKind || node.kind === SyntaxKind.FunctionKind || node.kind === SyntaxKind.TypeReference;
-}
-
-/** @internal */
-export function isDependentFunctionTypeNode(node: Node): node is DependentFunctionTypeNode {
-  return node.kind === SyntaxKind.DependentFunctionType;
 }
 
 // TODO(rbuckton): Rename to 'isParameterDeclaration'

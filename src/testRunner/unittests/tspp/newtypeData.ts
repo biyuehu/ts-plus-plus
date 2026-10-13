@@ -408,7 +408,7 @@ describe("unittests:: tspp:: newtype and data", () => {
       const service = adapter.getLanguageService();
       const info = service.getQuickInfoAtPosition("file.tspp", content.lastIndexOf("userId"));
       assert.isDefined(info);
-      const text = ts.displayPartsToString(info!.displayParts);
+      const text = ts.displayPartsToString(info.displayParts);
       assert.include(text, "UserId", text);
       assert.notInclude(text, "__@nominal@", text);
     });

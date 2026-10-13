@@ -1364,9 +1364,11 @@ function getCompilerCommitHash(sys: System): string | undefined {
 
 function getGitDirectory(sys: System, repositoryDirectory: string, gitPath: string): string | undefined {
   if (sys.directoryExists(gitPath)) return gitPath;
-  const gitFile = sys.readFile(gitPath);
-  const match = /^gitdir:\s*(.+)\s*$/i.exec(gitFile || "");
-  return match ? normalizePath(sys.resolvePath(combinePaths(repositoryDirectory, match[1]))) : undefined;
+  const gitFile = sys.readFile(gitPath)?.trim();
+  const gitDirectoryPrefix = "gitdir:";
+  if (!gitFile || !gitFile.toLowerCase().startsWith(gitDirectoryPrefix)) return undefined;
+  const gitDirectory = gitFile.slice(gitDirectoryPrefix.length).trim();
+  return gitDirectory ? normalizePath(sys.resolvePath(combinePaths(repositoryDirectory, gitDirectory))) : undefined;
 }
 
 function isFullCommitHash(value: string | undefined): boolean {
