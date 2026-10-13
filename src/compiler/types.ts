@@ -1172,6 +1172,9 @@ export type HasChildren =
   | ClassDeclaration
   | InterfaceDeclaration
   | TypeAliasDeclaration
+  | NewtypeDeclaration
+  | DataDeclaration
+  | DataVariant
   | EnumDeclaration
   | ModuleDeclaration
   | ModuleBlock
@@ -1402,6 +1405,8 @@ export type HasModifiers =
   | ClassDeclaration
   | InterfaceDeclaration
   | TypeAliasDeclaration
+  | NewtypeDeclaration
+  | DataDeclaration
   | EnumDeclaration
   | ModuleDeclaration
   | ImportEqualsDeclaration
@@ -5879,6 +5884,8 @@ export type LateVisibilityPaintedStatement =
   | FunctionDeclaration
   | ModuleDeclaration
   | TypeAliasDeclaration
+  | NewtypeDeclaration
+  | DataDeclaration
   | InterfaceDeclaration
   | EnumDeclaration;
 

@@ -2369,6 +2369,8 @@ function isDeclarationStatementKind(kind: SyntaxKind) {
     || kind === SyntaxKind.ClassDeclaration
     || kind === SyntaxKind.InterfaceDeclaration
     || kind === SyntaxKind.TypeAliasDeclaration
+    || kind === SyntaxKind.NewtypeDeclaration
+    || kind === SyntaxKind.DataDeclaration
     || kind === SyntaxKind.EnumDeclaration
     || kind === SyntaxKind.ModuleDeclaration
     || kind === SyntaxKind.ImportDeclaration

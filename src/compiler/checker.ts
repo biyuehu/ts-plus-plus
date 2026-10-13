@@ -11587,6 +11587,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         case SyntaxKind.ClassDeclaration:
         case SyntaxKind.InterfaceDeclaration:
         case SyntaxKind.TypeAliasDeclaration:
+        case SyntaxKind.NewtypeDeclaration:
+        case SyntaxKind.DataDeclaration:
         case SyntaxKind.FunctionDeclaration:
         case SyntaxKind.EnumDeclaration:
         case SyntaxKind.ImportEqualsDeclaration:
@@ -11634,6 +11636,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         case SyntaxKind.IntersectionType:
         case SyntaxKind.ParenthesizedType:
         case SyntaxKind.NamedTupleMember:
+        case SyntaxKind.DataVariant:
           return isDeclarationVisible(node.parent);
 
         // Default binding, import specifier and namespace import is visible
@@ -48973,6 +48976,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     checkExportsOnMergedDeclarations(node);
     checkTypeParameters(node.typeParameters);
     checkSourceElement(node.type);
+    const underlyingType = getTypeFromTypeNode(node.type);
+    if (underlyingType.flags & (TypeFlags.Any | TypeFlags.Unknown | TypeFlags.Never)) {
+      error(node.type, Diagnostics.A_newtype_cannot_use_any_unknown_or_never_as_its_underlying_type);
+    }
     // Resolve the declared type and the constructor type so that circularity errors surface on the declaration.
     // Not registered for the unused identifier check: checkUnusedIdentifiers rejects node kinds it does not know.
     getTypeOfNominalConstructor(getSymbolOfDeclaration(node), node);
@@ -48987,6 +48994,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     getDeclaredTypeOfSymbol(getSymbolOfDeclaration(node));
     for (const variant of node.variants) {
       for (const parameter of variant.parameters ?? emptyArray) {
+        if (!isIdentifier(parameter.name) || parameter.questionToken || parameter.initializer || parameter.dotDotDotToken || !parameter.type) {
+          error(parameter, Diagnostics.A_data_variant_field_must_be_a_required_identifier_with_a_type_annotation);
+        }
         checkSourceElement(parameter.type);
       }
       getTypeOfNominalConstructor(getSymbolOfDeclaration(variant), variant);
@@ -53382,6 +53392,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           case SyntaxKind.ClassExpression:
           case SyntaxKind.InterfaceDeclaration:
           case SyntaxKind.TypeAliasDeclaration:
+          case SyntaxKind.NewtypeDeclaration:
+          case SyntaxKind.DataDeclaration:
             return find(node.modifiers, isModifier);
           case SyntaxKind.VariableStatement:
             return node.declarationList.flags & NodeFlags.Using ?

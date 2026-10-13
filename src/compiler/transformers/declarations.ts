@@ -25,6 +25,7 @@ import {
   createGetSymbolAccessibilityDiagnosticForNode,
   createGetSymbolAccessibilityDiagnosticForNodeName,
   createSymbolTable,
+  DataDeclaration,
   Debug,
   Declaration,
   DeclarationDiagnosticProducing,
@@ -97,6 +98,7 @@ import {
   isClassDeclaration,
   isClassElement,
   isComputedPropertyName,
+  isDataVariant,
   isDeclaration,
   isEntityName,
   isEntityNameExpression,
@@ -164,6 +166,7 @@ import {
   NamedDeclaration,
   NamespaceDeclaration,
   needsScopeMarker,
+  NewtypeDeclaration,
   Node,
   NodeArray,
   NodeBuilderFlags,
@@ -727,6 +730,8 @@ export function transformDeclarations(context: TransformationContext): Transform
       case SyntaxKind.InterfaceDeclaration:
       case SyntaxKind.ClassDeclaration:
       case SyntaxKind.TypeAliasDeclaration:
+      case SyntaxKind.NewtypeDeclaration:
+      case SyntaxKind.DataDeclaration:
       case SyntaxKind.EnumDeclaration:
         return !resolver.isDeclarationVisible(node);
       // The following should be doing their own visibility checks based on filtering their members
@@ -1431,6 +1436,30 @@ export function transformDeclarations(context: TransformationContext): Transform
         needsDeclare = previousNeedsDeclare;
         return clean;
       }
+      case SyntaxKind.NewtypeDeclaration: {
+        needsDeclare = false;
+        const clean = cleanup(factory.updateNewtypeDeclaration(
+          input,
+          ensureModifiers(input),
+          input.name,
+          visitNodes(input.typeParameters, visitDeclarationSubtree, isTypeParameterDeclaration),
+          Debug.checkDefined(visitNode(input.type, visitDeclarationSubtree, isTypeNode)),
+        ));
+        needsDeclare = previousNeedsDeclare;
+        return clean;
+      }
+      case SyntaxKind.DataDeclaration: {
+        needsDeclare = false;
+        const clean = cleanup(factory.updateDataDeclaration(
+          input,
+          ensureModifiers(input),
+          input.name,
+          visitNodes(input.typeParameters, visitDeclarationSubtree, isTypeParameterDeclaration),
+          visitNodes(input.variants, visitDeclarationSubtree, isDataVariant),
+        ));
+        needsDeclare = previousNeedsDeclare;
+        return clean;
+      }
       case SyntaxKind.InterfaceDeclaration: {
         return cleanup(factory.updateInterfaceDeclaration(
           input,
@@ -1908,6 +1937,8 @@ type ProcessedDeclarationStatement =
   | InterfaceDeclaration
   | ClassDeclaration
   | TypeAliasDeclaration
+  | NewtypeDeclaration
+  | DataDeclaration
   | EnumDeclaration
   | VariableStatement
   | ImportDeclaration
@@ -1922,6 +1953,8 @@ function isPreservedDeclarationStatement(node: Node): node is ProcessedDeclarati
     case SyntaxKind.InterfaceDeclaration:
     case SyntaxKind.ClassDeclaration:
     case SyntaxKind.TypeAliasDeclaration:
+    case SyntaxKind.NewtypeDeclaration:
+    case SyntaxKind.DataDeclaration:
     case SyntaxKind.EnumDeclaration:
     case SyntaxKind.VariableStatement:
     case SyntaxKind.ImportDeclaration:

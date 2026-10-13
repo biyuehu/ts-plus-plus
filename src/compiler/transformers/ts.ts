@@ -25,6 +25,8 @@ import {
   createRange,
   createRuntimeTypeSerializer,
   createTokenRange,
+  DataDeclaration,
+  DataVariant,
   Debug,
   Declaration,
   Decorator,
@@ -143,6 +145,7 @@ import {
   NamedImportBindings,
   NamespaceExport,
   NewExpression,
+  NewtypeDeclaration,
   Node,
   NodeArray,
   NodeFlags,
@@ -703,11 +706,10 @@ export function transformTypeScript(context: TransformationContext): Transformer
         return factory.createNotEmittedStatement(node);
 
       case SyntaxKind.NewtypeDeclaration:
+        return visitNewtypeDeclaration(node as NewtypeDeclaration);
+
       case SyntaxKind.DataDeclaration:
-        // TODO(emit): a newtype constructor lowers to the identity function and a data variant lowers to an object
-        // carrying `_tag`. Until then the whole declaration is elided like a type alias, so referring to one of
-        // the constructors at runtime is a ReferenceError.
-        return factory.createNotEmittedStatement(node);
+        return visitDataDeclaration(node as DataDeclaration);
 
       case SyntaxKind.NamespaceExportDeclaration:
         // TypeScript namespace export declarations are elided.
@@ -840,6 +842,70 @@ export function transformTypeScript(context: TransformationContext): Transformer
         // node contains some other TypeScript syntax
         return visitEachChild(node, visitor, context);
     }
+  }
+
+  function visitNewtypeDeclaration(node: NewtypeDeclaration): VisitResult<Statement> {
+    const value = factory.createIdentifier("value");
+    const declaration = factory.createFunctionDeclaration(
+      node.modifiers,
+      /*asteriskToken*/ undefined,
+      node.name,
+      /*typeParameters*/ undefined,
+      [factory.createParameterDeclaration(/*modifiers*/ undefined, /*dotDotDotToken*/ undefined, value)],
+      /*type*/ undefined,
+      factory.createBlock([factory.createReturnStatement(value)], /*multiLine*/ true),
+    );
+    setOriginalNode(declaration, node);
+    setTextRange(declaration, node);
+    return visitFunctionDeclaration(declaration);
+  }
+
+  function visitDataDeclaration(node: DataDeclaration): VisitResult<Statement> {
+    const statements: Statement[] = [];
+    for (const variant of node.variants) {
+      const result = visitDataVariant(node, variant);
+      addRange(statements, isArray(result) ? result : [result]);
+    }
+    return statements;
+  }
+
+  function visitDataVariant(data: DataDeclaration, variant: DataVariant): VisitResult<Statement> {
+    const tag = factory.createPropertyAssignment("_tag", factory.createStringLiteral(idText(variant.name)));
+    if (!variant.parameters) {
+      const declaration = factory.createVariableStatement(
+        data.modifiers,
+        factory.createVariableDeclarationList(
+          [factory.createVariableDeclaration(variant.name, /*exclamationToken*/ undefined, /*type*/ undefined, factory.createObjectLiteralExpression([tag]))],
+          NodeFlags.Const,
+        ),
+      );
+      setOriginalNode(declaration, variant);
+      setTextRange(declaration, variant);
+      return Debug.checkDefined(visitVariableStatement(declaration));
+    }
+
+    const parameters = map(variant.parameters, parameter =>
+      factory.createParameterDeclaration(
+        /*modifiers*/ undefined,
+        parameter.dotDotDotToken,
+        parameter.name,
+        /*questionToken*/ undefined,
+        /*type*/ undefined,
+        parameter.initializer,
+      ));
+    const fields = mapDefined(variant.parameters, parameter => isIdentifier(parameter.name) ? factory.createShorthandPropertyAssignment(parameter.name) : undefined);
+    const declaration = factory.createFunctionDeclaration(
+      data.modifiers,
+      /*asteriskToken*/ undefined,
+      variant.name,
+      /*typeParameters*/ undefined,
+      parameters,
+      /*type*/ undefined,
+      factory.createBlock([factory.createReturnStatement(factory.createObjectLiteralExpression([tag, ...fields], /*multiLine*/ false))], /*multiLine*/ true),
+    );
+    setOriginalNode(declaration, variant);
+    setTextRange(declaration, variant);
+    return visitFunctionDeclaration(declaration);
   }
 
   function visitSourceFile(node: SourceFile) {
