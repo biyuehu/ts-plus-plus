@@ -1,0 +1,29 @@
+//// [tests/cases/compiler/typeUniverseNamesReserved.ts] ////
+
+=== ordinaryTypeScript.ts ===
+export type Type = 1;
+>Type : Symbol(Type, Decl(ordinaryTypeScript.ts, 0, 0))
+
+export type Type0 = 1;
+>Type0 : Symbol(Type0, Decl(ordinaryTypeScript.ts, 0, 21))
+
+export type Type1 = 1;
+>Type1 : Symbol(Type1, Decl(ordinaryTypeScript.ts, 1, 22))
+
+=== typeUniverseNamesReserved.tspp ===
+export type Type = 1;
+>Type : Symbol(Type, Decl(typeUniverseNamesReserved.tspp, 0, 0))
+
+export type Type0 = 1;
+>Type0 : Symbol(Type0, Decl(typeUniverseNamesReserved.tspp, 0, 21))
+
+export type Type1 = 1;
+>Type1 : Symbol(Type1, Decl(typeUniverseNamesReserved.tspp, 1, 22))
+
+// These names do not denote universes and remain available to user code.
+export type Type00 = 1;
+>Type00 : Symbol(Type00, Decl(typeUniverseNamesReserved.tspp, 2, 22))
+
+export type Type01 = 1;
+>Type01 : Symbol(Type01, Decl(typeUniverseNamesReserved.tspp, 5, 23))
+

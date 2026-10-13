@@ -47893,6 +47893,17 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function checkTypeNameIsReserved(name: Identifier, message: DiagnosticMessage): void {
     // TS 1.0 spec (April 2014): 3.6.1
     // The predefined type keywords are reserved and cannot be used as names of user defined types.
+    const typeName = name.escapedText as string;
+    const sourceFileName = getSourceFileOfNode(name).fileName;
+    const isTspp = fileExtensionIs(sourceFileName, Extension.Tspp) || fileExtensionIs(sourceFileName, Extension.Dtspp);
+    if (
+      isTspp &&
+      (typeName === "Type" && hasTsppFeature(compilerOptions, "higherKindedTypes") ||
+        /^Type(?:0|[1-9]\d*)$/.test(typeName) && hasTsppFeature(compilerOptions, "typeUniverses"))
+    ) {
+      error(name, message, typeName);
+      return;
+    }
     switch (name.escapedText) {
       case "any":
       case "unknown":
@@ -47905,7 +47916,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       case "void":
       case "object":
       case "undefined":
-        error(name, message, name.escapedText as string);
+        error(name, message, typeName);
     }
   }
 
