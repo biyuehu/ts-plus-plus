@@ -48,8 +48,8 @@ Current features:
 | Feature | Provides | Explicit dependencies | TS superset | Transparent erasure |
 | --- | --- | --- | --- | --- |
 | `higherKindedTypes` | Higher-kinded parameters and first-class type constructors | — | Yes | Yes |
-| `newtypeDeclarations` | `newtype` nominal type declarations and their constructors | — | Yes | Yes |
-| `dataDeclarations` | `data` discriminated unions and variant constructors | — | Yes | Yes |
+| `newtypeDeclarations` | `newtype` nominal type declarations and their constructors | — | Yes | No (emits runtime constructors) |
+| `dataDeclarations` | `data` discriminated unions and variant constructors | — | Yes | No (emits runtime variant values and constructors) |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types whose result can depend on a parameter | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |

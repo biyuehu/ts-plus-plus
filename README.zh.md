@@ -48,6 +48,8 @@ tspp --init
 | 特性 | 获得 | 必须显式开启的依赖 | TS 超集 | 透明擦除 |
 | --- | --- | --- | --- | --- |
 | `higherKindedTypes` | 高阶类型参数和一等类型构造器 | 无 | 是 | 是 |
+| `newtypeDeclarations` | `newtype` 名义类型声明与对应构造器 | 无 | 是 | 否（生成运行时构造器） |
+| `dataDeclarations` | `data` 可辨识联合声明与对应变体构造器 | 无 | 是 | 否（生成运行时变体值与构造器） |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |
 | `dependentFunctionTypes` | 返回类型可以依赖参数的 Pi 类型 | `typeUniverses` | 是 | 是 |
 | `dependentFunctionInterop` | Pi 类型与 TypeScript 泛型函数之间的赋值和调用 | `dependentFunctionTypes` | 是 | 是 |
