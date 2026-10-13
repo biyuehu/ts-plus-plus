@@ -21752,12 +21752,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function instantiateSignature(signature: Signature, mapper: TypeMapper, eraseTypeParameters?: boolean): Signature {
-    if (signature.resolvedReturnType && !signature.typeParameters) {
-      const result = createSignature(signature.declaration, /*typeParameters*/ undefined, signature.thisParameter && instantiateSymbol(signature.thisParameter, mapper), instantiateList(signature.parameters, mapper, instantiateSymbol), instantiateType(signature.resolvedReturnType, mapper), /*resolvedTypePredicate*/ undefined, signature.minArgumentCount, signature.flags & SignatureFlags.PropagatingFlags);
-      result.target = signature;
-      result.mapper = mapper;
-      return result;
-    }
     let freshTypeParameters: TypeParameter[] | undefined;
     if (signature.typeParameters && !eraseTypeParameters) {
       // First create a fresh set of type parameters, then include a mapping from the old to the

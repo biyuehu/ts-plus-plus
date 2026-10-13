@@ -68,6 +68,18 @@ jobs:
       - name: Self build
         run: npx hereby build-src --built
 
+  tspp-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: TS++ unit tests
+        run: "npx hereby runtests --tests 'unittests:: (MLTT|tspp::)' --lint=false"
+
   # baselines:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -121,6 +133,7 @@ jobs:
       - knip
       - typecheck
       - self-check
+      - tspp-tests
       # - baselines
       # - test
     steps:
