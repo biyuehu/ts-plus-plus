@@ -1,0 +1,43 @@
+// =============================================================================
+// 边界与实验篇：kind 传播、错误诊断和当前限制
+// =============================================================================
+
+export type Identity: Type1 =
+  (A: Type0) -> A;
+
+// external alias 会保留真实 kind。Identity 位于 Type1，不会降级成 Type0。
+export type HigherCodomain: Type1 =
+  (ignored: string) -> Identity;
+
+// -----------------------------------------------------------------------------
+// 错误实验
+// -----------------------------------------------------------------------------
+//
+// 可以逐条取消注释，然后运行 `npm run check`。
+
+// Missing 没有被任何 binder 引入。
+// export type UnboundName: Type1 = (A: Type0) -> Missing;
+
+// `(A: Type0) -> A` 位于 Type1，不能声明为 Type0。
+// export type WrongUniverse: Type0 = (A: Type0) -> A;
+
+// union/intersection 不能把 Type1 的依赖函数伪装成普通 Type0 类型。
+// export type HiddenHigherUniverse: Type1 =
+//   (A: Type0) -> A | ((B: Type0) -> B);
+
+// -----------------------------------------------------------------------------
+// 当前能力边界
+// -----------------------------------------------------------------------------
+//
+// 当前核心支持 universe、Pi、binder、类型应用、alpha/beta 定义相等，以及
+// TypeScript external type。以下能力仍处于后续设计范围：
+//
+//   - dependent pair / Sigma type；
+//   - identity type 和证明对象；
+//   - Nat 等 inductive family 及 eliminator；
+//   - pattern matching；
+//   - 对应的运行时 dependent function 声明和调用；
+//   - 让 JavaScript 表达式参与类型级计算。
+//
+// 当前最准确的理解是：TS++ 在 TypeScript 类型系统中嵌入了一个 MLTT
+// 子语言，而不是用 MLTT 替换整个 TypeScript 类型系统。

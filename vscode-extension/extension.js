@@ -12,12 +12,14 @@ function activate(context) {
       description: "Kinds, type constructors, and universes",
       command: "tspp.openHigherKindedTypesExample",
       directory: path.join(examplesRoot, "01-higher-kinded-types"),
+      entry: "index.tspp",
     },
     {
       label: "02 — Dependent Types",
       description: "A beginner-friendly introduction to native MLTT types",
       command: "tspp.openDependentTypesExample",
       directory: path.join(examplesRoot, "02-dependent-types"),
+      entry: path.join("src", "01-basics.tspp"),
     },
   ];
 
@@ -37,7 +39,7 @@ function activate(context) {
   status.show();
 
   async function openExample(example, viewColumn = vscode.ViewColumn.Active) {
-    const document = await vscode.workspace.openTextDocument(path.join(example.directory, "index.tspp"));
+    const document = await vscode.workspace.openTextDocument(path.join(example.directory, example.entry));
     await vscode.window.showTextDocument(document, { viewColumn, preview: false });
   }
 

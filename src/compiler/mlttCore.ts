@@ -59,7 +59,11 @@ export interface MlttExternal {
   readonly displayName: string;
   readonly arguments: readonly MlttTerm[];
   readonly type: MlttTerm;
+  /** Host-owned semantic identity. The independent core only passes it to an equality callback. */
+  readonly identity?: unknown;
 }
+
+export type MlttExternalEqualityComparer = (left: MlttExternal, right: MlttExternal) => boolean;
 
 /** Types for free variables, ordered from the nearest binder outwards. */
 export type MlttContext = readonly MlttTerm[];
@@ -104,8 +108,14 @@ export function mlttAnnotation(term: MlttTerm, type: MlttTerm): MlttAnnotation {
   return { kind: "annotation", term, type };
 }
 
-export function mlttExternal(key: string, displayName: string, arguments_: readonly MlttTerm[], type: MlttTerm): MlttExternal {
-  return { kind: "external", key, displayName, arguments: arguments_, type };
+export function mlttExternal(
+  key: string,
+  displayName: string,
+  arguments_: readonly MlttTerm[],
+  type: MlttTerm,
+  identity?: unknown,
+): MlttExternal {
+  return { kind: "external", key, displayName, arguments: arguments_, type, identity };
 }
 
 /** Infer the type of a core term. Lambdas require an expected type or an annotation. */
@@ -203,13 +213,17 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
       // weakHeadNormalizeMltt always removes an outer annotation.
       return normalizeMlttTerm(head.term);
     case "external":
-      return mlttExternal(head.key, head.displayName, head.arguments.map(normalizeMlttTerm), normalizeMlttTerm(head.type));
+      return mlttExternal(head.key, head.displayName, head.arguments.map(normalizeMlttTerm), normalizeMlttTerm(head.type), head.identity);
   }
 }
 
 /** Definitional equality currently consists of alpha and beta equality. */
-export function areMlttTermsDefinitionallyEqual(left: MlttTerm, right: MlttTerm): boolean {
-  return structurallyEqualMlttTerms(normalizeMlttTerm(left), normalizeMlttTerm(right));
+export function areMlttTermsDefinitionallyEqual(
+  left: MlttTerm,
+  right: MlttTerm,
+  compareExternal?: MlttExternalEqualityComparer,
+): boolean {
+  return structurallyEqualMlttTerms(normalizeMlttTerm(left), normalizeMlttTerm(right), compareExternal);
 }
 
 export function printMlttTerm(term: MlttTerm): string {
@@ -248,6 +262,7 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
         term.displayName,
         term.arguments.map(argument => shiftMlttTerm(argument, amount, cutoff)),
         shiftMlttTerm(term.type, amount, cutoff),
+        term.identity,
       );
   }
 }
@@ -282,6 +297,7 @@ function substituteMltt(term: MlttTerm, variableIndex: number, replacement: Mltt
         term.displayName,
         term.arguments.map(argument => substituteMltt(argument, variableIndex, replacement, binderDepth)),
         substituteMltt(term.type, variableIndex, replacement, binderDepth),
+        term.identity,
       );
   }
 }
@@ -290,7 +306,11 @@ function substituteMlttTop(replacement: MlttTerm, body: MlttTerm): MlttTerm {
   return shiftMlttTerm(substituteMltt(body, 0, shiftMlttTerm(replacement, 1)), -1);
 }
 
-function structurallyEqualMlttTerms(left: MlttTerm, right: MlttTerm): boolean {
+function structurallyEqualMlttTerms(
+  left: MlttTerm,
+  right: MlttTerm,
+  compareExternal?: MlttExternalEqualityComparer,
+): boolean {
   if (left.kind !== right.kind) return false;
   switch (left.kind) {
     case "universe":
@@ -299,23 +319,24 @@ function structurallyEqualMlttTerms(left: MlttTerm, right: MlttTerm): boolean {
       return left.index === (right as MlttVariable).index;
     case "pi": {
       const rightPi = right as MlttPi;
-      return structurallyEqualMlttTerms(left.domain, rightPi.domain) && structurallyEqualMlttTerms(left.codomain, rightPi.codomain);
+      return structurallyEqualMlttTerms(left.domain, rightPi.domain, compareExternal) && structurallyEqualMlttTerms(left.codomain, rightPi.codomain, compareExternal);
     }
     case "lambda":
-      return structurallyEqualMlttTerms(left.body, (right as MlttLambda).body);
+      return structurallyEqualMlttTerms(left.body, (right as MlttLambda).body, compareExternal);
     case "application": {
       const rightApplication = right as MlttApplication;
-      return structurallyEqualMlttTerms(left.functionTerm, rightApplication.functionTerm) && structurallyEqualMlttTerms(left.argument, rightApplication.argument);
+      return structurallyEqualMlttTerms(left.functionTerm, rightApplication.functionTerm, compareExternal) && structurallyEqualMlttTerms(left.argument, rightApplication.argument, compareExternal);
     }
     case "annotation": {
       const rightAnnotation = right as MlttAnnotation;
-      return structurallyEqualMlttTerms(left.term, rightAnnotation.term) && structurallyEqualMlttTerms(left.type, rightAnnotation.type);
+      return structurallyEqualMlttTerms(left.term, rightAnnotation.term, compareExternal) && structurallyEqualMlttTerms(left.type, rightAnnotation.type, compareExternal);
     }
     case "external": {
       const rightExternal = right as MlttExternal;
-      return left.key === rightExternal.key && left.arguments.length === rightExternal.arguments.length &&
-        left.arguments.every((argument, index) => structurallyEqualMlttTerms(argument, rightExternal.arguments[index])) &&
-        structurallyEqualMlttTerms(left.type, rightExternal.type);
+      return left.arguments.length === rightExternal.arguments.length &&
+        left.arguments.every((argument, index) => structurallyEqualMlttTerms(argument, rightExternal.arguments[index], compareExternal)) &&
+        structurallyEqualMlttTerms(left.type, rightExternal.type, compareExternal) &&
+        (compareExternal ? compareExternal(left, rightExternal) : left.key === rightExternal.key);
     }
   }
 }

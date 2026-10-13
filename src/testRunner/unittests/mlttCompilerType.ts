@@ -20,12 +20,19 @@ describe("unittests:: MLTT compiler type", () => {
     type Constant: Type1 = (A: Type0) -> (value: A) -> Type0;
     type WithUnion: Type1 = (A: Type0) -> A | string;
     type UnionAlphaEquivalent: Type1 = (T: Type0) -> T | string;
+    type StructuralLeft = { value: string };
+    type StructuralRight = { value: string };
+    type WithStructuralLeft: Type1 = (A: Type0) -> StructuralLeft;
+    type WithStructuralRight: Type1 = (A: Type0) -> StructuralRight;
+    type Box<T> = { value: T };
+    type WithGenericAlias: Type1 = (A: Type0) -> Box<A>;
+    type WithStructuralBody: Type1 = (T: Type0) -> { value: T };
   `;
   const program = createProgram("/file.tspp", content, { dependentTypes: true, noLib: true, strict: true });
   const checker = program.getTypeChecker();
   const file = program.getSourceFile("/file.tspp")!;
   const declarations = file.statements.filter(ts.isTypeAliasDeclaration);
-  const [identity, alphaEquivalent, constant, withUnion, unionAlphaEquivalent] = declarations.map(declaration => checker.getTypeAtLocation(declaration.type));
+  const [identity, alphaEquivalent, constant, withUnion, unionAlphaEquivalent, , , withStructuralLeft, withStructuralRight, , withGenericAlias, withStructuralBody] = declarations.map(declaration => checker.getTypeAtLocation(declaration.type));
 
   it("uses a dedicated compiler type and preserves native printing", () => {
     assert.strictEqual(identity.flags, ts.TypeFlags.DependentFunction);
@@ -37,6 +44,25 @@ describe("unittests:: MLTT compiler type", () => {
     assert.isTrue(checker.isTypeAssignableTo(identity, alphaEquivalent));
     assert.isFalse(checker.isTypeAssignableTo(identity, constant));
     assert.isTrue(checker.isTypeAssignableTo(withUnion, unionAlphaEquivalent));
+    assert.isTrue(checker.isTypeAssignableTo(withStructuralLeft, withStructuralRight));
+    assert.isTrue(checker.isTypeAssignableTo(withGenericAlias, withStructuralBody));
+  });
+
+  it("preserves the real universe of embedded TypeScript aliases", () => {
+    const higherCodomain = createProgram(
+      "/higher.tspp",
+      "type Identity: Type1 = (A: Type0) -> A; type HigherCodomain: Type1 = (ignored: string) -> Identity;",
+      { dependentTypes: true, noLib: true },
+    );
+    assert.isEmpty(higherCodomain.getSemanticDiagnostics());
+  });
+
+  it("rejects higher-universe types hidden inside TypeScript composites", () => {
+    const invalid = createProgram("/invalid.tspp", "type Invalid: Type1 = (A: Type0) -> A | ((B: Type0) -> B);", {
+      dependentTypes: true,
+      noLib: true,
+    });
+    assert.include(invalid.getSemanticDiagnostics().map(diagnostic => diagnostic.code), 18062);
   });
 
   it("requires the option and a tsppconfig.json config name", () => {
