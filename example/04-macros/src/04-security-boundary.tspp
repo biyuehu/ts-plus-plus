@@ -1,0 +1,53 @@
+import * as ts from "../../../built/local/typescript";
+
+// 宏实现运行在编译器的 Node.js 进程中，并没有沙箱。这里显式声明 require 只是为了
+// 获得类型；执行时拿到的是真正的 Node.js require，拥有与编译器相同的文件和模块权限。
+declare function require(name: string): any;
+
+/**
+ * 读取示例自己的 package.json，并把包名固化进生成的 JavaScript。
+ *
+ * 这段读取只用于展示能力边界。真实项目应当只运行可信宏，并避免网络请求、写文件、
+ * 修改环境或依赖当前时间等不可重复的副作用。
+ */
+export macro function exposePackageName(
+  _targets: readonly ts.MacroTarget[],
+  context: ts.MacroContext,
+): ts.MacroResult {
+  const packageJson = require("../package.json") as { name: string };
+
+  return context.factory.createVariableStatement(
+    [context.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+    context.factory.createVariableDeclarationList(
+      [
+        context.factory.createVariableDeclaration(
+          "MacroExamplePackageName",
+          undefined,
+          context.factory.createLiteralTypeNode(
+            context.factory.createStringLiteral(packageJson.name),
+          ),
+          context.factory.createStringLiteral(packageJson.name),
+        ),
+      ],
+      ts.NodeFlags.Const,
+    ),
+  );
+}
+
+macro exposePackageName();
+
+const checkedPackageName: "tspp-example-04-macros" = MacroExamplePackageName;
+console.log(checkedPackageName);
+
+// 下面这个宏永不完成；取消注释定义和调用后执行 npm run check，编译器会按这条调用
+// 声明的固定 50ms 预算报告超时，而不是永久等待。
+//
+// export macro function neverFinishes() with {
+//   timeout: { type: "fixed", value: 50, unit: "ms" };
+// }: Promise<ts.MacroResult> {
+//   return new Promise(() => { });
+// }
+// macro neverFinishes();
+//
+// 注意：超时只能约束 Promise 等待。同步死循环或同步阻塞 I/O 会堵住编译器线程，
+// 同进程计时器无法抢占它们。

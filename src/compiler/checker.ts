@@ -45349,9 +45349,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function checkFunctionDeclaration(node: FunctionDeclaration): void {
-    if (hasSyntacticModifier(node, ModifierFlags.Macro)) {
+    const isMacro = hasSyntacticModifier(node, ModifierFlags.Macro);
+    if (isMacro) {
       requireTsppFeature(node, "macros");
     }
+    checkFunctionWithClause(node, isMacro);
     addLazyDiagnostic(checkFunctionDeclarationDiagnostics);
 
     function checkFunctionDeclarationDiagnostics() {
@@ -45359,6 +45361,54 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       checkGrammarForGenerator(node);
       checkCollisionsForDeclarationName(node, node.name);
     }
+  }
+
+  function checkFunctionWithClause(node: FunctionDeclaration, isMacro: boolean): void {
+    if (!node.withClause) return;
+    const seen = new Set<string>();
+    for (const property of node.withClause.properties) {
+      const name = getTextOfNode(property.name);
+      if (seen.has(name)) {
+        error(property.name, Diagnostics.The_with_property_0_may_only_be_specified_once, name);
+        continue;
+      }
+      seen.add(name);
+      if (!isMacro || name !== "timeout") {
+        error(property.name, Diagnostics.The_with_property_0_is_not_supported_on_1, name, isMacro ? "a macro function" : "a regular function");
+        continue;
+      }
+      if (!isValidMacroTimeoutExpression(property.value)) {
+        error(property, Diagnostics.The_timeout_property_must_match_type_Colon_fixed_value_Colon_number_unit_Colon_ms_s_type_Colon_benchmark_multiplier_Colon_number);
+      }
+    }
+  }
+
+  function isValidMacroTimeoutExpression(expression: Expression): boolean {
+    if (!isObjectLiteralExpression(expression)) return false;
+    const properties = new Map<string, PropertyAssignment>();
+    for (const element of expression.properties) {
+      if (!isPropertyAssignment(element)) return false;
+      const name = isIdentifier(element.name) ? getTextOfNode(element.name) : isStringLiteralLike(element.name) ? element.name.text : undefined;
+      if (name === undefined || properties.has(name)) return false;
+      properties.set(name, element);
+    }
+    const typeInitializer = properties.get("type")?.initializer;
+    if (!typeInitializer || !isStringLiteralLike(typeInitializer)) return false;
+    if (typeInitializer.text === "fixed") {
+      if (properties.size !== 3 || !properties.has("value") || !properties.has("unit")) return false;
+      const value = properties.get("value")!.initializer;
+      const unit = properties.get("unit")!.initializer;
+      if (value.kind !== SyntaxKind.NumericLiteral || !isStringLiteralLike(unit) || unit.text !== "ms" && unit.text !== "s") return false;
+      const numericValue = Number(getTextOfNode(value));
+      return Number.isFinite(numericValue) && numericValue > 0 && numericValue * (unit.text === "s" ? 1000 : 1) <= 2_147_483_647;
+    }
+    if (typeInitializer.text === "benchmark") {
+      if (properties.size !== 2 || !properties.has("multiplier")) return false;
+      const multiplier = properties.get("multiplier")!.initializer;
+      const numericMultiplier = multiplier.kind === SyntaxKind.NumericLiteral ? Number(getTextOfNode(multiplier)) : NaN;
+      return Number.isFinite(numericMultiplier) && numericMultiplier > 0 && numericMultiplier <= 2_147_483_647;
+    }
+    return false;
   }
 
   function checkMacroInvocationStatement(node: MacroInvocationStatement): void {

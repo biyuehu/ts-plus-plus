@@ -20,6 +20,7 @@ import {
   createIncrementalCompilerHost,
   CreateProgram,
   createProgram,
+  createProgramAsync,
   CreateProgramOptions,
   createSolutionBuilder,
   createSolutionBuilderHost,
@@ -567,6 +568,7 @@ function executeCommandLineWorker(
   sys: System,
   cb: ExecuteCommandLineCallbacks,
   commandLine: ParsedCommandLine,
+  asyncCompilation = false,
 ) {
   let reportDiagnostic = createDiagnosticReporter(sys);
   // Configuration file name (if any)
@@ -701,12 +703,9 @@ function executeCommandLineWorker(
       );
     }
     else {
-      performCompilation(
-        sys,
-        cb,
-        reportDiagnostic,
-        configParseResult,
-      );
+      return asyncCompilation
+        ? performCompilationAsync(sys, cb, reportDiagnostic, configParseResult)
+        : performCompilation(sys, cb, reportDiagnostic, configParseResult);
     }
   }
   else {
@@ -740,12 +739,9 @@ function executeCommandLineWorker(
       );
     }
     else {
-      performCompilation(
-        sys,
-        cb,
-        reportDiagnostic,
-        { ...commandLine, options: commandLineOptions },
-      );
+      return asyncCompilation
+        ? performCompilationAsync(sys, cb, reportDiagnostic, { ...commandLine, options: commandLineOptions })
+        : performCompilation(sys, cb, reportDiagnostic, { ...commandLine, options: commandLineOptions });
     }
   }
 }
@@ -802,8 +798,22 @@ export function executeCommandLine(
       ));
   }
   else {
-    return executeCommandLineWorker(system, cb, commandLine);
+    return executeCommandLineWorker(system, cb, commandLine) as void | WatchOfConfigFile<EmitAndSemanticDiagnosticsBuilderProgram>;
   }
+}
+
+/** @internal Executes a one-shot compilation using the asynchronous macro pipeline. */
+export function executeCommandLineAsync(
+  system: System,
+  cb: ExecuteCommandLineCallbacks,
+  commandLineArgs: readonly string[],
+): ReturnType<typeof executeCommandLine> | Promise<void> {
+  // Solution builds, watch mode, incremental mode, and CPU profiling still use the synchronous
+  // pipeline. Their long-lived builder state needs a separate async scheduling design.
+  if (isBuildCommand(commandLineArgs)) return executeCommandLine(system, cb, commandLineArgs);
+  const commandLine = parseCommandLine(commandLineArgs, path => system.readFile(path));
+  if (commandLine.options.generateCpuProfile && system.enableCPUProfiler) return executeCommandLine(system, cb, commandLineArgs);
+  return executeCommandLineWorker(system, cb, commandLine, /*asyncCompilation*/ true);
 }
 
 function reportWatchModeWithoutSysSupport(sys: System, reportDiagnostic: DiagnosticReporter) {
@@ -936,6 +946,38 @@ function performCompilation(
     configFileParsingDiagnostics: getConfigFileParsingDiagnostics(config),
   };
   const program = createProgram(programOptions);
+  const exitStatus = emitFilesAndReportErrorsAndGetExitStatus(
+    program,
+    reportDiagnostic,
+    s => sys.write(s + sys.newLine),
+    createReportErrorSummary(sys, options),
+  );
+  reportStatistics(sys, program, /*solutionPerformance*/ undefined);
+  cb(program);
+  return sys.exit(exitStatus);
+}
+
+async function performCompilationAsync(
+  sys: System,
+  cb: ExecuteCommandLineCallbacks,
+  reportDiagnostic: DiagnosticReporter,
+  config: ParsedCommandLine,
+) {
+  const { fileNames, options, projectReferences } = config;
+  const host = createCompilerHostWorker(options, /*setParentNodes*/ undefined, sys);
+  host.jsDocParsingMode = defaultJSDocParsingMode;
+  const currentDirectory = host.getCurrentDirectory();
+  const getCanonicalFileName = createGetCanonicalFileName(host.useCaseSensitiveFileNames());
+  changeCompilerHostLikeToUseCache(host, fileName => toPath(fileName, currentDirectory, getCanonicalFileName));
+  enableStatisticsAndTracing(sys, options, /*isBuildMode*/ false);
+
+  const program = await createProgramAsync({
+    rootNames: fileNames,
+    options,
+    projectReferences,
+    host,
+    configFileParsingDiagnostics: getConfigFileParsingDiagnostics(config),
+  });
   const exitStatus = emitFilesAndReportErrorsAndGetExitStatus(
     program,
     reportDiagnostic,

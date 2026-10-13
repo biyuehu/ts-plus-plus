@@ -88,6 +88,8 @@ import {
   isTypeParameterDeclaration,
   isVariableDeclaration,
   isVariableDeclarationList,
+  isWithClause,
+  isWithProperty,
   LexicalEnvironmentFlags,
   Node,
   NodeArray,
@@ -1322,6 +1324,18 @@ const visitEachChildTable: VisitEachChildTable = {
     );
   },
 
+  [SyntaxKind.WithClause]: function visitEachChildOfWithClause(node, visitor, context, nodesVisitor, _nodeVisitor, _tokenVisitor) {
+    return context.factory.updateWithClause(node, nodesVisitor(node.properties, visitor, isWithProperty));
+  },
+
+  [SyntaxKind.WithProperty]: function visitEachChildOfWithProperty(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateWithProperty(
+      node,
+      Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
+      Debug.checkDefined(nodeVisitor(node.value, visitor, isExpression)),
+    );
+  },
+
   [SyntaxKind.IfStatement]: function visitEachChildOfIfStatement(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
     return context.factory.updateIfStatement(
       node,
@@ -1464,6 +1478,7 @@ const visitEachChildTable: VisitEachChildTable = {
       visitParameterList(node.parameters, visitor, context, nodesVisitor),
       nodeVisitor(node.type, visitor, isTypeNode),
       visitFunctionBody(node.body, visitor, context, nodeVisitor),
+      nodeVisitor(node.withClause, visitor, isWithClause),
     );
   },
 

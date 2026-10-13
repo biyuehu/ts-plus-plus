@@ -468,6 +468,8 @@ import {
   VisitResult,
   VoidExpression,
   WhileStatement,
+  WithClause,
+  WithProperty,
   WithStatement,
   YieldExpression,
 } from "../_namespaces/ts.js";
@@ -729,6 +731,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     createEmptyStatement,
     createExpressionStatement,
     updateExpressionStatement,
+    createWithClause,
+    updateWithClause,
+    createWithProperty,
+    updateWithProperty,
     createMacroInvocationStatement,
     updateMacroInvocationStatement,
     createIfStatement,
@@ -3992,6 +3998,37 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
+  function createWithClause(properties: readonly WithProperty[]): WithClause {
+    const node = createBaseNode<WithClause>(SyntaxKind.WithClause);
+    node.properties = createNodeArray(properties);
+    node.transformFlags |= TransformFlags.ContainsTypeScript | propagateChildrenFlags(node.properties);
+    return node;
+  }
+
+  // @api
+  function updateWithClause(node: WithClause, properties: readonly WithProperty[]) {
+    return node.properties !== properties ? update(createWithClause(properties), node) : node;
+  }
+
+  // @api
+  function createWithProperty(name: Identifier, value: Expression): WithProperty {
+    const node = createBaseNode<WithProperty>(SyntaxKind.WithProperty);
+    node.name = name;
+    node.value = value;
+    node.transformFlags |= TransformFlags.ContainsTypeScript |
+      propagateChildFlags(node.name) |
+      propagateChildFlags(node.value);
+    return node;
+  }
+
+  // @api
+  function updateWithProperty(node: WithProperty, name: Identifier, value: Expression) {
+    return node.name !== name || node.value !== value
+      ? update(createWithProperty(name, value), node)
+      : node;
+  }
+
+  // @api
   function createMacroInvocationStatement(macro: EntityName, targets: readonly EntityName[]): MacroInvocationStatement {
     const node = createBaseNode<MacroInvocationStatement>(SyntaxKind.MacroInvocationStatement);
     node.macro = macro;
@@ -4394,6 +4431,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     parameters: readonly ParameterDeclaration[],
     type: TypeNode | undefined,
     body: Block | undefined,
+    withClause?: WithClause,
   ) {
     const node = createBaseDeclaration<FunctionDeclaration>(SyntaxKind.FunctionDeclaration);
     node.modifiers = asNodeArray(modifiers);
@@ -4402,6 +4440,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     node.typeParameters = asNodeArray(typeParameters);
     node.parameters = createNodeArray(parameters);
     node.type = type;
+    node.withClause = withClause;
     node.body = body;
 
     if (!node.body || modifiersToFlags(node.modifiers) & (ModifierFlags.Ambient | ModifierFlags.Macro)) {
@@ -4417,6 +4456,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
         propagateNameFlags(node.name) |
         propagateChildrenFlags(node.typeParameters) |
         propagateChildrenFlags(node.parameters) |
+        propagateChildFlags(node.withClause) |
         propagateChildFlags(node.type) |
         (propagateChildFlags(node.body) & ~TransformFlags.ContainsPossibleTopLevelAwait) |
         (isAsyncGenerator ? TransformFlags.ContainsES2018 :
@@ -4446,15 +4486,17 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     parameters: readonly ParameterDeclaration[],
     type: TypeNode | undefined,
     body: Block | undefined,
+    withClause: WithClause | undefined,
   ) {
     return node.modifiers !== modifiers
         || node.asteriskToken !== asteriskToken
         || node.name !== name
         || node.typeParameters !== typeParameters
         || node.parameters !== parameters
+        || node.withClause !== withClause
         || node.type !== type
         || node.body !== body
-      ? finishUpdateFunctionDeclaration(createFunctionDeclaration(modifiers, asteriskToken, name, typeParameters, parameters, type, body), node)
+      ? finishUpdateFunctionDeclaration(createFunctionDeclaration(modifiers, asteriskToken, name, typeParameters, parameters, type, body, withClause), node)
       : node;
   }
 
@@ -7282,7 +7324,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
       isArrowFunction(node) ? updateArrowFunction(node, modifierArray, node.typeParameters, node.parameters, node.type, node.equalsGreaterThanToken, node.body) :
       isClassExpression(node) ? updateClassExpression(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
       isVariableStatement(node) ? updateVariableStatement(node, modifierArray, node.declarationList) :
-      isFunctionDeclaration(node) ? updateFunctionDeclaration(node, modifierArray, node.asteriskToken, node.name, node.typeParameters, node.parameters, node.type, node.body) :
+      isFunctionDeclaration(node) ? updateFunctionDeclaration(node, modifierArray, node.asteriskToken, node.name, node.typeParameters, node.parameters, node.type, node.body, node.withClause) :
       isClassDeclaration(node) ? updateClassDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
       isInterfaceDeclaration(node) ? updateInterfaceDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
       isTypeAliasDeclaration(node) ? updateTypeAliasDeclaration(node, modifierArray, node.name, node.typeParameters, node.type, node.kindType) :

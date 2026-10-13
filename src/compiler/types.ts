@@ -314,6 +314,8 @@ export const enum SyntaxKind {
   // Misc
   TemplateSpan,
   SemicolonClassElement,
+  WithClause,
+  WithProperty,
   // Element
   Block,
   EmptyStatement,
@@ -1157,6 +1159,8 @@ export type HasChildren =
   | Block
   | VariableStatement
   | ExpressionStatement
+  | WithClause
+  | WithProperty
   | MacroInvocationStatement
   | IfStatement
   | DoStatement
@@ -2128,6 +2132,7 @@ export interface FunctionDeclaration extends FunctionLikeDeclarationBase, Declar
   readonly kind: SyntaxKind.FunctionDeclaration;
   readonly modifiers?: NodeArray<ModifierLike>;
   readonly name?: Identifier;
+  readonly withClause?: WithClause;
   readonly body?: FunctionBody;
 }
 
@@ -3451,6 +3456,19 @@ export interface VariableStatement extends Statement, FlowContainer {
 export interface ExpressionStatement extends Statement, FlowContainer {
   readonly kind: SyntaxKind.ExpressionStatement;
   readonly expression: Expression;
+}
+
+/** A declaration-level block of statically checked configuration properties. */
+export interface WithClause extends Node {
+  readonly kind: SyntaxKind.WithClause;
+  readonly properties: NodeArray<WithProperty>;
+}
+
+/** A named entry in a declaration-level `with` block. */
+export interface WithProperty extends Node {
+  readonly kind: SyntaxKind.WithProperty;
+  readonly name: Identifier;
+  readonly value: Expression;
 }
 
 /** A compile-time macro invocation. The invocation is replaced by the statements returned by the macro. */
@@ -5193,7 +5211,12 @@ export interface MacroFailure {
   readonly diagnostics: readonly MacroDiagnostic[];
 }
 
-export type MacroReturn = void | Statement | readonly Statement[] | MacroFailure;
+export type MacroResult = void | Statement | readonly Statement[] | MacroFailure;
+export type MacroReturn = MacroResult | PromiseLike<MacroResult>;
+
+export type MacroTimeout =
+  | { readonly type: "fixed"; readonly value: number; readonly unit: "ms" | "s"; }
+  | { readonly type: "benchmark"; readonly multiplier: number; };
 
 /** Services available while a compile-time macro is running. */
 export interface MacroContext {
@@ -7938,6 +7961,11 @@ export interface CreateProgramOptions {
   typeScriptVersion?: string;
 }
 
+/** @internal */
+export type AsyncMacroEvaluation =
+  | { readonly kind: "resolved"; readonly result: unknown; readonly reported: readonly MacroDiagnostic[]; }
+  | { readonly kind: "rejected"; readonly error: unknown; readonly reported: readonly MacroDiagnostic[]; };
+
 // dprint-ignore
 /** @internal */
 export interface CommandLineOptionBase {
@@ -8397,6 +8425,30 @@ export interface CompilerHost extends ModuleResolutionHost {
   /** @internal */ getBuildInfo?(fileName: string, configFilePath: string | undefined): BuildInfo | undefined;
 
   jsDocParsingMode?: JSDocParsingMode;
+
+  /** @internal */
+  getResolvedAsyncMacroEvaluation?(key: string): AsyncMacroEvaluation | undefined;
+  /** @internal */
+  isAsyncMacroEvaluationPending?(key: string): boolean;
+  /** @internal */
+  scheduleAsyncMacroEvaluation?(key: string, evaluation: Promise<AsyncMacroEvaluation>): void;
+  /** @internal Overrides the default Promise wait limit for compile-time macros. */
+  macroTimeoutMs?: number;
+  /** @internal Overrides the measured local benchmark duration for tests and specialized hosts. */
+  macroBenchmarkMs?: number;
+  /** @internal Prevents recursive worker creation while a macro worker rebuilds a program. */
+  disableMacroWorkers?: boolean;
+  /** @internal Reports the active macro budget to the worker supervisor. */
+  onMacroInvocationStart?(info: {
+    readonly timeoutMs: number;
+    readonly description: string;
+    readonly fileName: string;
+    readonly start: number;
+    readonly length: number;
+    readonly macroName: string;
+  }): void;
+  /** @internal Reports that the active macro has settled. */
+  onMacroInvocationEnd?(): void;
 }
 
 /** @internal */
@@ -9231,6 +9283,10 @@ export interface NodeFactory {
   createEmptyStatement(): EmptyStatement;
   createExpressionStatement(expression: Expression): ExpressionStatement;
   updateExpressionStatement(node: ExpressionStatement, expression: Expression): ExpressionStatement;
+  createWithClause(properties: readonly WithProperty[]): WithClause;
+  updateWithClause(node: WithClause, properties: readonly WithProperty[]): WithClause;
+  createWithProperty(name: Identifier, value: Expression): WithProperty;
+  updateWithProperty(node: WithProperty, name: Identifier, value: Expression): WithProperty;
   createMacroInvocationStatement(macro: EntityName, targets: readonly EntityName[]): MacroInvocationStatement;
   updateMacroInvocationStatement(node: MacroInvocationStatement, macro: EntityName, targets: readonly EntityName[]): MacroInvocationStatement;
   createIfStatement(expression: Expression, thenStatement: Statement, elseStatement?: Statement): IfStatement;
@@ -9266,8 +9322,8 @@ export interface NodeFactory {
   updateVariableDeclaration(node: VariableDeclaration, name: BindingName, exclamationToken: ExclamationToken | undefined, type: TypeNode | undefined, initializer: Expression | undefined): VariableDeclaration;
   createVariableDeclarationList(declarations: readonly VariableDeclaration[], flags?: NodeFlags): VariableDeclarationList;
   updateVariableDeclarationList(node: VariableDeclarationList, declarations: readonly VariableDeclaration[]): VariableDeclarationList;
-  createFunctionDeclaration(modifiers: readonly ModifierLike[] | undefined, asteriskToken: AsteriskToken | undefined, name: string | Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, parameters: readonly ParameterDeclaration[], type: TypeNode | undefined, body: Block | undefined): FunctionDeclaration;
-  updateFunctionDeclaration(node: FunctionDeclaration, modifiers: readonly ModifierLike[] | undefined, asteriskToken: AsteriskToken | undefined, name: Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, parameters: readonly ParameterDeclaration[], type: TypeNode | undefined, body: Block | undefined): FunctionDeclaration;
+  createFunctionDeclaration(modifiers: readonly ModifierLike[] | undefined, asteriskToken: AsteriskToken | undefined, name: string | Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, parameters: readonly ParameterDeclaration[], type: TypeNode | undefined, body: Block | undefined, withClause?: WithClause): FunctionDeclaration;
+  updateFunctionDeclaration(node: FunctionDeclaration, modifiers: readonly ModifierLike[] | undefined, asteriskToken: AsteriskToken | undefined, name: Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, parameters: readonly ParameterDeclaration[], type: TypeNode | undefined, body: Block | undefined, withClause: WithClause | undefined): FunctionDeclaration;
   createClassDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly ClassElement[]): ClassDeclaration;
   updateClassDeclaration(node: ClassDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly ClassElement[]): ClassDeclaration;
   createInterfaceDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;

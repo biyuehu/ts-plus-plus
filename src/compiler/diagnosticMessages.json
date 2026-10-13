@@ -8639,5 +8639,17 @@
   "Macro '{0}' returned a Promise. Asynchronous macros are not supported by this compiler version.": {
     "category": "Error",
     "code": 18082
+  },
+  "The 'with' property '{0}' is not supported on {1}.": {
+    "category": "Error",
+    "code": 18083
+  },
+  "The 'with' property '{0}' may only be specified once.": {
+    "category": "Error",
+    "code": 18084
+  },
+  "The 'timeout' property must match '{ type: \"fixed\"; value: number; unit: \"ms\" | \"s\"; } | { type: \"benchmark\"; multiplier: number; }'.": {
+    "category": "Error",
+    "code": 18085
   }
 }
