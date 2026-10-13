@@ -1,5 +1,7 @@
 /// <reference path="fourslash.ts"/>
 
+// @tsppFeatures: higherKindedTypes,typeUniverses
+
 // @Filename: test.tspp
 ////type UniverseZero: Type1 = Type0;
 ////type Arrays: UniverseZero => UniverseZero = Array;

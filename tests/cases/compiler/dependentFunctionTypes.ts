@@ -1,6 +1,6 @@
 // @strict: true
 // @declaration: true
-// @dependentTypes: true
+// @tsppFeatures: higherKindedTypes,typeUniverses,dependentFunctionTypes,dependentFunctionInterop
 
 // @Filename: dependentFunctionTypes.tspp
 type Box<T> = { value: T };

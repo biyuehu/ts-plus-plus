@@ -607,6 +607,7 @@ import {
   WriteFileCallbackData,
   YieldExpression,
 } from "./_namespaces/ts.js";
+import { isTsppProject } from "./tsppFeatures.js";
 
 /** @internal */
 export const resolvingEmptyArray: never[] = [];
@@ -9971,17 +9972,21 @@ export function getScriptKindFromFileName(fileName: string): ScriptKind {
 /**
  *  Groups of supported extensions in order of file resolution precedence. (eg, TS > TSX > DTS and seperately, CTS > DCTS)
  */
-const supportedTSExtensions: readonly Extension[][] = [[Extension.Tspp, Extension.Dtspp, Extension.Ts, Extension.Tsx, Extension.Dts], [Extension.Cts, Extension.Dcts], [Extension.Mts, Extension.Dmts]];
+const supportedTSExtensions: readonly Extension[][] = [[Extension.Ts, Extension.Tsx, Extension.Dts], [Extension.Cts, Extension.Dcts], [Extension.Mts, Extension.Dmts]];
+const supportedTsppExtensions: readonly Extension[][] = [[Extension.Tspp, Extension.Dtspp, Extension.Ts, Extension.Tsx, Extension.Dts], [Extension.Cts, Extension.Dcts], [Extension.Mts, Extension.Dmts]];
 /** @internal */
-export const supportedTSExtensionsFlat: readonly Extension[] = flatten(supportedTSExtensions);
+export const supportedTSExtensionsFlat: readonly Extension[] = flatten(supportedTsppExtensions);
 const supportedTSExtensionsWithJson: readonly Extension[][] = [...supportedTSExtensions, [Extension.Json]];
+const supportedTsppExtensionsWithJson: readonly Extension[][] = [...supportedTsppExtensions, [Extension.Json]];
 /** Must have ".d.ts" first because if ".ts" goes first, that will be detected as the extension instead of ".d.ts". */
 const supportedTSExtensionsForExtractExtension: readonly Extension[] = [Extension.Dtspp, Extension.Dts, Extension.Dcts, Extension.Dmts, Extension.Tspp, Extension.Cts, Extension.Mts, Extension.Ts, Extension.Tsx];
 const supportedJSExtensions: readonly Extension[][] = [[Extension.Js, Extension.Jsx], [Extension.Mjs], [Extension.Cjs]];
 /** @internal */
 export const supportedJSExtensionsFlat: readonly Extension[] = flatten(supportedJSExtensions);
-const allSupportedExtensions: readonly Extension[][] = [[Extension.Tspp, Extension.Dtspp, Extension.Ts, Extension.Tsx, Extension.Dts, Extension.Js, Extension.Jsx], [Extension.Cts, Extension.Dcts, Extension.Cjs], [Extension.Mts, Extension.Dmts, Extension.Mjs]];
+const allSupportedExtensions: readonly Extension[][] = [[Extension.Ts, Extension.Tsx, Extension.Dts, Extension.Js, Extension.Jsx], [Extension.Cts, Extension.Dcts, Extension.Cjs], [Extension.Mts, Extension.Dmts, Extension.Mjs]];
+const allSupportedTsppExtensions: readonly Extension[][] = [[Extension.Tspp, Extension.Dtspp, Extension.Ts, Extension.Tsx, Extension.Dts, Extension.Js, Extension.Jsx], [Extension.Cts, Extension.Dcts, Extension.Cjs], [Extension.Mts, Extension.Dmts, Extension.Mjs]];
 const allSupportedExtensionsWithJson: readonly Extension[][] = [...allSupportedExtensions, [Extension.Json]];
+const allSupportedTsppExtensionsWithJson: readonly Extension[][] = [...allSupportedTsppExtensions, [Extension.Json]];
 /** @internal */
 export const supportedDeclarationExtensions: readonly Extension[] = [Extension.Dtspp, Extension.Dts, Extension.Dcts, Extension.Dmts];
 /** @internal */
@@ -9996,12 +10001,13 @@ export function getSupportedExtensions(options?: CompilerOptions, extraFileExten
 /** @internal */
 export function getSupportedExtensions(options?: CompilerOptions, extraFileExtensions?: readonly FileExtensionInfo[]): readonly string[][] {
   const needJsExtensions = options && getAllowJSCompilerOption(options);
+  const tspp = isTsppProject(options);
 
   if (!extraFileExtensions || extraFileExtensions.length === 0) {
-    return needJsExtensions ? allSupportedExtensions : supportedTSExtensions;
+    return needJsExtensions ? tspp ? allSupportedTsppExtensions : allSupportedExtensions : tspp ? supportedTsppExtensions : supportedTSExtensions;
   }
 
-  const builtins = needJsExtensions ? allSupportedExtensions : supportedTSExtensions;
+  const builtins = needJsExtensions ? tspp ? allSupportedTsppExtensions : allSupportedExtensions : tspp ? supportedTsppExtensions : supportedTSExtensions;
   const flatBuiltins = flatten(builtins);
   const extensions = [
     ...builtins,
@@ -10019,7 +10025,9 @@ export function getSupportedExtensionsWithJsonIfResolveJsonModule(options: Compi
 export function getSupportedExtensionsWithJsonIfResolveJsonModule(options: CompilerOptions | undefined, supportedExtensions: readonly string[][]): readonly string[][] {
   if (!options || !getResolveJsonModule(options)) return supportedExtensions;
   if (supportedExtensions === allSupportedExtensions) return allSupportedExtensionsWithJson;
+  if (supportedExtensions === allSupportedTsppExtensions) return allSupportedTsppExtensionsWithJson;
   if (supportedExtensions === supportedTSExtensions) return supportedTSExtensionsWithJson;
+  if (supportedExtensions === supportedTsppExtensions) return supportedTsppExtensionsWithJson;
   return [...supportedExtensions, [Extension.Json]];
 }
 

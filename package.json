@@ -4,7 +4,7 @@
   "homepage": "https://github.com/biyuehu/ts-plus-plus#readme",
   "version": "0.0.1",
   "license": "Apache-2.0",
-  "description": "A superset of TypeScript 6.0 with higher-kinded types, nominal types, GADTs, and compile-time types.",
+  "description": "An experimental TypeScript-derived compiler with explicitly enabled type-system features.",
   "keywords": [
     "ts-plus-plus",
     "tspp",

@@ -11,6 +11,8 @@
 
 示例的默认状态没有类型错误。源码末尾保留了几行被注释的反例，可以逐行取消注释，观察 TS++ 语言服务的诊断。
 
+本例的 `tsppconfig.json` 显式开启 `higherKindedTypes` 与它所需的 `typeUniverses`；依赖项不会被编译器隐式开启。
+
 ## 在插件开发窗口中运行
 
 在仓库根目录按 `F5`，选择 **TS++: Run Example 01 — Higher-Kinded Types**。新打开的 Extension Development Host 会自动打开本项目及 `index.tspp`。

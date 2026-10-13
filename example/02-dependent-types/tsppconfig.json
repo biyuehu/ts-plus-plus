@@ -1,9 +1,16 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "strict": true,
-    "noEmit": true,
-    "dependentTypes": true,
-    "rootDir": "src"
-  },
-  "include": ["src/**/*.tspp"]
+    "tsppFeatures": [
+      "higherKindedTypes",
+      "typeUniverses",
+      "dependentFunctionTypes",
+      "dependentFunctionInterop",
+      "naturalNumbers",
+      "naturalNumberAddition",
+      "naturalNumberElimination",
+      "identityTypes",
+      "sigmaTypes"
+    ]
+  }
 }

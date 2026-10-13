@@ -160,13 +160,24 @@ kind 检查、别名传播、类型打印和关系判断
 
 ```json
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "dependentTypes": true
+    "tsppFeatures": [
+      "higherKindedTypes",
+      "typeUniverses",
+      "dependentFunctionTypes",
+      "dependentFunctionInterop",
+      "naturalNumbers",
+      "naturalNumberAddition",
+      "naturalNumberElimination",
+      "identityTypes",
+      "sigmaTypes"
+    ]
   }
 }
 ```
 
-两个条件缺一不可：文件必须是 `.tspp`/`.d.tspp`，并且 `tsppconfig.json` 必须显式开启 `dependentTypes`。普通 `.ts` 文件永远不会启用依赖语法，即使同一项目打开了该选项；其中原有的 `=>` 函数类型也不受影响。
+每个能力及其依赖都必须显式列出，编译器不会自动补齐。普通 `.ts` 文件永远不会启用依赖语法，即使同一项目开启了这些特性；其中原有的 `=>` 函数类型也不受影响。
 
 目前没有新增一套运行时函数语法；实现仍写成普通 TypeScript 泛型函数。
 `02-advanced.tspp` 演示了它如何赋给 Pi 类型并以依赖函数的类型直接调用。

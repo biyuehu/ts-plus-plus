@@ -1,6 +1,7 @@
 // @strict: true
 // @declaration: true
 // @emitDeclarationOnly: true
+// @tsppFeatures: higherKindedTypes,typeUniverses
 
 // @Filename: higherKindedTypeAliases.tspp
 export interface AcceptsUnary<F: Type => Type> {

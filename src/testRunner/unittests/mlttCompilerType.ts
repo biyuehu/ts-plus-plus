@@ -5,6 +5,18 @@ import * as ts from "../_namespaces/ts.js";
 import * as vfs from "../_namespaces/vfs.js";
 
 describe("unittests:: MLTT compiler type", () => {
+  const allFeatures: string[] = [
+    "higherKindedTypes",
+    "typeUniverses",
+    "dependentFunctionTypes",
+    "dependentFunctionInterop",
+    "naturalNumbers",
+    "naturalNumberAddition",
+    "naturalNumberElimination",
+    "identityTypes",
+    "sigmaTypes",
+  ];
+
   function createProgram(fileName: string, content: string, options: ts.CompilerOptions) {
     const host = new fakes.CompilerHost(vfs.createFromFileSystem(
       Harness.IO,
@@ -28,7 +40,7 @@ describe("unittests:: MLTT compiler type", () => {
     type WithGenericAlias: Type1 = (A: Type0) -> Box<A>;
     type WithStructuralBody: Type1 = (T: Type0) -> { value: T };
   `;
-  const program = createProgram("/file.tspp", content, { dependentTypes: true, noLib: true, strict: true });
+  const program = createProgram("/file.tspp", content, { tsppFeatures: allFeatures, noLib: true, strict: true });
   const checker = program.getTypeChecker();
   const file = program.getSourceFile("/file.tspp")!;
   const declarations = file.statements.filter(ts.isTypeAliasDeclaration);
@@ -56,7 +68,7 @@ describe("unittests:: MLTT compiler type", () => {
       type GenericIdentity = <A>(value: A) => A;
       type WrongResult = <A>(value: A) => string;
     `,
-      { dependentTypes: true, noLib: true, strict: true },
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
     );
     const bridgedChecker = bridged.getTypeChecker();
     const bridgedFile = bridged.getSourceFile("/bridged.tspp")!;
@@ -78,7 +90,7 @@ describe("unittests:: MLTT compiler type", () => {
       const explicit = identity<string>("explicit");
       const inferred = identity("inferred");
     `,
-      { dependentTypes: true, noLib: true, strict: true },
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
     );
     const callableChecker = callable.getTypeChecker();
     const callableFile = callable.getSourceFile("/callable.tspp")!;
@@ -102,7 +114,7 @@ describe("unittests:: MLTT compiler type", () => {
       declare const buildVector: VectorBuilder;
       const pair = buildVector("item", 2);
     `,
-      { dependentTypes: true, noLib: true, strict: true },
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
     );
     const naturalsChecker = naturals.getTypeChecker();
     const naturalsFile = naturals.getSourceFile("/naturals.tspp")!;
@@ -123,7 +135,7 @@ describe("unittests:: MLTT compiler type", () => {
     const invalid = createProgram(
       "/invalid-nat.tspp",
       "type Invalid: Type1 = (N: Nat) -> Succ<string>;",
-      { dependentTypes: true, noLib: true, strict: true },
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
     );
 
     assert.match(invalid.getSemanticDiagnostics()[0].messageText.toString(), /Expected Nat, but inferred Type0/);
@@ -145,7 +157,7 @@ describe("unittests:: MLTT compiler type", () => {
       type ReflexivityProof: Type1 =
         (A: Type0) -> (value: A) -> Eq<Eq<A, value, value>, Refl<A, value>, Refl<A, value>>;
     `,
-      { dependentTypes: true, noLib: true, strict: true },
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
     );
 
     assert.isEmpty(proofs.getSemanticDiagnostics());
@@ -171,7 +183,7 @@ describe("unittests:: MLTT compiler type", () => {
           Refl<Nat, N>
         >;
     `,
-      { dependentTypes: true, noLib: true, strict: true },
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
     );
 
     assert.isEmpty(sigma.getSemanticDiagnostics());
@@ -181,36 +193,29 @@ describe("unittests:: MLTT compiler type", () => {
     const higherCodomain = createProgram(
       "/higher.tspp",
       "type Identity: Type1 = (A: Type0) -> A; type HigherCodomain: Type1 = (ignored: string) -> Identity;",
-      { dependentTypes: true, noLib: true },
+      { tsppFeatures: allFeatures, noLib: true },
     );
     assert.isEmpty(higherCodomain.getSemanticDiagnostics());
   });
 
   it("rejects higher-universe types hidden inside TypeScript composites", () => {
     const invalid = createProgram("/invalid.tspp", "type Invalid: Type1 = (A: Type0) -> A | ((B: Type0) -> B);", {
-      dependentTypes: true,
+      tsppFeatures: allFeatures,
       noLib: true,
     });
     assert.include(invalid.getSemanticDiagnostics().map(diagnostic => diagnostic.code), 18062);
   });
 
-  it("requires the option and a tsppconfig.json config name", () => {
+  it("requires the dependent-function feature", () => {
     const source = "type Identity: Type1 = (A: Type0) -> A;";
-    const disabled = createProgram("/disabled.tspp", source, { noLib: true });
-    assert.include(disabled.getSemanticDiagnostics().map(diagnostic => diagnostic.code), 18069);
-
-    const wrongConfig = createProgram("/wrong.tspp", source, {
-      configFilePath: "/tsconfig.json",
-      dependentTypes: true,
-      noLib: true,
-    });
-    assert.include(wrongConfig.getSemanticDiagnostics().map(diagnostic => diagnostic.code), 18069);
+    const disabled = createProgram("/disabled.tspp", source, { configFilePath: "/tsppconfig.json", noLib: true });
+    assert.include(disabled.getSemanticDiagnostics().map(diagnostic => diagnostic.code), 18072);
   });
 
   it("never enables dependent syntax in .ts files", () => {
     const ordinaryTs = createProgram("/file.ts", "type Identity = (A: Type0) -> A;", {
       configFilePath: "/tsppconfig.json",
-      dependentTypes: true,
+      tsppFeatures: allFeatures,
       noLib: true,
     });
     assert.isNotEmpty(ordinaryTs.getSyntacticDiagnostics());

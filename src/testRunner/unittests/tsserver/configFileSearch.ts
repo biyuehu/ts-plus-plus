@@ -17,7 +17,7 @@ describe("unittests:: tsserver:: configFileSearch:: searching for config file", 
     };
     const configFile = {
       path: "/home/src/workspaces/project/tsppconfig.json",
-      content: '{ "compilerOptions": { "dependentTypes": true } }',
+      content: '{ "compilerOptions": { "tsppFeatures": ["higherKindedTypes", "typeUniverses", "dependentFunctionTypes"] } }',
     };
     const host = TestServerHost.createServerHost([file, configFile]);
     const session = new TestSession(host);
@@ -26,7 +26,7 @@ describe("unittests:: tsserver:: configFileSearch:: searching for config file", 
     const projects = [...session.getProjectService().configuredProjects.values()];
     assert.lengthOf(projects, 1);
     assert.strictEqual(projects[0].getConfigFilePath(), configFile.path);
-    assert.isTrue(projects[0].getCompilationSettings().dependentTypes);
+    assert.deepEqual(projects[0].getCompilationSettings().tsppFeatures, ["higherKindedTypes", "typeUniverses", "dependentFunctionTypes"]);
   });
 
   it("should stop at projectRootPath if given", () => {

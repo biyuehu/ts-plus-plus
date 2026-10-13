@@ -4,24 +4,58 @@
 
 > The design proposal in [#](https://github.com/biyuehu/ts-plus-plus/issues/2) is for demonstration only. It is not a plan, not a TODO, and not a commitment. Treat it as a preview of a possible direction rather than a roadmap.
 
-ts-plus-plus is an experimental programming language inspired by TypeScript.
+ts-plus-plus is an experimental TypeScript-derived language. Language extensions are opt-in and are selected individually in `tsppconfig.json`.
 
-It aims to keep the parts of TypeScript that make typed application development approachable—familiar syntax, gradual adoption, and practical tooling—while leaving room to explore a different language design.
+Without `tsppconfig.json`, every TS++ feature is disabled and the compiler behaves like TypeScript; `.tspp` and `.d.tspp` files do not participate in project discovery or module resolution.
 
-## Direction
+## Initialize a project
 
-ts-plus-plus is TypeScript-like, but it is not defined as a TypeScript superset. Compatibility with every TypeScript program is not a promise, and the language may deliberately choose different syntax, semantics, or type-system rules when that leads to a more coherent design.
+```sh
+tspp --init
+```
 
-The language also does not promise that types are always erased or that compilation is merely “remove the types and produce the same JavaScript.” Type information may participate in compilation, transformation, or runtime behavior where the language design benefits from it. The output model is an implementation choice, not the definition of the language.
+If the directory has no `tsconfig.json`, this creates one first. It then creates `tsppconfig.json` with `"extends": "./tsconfig.json"` without modifying an existing TypeScript config. The generated file records the compiler commit, lists every available feature with comments, and leaves all of them disabled.
 
-## Philosophy
+Enable features manually:
 
-- Feel familiar without being constrained by compatibility.
-- Treat types as a first-class part of the language design.
-- Prefer clear and consistent semantics over historical behavior.
-- Keep experimentation possible while the language takes shape.
+```jsonc
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "tsppFeatures": [
+      "higherKindedTypes",
+      "typeUniverses"
+    ]
+  }
+}
+```
 
-The project is still at an early stage. This repository is an exploration of that direction, not a compatibility guarantee or a finalized specification.
+Dependencies must also be listed explicitly. An unknown feature, duplicate feature, or missing dependency is a configuration error: compilation is rejected, and the compiler neither edits the file nor starts in a fallback mode.
+
+## What a feature can change
+
+Each feature is evaluated on two independent properties:
+
+- **TypeScript superset**: existing TypeScript syntax, type checking, and runtime behavior remain compatible.
+- **Transparent erasure**: the feature is implemented by removing type syntax only; it does not generate or change JavaScript runtime code.
+
+A configured language remains a TypeScript superset only if every enabled feature preserves the first property. It remains transparently erasable only if every enabled feature preserves the second. Declaration-file preservation is intentionally not tracked as a separate property.
+
+Current features:
+
+| Feature | Provides | Explicit dependencies | TS superset | Transparent erasure |
+| --- | --- | --- | --- | --- |
+| `higherKindedTypes` | Higher-kinded parameters and first-class type constructors | — | Yes | Yes |
+| `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
+| `dependentFunctionTypes` | Pi types whose result can depend on a parameter | `typeUniverses` | Yes | Yes |
+| `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
+| `naturalNumbers` | `Nat`, `Zero`, and `Succ` type-level naturals | `dependentFunctionTypes` | Yes | Yes |
+| `naturalNumberAddition` | Reducible `NatAdd` | `naturalNumbers` | Yes | Yes |
+| `naturalNumberElimination` | The dependent `NatElim` eliminator | `naturalNumbers` | Yes | Yes |
+| `identityTypes` | `Eq` and `Refl` equality types and proofs | `dependentFunctionTypes` | Yes | Yes |
+| `sigmaTypes` | `Sigma`, `Pair`, `First`, and `Second` | `dependentFunctionTypes` | Yes | Yes |
+
+The generated configuration is the authoritative, compiler-version-specific feature guide. The project is still experimental; these classifications describe the listed implementation, not a permanent promise about future features.
 
 ## License
 

@@ -1181,6 +1181,7 @@ import {
   printMlttTerm,
   weakHeadNormalizeMltt,
 } from "./mlttCore.js";
+import { hasTsppFeature } from "./tsppFeatures.js";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;
@@ -1563,6 +1564,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   var universeTypes = new Map<string, Type>();
 
   var compilerOptions = host.getCompilerOptions();
+
+  function requireTsppFeature(node: Node, feature: string): boolean {
+    if (hasTsppFeature(compilerOptions, feature)) return true;
+    error(node, Diagnostics.TS_feature_0_is_not_enabled_in_tsppconfig_json, feature);
+    return false;
+  }
+
   var languageVersion = getEmitScriptTarget(compilerOptions);
   var moduleKind = getEmitModuleKind(compilerOptions);
   var legacyDecorators = !!compilerOptions.experimentalDecorators;
@@ -5625,6 +5633,17 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return createFunctionKind(node.parameters.map(getKindFromNode), getKindFromNode(node.returnKind));
   }
 
+  function checkKindFeatures(node: KindNode): void {
+    requireTsppFeature(node, "higherKindedTypes");
+    if (kindUsesTypeUniverses(node)) requireTsppFeature(node, "typeUniverses");
+  }
+
+  function kindUsesTypeUniverses(node: KindNode): boolean {
+    if (node.kind === SyntaxKind.TypeKind) return node.level !== undefined;
+    if (node.kind === SyntaxKind.TypeReference) return true;
+    return some(node.parameters, kindUsesTypeUniverses) || kindUsesTypeUniverses(node.returnKind);
+  }
+
   function getKindOfType(type: Type): Kind {
     return type.typeKind || ordinaryTypeKind;
   }
@@ -5701,7 +5720,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (!isTypeReferenceNode(node) || node.typeArguments || !isIdentifier(node.typeName)) return undefined;
     const sourceFileName = getSourceFileOfNode(node).fileName;
     if (!fileExtensionIs(sourceFileName, Extension.Tspp) && !fileExtensionIs(sourceFileName, Extension.Dtspp)) return undefined;
-    return /^Type(0|[1-9]\d*)$/.exec(idText(node.typeName))?.[1];
+    const level = /^Type(0|[1-9]\d*)$/.exec(idText(node.typeName))?.[1];
+    return level !== undefined && requireTsppFeature(node, "typeUniverses") ? level : undefined;
   }
 
   function getTypeParametersOfTypeConstructor(symbol: Symbol): readonly TypeParameter[] | undefined {
@@ -16154,7 +16174,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
    * maps primitive types and type parameters are to their apparent types.
    */
   function getSignaturesOfType(type: Type, kind: SignatureKind): readonly Signature[] {
-    if (kind === SignatureKind.Call && type.flags & TypeFlags.DependentFunction) {
+    if (kind === SignatureKind.Call && type.flags & TypeFlags.DependentFunction && hasTsppFeature(compilerOptions, "dependentFunctionInterop")) {
       const signature = getCallSignatureFromDependentFunctionType(type as DependentFunctionType);
       return signature ? [signature] : emptyArray;
     }
@@ -20753,8 +20773,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const links = getNodeLinks(node);
     if (links.resolvedType) return links.resolvedType;
 
-    if (!dependentTypesAreEnabled()) {
-      error(node, Diagnostics.Dependent_function_types_require_dependentTypes_to_be_enabled_in_tsppconfig_json);
+    if (!requireTsppFeature(node, "dependentFunctionTypes")) {
       return links.resolvedType = errorType;
     }
 
@@ -20793,12 +20812,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     readonly parameters: readonly TypeParameter[];
   }
 
-  function dependentTypesAreEnabled(): boolean {
-    if (!compilerOptions.dependentTypes) return false;
-    const configFilePath = compilerOptions.configFilePath?.replace(/\\/g, "/").toLowerCase();
-    return !configFilePath || configFilePath.endsWith("/tsppconfig.json") || configFilePath === "tsppconfig.json";
-  }
-
   function createMlttTypeBinding(name: string, binderDepth: number): MlttTypeBinding {
     const placeholderName = `__mltt_placeholder_${binderDepth}__`;
     const placeholders = mlttPlaceholderTypes ||= [];
@@ -20833,6 +20846,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
       const name = idText(reference.typeName);
       if (name === "Nat" || name === "Zero") {
+        if (!requireTsppFeature(node, "naturalNumbers")) return undefined;
         if (reference.typeArguments?.length) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `'${name}' does not accept type arguments.`);
           return undefined;
@@ -20840,6 +20854,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return name === "Nat" ? mlttNatType() : mlttZero();
       }
       if (name === "Succ") {
+        if (!requireTsppFeature(node, "naturalNumbers")) return undefined;
         if (reference.typeArguments?.length !== 1) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Succ' requires exactly one natural-number argument.");
           return undefined;
@@ -20848,6 +20863,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return predecessor && mlttSuccessor(predecessor);
       }
       if (name === "NatAdd") {
+        if (!requireTsppFeature(node, "naturalNumberAddition")) return undefined;
         if (reference.typeArguments?.length !== 2) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'NatAdd' requires exactly two natural-number arguments.");
           return undefined;
@@ -20857,6 +20873,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return left && right ? mlttNatAdd(left, right) : undefined;
       }
       if (name === "NatElim") {
+        if (!requireTsppFeature(node, "naturalNumberElimination")) return undefined;
         if (reference.typeArguments?.length !== 4) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'NatElim' requires a motive, zero case, successor case, and scrutinee.");
           return undefined;
@@ -20871,6 +20888,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           : undefined;
       }
       if (name === "Eq") {
+        if (!requireTsppFeature(node, "identityTypes")) return undefined;
         if (reference.typeArguments?.length !== 3) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Eq' requires a type and two terms.");
           return undefined;
@@ -20882,6 +20900,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return type && left && right ? mlttIdentityType(type, left, right) : undefined;
       }
       if (name === "Refl") {
+        if (!requireTsppFeature(node, "identityTypes")) return undefined;
         if (reference.typeArguments?.length !== 2) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Refl' requires a type and a term.");
           return undefined;
@@ -20892,6 +20911,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return type && term ? mlttRefl(type, term) : undefined;
       }
       if (name === "Sigma") {
+        if (!requireTsppFeature(node, "sigmaTypes")) return undefined;
         if (reference.typeArguments?.length !== 1) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Sigma' requires one dependent binder, for example Sigma<(x: A) -> B>.");
           return undefined;
@@ -20904,6 +20924,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return mlttSigma(binder.parameterName, binder.domain, binder.codomain);
       }
       if (name === "Pair") {
+        if (!requireTsppFeature(node, "sigmaTypes")) return undefined;
         if (reference.typeArguments?.length !== 3) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'Pair' requires a Sigma type and two components.");
           return undefined;
@@ -20915,6 +20936,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return sigma && first && second ? mlttPair(sigma, first, second) : undefined;
       }
       if (name === "First" || name === "Second") {
+        if (!requireTsppFeature(node, "sigmaTypes")) return undefined;
         if (reference.typeArguments?.length !== 1) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `'${name}' requires exactly one pair.`);
           return undefined;
@@ -20925,6 +20947,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const universeMatch = name === "Type" ? [name, "0"] : /^Type(0|[1-9]\d*)$/.exec(name);
       let term: MlttTerm;
       if (universeMatch) {
+        if (name !== "Type" && !requireTsppFeature(node, "typeUniverses")) return undefined;
         const level = Number(universeMatch[1]);
         if (!Number.isSafeInteger(level)) {
           error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `Universe level '${universeMatch[1]}' is too large.`);
@@ -23136,6 +23159,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           compareMlttExternalTerms,
         );
       }
+      if (!hasTsppFeature(compilerOptions, "dependentFunctionInterop")) return false;
       return source.flags & TypeFlags.DependentFunction
         ? isDependentFunctionRelatedToType(source as DependentFunctionType, target)
         : isDependentFunctionRelatedToType(target as DependentFunctionType, source);
@@ -42803,6 +42827,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     checkSourceElement(node.constraint);
     checkSourceElement(node.default);
+    if (node.kindType) checkKindFeatures(node.kindType);
     const typeParameter = getDeclaredTypeOfTypeParameter(getSymbolOfDeclaration(node));
     // Resolve base constraint to reveal circularity errors
     getBaseConstraintOfType(typeParameter);
@@ -48734,6 +48759,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       grammarErrorOnNode(node, Diagnostics._0_declarations_can_only_be_declared_inside_a_block, "type");
     }
     checkExportsOnMergedDeclarations(node);
+    if (node.kindType) checkKindFeatures(node.kindType);
     checkTypeParameters(node.typeParameters);
     if (node.type.kind === SyntaxKind.IntrinsicKeyword) {
       const typeParameterCount = length(node.typeParameters);

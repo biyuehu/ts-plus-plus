@@ -7504,8 +7504,6 @@ export interface CompilerOptions {
   customConditions?: string[];
   declaration?: boolean;
   declarationMap?: boolean;
-  /** Enables TS++ dependent function types in .tspp and .d.tspp files. */
-  dependentTypes?: boolean;
   emitDeclarationOnly?: boolean;
   declarationDir?: string;
   /** @internal */ diagnostics?: boolean;
@@ -7626,6 +7624,8 @@ export interface CompilerOptions {
   /** @internal */ suppressOutputPathCheck?: boolean;
   target?: ScriptTarget;
   traceResolution?: boolean;
+  /** TS++ language features explicitly enabled by tsppconfig.json. */
+  tsppFeatures?: string[];
   useUnknownInCatchVariables?: boolean;
   noUncheckedSideEffectImports?: boolean;
   resolveJsonModule?: boolean;

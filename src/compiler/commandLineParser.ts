@@ -122,6 +122,11 @@ import {
   WatchFileKind,
   WatchOptions,
 } from "./_namespaces/ts.js";
+import {
+  getTsppFeatureDefinition,
+  isTsppConfigFileName,
+  tsppFeatureDefinitions,
+} from "./tsppFeatures.js";
 
 const compileOnSaveCommandLineOption: CommandLineOption = {
   name: "compileOnSave",
@@ -1686,14 +1691,19 @@ const commandOptionsWithoutBuild: CommandLineOption[] = [
     defaultValueDescription: undefined,
   },
   {
-    name: "dependentTypes",
-    type: "boolean",
+    name: "tsppFeatures",
+    type: "list",
+    element: {
+      name: "tsppFeature",
+      type: new Map(tsppFeatureDefinitions.map(definition => [definition.name.toLowerCase(), definition.name])),
+      defaultValueDescription: undefined,
+    },
     affectsSemanticDiagnostics: true,
     affectsBuildInfo: true,
     isTSConfigOnly: true,
     category: Diagnostics.Language_and_Environment,
-    description: Diagnostics.Enable_TS_dependent_function_types_in_tspp_files,
-    defaultValueDescription: false,
+    description: Diagnostics.Enable_TS_language_features_listed_in_tsppconfig_json,
+    defaultValueDescription: undefined,
   },
 ];
 
@@ -3095,6 +3105,7 @@ function parseJsonConfigFileContentWorker(
     basePath,
   );
   options.configFilePath = configFileName && normalizeSlashes(configFileName);
+  validateTsppFeatures(options, errors, configFileName);
   const basePathForFileNames = normalizePath(configFileName ? directoryOfCombinedPath(configFileName, basePath) : basePath);
   const configFileSpecs = getConfigFileSpecs();
   if (sourceFile) sourceFile.configFileSpecs = configFileSpecs;
@@ -3255,6 +3266,32 @@ function parseJsonConfigFileContentWorker(
   function createCompilerDiagnosticOnlyIfJson(message: DiagnosticMessage, ...args: DiagnosticArguments) {
     if (!sourceFile) {
       errors.push(createCompilerDiagnostic(message, ...args));
+    }
+  }
+}
+
+function validateTsppFeatures(options: CompilerOptions, errors: Diagnostic[], configFileName: string | undefined): void {
+  const features = options.tsppFeatures;
+  if (!features) return;
+
+  if (!isTsppConfigFileName(configFileName)) {
+    errors.push(createCompilerDiagnostic(Diagnostics.Option_tsppFeatures_can_only_be_specified_in_tsppconfig_json));
+    return;
+  }
+
+  const enabled = new Set<string>();
+  for (const feature of features) {
+    if (enabled.has(feature)) {
+      errors.push(createCompilerDiagnostic(Diagnostics.TS_feature_0_is_listed_more_than_once, feature));
+    }
+    enabled.add(feature);
+  }
+
+  for (const feature of features) {
+    for (const dependency of getTsppFeatureDefinition(feature).dependencies) {
+      if (!enabled.has(dependency)) {
+        errors.push(createCompilerDiagnostic(Diagnostics.TS_feature_0_requires_feature_1_to_be_enabled_explicitly, feature, dependency));
+      }
     }
   }
 }

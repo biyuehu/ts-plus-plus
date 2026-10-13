@@ -1,6 +1,7 @@
 // @strict: true
 // @declaration: true
 // @emitDeclarationOnly: true
+// @tsppFeatures: higherKindedTypes,typeUniverses
 
 // @Filename: higherKindedTypeUniverses.tspp
 export interface LevelZeroBox<A: Type0> {
