@@ -29,6 +29,23 @@ describe("unittests:: MLTT core", () => {
     assert.deepEqual(mltt.inferMlttType(mltt.mlttUniverse(4)), mltt.mlttUniverse(5));
   });
 
+  it("provides Nat, Zero, and Succ as typed core primitives", () => {
+    assert.deepEqual(mltt.inferMlttType(mltt.mlttNatType()), type0);
+    assert.deepEqual(mltt.inferMlttType(mltt.mlttZero()), mltt.mlttNatType());
+    assert.deepEqual(
+      mltt.inferMlttType(mltt.mlttSuccessor(mltt.mlttSuccessor(mltt.mlttZero()))),
+      mltt.mlttNatType(),
+    );
+    assert.strictEqual(
+      mltt.printMlttTerm(mltt.mlttSuccessor(mltt.mlttSuccessor(mltt.mlttZero()))),
+      "Succ<Succ<Zero>>",
+    );
+  });
+
+  it("rejects a successor whose predecessor is not a natural number", () => {
+    assertMlttError(() => mltt.inferMlttType(mltt.mlttSuccessor(type0)), "type-mismatch");
+  });
+
   it("forms dependent Pi types", () => {
     assert.deepEqual(mltt.inferMlttType(polymorphicIdentityType), mltt.mlttUniverse(1));
   });

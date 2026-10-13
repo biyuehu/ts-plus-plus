@@ -9,11 +9,27 @@
  * @internal
  */
 
-export type MlttTerm = MlttUniverse | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
+export type MlttTerm = MlttUniverse | MlttNatType | MlttZero | MlttSuccessor | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
 
 export interface MlttUniverse {
   readonly kind: "universe";
   readonly level: number;
+}
+
+/** The built-in type of unary natural numbers. */
+export interface MlttNatType {
+  readonly kind: "nat-type";
+}
+
+/** The zero constructor of Nat. */
+export interface MlttZero {
+  readonly kind: "zero";
+}
+
+/** The successor constructor of Nat. */
+export interface MlttSuccessor {
+  readonly kind: "successor";
+  readonly predecessor: MlttTerm;
 }
 
 export interface MlttVariable {
@@ -85,6 +101,18 @@ export function mlttUniverse(level: number): MlttUniverse {
   return { kind: "universe", level };
 }
 
+export function mlttNatType(): MlttNatType {
+  return { kind: "nat-type" };
+}
+
+export function mlttZero(): MlttZero {
+  return { kind: "zero" };
+}
+
+export function mlttSuccessor(predecessor: MlttTerm): MlttSuccessor {
+  return { kind: "successor", predecessor };
+}
+
 export function mlttVariable(index: number): MlttVariable {
   if (!Number.isSafeInteger(index) || index < 0) {
     throw new RangeError(`Variable index must be a non-negative safe integer; received ${index}.`);
@@ -123,6 +151,16 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
   switch (term.kind) {
     case "universe":
       return mlttUniverse(term.level + 1);
+
+    case "nat-type":
+      return mlttUniverse(0);
+
+    case "zero":
+      return mlttNatType();
+
+    case "successor":
+      checkMlttType(term.predecessor, mlttNatType(), context);
+      return mlttNatType();
 
     case "variable": {
       const type = context[term.index];
@@ -201,8 +239,12 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
   const head = weakHeadNormalizeMltt(term);
   switch (head.kind) {
     case "universe":
+    case "nat-type":
+    case "zero":
     case "variable":
       return head;
+    case "successor":
+      return mlttSuccessor(normalizeMlttTerm(head.predecessor));
     case "pi":
       return mlttPi(head.parameterName, normalizeMlttTerm(head.domain), normalizeMlttTerm(head.codomain));
     case "lambda":
@@ -245,7 +287,11 @@ function extendContext(context: MlttContext, type: MlttTerm): MlttContext {
 function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
   switch (term.kind) {
     case "universe":
+    case "nat-type":
+    case "zero":
       return term;
+    case "successor":
+      return mlttSuccessor(shiftMlttTerm(term.predecessor, amount, cutoff));
     case "variable":
       return term.index < cutoff ? term : mlttVariable(term.index + amount);
     case "pi":
@@ -270,7 +316,11 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
 function substituteMltt(term: MlttTerm, variableIndex: number, replacement: MlttTerm, binderDepth = 0): MlttTerm {
   switch (term.kind) {
     case "universe":
+    case "nat-type":
+    case "zero":
       return term;
+    case "successor":
+      return mlttSuccessor(substituteMltt(term.predecessor, variableIndex, replacement, binderDepth));
     case "variable":
       return term.index === variableIndex + binderDepth ? shiftMlttTerm(replacement, binderDepth) : term;
     case "pi":
@@ -315,6 +365,11 @@ function structurallyEqualMlttTerms(
   switch (left.kind) {
     case "universe":
       return left.level === (right as MlttUniverse).level;
+    case "nat-type":
+    case "zero":
+      return true;
+    case "successor":
+      return structurallyEqualMlttTerms(left.predecessor, (right as MlttSuccessor).predecessor, compareExternal);
     case "variable":
       return left.index === (right as MlttVariable).index;
     case "pi": {
@@ -345,6 +400,12 @@ function printMlttTermWorker(term: MlttTerm, names: readonly string[]): string {
   switch (term.kind) {
     case "universe":
       return `Type${term.level}`;
+    case "nat-type":
+      return "Nat";
+    case "zero":
+      return "Zero";
+    case "successor":
+      return `Succ<${printMlttTermWorker(term.predecessor, names)}>`;
     case "variable":
       return names[term.index] ?? `#${term.index}`;
     case "pi": {

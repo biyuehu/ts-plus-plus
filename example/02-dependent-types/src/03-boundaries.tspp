@@ -34,7 +34,7 @@ export type HigherCodomain: Type1 =
 //
 //   - dependent pair / Sigma type；
 //   - identity type 和证明对象；
-//   - Nat 等 inductive family 及 eliminator；
+//   - 通用 inductive family，以及 Nat 的 eliminator/recursor；
 //   - pattern matching；
 //   - 专用的运行时 dependent function 声明语法；
 //   - 让 JavaScript 表达式参与类型级计算。
