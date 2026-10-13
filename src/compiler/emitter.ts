@@ -1748,6 +1748,12 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitInterfaceDeclaration(node as InterfaceDeclaration);
         case SyntaxKind.TypeAliasDeclaration:
           return emitTypeAliasDeclaration(node as TypeAliasDeclaration);
+        case SyntaxKind.NewtypeDeclaration:
+          return emitNewtypeDeclaration(node as ts.NewtypeDeclaration);
+        case SyntaxKind.DataDeclaration:
+          return emitDataDeclaration(node as ts.DataDeclaration);
+        case SyntaxKind.DataVariant:
+          return emitDataVariant(node as ts.DataVariant);
         case SyntaxKind.EnumDeclaration:
           return emitEnumDeclaration(node as EnumDeclaration);
         case SyntaxKind.ModuleDeclaration:
@@ -3666,6 +3672,46 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writeTrailingSemicolon();
   }
 
+  function emitNewtypeDeclaration(node: ts.NewtypeDeclaration) {
+    emitDecoratorsAndModifiers(node, node.modifiers, /*allowDecorators*/ false);
+    writeKeyword("newtype");
+    writeSpace();
+    emit(node.name);
+    emitTypeParameters(node, node.typeParameters);
+    writeSpace();
+    writePunctuation("=");
+    writeSpace();
+    emit(node.type);
+    writeTrailingSemicolon();
+  }
+
+  function emitDataDeclaration(node: ts.DataDeclaration) {
+    emitDecoratorsAndModifiers(node, node.modifiers, /*allowDecorators*/ false);
+    writeKeyword("data");
+    writeSpace();
+    emit(node.name);
+    emitTypeParameters(node, node.typeParameters);
+    writeSpace();
+    writePunctuation("=");
+    writeSpace();
+    for (let i = 0; i < node.variants.length; i++) {
+      if (i > 0) {
+        writeSpace();
+        writePunctuation("|");
+        writeSpace();
+      }
+      emit(node.variants[i]);
+    }
+    writeTrailingSemicolon();
+  }
+
+  function emitDataVariant(node: ts.DataVariant) {
+    emit(node.name);
+    if (node.parameters) {
+      emitParameters(node, node.parameters);
+    }
+  }
+
   function emitEnumDeclaration(node: EnumDeclaration) {
     emitDecoratorsAndModifiers(node, node.modifiers, /*allowDecorators*/ false);
     writeKeyword("enum");
@@ -4648,7 +4694,7 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     emitList(parentNode, typeArguments, ListFormat.TypeArguments, typeArgumentParenthesizerRuleSelector);
   }
 
-  function emitTypeParameters(parentNode: SignatureDeclaration | InterfaceDeclaration | TypeAliasDeclaration | ClassDeclaration | ClassExpression, typeParameters: NodeArray<TypeParameterDeclaration> | undefined) {
+  function emitTypeParameters(parentNode: SignatureDeclaration | InterfaceDeclaration | TypeAliasDeclaration | ts.NewtypeDeclaration | ts.DataDeclaration | ClassDeclaration | ClassExpression, typeParameters: NodeArray<TypeParameterDeclaration> | undefined) {
     if (isFunctionLike(parentNode) && parentNode.typeArguments) { // Quick info uses type arguments in place of type parameters on instantiated signatures
       return emitTypeArguments(parentNode, parentNode.typeArguments);
     }

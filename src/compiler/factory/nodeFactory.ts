@@ -165,6 +165,7 @@ import {
   isConstructorDeclaration,
   isConstructorTypeNode,
   isCustomPrologue,
+  isDataDeclaration,
   isElementAccessChain,
   isElementAccessExpression,
   isEnumDeclaration,
@@ -193,6 +194,7 @@ import {
   isMethodSignature,
   isModuleDeclaration,
   isNamedDeclaration,
+  isNewtypeDeclaration,
   isNodeArray,
   isNodeKind,
   isNonNullChain,
@@ -7261,6 +7263,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
       isClassDeclaration(node) ? updateClassDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
       isInterfaceDeclaration(node) ? updateInterfaceDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
       isTypeAliasDeclaration(node) ? updateTypeAliasDeclaration(node, modifierArray, node.name, node.typeParameters, node.type, node.kindType) :
+      isNewtypeDeclaration(node) ? updateNewtypeDeclaration(node, modifierArray, node.name, node.typeParameters, node.type) :
+      isDataDeclaration(node) ? updateDataDeclaration(node, modifierArray, node.name, node.typeParameters, node.variants) :
       isEnumDeclaration(node) ? updateEnumDeclaration(node, modifierArray, node.name, node.members) :
       isModuleDeclaration(node) ? updateModuleDeclaration(node, modifierArray, node.name, node.body) :
       isImportEqualsDeclaration(node) ? updateImportEqualsDeclaration(node, modifierArray, node.isTypeOnly, node.name, node.moduleReference) :

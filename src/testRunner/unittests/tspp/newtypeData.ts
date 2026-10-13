@@ -18,6 +18,61 @@ describe("unittests:: tspp:: newtype and data", () => {
     return program.getSemanticDiagnostics().map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
   }
 
+  function emitDeclarations(content: string) {
+    const fileName = "/file.tspp";
+    const options: ts.CompilerOptions = {
+      declaration: true,
+      emitDeclarationOnly: true,
+      noLib: true,
+      strict: true,
+      tsppFeatures: ["newtypeDeclarations", "dataDeclarations"],
+    };
+    const fs = vfs.createFromFileSystem(
+      Harness.IO,
+      /*ignoreCase*/ true,
+      { documents: [new documents.TextDocument(fileName, content)], cwd: "/" },
+    );
+    const host = new fakes.CompilerHost(fs, options);
+    const program = ts.createProgram({ host, rootNames: [fileName], options });
+    const result = program.emit();
+    assert.isFalse(result.emitSkipped, result.diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")).join("\n"));
+    return fs.readFileSync("/file.d.tspp").toString();
+  }
+
+  describe("emit", () => {
+    it("lowers newtype and data constructors to JavaScript", () => {
+      const output = ts.transpileModule(
+        `
+        newtype UserId = number;
+        data Option<T> = None | Some(value: T);
+        const values = [UserId(1), Some(2), None];
+        `,
+        {
+          fileName: "file.tspp",
+          compilerOptions: {
+            target: ts.ScriptTarget.ES2022,
+            tsppFeatures: ["newtypeDeclarations", "dataDeclarations"],
+          },
+        },
+      ).outputText;
+
+      assert.include(output, "function UserId(value)");
+      assert.include(output, 'const None = { _tag: "None" };');
+      assert.include(output, "function Some(value)");
+      assert.include(output, 'return { _tag: "Some", value };');
+    });
+
+    it("preserves newtype and data declarations in declaration output", () => {
+      const output = emitDeclarations(`
+        export newtype UserId = number;
+        export data Option<T> = None | Some(value: T);
+      `);
+
+      assert.include(output, "export newtype UserId = number;");
+      assert.include(output, "export data Option<T> = None | Some(value: T);");
+    });
+  });
+
   describe("newtype", () => {
     it("is assignable to its underlying type but not vice versa", () => {
       const program = createProgram(
@@ -333,6 +388,39 @@ describe("unittests:: tspp:: newtype and data", () => {
       const text = ts.displayPartsToString(info!.displayParts);
       assert.include(text, "UserId", text);
       assert.notInclude(text, "__@nominal@", text);
+    });
+
+    it("rejects underlying types that erase the nominal brand", () => {
+      const program = createProgram(
+        "/file.tspp",
+        `
+        newtype AnyValue = any;
+        newtype UnknownValue = unknown;
+        newtype NeverValue = never;
+      `,
+      );
+      const messages = semanticMessages(program);
+      assert.lengthOf(messages, 3, messages.join("\n"));
+      assert.isTrue(messages.every(message => /cannot use 'any', 'unknown', or 'never'/.test(message)), messages.join("\n"));
+    });
+  });
+
+  describe("data variant fields", () => {
+    it("rejects unsupported parameter forms", () => {
+      const program = createProgram(
+        "/file.tspp",
+        `
+        data Invalid =
+          MissingType(value)
+          | Optional(value?: number)
+          | Defaulted(value: number = 1)
+          | Rest(...values: number[])
+          | Destructured({ value }: { value: number });
+      `,
+      );
+      const messages = semanticMessages(program);
+      assert.lengthOf(messages, 5, messages.join("\n"));
+      assert.isTrue(messages.every(message => /must be a required identifier with a type annotation/.test(message)), messages.join("\n"));
     });
   });
 });

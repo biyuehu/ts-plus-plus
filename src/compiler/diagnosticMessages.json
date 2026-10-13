@@ -8607,5 +8607,13 @@
   "A tsppconfig.json file is already defined at: '{0}'.": {
     "category": "Error",
     "code": 18074
+  },
+  "A newtype cannot use 'any', 'unknown', or 'never' as its underlying type.": {
+    "category": "Error",
+    "code": 18075
+  },
+  "A data variant field must be a required identifier with a type annotation.": {
+    "category": "Error",
+    "code": 18076
   }
 }

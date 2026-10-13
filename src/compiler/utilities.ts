@@ -2310,6 +2310,8 @@ export function isLateVisibilityPaintedStatement(node: Node): node is LateVisibi
     case SyntaxKind.FunctionDeclaration:
     case SyntaxKind.ModuleDeclaration:
     case SyntaxKind.TypeAliasDeclaration:
+    case SyntaxKind.NewtypeDeclaration:
+    case SyntaxKind.DataDeclaration:
     case SyntaxKind.InterfaceDeclaration:
     case SyntaxKind.EnumDeclaration:
       return true;
