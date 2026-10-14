@@ -1,0 +1,18 @@
+export function absolute(value: bigint) with {
+  ensures: result >= 0n;
+}: bigint {
+  if (value >= 0n) return value;
+  return -value;
+}
+
+export function successor(value: bigint) with {
+  requires: value >= 0n;
+  ensures: result > value;
+}: bigint {
+  return value + 1n;
+}
+
+console.log(`absolute(-5) = ${absolute(-5n)}`);
+console.log(`successor(5) = ${successor(5n)}`);
+// Uncomment to see a call-site counterexample:
+// successor(-5n);

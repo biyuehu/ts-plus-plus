@@ -27,6 +27,11 @@
         "scopeName": "tspp.macros",
         "path": "./syntaxes/tspp-macros.tmLanguage.json",
         "injectTo": ["source.ts"]
+      },
+      {
+        "scopeName": "tspp.formal-contracts",
+        "path": "./syntaxes/tspp-formal-contracts.tmLanguage.json",
+        "injectTo": ["source.ts"]
       }
     ],
     "commands": [
@@ -51,9 +56,22 @@
         "title": "TS++: Open Newtype and Data Example"
       },
       {
+        "command": "tspp.openMacrosExample",
+        "title": "TS++: Open Compile-Time Macros Example"
+      },
+      {
+        "command": "tspp.openFormalContractsExample",
+        "title": "TS++: Open Formal Contracts Example"
+      },
+      {
         "command": "tspp.showExpandedSource",
         "title": "TS++: Show Expanded Source",
         "icon": "$(preview)"
+      },
+      {
+        "command": "tspp.showVerificationSmt",
+        "title": "TS++: Show Verification SMT-LIB",
+        "icon": "$(symbol-operator)"
       }
     ],
     "menus": {
@@ -62,6 +80,11 @@
           "command": "tspp.showExpandedSource",
           "when": "editorLangId == typescript && resourceExtname == .tspp",
           "group": "navigation@10"
+        },
+        {
+          "command": "tspp.showVerificationSmt",
+          "when": "editorLangId == typescript && resourceExtname == .tspp",
+          "group": "navigation@11"
         }
       ]
     }

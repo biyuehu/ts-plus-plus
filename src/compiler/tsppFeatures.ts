@@ -40,6 +40,14 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "formalContracts",
+    dependencies: [],
+    initComments: [
+      "获得：requires、ensures 与循环 invariant 的静态 SMT 验证。",
+      "影响：TS超集=是；透明擦除=是。",
+    ],
+  },
+  {
     name: "typeUniverses",
     dependencies: ["higherKindedTypes"],
     initComments: [

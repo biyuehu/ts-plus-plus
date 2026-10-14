@@ -1,0 +1,21 @@
+{
+  "name": "TS++ Formal Contracts",
+  "scopeName": "tspp.formal-contracts",
+  "injectionSelector": "L:source.ts -comment -string",
+  "patterns": [
+    {
+      "match": "\\b(requires|ensures|invariant|numberModel|timeout)\\b(?=\\s*:)",
+      "captures": {
+        "1": { "name": "keyword.other.contract.tspp" }
+      }
+    },
+    {
+      "match": "\\bresult\\b",
+      "name": "variable.language.result.tspp"
+    },
+    {
+      "match": "<=|>=|<|>",
+      "name": "keyword.operator.relational.ts"
+    }
+  ]
+}

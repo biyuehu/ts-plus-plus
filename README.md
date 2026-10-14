@@ -27,6 +27,7 @@ Enable features manually:
       "newtypeDeclarations",
       "dataDeclarations",
       "macros",
+      "formalContracts",
       "typeUniverses"
     ]
   }
@@ -52,6 +53,7 @@ Current features:
 | `newtypeDeclarations` | `newtype` nominal type declarations and their constructors | — | Yes | No (emits runtime constructors) |
 | `dataDeclarations` | `data` discriminated unions and variant constructors | — | Yes | No (emits runtime variant values and constructors) |
 | `macros` | `macro function` declarations and compile-time `macro f(Target);` statement expansion | — | Yes | No (macro calls can replace emitted statements) |
+| `formalContracts` | Z3-backed `requires`, `ensures`, and `while` invariants | — | Yes | Yes |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
@@ -62,6 +64,30 @@ Current features:
 | `sigmaTypes` | `Sigma`, `Pair`, `First`, and `Second` | `dependentFunctionTypes` | Yes | Yes |
 
 The generated configuration is the authoritative, compiler-version-specific feature guide. The project is still experimental; these classifications describe the listed implementation, not a permanent promise about future features.
+
+## Formal contracts
+
+Enable `formalContracts`, then attach contracts to a function and invariants to `while` statements:
+
+```ts
+function sumTo(n: bigint) with {
+  requires: n >= 0n;
+  ensures: result === n;
+}: bigint {
+  let current = 0n;
+  while (current < n) with {
+    invariant: current >= 0n;
+    invariant: current <= n;
+  } {
+    current += 1n;
+  }
+  return current;
+}
+```
+
+The initial subset covers `boolean` and `bigint`, local variables, assignments, branches, multiple returns, invariant-annotated loops, and `requires` checks at direct call sites that resolve to project function declarations. Calls inside verified functions use the caller's assumptions and current symbolic path facts. `number` is available only after adding `numberModel: "mathematical-real";` to the function contract; this deliberately models numbers as mathematical reals rather than JavaScript IEEE-754 values.
+
+Every obligation is reported as `proved`, `failed`, `unknown`, or `error`. Unsupported syntax and unavailable solver environments are compilation errors with an `unknown` result, never a successful proof. `Program.getVerificationArtifacts()` exposes the exact solver input, replayable SMT-LIB, status, counterexample model, and source location. The development extension's **TS++: Show Verification SMT-LIB** command opens that replayable input beside the source.
 
 ## License
 

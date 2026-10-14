@@ -1,0 +1,10 @@
+{
+  "name": "tspp-example-05-formal-contracts",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "check": "node ../../built/local/tsc.js --project tsppconfig.json",
+    "build": "node ../../built/local/tsc.js --project tsppconfig.json --noEmit false --declaration --rootDir src --outDir dist",
+    "start": "node dist/01-function-contracts.js && node dist/02-loop-invariants.js && node dist/03-number-model.js"
+  }
+}

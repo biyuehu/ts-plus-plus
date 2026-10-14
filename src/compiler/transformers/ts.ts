@@ -204,6 +204,7 @@ import {
   visitNodes,
   visitParameterList,
   VisitResult,
+  WhileStatement,
 } from "../_namespaces/ts.js";
 
 /**
@@ -773,6 +774,9 @@ export function transformTypeScript(context: TransformationContext): Transformer
         // inserted before this transformer runs; the invocation itself never reaches JS.
         return factory.createNotEmittedStatement(node);
 
+      case SyntaxKind.WhileStatement:
+        return visitWhileStatement(node as WhileStatement);
+
       case SyntaxKind.FunctionExpression:
         // TypeScript function expressions can have modifiers and type annotations.
         return visitFunctionExpression(node as FunctionExpression);
@@ -847,6 +851,15 @@ export function transformTypeScript(context: TransformationContext): Transformer
         // node contains some other TypeScript syntax
         return visitEachChild(node, visitor, context);
     }
+  }
+
+  function visitWhileStatement(node: WhileStatement): WhileStatement {
+    return factory.updateWhileStatement(
+      node,
+      Debug.checkDefined(visitNode(node.expression, visitor, isExpression)),
+      Debug.checkDefined(visitNode(node.statement, visitor, isStatement)),
+      /*withClause*/ undefined,
+    );
   }
 
   function visitNewtypeDeclaration(node: NewtypeDeclaration): VisitResult<Statement> {

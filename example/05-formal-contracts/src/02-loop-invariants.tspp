@@ -1,0 +1,17 @@
+export function countTo(limit: bigint) with {
+  requires: limit >= 0n;
+  ensures: result === limit;
+}: bigint {
+  let current = 0n;
+
+  while (current < limit) with {
+    invariant: current >= 0n;
+    invariant: current <= limit;
+  } {
+    current += 1n;
+  }
+
+  return current;
+}
+
+console.log(`countTo(4) = ${countTo(4n)}`);

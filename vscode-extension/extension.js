@@ -29,6 +29,20 @@ function activate(context) {
       directory: path.join(examplesRoot, "03-newtype-and-data"),
       entry: "index.tspp",
     },
+    {
+      label: "04 — Compile-Time Macros",
+      description: "Compile-time AST validation and transformation",
+      command: "tspp.openMacrosExample",
+      directory: path.join(examplesRoot, "04-macros"),
+      entry: path.join("src", "01-check.tspp"),
+    },
+    {
+      label: "05 — Formal Contracts",
+      description: "Z3-backed preconditions, postconditions, and loop invariants",
+      command: "tspp.openFormalContractsExample",
+      directory: path.join(examplesRoot, "05-formal-contracts"),
+      entry: path.join("src", "01-function-contracts.tspp"),
+    },
   ];
 
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -46,33 +60,42 @@ function activate(context) {
   status.tooltip = `Using ${compilerPath}. Click to choose an example.`;
   status.show();
 
-  const macroDiagnostics = vscode.languages.createDiagnosticCollection("tspp-macros");
+  const macroDiagnostics = vscode.languages.createDiagnosticCollection("tspp");
   context.subscriptions.push(macroDiagnostics);
 
   const macroExpansionCache = new Map();
   let macroExpansionQueue = Promise.resolve();
 
-  function getMacroExpansions(document) {
-    if (document.uri.scheme !== "file" || path.extname(document.fileName).toLowerCase() !== ".tspp") return Promise.resolve([]);
+  function getDocumentAnalysis(document) {
+    if (document.uri.scheme !== "file" || path.extname(document.fileName).toLowerCase() !== ".tspp") return Promise.resolve({ expansions: [], artifacts: [] });
     const cacheKey = `${document.uri.toString()}:${document.version}`;
     const cached = macroExpansionCache.get(cacheKey);
     if (cached) return cached;
 
-    const pending = macroExpansionQueue.then(() => computeMacroExpansions(document));
+    const pending = macroExpansionQueue.then(() => computeDocumentAnalysis(document));
     macroExpansionQueue = pending.then(() => undefined, () => undefined);
     macroExpansionCache.set(cacheKey, pending);
     return pending;
   }
 
-  async function computeMacroExpansions(document) {
+  async function getMacroExpansions(document) {
+    return (await getDocumentAnalysis(document)).expansions;
+  }
+
+  async function getVerificationArtifacts(document) {
+    return (await getDocumentAnalysis(document)).artifacts;
+  }
+
+  async function computeDocumentAnalysis(document) {
     let expansions = [];
+    let artifacts = [];
     const documentVersion = document.version;
     try {
       const ts = require(typescriptPath);
       const configPath = ts.findConfigFile(path.dirname(document.fileName), ts.sys.fileExists, "tsppconfig.json");
-      if (!configPath) return [];
+      if (!configPath) return { expansions, artifacts };
       const config = ts.readConfigFile(configPath, ts.sys.readFile);
-      if (config.error) return [];
+      if (config.error) return { expansions, artifacts };
       const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(configPath), /*existingOptions*/ undefined, configPath);
       const host = ts.createCompilerHost(parsed.options);
       const originalGetSourceFile = host.getSourceFile.bind(host);
@@ -88,9 +111,10 @@ function activate(context) {
         : [...parsed.fileNames, document.fileName];
       const program = await ts.createProgramAsync({ rootNames, options: parsed.options, host });
       expansions = program.getMacroExpansions?.(document.fileName) || [];
+      artifacts = program.getVerificationArtifacts?.(document.fileName) || [];
       const sourceFile = program.getSourceFile(document.fileName);
       const diagnostics = sourceFile
-        ? program.getSemanticDiagnostics(sourceFile).filter(diagnostic => diagnostic.code >= 18080 && diagnostic.code <= 18082)
+        ? program.getSemanticDiagnostics(sourceFile).filter(diagnostic => diagnostic.code >= 18080 && diagnostic.code <= 18085)
         : [];
       if (!document.isClosed && document.version === documentVersion) {
         macroDiagnostics.set(document.uri, diagnostics.map(diagnostic => toVscodeDiagnostic(ts, document, diagnostic)));
@@ -100,7 +124,7 @@ function activate(context) {
       // Keep previews and fallback diagnostics unavailable while the source is incomplete.
       if (!document.isClosed && document.version === documentVersion) macroDiagnostics.delete(document.uri);
     }
-    return expansions;
+    return { expansions, artifacts };
   }
 
   function toVscodeDiagnostic(ts, document, diagnostic) {
@@ -112,7 +136,7 @@ function activate(context) {
       vscode.DiagnosticSeverity.Error,
     );
     result.code = diagnostic.code;
-    result.source = "TS++ macro";
+    result.source = diagnostic.source || "TS++";
     return result;
   }
 
@@ -130,6 +154,14 @@ function activate(context) {
       return expandedDocuments.get(uri.toString()) || "";
     },
   };
+  const smtDocuments = new Map();
+  const smtDocumentChanges = new vscode.EventEmitter();
+  const smtDocumentProvider = {
+    onDidChange: smtDocumentChanges.event,
+    provideTextDocumentContent(uri) {
+      return smtDocuments.get(uri.toString()) || "";
+    },
+  };
 
   async function createExpandedSource(document) {
     let text = document.getText();
@@ -142,7 +174,9 @@ function activate(context) {
 
   context.subscriptions.push(
     expandedDocumentChanges,
+    smtDocumentChanges,
     vscode.workspace.registerTextDocumentContentProvider("tspp-expanded", expandedDocumentProvider),
+    vscode.workspace.registerTextDocumentContentProvider("tspp-smt", smtDocumentProvider),
     vscode.languages.registerHoverProvider(macroSelector, {
       async provideHover(document, position) {
         const expansion = await expansionAt(document, position);
@@ -189,6 +223,45 @@ function activate(context) {
         preview: true,
       });
     }),
+    vscode.commands.registerCommand("tspp.showVerificationSmt", async () => {
+      const editor = vscode.window.activeTextEditor;
+      const document = editor?.document;
+      if (!document || document.uri.scheme !== "file" || path.extname(document.fileName).toLowerCase() !== ".tspp") return;
+      const artifacts = await getVerificationArtifacts(document);
+      if (!artifacts.length) {
+        await vscode.window.showInformationMessage("This file contains no formal-verification obligations.");
+        return;
+      }
+      const offset = editor ? document.offsetAt(editor.selection.active) : -1;
+      const atCursor = artifacts.filter(artifact => artifact.start <= offset && offset <= artifact.start + artifact.length);
+      let artifact = atCursor.length === 1 ? atCursor[0] : undefined;
+      if (!artifact) {
+        const picked = await vscode.window.showQuickPick(
+          artifacts.map((candidate, index) => ({
+            label: `$(${candidate.status === "proved" ? "pass" : candidate.status === "failed" ? "error" : "question"}) ${candidate.name}`,
+            description: `${candidate.status} · ${candidate.obligation}`,
+            index,
+          })),
+          { placeHolder: "Choose a proof obligation to inspect" },
+        );
+        if (!picked) return;
+        artifact = artifacts[picked.index];
+      }
+      const smtUri = vscode.Uri.from({
+        scheme: "tspp-smt",
+        path: `${document.uri.path}.${artifact.obligation}.smt2`,
+        query: `source=${encodeURIComponent(document.uri.toString())}&start=${artifact.start}`,
+      });
+      const counterexample = artifact.counterexample ? `; counterexample: ${artifact.counterexample.replaceAll("\n", "\n; ")}\n` : "";
+      const model = artifact.model ? `; raw Z3 model:\n; ${artifact.model.replaceAll("\n", "\n; ")}\n` : "";
+      const header = `; ${artifact.name}\n; status: ${artifact.status}\n; ${artifact.message.replaceAll("\n", "\n; ")}\n${counterexample}${model}\n`;
+      smtDocuments.set(smtUri.toString(), header + artifact.replayableSmtLib);
+      smtDocumentChanges.fire(smtUri);
+      let smtDocument = await vscode.workspace.openTextDocument(smtUri);
+      const languageId = (await vscode.languages.getLanguages()).includes("smt") ? "smt" : "plaintext";
+      if (smtDocument.languageId !== languageId) smtDocument = await vscode.languages.setTextDocumentLanguage(smtDocument, languageId);
+      await vscode.window.showTextDocument(smtDocument, { viewColumn: vscode.ViewColumn.Beside, preview: true });
+    }),
     vscode.workspace.onDidChangeTextDocument(event => {
       macroExpansionCache.clear();
       scheduleMacroDiagnostics(event.document);
@@ -216,7 +289,7 @@ function activate(context) {
     if (previous) clearTimeout(previous);
     const timer = setTimeout(() => {
       macroDiagnosticTimers.delete(key);
-      void getMacroExpansions(document);
+      void getDocumentAnalysis(document);
     }, delay);
     macroDiagnosticTimers.set(key, timer);
   }
@@ -232,15 +305,19 @@ function activate(context) {
     vscode.commands.registerCommand("tspp.openHigherKindedTypesExample", () => openExample(examples[0])),
     vscode.commands.registerCommand("tspp.openDependentTypesExample", () => openExample(examples[1])),
     vscode.commands.registerCommand("tspp.openNewtypeAndDataExample", () => openExample(examples[2])),
+    vscode.commands.registerCommand("tspp.openMacrosExample", () => openExample(examples[3])),
+    vscode.commands.registerCommand("tspp.openFormalContractsExample", () => openExample(examples[4])),
     vscode.commands.registerCommand("tspp.openAllExamples", async () => {
       await openExample(examples[0], vscode.ViewColumn.One);
       await openExample(examples[1], vscode.ViewColumn.Two);
       await openExample(examples[2], vscode.ViewColumn.Three);
+      await openExample(examples[3], vscode.ViewColumn.Beside);
+      await openExample(examples[4], vscode.ViewColumn.Beside);
     }),
     vscode.commands.registerCommand("tspp.pickExample", async () => {
       const selection = await vscode.window.showQuickPick(
         [
-          { label: "All examples", description: "Open examples 01, 02 and 03 side by side", command: "tspp.openAllExamples" },
+          { label: "All examples", description: "Open examples 01 through 05", command: "tspp.openAllExamples" },
           ...examples,
         ],
         { placeHolder: "Choose a TS++ example to open" },

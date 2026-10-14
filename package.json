@@ -28,7 +28,7 @@
     "tsppserver": "./bin/tsserver"
   },
   "engines": {
-    "node": ">=14.17"
+    "node": ">=16"
   },
   "files": [
     "bin",
@@ -40,6 +40,9 @@
     "ThirdPartyNoticeText.txt",
     "!**/.gitattributes"
   ],
+  "dependencies": {
+    "z3-solver": "^5.2.0"
+  },
   "devDependencies": {
     "@dprint/formatter": "^0.4.1",
     "@dprint/typescript": "0.93.4",

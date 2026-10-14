@@ -3502,6 +3502,7 @@ export interface DoStatement extends IterationStatement, FlowContainer {
 export interface WhileStatement extends IterationStatement, FlowContainer {
   readonly kind: SyntaxKind.WhileStatement;
   readonly expression: Expression;
+  readonly withClause?: WithClause;
 }
 
 export type ForInitializer =
@@ -4834,6 +4835,9 @@ export interface Program extends ScriptReferenceHost {
   /** Returns source replacements produced by compile-time macro invocations. */
   getMacroExpansions?(fileName?: string): readonly MacroExpansion[];
 
+  /** Returns formal-verification obligations and their generated SMT-LIB. */
+  getVerificationArtifacts?(fileName?: string): readonly VerificationArtifact[];
+
   /**
    * Get a list of file names that were passed to 'createProgram' or referenced in a
    * program source file but could not be located.
@@ -5241,6 +5245,26 @@ export interface MacroExpansion {
   readonly length: number;
   readonly macroName: string;
   readonly text: string;
+}
+
+export type VerificationStatus = "proved" | "failed" | "unknown" | "error";
+
+/** A proof obligation and the exact SMT-LIB generated for it. */
+export interface VerificationArtifact {
+  readonly fileName: string;
+  readonly start: number;
+  readonly length: number;
+  readonly kind: "function-contract" | "loop-invariant" | "call-precondition";
+  readonly obligation: "precondition" | "postcondition" | "invariant-initialization" | "invariant-preservation";
+  readonly name: string;
+  readonly status: VerificationStatus;
+  readonly solverInput: string;
+  readonly replayableSmtLib: string;
+  readonly message: string;
+  /** A source-level assignment demonstrating a failed obligation. */
+  readonly counterexample?: string;
+  /** The raw Z3 model, when Z3 assigned at least one model constant. */
+  readonly model?: string;
 }
 
 export interface TypeChecker {
@@ -7966,6 +7990,9 @@ export type AsyncMacroEvaluation =
   | { readonly kind: "resolved"; readonly result: unknown; readonly reported: readonly MacroDiagnostic[]; }
   | { readonly kind: "rejected"; readonly error: unknown; readonly reported: readonly MacroDiagnostic[]; };
 
+/** @internal */
+export type AsyncFormalVerification = readonly VerificationArtifact[];
+
 // dprint-ignore
 /** @internal */
 export interface CommandLineOptionBase {
@@ -8432,6 +8459,12 @@ export interface CompilerHost extends ModuleResolutionHost {
   isAsyncMacroEvaluationPending?(key: string): boolean;
   /** @internal */
   scheduleAsyncMacroEvaluation?(key: string, evaluation: Promise<AsyncMacroEvaluation>): void;
+  /** @internal */
+  getResolvedAsyncFormalVerification?(key: string): AsyncFormalVerification | undefined;
+  /** @internal */
+  isAsyncFormalVerificationPending?(key: string): boolean;
+  /** @internal */
+  scheduleAsyncFormalVerification?(key: string, evaluation: Promise<AsyncFormalVerification>): void;
   /** @internal Overrides the default Promise wait limit for compile-time macros. */
   macroTimeoutMs?: number;
   /** @internal Overrides the measured local benchmark duration for tests and specialized hosts. */
@@ -9293,8 +9326,8 @@ export interface NodeFactory {
   updateIfStatement(node: IfStatement, expression: Expression, thenStatement: Statement, elseStatement: Statement | undefined): IfStatement;
   createDoStatement(statement: Statement, expression: Expression): DoStatement;
   updateDoStatement(node: DoStatement, statement: Statement, expression: Expression): DoStatement;
-  createWhileStatement(expression: Expression, statement: Statement): WhileStatement;
-  updateWhileStatement(node: WhileStatement, expression: Expression, statement: Statement): WhileStatement;
+  createWhileStatement(expression: Expression, statement: Statement, withClause?: WithClause): WhileStatement;
+  updateWhileStatement(node: WhileStatement, expression: Expression, statement: Statement, withClause?: WithClause): WhileStatement;
   createForStatement(initializer: ForInitializer | undefined, condition: Expression | undefined, incrementor: Expression | undefined, statement: Statement): ForStatement;
   updateForStatement(node: ForStatement, initializer: ForInitializer | undefined, condition: Expression | undefined, incrementor: Expression | undefined, statement: Statement): ForStatement;
   createForInStatement(initializer: ForInitializer, expression: Expression, statement: Statement): ForInStatement;
