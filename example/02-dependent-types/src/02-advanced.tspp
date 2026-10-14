@@ -88,6 +88,36 @@ declare const ordinaryBooleanChooser:
   <B extends boolean>(value: B) => B extends true ? string : number;
 export const bridgedBooleanChooser: BooleanChooser = ordinaryBooleanChooser;
 
+// IfType 使用定义相等做精确类型分支；它不是 TypeScript 的 `extends`。
+export type NumberOrFallback: Type1 =
+  (A: Type0) -> IfType<A, number, Bool, string>;
+
+export type NumberBranchComputed: Type1 = Eq<
+  Type0,
+  IfType<number, number, Bool, string>,
+  Bool
+>;
+
+// TypeMatch 按顺序尝试 Case，最后必须有 Default。开放的 A 无法判断时
+// 整个匹配保持为中性项，等 A 被实例化后再继续归约。
+export type MatchRuntimeValue: Type1 =
+  (A: Type0) ->
+  (value: A) ->
+  TypeMatch<
+    A,
+    Case<string, number>,
+    Case<number, string>,
+    Default<boolean>
+  >;
+
+export declare const matchRuntimeValue: MatchRuntimeValue;
+declare let runtimeText: string;
+declare let runtimeNumber: number;
+declare let runtimeBoolean: boolean;
+export const matchedText = matchRuntimeValue(runtimeText); // number
+export const matchedNumber = matchRuntimeValue(runtimeNumber); // string
+export const matchedDefault = matchRuntimeValue(runtimeBoolean); // boolean
+
 // -----------------------------------------------------------------------------
 // 3. Nat：把数字放进类型
 // -----------------------------------------------------------------------------

@@ -148,6 +148,7 @@ kind 检查、别名传播、类型打印和关系判断
 - `Lam<(x: A) -> term>` term-level lambda 与 `Ann<term, type>` 显式类型标注；
 - 内建 `Nat`、`Zero`、`Succ<N>` 自然数索引，以及可归约的 `NatAdd<A, B>`；
 - `Bool`、`True`、`False`，以及 `BoolElim`/`If` 依值分支与计算规则；
+- `IfType<A, P, T, F>` 精确类型分支，以及由 `Case`/`Default` 组成的有序 `TypeMatch`；
 - `NatElim` 依赖消去器与对 `Zero`/`Succ` 的计算规则；
 - `Eq<A, x, y>`、`Refl<A, x>` identity type 和反身证明，以及 `J` path induction；
 - `Sigma<(x: A) -> B>`、`Pair`、`First`、`Second` 依赖对及投影归约；
@@ -169,6 +170,7 @@ kind 检查、别名传播、类型打印和关系判断
       "typeUniverses",
       "dependentFunctionTypes",
       "dependentFunctionInterop",
+      "typeMatching",
       "naturalNumbers",
       "naturalNumberAddition",
       "naturalNumberElimination",

@@ -41,6 +41,8 @@ export type DirectSigma: Type0 =
 // 字面量类型。动态 number、负数和小数会被拒绝，避免破坏 Nat 语义。
 // Bool binder 成为 `B extends boolean` 和运行时布尔参数；true/false 精确
 // 选择分支，动态 boolean 的结果则是两个分支的 union。
+// 开放的 IfType/TypeMatch 会桥接为非分布式的双向条件类型，从而按精确
+// 类型而不是 `extends` 子类型关系选择结果。
 //
 // 尚未纳入桥接的有：可选/剩余参数、默认/约束类型参数、
 // 高阶运行时 binder，以及 Sigma 的专用 JavaScript 运行时表示。

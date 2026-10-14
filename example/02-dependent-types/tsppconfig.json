@@ -6,6 +6,7 @@
       "typeUniverses",
       "dependentFunctionTypes",
       "dependentFunctionInterop",
+      "typeMatching",
       "naturalNumbers",
       "naturalNumberAddition",
       "naturalNumberElimination",

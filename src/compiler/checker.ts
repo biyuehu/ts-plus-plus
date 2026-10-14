@@ -1169,6 +1169,7 @@ import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers.js";
 import * as performance from "./_namespaces/ts.performance.js";
 import {
   areMlttTermsDefinitionallyEqual,
+  compareMlttTermsDefinitionally,
   inferMlttType,
   mlttAnnotation,
   mlttApplication,
@@ -1193,6 +1194,7 @@ import {
   MlttTerm,
   mlttTrue,
   MlttTypeError,
+  mlttTypeMatch,
   mlttUniverse,
   mlttVariable,
   mlttZero,
@@ -20996,6 +20998,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       : name === "NatElim" ? "naturalNumberElimination"
       : name === "Bool" || name === "True" || name === "False" ? "booleans"
       : name === "BoolElim" || name === "If" ? "booleanElimination"
+      : name === "IfType" || name === "TypeMatch" || name === "Case" || name === "Default" ? "typeMatching"
       : name === "Eq" || name === "Refl" || name === "J" ? "identityTypes"
       : name === "Lam" || name === "Ann" ? "dependentFunctionTypes"
       : name === "Sigma" || name === "Pair" || name === "First" || name === "Second" ? "sigmaTypes"
@@ -21098,6 +21101,53 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return motive && trueCase && falseCase && scrutinee
           ? mlttBoolElim(motive, trueCase, falseCase, scrutinee)
           : undefined;
+      }
+      if (name === "IfType") {
+        if (!requireTsppFeature(node, "typeMatching")) return undefined;
+        if (reference.typeArguments?.length !== 4) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'IfType' requires a scrutinee type, pattern type, matching result, and fallback result.");
+          return undefined;
+        }
+        const [scrutineeNode, patternNode, matchingNode, fallbackNode] = reference.typeArguments;
+        const scrutinee = getMlttTermFromTypeNode(scrutineeNode, scope);
+        const pattern = getMlttTermFromTypeNode(patternNode, scope);
+        const matching = getMlttTermFromTypeNode(matchingNode, scope);
+        const fallback = getMlttTermFromTypeNode(fallbackNode, scope);
+        return scrutinee && pattern && matching && fallback
+          ? mlttTypeMatch(scrutinee, [{ pattern, result: matching }], fallback)
+          : undefined;
+      }
+      if (name === "TypeMatch") {
+        if (!requireTsppFeature(node, "typeMatching")) return undefined;
+        if (!reference.typeArguments || reference.typeArguments.length < 3) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "'TypeMatch' requires a scrutinee, at least one Case<Pattern, Result>, and a final Default<Result>.");
+          return undefined;
+        }
+        const scrutinee = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
+        const cases = [];
+        for (let index = 1; index < reference.typeArguments.length - 1; index++) {
+          const caseNode = reference.typeArguments[index];
+          if (!isTypeReferenceNode(caseNode) || !isIdentifier(caseNode.typeName) || idText(caseNode.typeName) !== "Case" || caseNode.typeArguments?.length !== 2) {
+            error(caseNode, Diagnostics.Invalid_MLTT_type_Colon_0, "Each non-final 'TypeMatch' branch must be Case<Pattern, Result>.");
+            return undefined;
+          }
+          const pattern = getMlttTermFromTypeNode(caseNode.typeArguments[0], scope);
+          const result = getMlttTermFromTypeNode(caseNode.typeArguments[1], scope);
+          if (!pattern || !result) return undefined;
+          cases.push({ pattern, result });
+        }
+        const defaultNode = reference.typeArguments[reference.typeArguments.length - 1];
+        if (!isTypeReferenceNode(defaultNode) || !isIdentifier(defaultNode.typeName) || idText(defaultNode.typeName) !== "Default" || defaultNode.typeArguments?.length !== 1) {
+          error(defaultNode, Diagnostics.Invalid_MLTT_type_Colon_0, "The final 'TypeMatch' branch must be Default<Result>.");
+          return undefined;
+        }
+        const defaultCase = getMlttTermFromTypeNode(defaultNode.typeArguments[0], scope);
+        return scrutinee && defaultCase ? mlttTypeMatch(scrutinee, cases, defaultCase) : undefined;
+      }
+      if (name === "Case" || name === "Default") {
+        if (!requireTsppFeature(node, "typeMatching")) return undefined;
+        error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `'${name}' is only valid as a branch inside 'TypeMatch'.`);
+        return undefined;
       }
       if (name === "Nat" || name === "Zero") {
         if (!requireTsppFeature(node, "naturalNumbers")) return undefined;
@@ -21538,37 +21588,28 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return (scrutinee as IntrinsicType).intrinsicName === "true" ? trueCase : falseCase;
       }
       if (!(scrutinee.flags & TypeFlags.TypeParameter)) return undefined;
-
-      const checkTypeNode = factory.createTypeReferenceNode("__mltt_bool_check", /*typeArguments*/ undefined);
-      const extendsTypeNode = factory.createTypeReferenceNode("__mltt_bool_true", /*typeArguments*/ undefined);
-      const trueTypeNode = factory.createTypeReferenceNode("__mltt_true_case", /*typeArguments*/ undefined);
-      const falseTypeNode = factory.createTypeReferenceNode("__mltt_false_case", /*typeArguments*/ undefined);
-      const conditionalNode = factory.createConditionalTypeNode(checkTypeNode, extendsTypeNode, trueTypeNode, falseTypeNode);
-      setParent(conditionalNode, currentNode);
-      setParent(checkTypeNode, conditionalNode);
-      setParent(extendsTypeNode, conditionalNode);
-      setParent(trueTypeNode, conditionalNode);
-      setParent(falseTypeNode, conditionalNode);
-      getNodeLinks(checkTypeNode).resolvedType = scrutinee;
-      getNodeLinks(extendsTypeNode).resolvedType = regularTrueType;
-      getNodeLinks(trueTypeNode).resolvedType = trueCase;
-      getNodeLinks(falseTypeNode).resolvedType = falseCase;
-      const outerTypeParameters = mapDefined(scope, binding => binding.compilerType.flags & TypeFlags.TypeParameter ? binding.compilerType : undefined);
-      const root: ConditionalRoot = {
-        node: conditionalNode,
-        checkType: scrutinee,
-        extendsType: regularTrueType,
-        isDistributive: true,
-        inferTypeParameters: undefined,
-        outerTypeParameters,
-        instantiations: undefined,
-        aliasSymbol: undefined,
-        aliasTypeArguments: undefined,
-      };
-      const conditionalType = getConditionalType(root, /*mapper*/ undefined, /*forConstraint*/ false);
-      root.instantiations = new Map<string, Type>();
-      root.instantiations.set(getTypeListId(outerTypeParameters), conditionalType);
-      return conditionalType;
+      return getMlttConditionalType(scrutinee, regularTrueType, trueCase, falseCase, scope, /*isDistributive*/ true);
+    }
+    if (term.kind === "type-match") {
+      let fallback = getCompilerTypeFromMlttTerm(term.defaultCase, scope);
+      if (!fallback) return undefined;
+      for (let index = term.cases.length - 1; index >= 0; index--) {
+        const matchCase = term.cases[index];
+        const comparison = compareMlttTermsDefinitionally(term.scrutinee, matchCase.pattern, compareMlttExternalTerms);
+        if (comparison === "equal") {
+          fallback = getCompilerTypeFromMlttTerm(matchCase.result, scope);
+          if (!fallback) return undefined;
+          continue;
+        }
+        if (comparison === "apart") continue;
+        const scrutinee = getCompilerTypeFromMlttTerm(term.scrutinee, scope);
+        const pattern = getCompilerTypeFromMlttTerm(matchCase.pattern, scope);
+        const matching = getCompilerTypeFromMlttTerm(matchCase.result, scope);
+        if (!scrutinee || !pattern || !matching) return undefined;
+        const reverse = getMlttConditionalType(pattern, scrutinee, matching, fallback, scope, /*isDistributive*/ false);
+        fallback = getMlttConditionalType(scrutinee, pattern, reverse, fallback, scope, /*isDistributive*/ false);
+      }
+      return fallback;
     }
     if (term.kind === "nat-type") return numberType;
     if (term.kind === "zero") return getNumberLiteralType(0);
@@ -21593,6 +21634,46 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return some(termArguments, argument => !argument)
       ? undefined
       : instantiateType(identity.type, createTypeMapper(identity.parameters, termArguments as Type[]));
+  }
+
+  function getMlttConditionalType(
+    checkType: Type,
+    extendsType: Type,
+    trueType: Type,
+    falseType: Type,
+    scope: readonly MlttTypeBinding[],
+    isDistributive: boolean,
+  ): Type {
+    const checkTypeNode = factory.createTypeReferenceNode("__mltt_check", /*typeArguments*/ undefined);
+    const extendsTypeNode = factory.createTypeReferenceNode("__mltt_extends", /*typeArguments*/ undefined);
+    const trueTypeNode = factory.createTypeReferenceNode("__mltt_true_case", /*typeArguments*/ undefined);
+    const falseTypeNode = factory.createTypeReferenceNode("__mltt_false_case", /*typeArguments*/ undefined);
+    const conditionalNode = factory.createConditionalTypeNode(checkTypeNode, extendsTypeNode, trueTypeNode, falseTypeNode);
+    setParent(conditionalNode, currentNode);
+    setParent(checkTypeNode, conditionalNode);
+    setParent(extendsTypeNode, conditionalNode);
+    setParent(trueTypeNode, conditionalNode);
+    setParent(falseTypeNode, conditionalNode);
+    getNodeLinks(checkTypeNode).resolvedType = checkType;
+    getNodeLinks(extendsTypeNode).resolvedType = extendsType;
+    getNodeLinks(trueTypeNode).resolvedType = trueType;
+    getNodeLinks(falseTypeNode).resolvedType = falseType;
+    const outerTypeParameters = mapDefined(scope, binding => binding.compilerType.flags & TypeFlags.TypeParameter ? binding.compilerType : undefined);
+    const root: ConditionalRoot = {
+      node: conditionalNode,
+      checkType,
+      extendsType,
+      isDistributive,
+      inferTypeParameters: undefined,
+      outerTypeParameters,
+      instantiations: undefined,
+      aliasSymbol: undefined,
+      aliasTypeArguments: undefined,
+    };
+    const conditionalType = getConditionalType(root, /*mapper*/ undefined, /*forConstraint*/ false);
+    root.instantiations = new Map<string, Type>();
+    root.instantiations.set(getTypeListId(outerTypeParameters), conditionalType);
+    return conditionalType;
   }
 
   function getTypeFromTypeNode(node: TypeNode): Type {
@@ -48243,6 +48324,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         typeName === "NatElim" && hasTsppFeature(compilerOptions, "naturalNumberElimination") ||
         (typeName === "Bool" || typeName === "True" || typeName === "False") && hasTsppFeature(compilerOptions, "booleans") ||
         (typeName === "BoolElim" || typeName === "If") && hasTsppFeature(compilerOptions, "booleanElimination") ||
+        (typeName === "IfType" || typeName === "TypeMatch" || typeName === "Case" || typeName === "Default") && hasTsppFeature(compilerOptions, "typeMatching") ||
         (typeName === "Lam" || typeName === "Ann") && hasTsppFeature(compilerOptions, "dependentFunctionTypes") ||
         (typeName === "Eq" || typeName === "Refl" || typeName === "J") && hasTsppFeature(compilerOptions, "identityTypes") ||
         (typeName === "Sigma" || typeName === "Pair" || typeName === "First" || typeName === "Second") && hasTsppFeature(compilerOptions, "sigmaTypes"))

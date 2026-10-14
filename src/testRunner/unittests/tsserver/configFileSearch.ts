@@ -67,6 +67,39 @@ const chosenString = chooseByBoolean(true);
     assert.strictEqual(response.displayString, "const chooseByBoolean: <true>(value: true) => string");
   });
 
+  it("serializes instantiated type-match signatures in quick info", () => {
+    const file = {
+      path: "/home/src/workspaces/project/index.tspp",
+      content: `
+type MatchValue: Type1 =
+  (A: Type0) ->
+  (value: A) ->
+  TypeMatch<A, Case<string, number>, Case<number, string>, Default<boolean>>;
+declare const matchValue: MatchValue;
+declare let text: string;
+const matchedText = matchValue(text);
+`,
+    };
+    const configFile = {
+      path: "/home/src/workspaces/project/tsppconfig.json",
+      content: JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          tsppFeatures: ["higherKindedTypes", "typeUniverses", "dependentFunctionTypes", "dependentFunctionInterop", "typeMatching"],
+        },
+      }),
+    };
+    const host = TestServerHost.createServerHost([file, configFile]);
+    const session = new TestSession(host);
+    openFilesForSession([file], session);
+
+    const response = session.executeCommandSeq<ts.server.protocol.QuickInfoRequest>({
+      command: ts.server.protocol.CommandTypes.Quickinfo,
+      arguments: protocolFileLocationFromSubstring(file, "matchValue(text)"),
+    }).response as ts.server.protocol.QuickInfoResponseBody;
+    assert.strictEqual(response.displayString, "const matchValue: <string>(value: string) => number");
+  });
+
   it("should stop at projectRootPath if given", () => {
     const f1 = {
       path: "/home/src/project/project/a/file1.ts",
