@@ -866,6 +866,7 @@ const forEachChildTable: ForEachChildTable = {
   },
   [SyntaxKind.WhileStatement]: function forEachChildInWhileStatement<T>(node: WhileStatement, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNode(cbNode, node.expression) ||
+      visitNode(cbNode, node.withClause) ||
       visitNode(cbNode, node.statement);
   },
   [SyntaxKind.ForStatement]: function forEachChildInForStatement<T>(node: ForStatement, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
@@ -7063,8 +7064,11 @@ namespace Parser {
     const openParenParsed = parseExpected(SyntaxKind.OpenParenToken);
     const expression = allowInAnd(parseExpression);
     parseExpectedMatchingBrackets(SyntaxKind.OpenParenToken, SyntaxKind.CloseParenToken, openParenParsed, openParenPosition);
+    const withClause = token() === SyntaxKind.WithKeyword && lookAhead(nextToken) === SyntaxKind.OpenBraceToken
+      ? parseWithClause()
+      : undefined;
     const statement = parseStatement();
-    return withJSDoc(finishNode(factoryCreateWhileStatement(expression, statement), pos), hasJSDoc);
+    return withJSDoc(finishNode(factoryCreateWhileStatement(expression, statement, withClause), pos), hasJSDoc);
   }
 
   function parseForOrForInOrForOfStatement(): Statement {

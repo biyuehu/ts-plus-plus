@@ -8,6 +8,7 @@ import {
   AsExpression,
   AsyncMacroEvaluation,
   BuilderProgram,
+  CallExpression,
   CancellationToken,
   canHaveDecorators,
   canHaveIllegalDecorators,
@@ -333,16 +334,22 @@ import {
   unprefixedNodeCoreModules,
   VariableDeclaration,
   VariableStatement,
+  VerificationArtifact,
   Version,
   versionMajorMinor,
   visitEachChild,
   Visitor,
   walkUpParenthesizedExpressions,
+  WithProperty,
   WriteFileCallback,
   WriteFileCallbackData,
   writeFileEnsuringDirectories,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
+import {
+  formatVerificationMessage,
+  verifyFormalContracts,
+} from "./formalVerification.js";
 import {
   canUseMacroWorkers,
   MacroWorkerError,
@@ -2213,7 +2220,7 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
   finally {
     macroExpansionDepth--;
   }
-  if (!hasTsppFeature(options, "macros")) return initialProgram;
+  if (!hasTsppFeature(options, "macros")) return attachFormalVerification(initialProgram, host);
 
   let expansionPromise: Promise<MacroExpansionResult>;
   macroExpansionDepth++;
@@ -2229,7 +2236,7 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
     macroExpansionDepth--;
   }
   const expansion = await expansionPromise;
-  if (!expansion.sourceFiles.size) return initialProgram;
+  if (!expansion.sourceFiles.size) return attachFormalVerification(initialProgram, host);
 
   const expandedHost = Object.create(host) as CompilerHost;
   expandedHost.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
@@ -2290,7 +2297,46 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
       return [...original(sourceFile, ...args), ...own];
     };
   }
-  return expandedProgram;
+  return attachFormalVerification(expandedProgram, host);
+}
+
+async function attachFormalVerification(program: Program, host: CompilerHost): Promise<Program> {
+  if (!hasTsppFeature(program.getCompilerOptions(), "formalContracts")) return program;
+  const verification = await verifyFormalContracts(program);
+  return attachFormalVerificationArtifacts(program, verification.artifacts, host);
+}
+
+function attachFormalVerificationArtifacts(program: Program, artifacts: readonly VerificationArtifact[], host?: CompilerHost): Program {
+  const currentDirectory = host?.getCurrentDirectory();
+  program.getVerificationArtifacts = (fileName?: string) =>
+    fileName === undefined
+      ? artifacts
+      : artifacts.filter(artifact =>
+        host
+          ? comparePaths(artifact.fileName, fileName, currentDirectory!, !host.useCaseSensitiveFileNames()) === Comparison.EqualTo
+          : artifact.fileName === fileName
+      );
+  const diagnostics: Diagnostic[] = artifacts
+    .filter(artifact => artifact.status !== "proved")
+    .map(artifact => ({
+      category: DiagnosticCategory.Error,
+      code: 18090,
+      file: program.getSourceFile(artifact.fileName),
+      start: artifact.start,
+      length: artifact.length,
+      source: "TS++ verification",
+      messageText: formatVerificationMessage(artifact),
+    }));
+  if (diagnostics.length) {
+    const original = program.getSemanticDiagnostics.bind(program) as (...args: any[]) => readonly Diagnostic[];
+    (program as any).getSemanticDiagnostics = (sourceFile?: SourceFile, ...args: any[]) => {
+      const own = sourceFile
+        ? diagnostics.filter(diagnostic => diagnostic.file?.fileName === sourceFile.fileName)
+        : diagnostics;
+      return [...original(sourceFile, ...args), ...own];
+    };
+  }
+  return program;
 }
 
 /**
@@ -2836,7 +2882,7 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
             return [...original(sourceFile, ...args), ...own];
           };
         }
-        return expandedProgram;
+        return hasTsppFeature(options, "formalContracts") ? attachSynchronousFormalVerification(expandedProgram, host) : expandedProgram;
       }
     }
     finally {
@@ -2844,7 +2890,7 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
     }
   }
 
-  return program;
+  return macroExpansionDepth === 0 && hasTsppFeature(options, "formalContracts") ? attachSynchronousFormalVerification(program, host) : program;
 
   function getResolvedModule(file: SourceFile, moduleName: string, mode: ResolutionMode) {
     return resolvedModules?.get(file.path)?.get(moduleName, mode);
@@ -5718,6 +5764,110 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
   function getModeForTypeReferenceDirectiveInFile(ref: FileReference, sourceFile: SourceFile) {
     return ref.resolutionMode || getDefaultResolutionModeForFile(sourceFile);
   }
+}
+
+function attachSynchronousFormalVerification(program: Program, host: CompilerHost): Program {
+  const key = getFormalVerificationKey(program);
+  const resolved = host.getResolvedAsyncFormalVerification?.(key);
+  if (resolved) return attachFormalVerificationArtifacts(program, resolved, host);
+
+  if (host.scheduleAsyncFormalVerification) {
+    if (!host.isAsyncFormalVerificationPending?.(key)) {
+      const evaluation = verifyFormalContracts(program).then(
+        result => result.artifacts,
+        error => createPlaceholderFormalArtifacts(program, `Formal verification failed: ${error instanceof Error ? error.message : String(error)}`, "error"),
+      );
+      host.scheduleAsyncFormalVerification(key, evaluation);
+    }
+    const artifacts = createPlaceholderFormalArtifacts(program, "Formal verification is running asynchronously.");
+    program.getVerificationArtifacts = (fileName?: string) => fileName === undefined ? artifacts : artifacts.filter(artifact => artifact.fileName === fileName);
+    return program;
+  }
+
+  const message = "Formal verification requires the asynchronous createProgramAsync API.";
+  return attachFormalVerificationArtifacts(program, createPlaceholderFormalArtifacts(program, message));
+}
+
+function getFormalVerificationKey(program: Program): string {
+  const options = program.getCompilerOptions();
+  let hash = 2166136261;
+  const update = (text: string) => {
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+  };
+  update(JSON.stringify({
+    alwaysStrict: options.alwaysStrict,
+    strict: options.strict,
+    strictNullChecks: options.strictNullChecks,
+    target: options.target,
+    tsppFeatures: options.tsppFeatures,
+  }));
+  for (const sourceFile of program.getSourceFiles()) {
+    if (sourceFile.isDeclarationFile) continue;
+    update(sourceFile.fileName);
+    update("\0");
+    update(sourceFile.text);
+    update("\0");
+  }
+  return `formal:${(hash >>> 0).toString(16)}`;
+}
+
+function createPlaceholderFormalArtifacts(program: Program, message: string, status: VerificationArtifact["status"] = "unknown"): VerificationArtifact[] {
+  const artifacts: VerificationArtifact[] = [];
+  const checker = program.getTypeChecker();
+  for (const sourceFile of program.getSourceFiles()) {
+    if (sourceFile.isDeclarationFile) continue;
+    forEachChildRecursively(sourceFile, node => {
+      if (node.kind === SyntaxKind.CallExpression) {
+        const call = node as CallExpression;
+        const declaration = checker.getResolvedSignature(call)?.declaration;
+        if (declaration?.kind !== SyntaxKind.FunctionDeclaration) return undefined;
+        const requirements = (declaration as FunctionDeclaration).withClause?.properties.filter(property => String(property.name.escapedText) === "requires") ?? emptyArray;
+        const targetName = (declaration as FunctionDeclaration).name ? String((declaration as FunctionDeclaration).name!.escapedText) : "anonymous function";
+        const start = skipTrivia(sourceFile.text, call.pos);
+        for (let i = 0; i < requirements.length; i++) {
+          const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
+          artifacts.push({
+            fileName: sourceFile.fileName,
+            start,
+            length: call.end - start,
+            kind: "call-precondition",
+            obligation: "precondition",
+            name: `${targetName} precondition ${i + 1}`,
+            status,
+            solverInput: smt,
+            replayableSmtLib: smt,
+            message,
+          });
+        }
+        return undefined;
+      }
+      if (node.kind !== SyntaxKind.WithProperty) return undefined;
+      const property = node as WithProperty;
+      const name = String(property.name.escapedText);
+      if (name !== "ensures" && name !== "invariant") return undefined;
+      const kind = name === "ensures" ? "function-contract" : "loop-invariant";
+      const obligation = name === "ensures" ? "postcondition" : "invariant-preservation";
+      const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
+      const start = skipTrivia(sourceFile.text, property.value.pos);
+      artifacts.push({
+        fileName: sourceFile.fileName,
+        start,
+        length: property.value.end - start,
+        kind,
+        obligation,
+        name: `${name} verification`,
+        status,
+        solverInput: smt,
+        replayableSmtLib: smt,
+        message,
+      });
+      return undefined;
+    });
+  }
+  return artifacts;
 }
 
 function shouldTransformImportCallWorker(sourceFile: Pick<SourceFile, "fileName" | "impliedNodeFormat" | "packageJsonScope">, options: CompilerOptions): boolean {

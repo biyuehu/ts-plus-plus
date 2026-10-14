@@ -1358,6 +1358,7 @@ const visitEachChildTable: VisitEachChildTable = {
       node,
       Debug.checkDefined(nodeVisitor(node.expression, visitor, isExpression)),
       visitIterationBody(node.statement, visitor, context, nodeVisitor),
+      nodeVisitor(node.withClause, visitor, isWithClause),
     );
   },
 

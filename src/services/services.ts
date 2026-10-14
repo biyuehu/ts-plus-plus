@@ -3,6 +3,7 @@ import {
   ApplicableRefactorInfo,
   ApplyCodeActionCommandResult,
   AssignmentDeclarationKind,
+  AsyncFormalVerification,
   AsyncMacroEvaluation,
   BaseType,
   BinaryExpression,
@@ -1648,7 +1649,9 @@ export function createLanguageService(
   let program: Program;
   let lastProjectVersion: string;
   let lastTypesRootVersion = 0;
+  let hasCompletedAsyncUpdate = false;
   const asyncMacroEvaluations = new Map<string, { readonly kind: "pending"; } | { readonly kind: "resolved"; readonly evaluation: AsyncMacroEvaluation; }>();
+  const asyncFormalVerifications = new Map<string, { readonly kind: "pending"; } | { readonly kind: "resolved"; readonly artifacts: AsyncFormalVerification; }>();
 
   const cancellationToken = host.getCancellationToken
     ? new CancellationTokenObject(host.getCancellationToken())
@@ -1794,9 +1797,27 @@ export function createLanguageService(
         evaluation.then(result => {
           if (asyncMacroEvaluations.get(key) !== pending) return;
           asyncMacroEvaluations.set(key, { kind: "resolved", evaluation: result });
-          // The language-service API remains synchronous. Invalidate its current
-          // Program now, then consume this completed result during the next request.
-          program = undefined!;
+          // The language-service API remains synchronous. Force synchronization
+          // on the next request, while preserving the current Program until the
+          // project layer begins its normal graph-update transaction.
+          hasCompletedAsyncUpdate = true;
+          lastProjectVersion = undefined!;
+          host.onAsyncMacroExpansionComplete?.();
+        });
+      },
+      getResolvedAsyncFormalVerification: key => {
+        const entry = asyncFormalVerifications.get(key);
+        return entry?.kind === "resolved" ? entry.artifacts : undefined;
+      },
+      isAsyncFormalVerificationPending: key => asyncFormalVerifications.get(key)?.kind === "pending",
+      scheduleAsyncFormalVerification: (key, evaluation) => {
+        if (asyncFormalVerifications.has(key)) return;
+        const pending = { kind: "pending" as const };
+        asyncFormalVerifications.set(key, pending);
+        evaluation.then(artifacts => {
+          if (asyncFormalVerifications.get(key) !== pending) return;
+          asyncFormalVerifications.set(key, { kind: "resolved", artifacts });
+          hasCompletedAsyncUpdate = true;
           lastProjectVersion = undefined!;
           host.onAsyncMacroExpansionComplete?.();
         });
@@ -1834,12 +1855,13 @@ export function createLanguageService(
     let releasedScriptKinds: Set<Path> | undefined = new Set();
 
     // If the program is already up-to-date, we can reuse it
-    if (isProgramUptoDate(program, rootFileNames, newSettings, (_path, fileName) => host.getScriptVersion(fileName), fileName => compilerHost!.fileExists(fileName), hasInvalidatedResolutions, hasInvalidatedLibResolutions, hasChangedAutomaticTypeDirectiveNames, getParsedCommandLine, projectReferences)) {
+    if (!hasCompletedAsyncUpdate && isProgramUptoDate(program, rootFileNames, newSettings, (_path, fileName) => host.getScriptVersion(fileName), fileName => compilerHost!.fileExists(fileName), hasInvalidatedResolutions, hasInvalidatedLibResolutions, hasChangedAutomaticTypeDirectiveNames, getParsedCommandLine, projectReferences)) {
       compilerHost = undefined;
       parsedCommandLines = undefined;
       releasedScriptKinds = undefined;
       return;
     }
+    hasCompletedAsyncUpdate = false;
 
     // IMPORTANT - It is critical from this moment onward that we do not check
     // cancellation tokens.  We are about to mutate source files from a previous program

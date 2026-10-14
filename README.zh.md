@@ -26,6 +26,7 @@ tspp --init
       "higherKindedTypes",
       "newtypeDeclarations",
       "dataDeclarations",
+      "formalContracts",
       "typeUniverses"
     ]
   }
@@ -50,6 +51,7 @@ tspp --init
 | `higherKindedTypes` | 高阶类型参数和一等类型构造器 | 无 | 是 | 是 |
 | `newtypeDeclarations` | `newtype` 名义类型声明与对应构造器 | 无 | 是 | 否（生成运行时构造器） |
 | `dataDeclarations` | `data` 可辨识联合声明与对应变体构造器 | 无 | 是 | 否（生成运行时变体值与构造器） |
+| `formalContracts` | 由 Z3 验证的 `requires`、`ensures` 和 `while` 循环不变式 | 无 | 是 | 是 |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |
 | `dependentFunctionTypes` | Pi 类型，以及显式的 `Lam`/`Ann` MLTT 项 | `typeUniverses` | 是 | 是 |
 | `dependentFunctionInterop` | Pi 类型与 TypeScript 泛型函数之间的赋值和调用 | `dependentFunctionTypes` | 是 | 是 |
@@ -60,6 +62,30 @@ tspp --init
 | `sigmaTypes` | `Sigma`、`Pair`、`First`、`Second` 依赖对及投影 | `dependentFunctionTypes` | 是 | 是 |
 
 自动生成的配置是与编译器版本对应的权威特性说明。本项目仍处于实验阶段；表中的结论描述当前实现，不是对未来新增特性的永久承诺。
+
+## 形式化契约
+
+开启 `formalContracts` 后，可以给函数附加契约，并给 `while` 附加循环不变式：
+
+```ts
+function sumTo(n: bigint) with {
+  requires: n >= 0n;
+  ensures: result === n;
+}: bigint {
+  let current = 0n;
+  while (current < n) with {
+    invariant: current >= 0n;
+    invariant: current <= n;
+  } {
+    current += 1n;
+  }
+  return current;
+}
+```
+
+首版支持 `boolean`、`bigint`、局部变量、赋值、分支、多返回路径、带不变式的循环，以及对能够静态解析到项目函数声明的直接调用检查 `requires`。验证函数内部调用时，调用者前提与当前符号路径事实也会参与证明。只有在函数契约中加入 `numberModel: "mathematical-real";` 后才支持 `number`；它明确表示把 `number` 抽象成数学实数，而不是 JavaScript 的 IEEE-754 数值。
+
+每个证明义务都会得到 `proved`、`failed`、`unknown` 或 `error` 状态。不支持的语法以及求解器不可用都会产生 `unknown` 编译错误，绝不会伪装成证明成功。`Program.getVerificationArtifacts()` 会公开实际求解器输入、可重放的 SMT-LIB、状态、反例模型和源码位置。开发扩展中的 **TS++: Show Verification SMT-LIB** 命令可以在源码旁直接打开这份输入。
 
 ## 协议
 

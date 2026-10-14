@@ -1520,6 +1520,7 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
     addAntecedent(preWhileLabel, currentFlow);
     currentFlow = preWhileLabel;
     bindCondition(node.expression, preBodyLabel, postWhileLabel);
+    bind(node.withClause);
     currentFlow = finishFlowLabel(preBodyLabel);
     bindIterativeStatement(node.statement, postWhileLabel, preWhileLabel);
     addAntecedent(preWhileLabel, currentFlow);

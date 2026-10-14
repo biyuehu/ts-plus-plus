@@ -810,6 +810,7 @@ import {
   isVariableDeclarationList,
   isVariableLike,
   isVariableStatement,
+  isWithProperty,
   isWriteAccess,
   isWriteOnlyAccess,
   IterableOrIteratorType,
@@ -32185,6 +32186,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       return checkThisExpression(node);
     }
 
+    const contractResultType = getContractResultType(node);
+    if (contractResultType) return contractResultType;
+    const contractParameterType = getContractParameterType(node);
+    if (contractParameterType) return contractParameterType;
+
     const symbol = getResolvedSymbol(node);
     if (symbol === unknownSymbol) {
       return errorType;
@@ -45367,20 +45373,60 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (!node.withClause) return;
     const seen = new Set<string>();
     for (const property of node.withClause.properties) {
-      const name = getTextOfNode(property.name);
-      if (seen.has(name)) {
+      const name = idText(property.name);
+      if (seen.has(name) && name !== "requires" && name !== "ensures") {
         error(property.name, Diagnostics.The_with_property_0_may_only_be_specified_once, name);
         continue;
       }
       seen.add(name);
-      if (!isMacro || name !== "timeout") {
+      if (isMacro) {
+        if (name !== "timeout") {
+          error(property.name, Diagnostics.The_with_property_0_is_not_supported_on_1, name, "a macro function");
+          continue;
+        }
+        if (!isValidMacroTimeoutExpression(property.value)) {
+          error(property, Diagnostics.The_timeout_property_must_match_type_Colon_fixed_value_Colon_number_unit_Colon_ms_s_type_Colon_benchmark_multiplier_Colon_number);
+        }
+        continue;
+      }
+      if (name !== "requires" && name !== "ensures" && name !== "numberModel") {
         error(property.name, Diagnostics.The_with_property_0_is_not_supported_on_1, name, isMacro ? "a macro function" : "a regular function");
         continue;
       }
-      if (!isValidMacroTimeoutExpression(property.value)) {
-        error(property, Diagnostics.The_timeout_property_must_match_type_Colon_fixed_value_Colon_number_unit_Colon_ms_s_type_Colon_benchmark_multiplier_Colon_number);
+      requireTsppFeature(property, "formalContracts");
+      if (name === "numberModel") {
+        if (!isStringLiteralLike(property.value) || property.value.text !== "mathematical-real") {
+          error(property.name, Diagnostics.The_with_property_0_is_not_supported_on_1, `${name}: invalid value`, "a formal contract");
+        }
+      }
+      else {
+        checkTruthinessExpression(property.value);
       }
     }
+  }
+
+  function getContractResultType(node: Identifier): Type | undefined {
+    if (idText(node) !== "result") return undefined;
+    let current: Node | undefined = node.parent;
+    while (current && !isWithProperty(current)) current = current.parent;
+    if (!current || current.name === node || idText(current.name) !== "ensures") return undefined;
+    const clause = current.parent;
+    const declaration = clause?.parent;
+    return declaration && isFunctionDeclaration(declaration)
+      ? getReturnTypeOfSignature(getSignatureFromDeclaration(declaration))
+      : undefined;
+  }
+
+  function getContractParameterType(node: Identifier): Type | undefined {
+    let current: Node | undefined = node.parent;
+    while (current && !isWithProperty(current)) current = current.parent;
+    if (!current || current.name === node) return undefined;
+    const propertyName = idText(current.name);
+    if (propertyName !== "requires" && propertyName !== "ensures") return undefined;
+    const declaration = current.parent?.parent;
+    if (!declaration || !isFunctionDeclaration(declaration)) return undefined;
+    const parameter = declaration.parameters.find(candidate => isIdentifier(candidate.name) && idText(candidate.name) === idText(node));
+    return parameter ? getTypeOfSymbol(getSymbolOfDeclaration(parameter)) : undefined;
   }
 
   function isValidMacroTimeoutExpression(expression: Expression): boolean {
@@ -46673,6 +46719,30 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     checkGrammarStatementInAmbientContext(node);
 
     checkTruthinessExpression(node.expression);
+    if (node.withClause) {
+      const seen = new Set<string>();
+      for (const property of node.withClause.properties) {
+        const name = idText(property.name);
+        if (seen.has(name) && name !== "invariant") {
+          error(property.name, Diagnostics.The_with_property_0_may_only_be_specified_once, name);
+          continue;
+        }
+        seen.add(name);
+        if (name !== "invariant" && name !== "numberModel") {
+          error(property.name, Diagnostics.The_with_property_0_is_not_supported_on_1, name, "a while statement");
+          continue;
+        }
+        requireTsppFeature(property, "formalContracts");
+        if (name === "numberModel") {
+          if (!isStringLiteralLike(property.value) || property.value.text !== "mathematical-real") {
+            error(property.name, Diagnostics.The_with_property_0_is_not_supported_on_1, `${name}: invalid value`, "a loop invariant");
+          }
+        }
+        else {
+          checkTruthinessExpression(property.value);
+        }
+      }
+    }
     checkSourceElement(node.statement);
   }
 

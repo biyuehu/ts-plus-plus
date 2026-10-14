@@ -3206,6 +3206,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
 
   function emitWhileStatement(node: WhileStatement) {
     emitWhileClause(node, node.pos);
+    if (node.withClause) {
+      writeSpace();
+      emitWithClause(node.withClause);
+    }
     emitEmbeddedStatement(node, node.statement);
   }
 

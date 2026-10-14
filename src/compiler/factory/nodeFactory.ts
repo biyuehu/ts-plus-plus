@@ -4093,11 +4093,13 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function createWhileStatement(expression: Expression, statement: Statement) {
+  function createWhileStatement(expression: Expression, statement: Statement, withClause?: WithClause) {
     const node = createBaseNode<WhileStatement>(SyntaxKind.WhileStatement);
     node.expression = expression;
     node.statement = asEmbeddedStatement(statement);
+    node.withClause = withClause;
     node.transformFlags |= propagateChildFlags(node.expression) |
+      propagateChildFlags(node.withClause) |
       propagateChildFlags(node.statement);
 
     node.jsDoc = undefined; // initialized by parser (JsDocContainer)
@@ -4106,10 +4108,12 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function updateWhileStatement(node: WhileStatement, expression: Expression, statement: Statement) {
+  function updateWhileStatement(node: WhileStatement, expression: Expression, statement: Statement, withClause?: WithClause) {
+    if (arguments.length < 4) withClause = node.withClause;
     return node.expression !== expression
         || node.statement !== statement
-      ? update(createWhileStatement(expression, statement), node)
+        || node.withClause !== withClause
+      ? update(createWhileStatement(expression, statement, withClause), node)
       : node;
   }
 
