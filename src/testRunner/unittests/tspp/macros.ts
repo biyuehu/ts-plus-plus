@@ -64,6 +64,37 @@ describe("unittests:: tspp:: macros", () => {
     const checked: "User" = UserTypeName;
   `;
 
+  const recursiveExpansionSource = `
+    macro function first([target], context) {
+      return context.factory.createMacroInvocationStatement(
+        context.factory.createIdentifier("second"),
+        [context.factory.createIdentifier(target.name)],
+      );
+    }
+    macro function second([target], context) {
+      return context.factory.createMacroInvocationStatement(
+        context.factory.createIdentifier("finish"),
+        [context.factory.createIdentifier(target.name)],
+      );
+    }
+    macro function finish([target], context) {
+      return context.factory.createVariableStatement(
+        undefined,
+        context.factory.createVariableDeclarationList([
+          context.factory.createVariableDeclaration(
+            target.name + "ExpandedName",
+            undefined,
+            context.factory.createLiteralTypeNode(context.factory.createStringLiteral(target.name)),
+            context.factory.createStringLiteral(target.name),
+          ),
+        ]),
+      );
+    }
+    interface User { id: number }
+    macro first(User);
+    const checked: "User" = UserExpandedName;
+  `;
+
   it("parses and prints declaration-level with clauses", () => {
     const file = ts.createSourceFile(
       "/file.tspp",
@@ -309,37 +340,17 @@ describe("unittests:: tspp:: macros", () => {
     assert.include(program.getMacroExpansions!("/file.tspp")[0].text, 'var UserAsyncName: "User" = "User";');
   });
 
+  it("recursively expands macro invocations in synchronous programs", () => {
+    const { program } = createProgram(recursiveExpansionSource);
+    const diagnostics = program.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(d => ts.flattenDiagnosticMessageText(d.messageText, "\n")).join("\n"));
+    const expansion = program.getMacroExpansions!("/file.tspp")[0].text;
+    assert.include(expansion, 'var UserExpandedName: "User" = "User";');
+    assert.notInclude(expansion, "macro second");
+    assert.notInclude(expansion, "macro finish");
+  });
+
   it("recursively expands macro invocations returned by macros", async () => {
-    const content = `
-      macro function first([target], context) {
-        return context.factory.createMacroInvocationStatement(
-          context.factory.createIdentifier("second"),
-          [context.factory.createIdentifier(target.name)],
-        );
-      }
-      macro function second([target], context) {
-        return context.factory.createMacroInvocationStatement(
-          context.factory.createIdentifier("finish"),
-          [context.factory.createIdentifier(target.name)],
-        );
-      }
-      macro function finish([target], context) {
-        return context.factory.createVariableStatement(
-          undefined,
-          context.factory.createVariableDeclarationList([
-            context.factory.createVariableDeclaration(
-              target.name + "ExpandedName",
-              undefined,
-              context.factory.createLiteralTypeNode(context.factory.createStringLiteral(target.name)),
-              context.factory.createStringLiteral(target.name),
-            ),
-          ]),
-        );
-      }
-      interface User { id: number }
-      macro first(User);
-      const checked: "User" = UserExpandedName;
-    `;
     const compilerOptions: ts.CompilerOptions = {
       noLib: true,
       noImplicitAny: false,
@@ -350,7 +361,7 @@ describe("unittests:: tspp:: macros", () => {
     const fs = vfs.createFromFileSystem(
       Harness.IO,
       /*ignoreCase*/ true,
-      { documents: [new documents.TextDocument("/file.tspp", content)], cwd: "/" },
+      { documents: [new documents.TextDocument("/file.tspp", recursiveExpansionSource)], cwd: "/" },
     );
     const host = new fakes.CompilerHost(fs, compilerOptions);
     const program = await ts.createProgramAsync({ host, rootNames: ["/file.tspp"], options: compilerOptions });
