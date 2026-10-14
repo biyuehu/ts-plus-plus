@@ -1,0 +1,81 @@
+// =============================================================================
+// 自然数篇：用索引表达数据的不变量
+// =============================================================================
+//
+// 本篇只关注 Nat 怎样进入类型，以及内核为什么只计算可证明终止的递归。
+
+// -----------------------------------------------------------------------------
+// 1. Nat、Zero 和 Succ
+// -----------------------------------------------------------------------------
+//
+// Nat 是自然数类型。Zero 是 0，Succ<N> 是 N 的后继：
+//
+//   Zero             = 0
+//   Succ<Zero>       = 1
+//   Succ<Succ<Zero>> = 2
+
+type Vector<N extends number, A> = {
+  length: N;
+  value: A;
+};
+
+// N 不只是文档信息，它参与了 Vector 的类型。
+export type EmptyVector: Type1 =
+  (A: Type0) -> Vector<Zero, A>;
+
+export type TwoVector: Type1 =
+  (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
+
+// -----------------------------------------------------------------------------
+// 2. Nat binder 的运行时边界
+// -----------------------------------------------------------------------------
+
+export type VectorBuilder: Type1 =
+  (A: Type0) ->
+  (value: A) ->
+  (length: Nat) ->
+  Vector<length, A>;
+
+export declare const buildVector: VectorBuilder;
+export const pair = buildVector("item", 2); // Vector<2, string>
+
+// 调用点必须给出非负安全整数字面量。宽泛 number、负数和小数不能证明
+// 自己属于 Nat；这些反例集中放在 07-boundaries.tspp。
+
+// -----------------------------------------------------------------------------
+// 3. NatAdd 是内核知道如何归约的计算
+// -----------------------------------------------------------------------------
+//
+//   NatAdd<Zero, M>    → M
+//   NatAdd<Succ<N>, M> → Succ<NatAdd<N, M>>
+//
+// 递归严格缩小第一个参数，因此归一化一定终止。
+
+export type ComputedTwoVector: Type1 =
+  (A: Type0) ->
+  Vector<NatAdd<Succ<Zero>, Succ<Zero>>, A>;
+
+// ComputedTwoVector<A> 与 TwoVector<A> 定义相等，不需要额外证明。
+
+// -----------------------------------------------------------------------------
+// 4. NatElim 把递归原则写进类型
+// -----------------------------------------------------------------------------
+//
+// P 是随自然数变化的结果类型（motive）。要为任意 N 构造 P<N>，只需：
+//
+//   zeroCase      : P<Zero>
+//   successorCase : 对每个 N，从 P<N> 得到 P<Succ<N>>
+
+export type NaturalNumberInduction: Type1 =
+  (P: (N: Nat) -> Type0) ->
+  (zeroCase: P<Zero>) ->
+  (successorCase: (N: Nat) -> (previous: P<N>) -> P<Succ<N>>) ->
+  (N: Nat) ->
+  P<N>;
+
+// 计算规则与普通结构递归一致：
+//
+//   NatElim<P, z, s, Zero>    → z
+//   NatElim<P, z, s, Succ<N>> → s<N, NatElim<P, z, s, N>>
+//
+// 下一篇会用 Eq 把这些计算结果写成系统内部可表达的命题。

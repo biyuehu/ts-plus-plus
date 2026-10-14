@@ -1,0 +1,123 @@
+// =============================================================================
+// 相等篇：计算得到的相同，与需要证明的相等
+// =============================================================================
+//
+// “定义相等”和 Eq 经常被混为一谈。本篇先把二者明确分开，再介绍 Refl 和 J。
+
+// -----------------------------------------------------------------------------
+// 1. 定义相等是 checker 的判断规则
+// -----------------------------------------------------------------------------
+//
+// 两个表达式归一化后相同，checker 就直接把它们当作同一类型。例如：
+//
+//   NatAdd<Succ<Zero>, Succ<Zero>>  → Succ<Succ<Zero>>
+//   If<False, P, string, number>    → number
+//
+// alpha 改名、beta 归约和内建 eliminator 的计算都属于定义相等。
+// 它没有“证明对象”；通常也不需要程序员写任何东西。
+
+// -----------------------------------------------------------------------------
+// 2. Eq 是系统内部的命题类型
+// -----------------------------------------------------------------------------
+//
+// Eq<A, left, right> 表示 A 中的 left 与 right 相等。命题本身是类型，
+// 这个类型的值是证明。这就是 propositions as types（命题即类型）。
+
+export type ZeroEqualsZero: Type0 =
+  Eq<Nat, Zero, Zero>;
+
+// Refl<A, value> 是“value 等于自身”的规范证明。
+export type Reflexivity: Type1 =
+  (A: Type0) ->
+  (value: A) ->
+  Eq<A, value, value>;
+
+// 下列命题成立，正是因为 NatAdd 两边先按定义相等完成了计算。
+export type AdditionComputation: Type0 = Eq<
+  Nat,
+  NatAdd<Succ<Zero>, Succ<Zero>>,
+  Succ<Succ<Zero>>
+>;
+
+// Bool 的计算也可以作为 Eq 两端的一部分。
+// 两端本身是 Type0 中的类型，所以这个相等命题位于更高一层 Type1。
+export type BooleanComputation: Type1 = Eq<
+  Type0,
+  If<
+    False,
+    Ann<Lam<(ignored: Bool) -> Type0>, (ignored: Bool) -> Type1>,
+    string,
+    number
+  >,
+  number
+>;
+
+// 关键区别：Eq 是可传递、可消去的类型；定义相等是 checker 用来判断
+// 类型是否兼容的元层规则。拥有 proof: Eq<A, x, y> 不会让 checker 自动把
+// 所有 x 都改写成 y；这种“相等反射”不在当前系统中。
+
+// -----------------------------------------------------------------------------
+// 3. NatElim 的计算可以出现在相等命题里
+// -----------------------------------------------------------------------------
+
+export type NatZeroComputation: Type1 =
+  (P: (N: Nat) -> Type0) ->
+  (zeroCase: P<Zero>) ->
+  (successorCase: (N: Nat) -> (previous: P<N>) -> P<Succ<N>>) ->
+  Eq<P<Zero>, NatElim<P, zeroCase, successorCase, Zero>, zeroCase>;
+
+// Lam 构造 term-level lambda，Ann 给它显式类型。它们让闭合的 motive 和
+// 递归分支无需借助外层 binder 也能被检查。
+export type ClosedNatElimComputation: Type0 = Eq<
+  Nat,
+  NatElim<
+    Ann<Lam<(value: Nat) -> Nat>, (value: Nat) -> Type0>,
+    Zero,
+    Ann<
+      Lam<(value: Nat) -> Lam<(previous: Nat) -> Succ<previous>>>,
+      (value: Nat) -> (previous: Nat) -> Nat
+    >,
+    Succ<Zero>
+  >,
+  Succ<Zero>
+>;
+
+// -----------------------------------------------------------------------------
+// 4. J：只证明反身情况，就能使用任意相等证明
+// -----------------------------------------------------------------------------
+//
+// J 也叫 path induction。Motive 描述要对 left、right 和它们的 proof
+// 建立什么结论；reflexivityCase 只处理 left = right = value 的情况。
+
+export type PathInduction: Type1 =
+  (Motive:
+    (left: Nat) ->
+    (right: Nat) ->
+    (proof: Eq<Nat, left, right>) ->
+    Type0
+  ) ->
+  (reflexivityCase:
+    (value: Nat) -> Motive<value, value, Refl<Nat, value>>
+  ) ->
+  (left: Nat) ->
+  (right: Nat) ->
+  (proof: Eq<Nat, left, right>) ->
+  Motive<left, right, proof>;
+
+// proof 是 Refl 时，J 按定义计算回 reflexivityCase。
+export type PathInductionComputation: Type1 =
+  (Motive:
+    (left: Nat) ->
+    (right: Nat) ->
+    (proof: Eq<Nat, left, right>) ->
+    Type0
+  ) ->
+  (reflexivityCase:
+    (value: Nat) -> Motive<value, value, Refl<Nat, value>>
+  ) ->
+  (value: Nat) ->
+  Eq<
+    Motive<value, value, Refl<Nat, value>>,
+    J<Nat, Motive, reflexivityCase, value, value, Refl<Nat, value>>,
+    reflexivityCase<value>
+  >;

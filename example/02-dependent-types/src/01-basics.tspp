@@ -91,4 +91,22 @@ export const identity: PolymorphicIdentity = ordinaryIdentity;
 export const explicitResult = identity<string>("explicit");
 export const inferredResult = identity("inferred");
 
-// 现在可以进入高级篇：先加入自然数索引，再逐步引入计算和证明。
+// -----------------------------------------------------------------------------
+// 5. MLTT binder 可以包住普通 TypeScript 类型
+// -----------------------------------------------------------------------------
+//
+// TS++ 没有抛弃 TypeScript 的类型系统。object、union、keyof、mapped type
+// 仍由原来的 TS checker 解释；MLTT 只负责外层 binder、应用、归约和宇宙。
+
+type Box<T> = { value: T };
+export type BoxFamily: Type1 = (A: Type0) -> Box<A>;
+export type UnionFamily: Type1 = (A: Type0) -> A | undefined;
+export type KeyFamily: Type1 = (A: Type0) -> keyof A;
+
+// binder 名只是给人看的。下面两种写法绑定关系相同，因此定义相等。
+export type IdentityWithA: Type1 = (A: Type0) -> (value: A) -> A;
+export type IdentityWithT: Type1 = (T: Type0) -> (item: T) -> T;
+
+// “定义相等”不是一个需要手写证明的命题；它是 checker 判断两个表达式
+// 经过改名和计算后是否为同一类型的规则。下一篇会用 Bool 的计算规则
+// 给出第一个可以直接观察的例子。
