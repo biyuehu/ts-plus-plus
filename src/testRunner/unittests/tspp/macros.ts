@@ -122,6 +122,10 @@ describe("unittests:: tspp:: macros", () => {
     assert.isTrue(file.statements.some(statement => ts.isVariableStatement(statement) && statement.declarationList.declarations.some(declaration => ts.isIdentifier(declaration.name) && declaration.name.text === "UserTypeName")));
 
     const [expansion] = program.getMacroExpansions!("/file.tspp");
+    assert.equal(expansion.taskKind, "macro");
+    assert.equal(expansion.outcome, "succeeded");
+    assert.match(expansion.taskId, /^macro:/);
+    assert.deepEqual(program.getAnalysisArtifacts!(), [expansion]);
     assert.equal(expansion.macroName, "exposeTypeName");
     assert.equal(expandingSource.slice(expansion.start, expansion.start + expansion.length), "macro exposeTypeName(User);");
     assert.include(expansion.text, 'var UserTypeName: "User" = "User";');

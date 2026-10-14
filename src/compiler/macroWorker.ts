@@ -1,10 +1,16 @@
 import {
+  AnalysisWorkerBudget,
+  defaultAnalysisWorkerBudget,
+} from "./analysisTasks.js";
+import { scheduleAnalysisWorker } from "./analysisWorkerQueue.js";
+import {
+  AnalysisTaskArtifact,
   CompilerOptions,
   Program,
   ProjectReference,
 } from "./types.js";
 
-export interface SerializedMacroExpansion {
+export interface SerializedMacroExpansion extends AnalysisTaskArtifact {
   readonly fileName: string;
   readonly start: number;
   readonly length: number;
@@ -26,11 +32,7 @@ export interface MacroWorkerResult {
   readonly diagnostics: readonly SerializedMacroDiagnostic[];
 }
 
-interface MacroWorkerOptions {
-  readonly maxOldGenerationSizeMb?: number;
-  readonly startupTimeoutMs?: number;
-  readonly cancellationGraceMs?: number;
-}
+interface MacroWorkerOptions extends Partial<AnalysisWorkerBudget> {}
 
 interface MacroWorkerRequest {
   readonly compilerPath: string;
@@ -51,9 +53,7 @@ type MacroWorkerMessage =
   | { readonly type: "error"; readonly name: string; readonly message: string; readonly stack: string | undefined; };
 
 const defaultMacroWorkerOptions: Required<MacroWorkerOptions> = {
-  maxOldGenerationSizeMb: 256,
-  startupTimeoutMs: 60_000,
-  cancellationGraceMs: 100,
+  ...defaultAnalysisWorkerBudget,
 };
 const maximumTimerDelayMs = 2_147_483_647;
 
@@ -156,14 +156,6 @@ function getMacroWorkerCompilerPath(): string | undefined {
   return fs.existsSync(siblingCompilerPath) ? siblingCompilerPath : undefined;
 }
 
-interface QueuedMacroWorkerTask {
-  start(): void;
-}
-
-const macroWorkerQueue: QueuedMacroWorkerTask[] = [];
-let activeMacroWorkerCount = 0;
-let maximumMacroWorkerCount: number | undefined;
-
 export function runMacroExpansionWorker(
   program: Program,
   compilerOptions: CompilerOptions,
@@ -172,33 +164,7 @@ export function runMacroExpansionWorker(
   macroBenchmarkMs: number | undefined,
   options: MacroWorkerOptions = {},
 ): Promise<MacroWorkerResult> {
-  return new Promise<MacroWorkerResult>((resolve, reject) => {
-    macroWorkerQueue.push({
-      start: () => {
-        activeMacroWorkerCount++;
-        void startMacroExpansionWorker(program, compilerOptions, projectReferences, macroTimeoutMs, macroBenchmarkMs, options)
-          .then(resolve, reject)
-          .finally(() => {
-            activeMacroWorkerCount--;
-            scheduleMacroWorkers();
-          });
-      },
-    });
-    scheduleMacroWorkers();
-  });
-}
-
-function scheduleMacroWorkers(): void {
-  if (maximumMacroWorkerCount === undefined) {
-    const os = require("node:os") as typeof import("node:os");
-    const availableParallelism = os.availableParallelism?.() ?? os.cpus().length;
-    maximumMacroWorkerCount = Math.max(1, Math.min(4, availableParallelism));
-  }
-  while (activeMacroWorkerCount < maximumMacroWorkerCount) {
-    const task = macroWorkerQueue.shift();
-    if (!task) return;
-    task.start();
-  }
+  return scheduleAnalysisWorker("compiler-analysis", () => startMacroExpansionWorker(program, compilerOptions, projectReferences, macroTimeoutMs, macroBenchmarkMs, options));
 }
 
 function startMacroExpansionWorker(
