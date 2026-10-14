@@ -53,7 +53,7 @@ tspp --init
 | `newtypeDeclarations` | `newtype` 名义类型声明与对应构造器 | 无 | 是 | 否（生成运行时构造器） |
 | `dataDeclarations` | `data` 可辨识联合声明与对应变体构造器 | 无 | 是 | 否（生成运行时变体值与构造器） |
 | `formalContracts` | 由 Z3 验证的 `requires`、`ensures` 和 `while` 循环不变式 | 无 | 是 | 是 |
-| `standardLibraryPredicates` | 标准库整数谓词 `isEven`、`isOdd`、`isPositive`、`isNonNegative`、`isZero`、`divides`、`between` | `formalContracts` | 是 | 是 |
+| `standardLibraryPredicates` | 标准库数值谓词 `isEven`、`isOdd`、`isPositive`、`isNonNegative`、`isZero`、`divides`、`between`；`number` 需设置 `numberModel: "mathematical-real"` | `formalContracts` | 是 | 是 |
 | `refinementTypes` | 由 Z3 验证结构类型别名引入点的谓词 | `formalContracts` | 是 | 是 |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |
 | `dependentFunctionTypes` | Pi 类型，以及显式的 `Lam`/`Ann` MLTT 项 | `typeUniverses` | 是 | 是 |

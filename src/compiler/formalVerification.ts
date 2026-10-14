@@ -29,6 +29,7 @@ import {
 import { forEachChild } from "./parser.js";
 import {
   getStandardPredicateDefinition,
+  type StandardPredicateDefinition,
   type StandardPredicateName,
 } from "./standardPredicates.js";
 import {
@@ -748,6 +749,77 @@ function getStandardPredicateName(expression: CallExpression): StandardPredicate
   return getStandardPredicateDefinition(idText(expression.expression))?.name;
 }
 
+function zeroForSort(sort: VerificationSort): VerificationExpression {
+  return sort === "Real" ? verificationReal("0") : verificationInteger("0");
+}
+
+function integerExpression(term: Term): VerificationExpression {
+  return term.sort === "Int" ? term.expression : verificationApplication("to_int", term.expression);
+}
+
+function constrainToInteger(term: Term, expression: VerificationExpression): VerificationExpression {
+  return term.sort === "Int" ? expression : verificationApplication("and", verificationApplication("is_int", term.expression), expression);
+}
+
+function translateStandardPredicateForReal(
+  name: StandardPredicateName,
+  definition: StandardPredicateDefinition,
+  argumentTerms: readonly Term[],
+): Term | string {
+  if (argumentTerms.some(argument => argument.sort !== "Real")) {
+    return `Standard predicate '${name}' requires arguments of the same numeric type.`;
+  }
+  switch (definition.kind) {
+    case "even":
+    case "odd": {
+      const value = argumentTerms[0];
+      const parity = verificationApplication(
+        "=",
+        verificationApplication("mod", integerExpression(value), verificationInteger("2")),
+        definition.kind === "even" ? verificationInteger("0") : verificationInteger("1"),
+      );
+      return {
+        sort: "Bool",
+        expression: constrainToInteger(value, parity),
+      };
+    }
+    case "positive":
+      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
+    case "nonNegative":
+      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
+    case "zero":
+      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
+    case "divides": {
+      const [divisor, value] = argumentTerms;
+      return {
+        sort: "Bool",
+        expression: verificationApplication(
+          "and",
+          verificationApplication("is_int", divisor.expression),
+          verificationApplication("is_int", value.expression),
+          verificationApplication("not", verificationApplication("=", divisor.expression, zeroForSort(divisor.sort))),
+          verificationApplication(
+            "=",
+            verificationApplication("mod", integerExpression(value), integerExpression(divisor)),
+            verificationInteger("0"),
+          ),
+        ),
+      };
+    }
+    case "between":
+      return {
+        sort: "Bool",
+        expression: verificationApplication(
+          "and",
+          verificationApplication(">=", argumentTerms[0].expression, argumentTerms[1].expression),
+          verificationApplication("<=", argumentTerms[0].expression, argumentTerms[2].expression),
+        ),
+      };
+    default:
+      return `Unsupported standard predicate '${name}'.`;
+  }
+}
+
 function translateStandardPredicate(
   context: VerificationContext,
   state: SymbolicState,
@@ -764,8 +836,11 @@ function translateStandardPredicate(
   for (const argument of expression.arguments) {
     const term = translateExpression(context, state, argument);
     if (typeof term === "string") return term;
-    if (term.sort !== "Int") return `Standard predicate '${name}' requires bigint arguments.`;
+    if (!isVerificationNumericSort(term.sort)) return `Standard predicate '${name}' requires bigint or number arguments.`;
     argumentTerms.push(term);
+  }
+  if (argumentTerms.some(term => term.sort === "Real")) {
+    return translateStandardPredicateForReal(name, definition, argumentTerms);
   }
 
   switch (definition.kind) {

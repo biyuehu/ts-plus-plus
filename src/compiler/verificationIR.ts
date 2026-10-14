@@ -51,6 +51,8 @@ export type VerificationOperator =
   | "-"
   | "*"
   | "mod"
+  | "is_int"
+  | "to_int"
   | "="
   | "<"
   | "<="
