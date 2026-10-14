@@ -1195,6 +1195,8 @@ import {
   mlttTrue,
   MlttTypeError,
   mlttTypeMatch,
+  MlttTypeMatchCapture,
+  MlttTypePatternMatch,
   mlttUniverse,
   mlttVariable,
   mlttZero,
@@ -20499,6 +20501,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getTypeFromInferTypeNode(node: InferTypeNode): Type {
+    if (currentMlttTypeBindings) {
+      const name = idText(node.typeParameter.name);
+      const binding = currentMlttTypeBindings.find(binding => binding.name === name);
+      if (binding) return binding.compilerType;
+    }
     const links = getNodeLinks(node);
     if (!links.resolvedType) {
       links.resolvedType = getDeclaredTypeOfTypeParameter(getSymbolOfDeclaration(node.typeParameter));
@@ -21131,10 +21138,24 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             error(caseNode, Diagnostics.Invalid_MLTT_type_Colon_0, "Each non-final 'TypeMatch' branch must be Case<Pattern, Result>.");
             return undefined;
           }
-          const pattern = getMlttTermFromTypeNode(caseNode.typeArguments[0], scope);
-          const result = getMlttTermFromTypeNode(caseNode.typeArguments[1], scope);
+          const patternNode = caseNode.typeArguments[0];
+          const captureNames: string[] = [];
+          if (!collectMlttTypePatternCaptures(patternNode, captureNames)) return undefined;
+          if (captureNames.length && !isTypeReferenceNode(patternNode)) {
+            error(patternNode, Diagnostics.Invalid_MLTT_type_Colon_0, "A capturing type pattern must be a generic type reference such as Array<infer T>.");
+            return undefined;
+          }
+          let caseScope = scope;
+          let captures: MlttTypeMatchCapture[] = [];
+          for (const captureName of captureNames) {
+            const binding = createMlttTypeBinding(captureName, caseScope.length);
+            caseScope = [binding, ...caseScope];
+            captures = [{ name: captureName, type: mlttUniverse(0) }, ...captures];
+          }
+          const pattern = getMlttTermFromTypeNode(patternNode, caseScope);
+          const result = getMlttTermFromTypeNode(caseNode.typeArguments[1], caseScope);
           if (!pattern || !result) return undefined;
-          cases.push({ pattern, result });
+          cases.push({ pattern, captures, result });
         }
         const defaultNode = reference.typeArguments[reference.typeArguments.length - 1];
         if (!isTypeReferenceNode(defaultNode) || !isIdentifier(defaultNode.typeName) || idText(defaultNode.typeName) !== "Default" || defaultNode.typeArguments?.length !== 1) {
@@ -21342,12 +21363,44 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     scope: readonly MlttTypeBinding[],
     result: Set<MlttTypeBinding>,
   ): void {
+    if (node.kind === SyntaxKind.InferType) {
+      const name = idText((node as InferTypeNode).typeParameter.name);
+      const binding = scope.find(binding => binding.name === name);
+      if (binding) result.add(binding);
+      return;
+    }
     if (isTypeReferenceNode(node) && isIdentifier(node.typeName)) {
       const name = idText(node.typeName);
       const binding = scope.find(binding => binding.name === name);
       if (binding) result.add(binding);
     }
     forEachChild(node, child => collectMlttBindingsReferencedInTypeNode(child, scope, result));
+  }
+
+  function collectMlttTypePatternCaptures(node: TypeNode, names: string[]): boolean {
+    let valid = true;
+    visit(node);
+    return valid;
+
+    function visit(current: Node): void {
+      if (current.kind === SyntaxKind.InferType) {
+        const inferType = current as InferTypeNode;
+        const name = idText(inferType.typeParameter.name);
+        if (inferType.typeParameter.constraint) {
+          error(inferType, Diagnostics.Invalid_MLTT_type_Colon_0, "Type-match captures do not support constraints yet.");
+          valid = false;
+        }
+        if (names.includes(name)) {
+          error(inferType.typeParameter.name, Diagnostics.Invalid_MLTT_type_Colon_0, `Duplicate type-match capture '${name}'. Refer to '${name}' without 'infer' after its first capture.`);
+          valid = false;
+        }
+        else {
+          names.push(name);
+        }
+        return;
+      }
+      forEachChild(current, visit);
+    }
   }
 
   function checkMlttExternalUnionOrIntersectionKinds(type: Type, node: TypeNode): boolean {
@@ -21391,9 +21444,130 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const rightType = rightIdentity.parameters.length
       ? instantiateType(rightIdentity.type, createTypeMapper(rightIdentity.parameters, leftIdentity.parameters))
       : rightIdentity.type;
-    if (isTypeIdenticalTo(leftIdentity.type, rightType)) return true;
-    if ((leftIdentity.type.flags | rightType.flags) & (TypeFlags.Any | TypeFlags.Unknown)) return false;
-    return isTypeAssignableTo(leftIdentity.type, rightType) && isTypeAssignableTo(rightType, leftIdentity.type);
+    return areMlttExternalTypesConstructorEqual(leftIdentity.type, rightType);
+  }
+
+  /**
+   * MLTT external types are transparent through aliases, but nominal at generic
+   * constructor boundaries. TypeScript assignability is deliberately not used:
+   * two independently declared generic interfaces may have the same members
+   * without denoting the same type constructor.
+   */
+  function areMlttExternalTypesConstructorEqual(left: Type, right: Type): boolean {
+    if (left === right) return true;
+    const leftIsReference = !!(getObjectFlags(left) & ObjectFlags.Reference);
+    const rightIsReference = !!(getObjectFlags(right) & ObjectFlags.Reference);
+    if (leftIsReference || rightIsReference) {
+      if (!leftIsReference || !rightIsReference) return false;
+      const leftReference = left as TypeReference;
+      const rightReference = right as TypeReference;
+      if (leftReference.target !== rightReference.target) return false;
+      const leftArguments = getTypeArguments(leftReference);
+      const rightArguments = getTypeArguments(rightReference);
+      return leftArguments.length === rightArguments.length &&
+        leftArguments.every((argument, index) => areMlttExternalTypesConstructorEqual(argument, rightArguments[index]));
+    }
+    if (left.flags & TypeFlags.Object && right.flags & TypeFlags.Object) {
+      const leftObject = left as ObjectType;
+      const rightObject = right as ObjectType;
+      const namedFlags = ObjectFlags.ClassOrInterface;
+      if ((leftObject.objectFlags | rightObject.objectFlags) & namedFlags) {
+        return !!(leftObject.objectFlags & namedFlags) &&
+          !!(rightObject.objectFlags & namedFlags) &&
+          left.symbol === right.symbol;
+      }
+    }
+    return isTypeIdenticalTo(left, right);
+  }
+
+  function matchMlttExternalPattern(
+    scrutinee: MlttExternal,
+    pattern: MlttExternal,
+    captures: readonly MlttTypeMatchCapture[],
+  ): MlttTypePatternMatch {
+    const scrutineeType = instantiateMlttExternalType(scrutinee);
+    const patternIdentity = pattern.identity as MlttExternalIdentity | undefined;
+    if (!scrutineeType || !patternIdentity) return { kind: "stuck" };
+    if (scrutineeType.flags & TypeFlags.Any) return { kind: "stuck" };
+
+    const captureParameters: TypeParameter[] = Array(captures.length);
+    const patternArguments: Type[] = [];
+    for (let index = 0; index < patternIdentity.parameters.length; index++) {
+      const argument = pattern.arguments[index];
+      if (argument?.kind === "variable" && argument.index < captures.length) {
+        const parameter = patternIdentity.parameters[index];
+        captureParameters[argument.index] = parameter;
+        patternArguments.push(parameter);
+        continue;
+      }
+      const argumentType = argument && getCompilerTypeFromMlttTerm(argument, emptyArray);
+      if (!argumentType) return { kind: "stuck" };
+      patternArguments.push(argumentType);
+    }
+    if (captures.some((_capture, index) => !captureParameters[index])) return { kind: "apart" };
+
+    const patternType = instantiateType(patternIdentity.type, createTypeMapper(patternIdentity.parameters, patternArguments));
+    const inferredTypes: (Type | undefined)[] = Array(captures.length);
+    const result = matchCompilerTypePattern(scrutineeType, patternType);
+    if (result !== "matched") return { kind: result };
+    if (inferredTypes.some(type => !type)) return { kind: "apart" };
+
+    return {
+      kind: "matched",
+      captures: (inferredTypes as Type[]).map(type =>
+        mlttExternal(
+          typeToString(type, /*enclosingDeclaration*/ undefined, TypeFormatFlags.NoTruncation),
+          typeToString(type, /*enclosingDeclaration*/ undefined, TypeFormatFlags.NoTruncation),
+          emptyArray,
+          mlttUniverse(0),
+          { type, parameters: emptyArray } satisfies MlttExternalIdentity,
+        )
+      ),
+    };
+
+    function matchCompilerTypePattern(subject: Type, currentPattern: Type): "matched" | "apart" | "stuck" {
+      const captureIndex = captureParameters.indexOf(currentPattern as TypeParameter);
+      if (captureIndex >= 0) {
+        const previous = inferredTypes[captureIndex];
+        if (!previous) {
+          inferredTypes[captureIndex] = subject;
+          return "matched";
+        }
+        return areMlttExternalTypesConstructorEqual(previous, subject) ? "matched" : "apart";
+      }
+
+      if (subject.flags & (TypeFlags.Any | TypeFlags.TypeParameter | TypeFlags.Conditional | TypeFlags.IndexedAccess)) {
+        return "stuck";
+      }
+
+      const subjectIsReference = !!(getObjectFlags(subject) & ObjectFlags.Reference);
+      const patternIsReference = !!(getObjectFlags(currentPattern) & ObjectFlags.Reference);
+      if (subjectIsReference || patternIsReference) {
+        if (!subjectIsReference || !patternIsReference) return "apart";
+        const subjectReference = subject as TypeReference;
+        const patternReference = currentPattern as TypeReference;
+        if (subjectReference.target !== patternReference.target) return "apart";
+        const subjectArguments = getTypeArguments(subjectReference);
+        const patternArguments = getTypeArguments(patternReference);
+        if (subjectArguments.length !== patternArguments.length) return "apart";
+        for (let index = 0; index < subjectArguments.length; index++) {
+          const argumentResult = matchCompilerTypePattern(subjectArguments[index], patternArguments[index]);
+          if (argumentResult !== "matched") return argumentResult;
+        }
+        return "matched";
+      }
+
+      return areMlttExternalTypesConstructorEqual(subject, currentPattern) ? "matched" : "apart";
+    }
+  }
+
+  function instantiateMlttExternalType(term: MlttExternal): Type | undefined {
+    const identity = term.identity as MlttExternalIdentity | undefined;
+    if (!identity) return undefined;
+    const instantiatedArguments = term.arguments.map(argument => getCompilerTypeFromMlttTerm(argument, emptyArray));
+    return some(instantiatedArguments, argument => !argument)
+      ? undefined
+      : instantiateType(identity.type, createTypeMapper(identity.parameters, instantiatedArguments as Type[]));
   }
 
   interface MlttSignatureBinder {
@@ -21458,7 +21632,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       return true;
     }
     const signatureTerm = getMlttTermFromSignature(signatures[0]);
-    return !!signatureTerm && areMlttTermsDefinitionallyEqual(dependent.mlttTerm, signatureTerm, compareMlttExternalTerms);
+    return !!signatureTerm && areMlttTermsDefinitionallyEqual(dependent.mlttTerm, signatureTerm, compareMlttExternalTerms, matchMlttExternalPattern);
   }
 
   function getCallSignatureFromDependentFunctionType(type: DependentFunctionType): Signature | undefined {
@@ -21591,10 +21765,48 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       return getMlttConditionalType(scrutinee, regularTrueType, trueCase, falseCase, scope, /*isDistributive*/ true);
     }
     if (term.kind === "type-match") {
+      const normalized = weakHeadNormalizeMltt(term, compareMlttExternalTerms, matchMlttExternalPattern);
+      if (normalized.kind !== "type-match") return getCompilerTypeFromMlttTerm(normalized, scope);
       let fallback = getCompilerTypeFromMlttTerm(term.defaultCase, scope);
       if (!fallback) return undefined;
       for (let index = term.cases.length - 1; index >= 0; index--) {
         const matchCase = term.cases[index];
+        const captures = matchCase.captures ?? [];
+        if (captures.length) {
+          const patternIdentity = matchCase.pattern.kind === "external" && matchCase.pattern.identity as MlttExternalIdentity | undefined;
+          if (!patternIdentity || matchCase.pattern.kind !== "external") return undefined;
+          const captureParameters: TypeParameter[] = Array(captures.length);
+          for (let parameterIndex = 0; parameterIndex < patternIdentity.parameters.length; parameterIndex++) {
+            const argument = matchCase.pattern.arguments[parameterIndex];
+            if (argument?.kind === "variable" && argument.index < captures.length) {
+              captureParameters[argument.index] = patternIdentity.parameters[parameterIndex];
+            }
+          }
+          if (captures.some((_capture, captureIndex) => !captureParameters[captureIndex])) return undefined;
+          const captureScope: MlttTypeBinding[] = [
+            ...captures.map((capture, captureIndex) => ({
+              name: capture.name,
+              placeholderName: capture.name,
+              compilerType: captureParameters[captureIndex],
+            })),
+            ...scope,
+          ];
+          const scrutinee = getCompilerTypeFromMlttTerm(term.scrutinee, scope);
+          const pattern = getCompilerTypeFromMlttTerm(matchCase.pattern, captureScope);
+          const matching = getCompilerTypeFromMlttTerm(matchCase.result, captureScope);
+          if (!scrutinee || !pattern || !matching) return undefined;
+          const reverse = getMlttConditionalType(pattern, scrutinee, matching, fallback, captureScope, /*isDistributive*/ false);
+          fallback = getMlttConditionalType(
+            scrutinee,
+            pattern,
+            reverse,
+            fallback,
+            scope,
+            /*isDistributive*/ false,
+            captureParameters,
+          );
+          continue;
+        }
         const comparison = compareMlttTermsDefinitionally(term.scrutinee, matchCase.pattern, compareMlttExternalTerms);
         if (comparison === "equal") {
           fallback = getCompilerTypeFromMlttTerm(matchCase.result, scope);
@@ -21643,6 +21855,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     falseType: Type,
     scope: readonly MlttTypeBinding[],
     isDistributive: boolean,
+    inferTypeParameters?: TypeParameter[],
   ): Type {
     const checkTypeNode = factory.createTypeReferenceNode("__mltt_check", /*typeArguments*/ undefined);
     const extendsTypeNode = factory.createTypeReferenceNode("__mltt_extends", /*typeArguments*/ undefined);
@@ -21664,7 +21877,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       checkType,
       extendsType,
       isDistributive,
-      inferTypeParameters: undefined,
+      inferTypeParameters,
       outerTypeParameters,
       instantiations: undefined,
       aliasSymbol: undefined,
@@ -23572,6 +23785,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           (source as DependentFunctionType).mlttTerm,
           (target as DependentFunctionType).mlttTerm,
           compareMlttExternalTerms,
+          matchMlttExternalPattern,
         );
       }
       if (!hasTsppFeature(compilerOptions, "dependentFunctionInterop")) return false;
@@ -44331,7 +44545,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function checkInferType(node: InferTypeNode) {
-    if (!findAncestor(node, n => n.parent && n.parent.kind === SyntaxKind.ConditionalType && (n.parent as ConditionalTypeNode).extendsType === n)) {
+    if (
+      !findAncestor(node, n => n.parent && n.parent.kind === SyntaxKind.ConditionalType && (n.parent as ConditionalTypeNode).extendsType === n) &&
+      !isInferTypeInMlttTypeMatchPattern(node)
+    ) {
       grammarErrorOnNode(node, Diagnostics.infer_declarations_are_only_permitted_in_the_extends_clause_of_a_conditional_type);
     }
     checkSourceElement(node.typeParameter);
@@ -44352,6 +44569,20 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
     }
     registerForUnusedIdentifiersCheck(node);
+  }
+
+  function isInferTypeInMlttTypeMatchPattern(node: InferTypeNode): boolean {
+    const inferSourceFileName = getSourceFileOfNode(node).fileName;
+    if (
+      !hasTsppFeature(compilerOptions, "typeMatching") ||
+      !fileExtensionIs(inferSourceFileName, Extension.Tspp) && !fileExtensionIs(inferSourceFileName, Extension.Dtspp)
+    ) return false;
+    const caseNode = findAncestor(node.parent, current => isTypeReferenceNode(current) && isIdentifier(current.typeName) && idText(current.typeName) === "Case") as TypeReferenceNode | undefined;
+    if (!caseNode?.typeArguments || caseNode.typeArguments.length !== 2) return false;
+    const pattern = caseNode.typeArguments[0];
+    if (node.pos < pattern.pos || node.end > pattern.end) return false;
+    const matchNode = caseNode.parent;
+    return isTypeReferenceNode(matchNode) && isIdentifier(matchNode.typeName) && idText(matchNode.typeName) === "TypeMatch";
   }
 
   function checkTemplateLiteralType(node: TemplateLiteralTypeNode) {

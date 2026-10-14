@@ -91,6 +91,30 @@ describe("unittests:: MLTT core", () => {
     assert.deepEqual(mltt.normalizeMlttTerm(applied), mltt.mlttNatType());
   });
 
+  it("substitutes captures produced by an external type pattern", () => {
+    const stringType = mltt.mlttExternal("string", "string", [], type0);
+    const arrayOfString = mltt.mlttExternal("Array<string>", "Array<string>", [], type0);
+    const arrayPattern = mltt.mlttExternal("Array<$0>", "Array<infer T>", [mltt.mlttVariable(0)], type0);
+    const match = mltt.mlttTypeMatch(
+      arrayOfString,
+      [{
+        pattern: arrayPattern,
+        captures: [{ name: "T", type: type0 }],
+        result: mltt.mlttVariable(0),
+      }],
+      mltt.mlttBoolType(),
+    );
+
+    assert.deepEqual(
+      mltt.normalizeMlttTerm(
+        match,
+        /*compareExternal*/ undefined,
+        () => ({ kind: "matched", captures: [stringType] }),
+      ),
+      stringType,
+    );
+  });
+
   it("requires every type-match result to inhabit the same universe", () => {
     assertMlttError(
       () =>

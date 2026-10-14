@@ -85,7 +85,71 @@ export const matchedNumber = matchRuntimeValue(runtimeNumber);   // string
 export const matchedDefault = matchRuntimeValue(runtimeBoolean); // boolean
 
 // -----------------------------------------------------------------------------
-// 4. union 作为一个整体参与匹配
+// 4. infer 在匹配成功时解构泛型参数
+// -----------------------------------------------------------------------------
+//
+// Case 中的 infer T 引入一个只在该分支结果中可见的类型 binder。
+// 匹配会先展开透明 type alias，再检查泛型构造器身份并递归匹配参数；
+// Array<string> 匹配 Array<infer T> 时，T 被捕获为 string。
+
+export type ElementOrSelf: Type1 =
+  (A: Type0) ->
+  TypeMatch<
+    A,
+    Case<Array<infer T>, T>,
+    Default<A>
+  >;
+
+// pattern 可以嵌套；这里仅匹配恰好具有 Promise<Array<T>> 形状的类型。
+export type NestedElementOrSelf: Type1 =
+  (A: Type0) ->
+  TypeMatch<
+    A,
+    Case<Promise<Array<infer T>>, T>,
+    Default<A>
+  >;
+
+// 捕获仍遵守 equal / apart / stuck：开放的 A 不会提前走 Default，
+// 而是在调用点获得实际类型后再决定并代入 T。
+export type FirstArrayElement: Type1 =
+  (A: Type0) ->
+  (value: A) ->
+  TypeMatch<
+    A,
+    Case<Array<infer T>, T>,
+    Default<A>
+  >;
+
+export declare const firstArrayElement: FirstArrayElement;
+
+declare let textArray: Array<string>;
+declare let notArray: Date;
+export const inferredElement = firstArrayElement(textArray); // string
+export const inferredFallback = firstArrayElement(notArray); // Date
+
+// “构造器相同”比 TypeScript 的结构可赋值更严格：tuple、ReadonlyArray、
+// Array 的子接口和交叉类型都不是恰好一个 Array<T>，因此不会被解构。
+// 但 type alias 是透明的，别名展开后仍然是同一个 Array 构造器。
+type TextArrayAlias = Array<string>;
+interface TaggedArray<T> extends Array<T> { readonly tag: "tagged" }
+declare let aliasedTextArray: TextArrayAlias;
+declare let readonlyTextArray: ReadonlyArray<string>;
+declare let textTuple: [string];
+declare let taggedTextArray: TaggedArray<string>;
+declare let intersectedTextArray: Array<string> & { readonly tag: "tagged" };
+
+export const inferredThroughAlias = firstArrayElement(aliasedTextArray);       // string
+export const readonlyArrayFallback = firstArrayElement(readonlyTextArray);     // ReadonlyArray<string>
+export const tupleFallback = firstArrayElement(textTuple);                     // [string]
+export const derivedConstructorFallback = firstArrayElement(taggedTextArray);  // TaggedArray<string>
+export const intersectionFallback = firstArrayElement(intersectedTextArray);   // Array<string> & { tag: "tagged" }
+
+// 上面这些调用会投影为 TypeScript conditional type；对这些常见构造器结果与
+// 内核一致。不过声明桥接无法编码构造器身份：两个成员完全相同、声明却不同的
+// 泛型接口，可能被 TypeScript 结构类型系统视为匹配。核心 TypeMatch 没有此假阳性。
+
+// -----------------------------------------------------------------------------
+// 5. union 作为一个整体参与匹配
 // -----------------------------------------------------------------------------
 //
 // 精确匹配不会像裸 TypeScript conditional type 那样自动分发 union。
