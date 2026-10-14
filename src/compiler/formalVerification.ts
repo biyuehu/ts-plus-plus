@@ -30,6 +30,7 @@ import { forEachChild } from "./parser.js";
 import {
   getStandardPredicateDefinition,
   type StandardPredicateDefinition,
+  standardPredicateDefinitions,
   type StandardPredicateName,
 } from "./standardPredicates.js";
 import {
@@ -108,6 +109,8 @@ import { runVerificationQueries } from "./verificationWorker.js";
 
 type Sort = VerificationSort;
 type Term = VerificationTerm;
+
+const standardPredicateNames = new Set<string>(standardPredicateDefinitions.map(definition => definition.name));
 
 export interface FormalVerificationResult {
   readonly artifacts: readonly VerificationArtifact[];
@@ -746,7 +749,8 @@ function translateCallExpression(context: VerificationContext, state: SymbolicSt
 
 function getStandardPredicateName(expression: CallExpression): StandardPredicateName | undefined {
   if (!isIdentifier(expression.expression)) return undefined;
-  return getStandardPredicateDefinition(idText(expression.expression))?.name;
+  const name = idText(expression.expression);
+  return standardPredicateNames.has(name) ? getStandardPredicateDefinition(name)?.name : undefined;
 }
 
 function zeroForSort(sort: VerificationSort): VerificationExpression {
