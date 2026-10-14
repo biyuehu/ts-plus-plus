@@ -3,6 +3,7 @@ import {
   addInternalEmitFlags,
   addRange,
   addRelatedInfo,
+  AnalysisTaskReason,
   append,
   arrayIsEqualTo,
   AsExpression,
@@ -2232,7 +2233,7 @@ function arrayToMultiMap<T, K>(values: readonly T[], keySelector: (value: T) => 
 
 /** Creates a program and waits for compile-time macros that return promises. */
 export async function createProgramAsync(createProgramOptions: CreateProgramOptions): Promise<Program> {
-  const { rootNames, options, projectReferences, configFileParsingDiagnostics, typeScriptVersion } = createProgramOptions;
+  const { rootNames, options, projectReferences, configFileParsingDiagnostics, typeScriptVersion, cancellationToken } = createProgramOptions;
   const host = createProgramOptions.host ?? createCompilerHost(options, /*setParentNodes*/ true);
   let initialProgram: Program;
   macroExpansionDepth++;
@@ -2246,13 +2247,13 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
   finally {
     macroExpansionDepth--;
   }
-  if (!hasTsppFeature(options, "macros")) return attachFormalVerification(initialProgram, host);
+  if (!hasTsppFeature(options, "macros")) return attachFormalVerification(initialProgram, host, cancellationToken);
 
   let expansionPromise: Promise<MacroExpansionResult>;
   macroExpansionDepth++;
   try {
     expansionPromise = !host.disableMacroWorkers && canUseMacroWorkers()
-      ? runMacroExpansionWorker(initialProgram, options, projectReferences, host.macroTimeoutMs, host.macroBenchmarkMs).then(
+      ? runMacroExpansionWorker(initialProgram, options, projectReferences, host.macroTimeoutMs, host.macroBenchmarkMs, /*options*/ undefined, cancellationToken).then(
         result => restoreMacroWorkerResult(initialProgram, result),
         error => error instanceof MacroWorkerError ? macroWorkerFailureResult(initialProgram, error) : Promise.reject(error),
       )
@@ -2262,7 +2263,8 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
     macroExpansionDepth--;
   }
   const expansion = await expansionPromise;
-  if (!expansion.sourceFiles.size) return attachFormalVerification(initialProgram, host);
+  cancellationToken?.throwIfCancellationRequested();
+  if (!expansion.sourceFiles.size) return attachFormalVerification(initialProgram, host, cancellationToken);
 
   const expandedHost = Object.create(host) as CompilerHost;
   expandedHost.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
@@ -2294,6 +2296,7 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
       projectReferences,
       configFileParsingDiagnostics,
       typeScriptVersion,
+      cancellationToken,
     });
   }
   finally {
@@ -2327,12 +2330,12 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
       return [...original(sourceFile, ...args), ...own];
     };
   }
-  return attachFormalVerification(expandedProgram, host);
+  return attachFormalVerification(expandedProgram, host, cancellationToken);
 }
 
-async function attachFormalVerification(program: Program, host: CompilerHost): Promise<Program> {
+async function attachFormalVerification(program: Program, host: CompilerHost, cancellationToken?: CancellationToken): Promise<Program> {
   if (!hasTsppFeature(program.getCompilerOptions(), "formalContracts")) return program;
-  const verification = await verifyFormalContracts(program);
+  const verification = await verifyFormalContracts(program, cancellationToken);
   return attachFormalVerificationArtifacts(program, verification.artifacts, host);
 }
 
@@ -2403,7 +2406,7 @@ export function createProgram(createProgramOptions: CreateProgramOptions): Progr
 export function createProgram(rootNames: readonly string[], options: CompilerOptions, host?: CompilerHost, oldProgram?: Program, configFileParsingDiagnostics?: readonly Diagnostic[]): Program;
 export function createProgram(_rootNamesOrOptions: readonly string[] | CreateProgramOptions, _options?: CompilerOptions, _host?: CompilerHost, _oldProgram?: Program, _configFileParsingDiagnostics?: readonly Diagnostic[]): Program {
   let _createProgramOptions = isArray(_rootNamesOrOptions) ? createCreateProgramOptions(_rootNamesOrOptions, _options!, _host, _oldProgram, _configFileParsingDiagnostics) : _rootNamesOrOptions; // TODO: GH#18217
-  const { rootNames, options, configFileParsingDiagnostics, projectReferences, typeScriptVersion, host: createProgramOptionsHost } = _createProgramOptions;
+  const { rootNames, options, configFileParsingDiagnostics, projectReferences, typeScriptVersion, cancellationToken, host: createProgramOptionsHost } = _createProgramOptions;
   let { oldProgram } = _createProgramOptions;
   // Stop referencing these objects to ensure GC collects them.
   _createProgramOptions = undefined!;
@@ -2894,6 +2897,7 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
           projectReferences,
           configFileParsingDiagnostics,
           typeScriptVersion,
+          cancellationToken,
         });
         expandedProgram.getMacroExpansions = (fileName?: string): readonly MacroExpansion[] => {
           const result: MacroExpansion[] = [];
@@ -2922,7 +2926,7 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
             return [...original(sourceFile, ...args), ...own];
           };
         }
-        return hasTsppFeature(options, "formalContracts") ? attachSynchronousFormalVerification(expandedProgram, host) : expandedProgram;
+        return hasTsppFeature(options, "formalContracts") ? attachSynchronousFormalVerification(expandedProgram, host, cancellationToken) : expandedProgram;
       }
     }
     finally {
@@ -2930,7 +2934,7 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
     }
   }
 
-  return macroExpansionDepth === 0 && hasTsppFeature(options, "formalContracts") ? attachSynchronousFormalVerification(program, host) : program;
+  return macroExpansionDepth === 0 && hasTsppFeature(options, "formalContracts") ? attachSynchronousFormalVerification(program, host, cancellationToken) : program;
 
   function getResolvedModule(file: SourceFile, moduleName: string, mode: ResolutionMode) {
     return resolvedModules?.get(file.path)?.get(moduleName, mode);
@@ -5806,16 +5810,19 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
   }
 }
 
-function attachSynchronousFormalVerification(program: Program, host: CompilerHost): Program {
+function attachSynchronousFormalVerification(program: Program, host: CompilerHost, cancellationToken?: CancellationToken): Program {
   const key = getFormalVerificationKey(program);
   const resolved = host.getResolvedAsyncFormalVerification?.(key);
   if (resolved) return attachFormalVerificationArtifacts(program, resolved, host);
 
   if (host.scheduleAsyncFormalVerification) {
     if (!host.isAsyncFormalVerificationPending?.(key)) {
-      const evaluation = verifyFormalContracts(program).then(
+      const evaluation = verifyFormalContracts(program, cancellationToken).then(
         result => result.artifacts,
-        error => createPlaceholderFormalArtifacts(program, `Formal verification failed: ${error instanceof Error ? error.message : String(error)}`, "error"),
+        error =>
+          error instanceof OperationCanceledException
+            ? createPlaceholderFormalArtifacts(program, "Formal verification was cancelled.", "unknown", "cancelled")
+            : createPlaceholderFormalArtifacts(program, `Formal verification failed: ${error instanceof Error ? error.message : String(error)}`, "error"),
       );
       host.scheduleAsyncFormalVerification(key, evaluation);
     }
@@ -5859,10 +5866,15 @@ function getFormalVerificationKey(program: Program): string {
   return `formal:${(hash >>> 0).toString(16)}`;
 }
 
-function createPlaceholderFormalArtifacts(program: Program, message: string, status: VerificationArtifact["status"] = "unknown"): VerificationArtifact[] {
+function createPlaceholderFormalArtifacts(
+  program: Program,
+  message: string,
+  status: VerificationArtifact["status"] = "unknown",
+  reasonCode?: AnalysisTaskReason["code"],
+): VerificationArtifact[] {
   const artifacts: VerificationArtifact[] = [];
   const checker = program.getTypeChecker();
-  const reason = { code: status === "error" ? "execution-error" as const : "unavailable" as const, message };
+  const reason = { code: reasonCode ?? (status === "error" ? "execution-error" as const : "unavailable" as const), message };
   for (const sourceFile of program.getSourceFiles()) {
     if (sourceFile.isDeclarationFile) continue;
     forEachChildRecursively(sourceFile, node => {

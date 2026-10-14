@@ -1,6 +1,6 @@
 import {
   createAnalysisTaskId,
-  verificationStatusToAnalysisOutcome,
+  verificationResultToAnalysisOutcome,
 } from "./analysisTasks.js";
 import { skipTrivia } from "./scanner.js";
 import {
@@ -42,7 +42,7 @@ export function createVerificationArtifact(
   return {
     taskId: createAnalysisTaskId("verification", sourceFile.fileName, start, length, name),
     taskKind: "verification",
-    outcome: verificationStatusToAnalysisOutcome(status),
+    outcome: verificationResultToAnalysisOutcome(status, reason),
     reason,
     fileName: sourceFile.fileName,
     start,
@@ -65,7 +65,7 @@ export function updateVerificationArtifact(
   return {
     ...artifact,
     ...update,
-    outcome: verificationStatusToAnalysisOutcome(update.status),
+    outcome: verificationResultToAnalysisOutcome(update.status, update.reason),
   };
 }
 

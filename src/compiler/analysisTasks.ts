@@ -40,6 +40,13 @@ export function verificationStatusToAnalysisOutcome(status: VerificationStatus):
   }
 }
 
+/** @internal */
+export function verificationResultToAnalysisOutcome(status: VerificationStatus, reason?: AnalysisTaskReason): AnalysisTaskOutcome {
+  if (reason?.code === "cancelled") return "cancelled";
+  if (reason?.code === "timeout") return "timedOut";
+  return verificationStatusToAnalysisOutcome(status);
+}
+
 /** Resource limits shared by compiler analysis workers. @internal */
 export interface AnalysisWorkerBudget {
   readonly maxOldGenerationSizeMb: number;

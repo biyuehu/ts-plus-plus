@@ -1,18 +1,25 @@
 import {
   isBinaryExpression,
   isBlock,
+  isBreakStatement,
   isCallExpression,
+  isCaseClause,
+  isDataVariant,
   isEmptyStatement,
   isExpressionStatement,
   isFunctionDeclaration,
   isIdentifier,
   isIfStatement,
   isNewtypeDeclaration,
+  isObjectLiteralExpression,
   isParenthesizedExpression,
   isPrefixUnaryExpression,
   isPropertyAccessExpression,
+  isPropertyAssignment,
   isReturnStatement,
+  isShorthandPropertyAssignment,
   isStringLiteral,
+  isSwitchStatement,
   isTypeAliasDeclaration,
   isTypeReferenceNode,
   isVariableDeclaration,
@@ -23,15 +30,19 @@ import { forEachChild } from "./parser.js";
 import {
   Block,
   CallExpression,
+  CancellationToken,
+  DataVariant,
   Diagnostic,
   Expression,
   FunctionDeclaration,
   Identifier,
   NewtypeDeclaration,
   Node,
+  ObjectLiteralExpression,
   Program,
   SourceFile,
   Statement,
+  SwitchStatement,
   SymbolFlags,
   SyntaxKind,
   Type,
@@ -48,19 +59,26 @@ import {
   isFunctionLike,
 } from "./utilitiesPublic.js";
 import {
+  createVerificationConstant as freshConstant,
+  createVerificationContext,
+  VerificationContext,
+} from "./verificationContext.js";
+import {
   isVerificationNumericSort,
   verificationApplication,
   verificationBoolean,
-  verificationConstant,
+  verificationConstruct,
   VerificationExpression,
   verificationInteger,
   verificationIsVariant,
   VerificationProblem,
+  VerificationProductSort,
   verificationReal,
   verificationSelect,
   VerificationSort,
   verificationSortsEqual,
   verificationString,
+  VerificationSumSort,
   VerificationTerm,
 } from "./verificationIR.js";
 import {
@@ -85,16 +103,6 @@ import { runVerificationQueries } from "./verificationWorker.js";
 
 type Sort = VerificationSort;
 type Term = VerificationTerm;
-interface VerificationContext {
-  readonly checker: TypeChecker;
-  readonly sourceFile: SourceFile;
-  readonly declaration: FunctionDeclaration | NewtypeDeclaration | TypeAliasDeclaration;
-  readonly declarations: Map<string, Sort>;
-  readonly symbolNames: Map<string, string>;
-  readonly pending: PendingVerificationTask[];
-  readonly numberModel: boolean;
-  freshIndex: number;
-}
 
 export interface FormalVerificationResult {
   readonly artifacts: readonly VerificationArtifact[];
@@ -103,13 +111,16 @@ export interface FormalVerificationResult {
 
 const maximumPaths = 64;
 
-export async function verifyFormalContracts(program: Program): Promise<FormalVerificationResult> {
+export async function verifyFormalContracts(program: Program, cancellationToken?: CancellationToken): Promise<FormalVerificationResult> {
+  cancellationToken?.throwIfCancellationRequested();
   const checker = program.getTypeChecker();
   const pending: PendingVerificationTask[] = [];
   for (const sourceFile of program.getSourceFiles()) {
+    cancellationToken?.throwIfCancellationRequested();
     if (sourceFile.isDeclarationFile) continue;
     analyzeTopLevelCalls(checker, sourceFile, pending);
     visit(sourceFile, node => {
+      cancellationToken?.throwIfCancellationRequested();
       if (!isFunctionDeclaration(node) || !node.body || !needsVerification(checker, node)) return;
       analyzeFunction(checker, sourceFile, node, pending);
     });
@@ -117,7 +128,7 @@ export async function verifyFormalContracts(program: Program): Promise<FormalVer
 
   const queries = pending.filter(item => item.query !== undefined);
   if (queries.length) {
-    const results = await runVerificationQueries(queries.map(item => item.query!));
+    const results = await runVerificationQueries(queries.map(item => item.query!), /*budget*/ undefined, cancellationToken);
     for (let i = 0; i < queries.length; i++) {
       const item = queries[i];
       const result = results[i];
@@ -194,25 +205,6 @@ function analyzeTopLevelCalls(checker: TypeChecker, sourceFile: SourceFile, pend
     });
   };
   visitTopLevel(sourceFile);
-}
-
-function createVerificationContext(
-  checker: TypeChecker,
-  sourceFile: SourceFile,
-  declaration: FunctionDeclaration | NewtypeDeclaration | TypeAliasDeclaration,
-  pending: PendingVerificationTask[],
-  numberModel: boolean,
-): VerificationContext {
-  return {
-    checker,
-    sourceFile,
-    declaration,
-    declarations: new Map(),
-    symbolNames: new Map(),
-    pending,
-    numberModel,
-    freshIndex: 0,
-  };
 }
 
 function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declaration: FunctionDeclaration, pending: PendingVerificationTask[]): void {
@@ -369,7 +361,82 @@ function executeStatement(context: VerificationContext, statement: Statement, st
     return { live: [], returns: [{ state, value: typeof value === "string" ? undefined : value, node: statement }] };
   }
   if (isWhileStatement(statement)) return executeWhile(context, statement, state);
+  if (isSwitchStatement(statement)) return executeSwitch(context, statement, state);
   return unsupportedFlow(state, `Statement kind ${statement.kind} is outside the supported verification subset.`);
+}
+
+function executeSwitch(context: VerificationContext, statement: SwitchStatement, incoming: SymbolicState): FlowResult {
+  let discriminant: Term | undefined;
+  let variantTarget: Term | undefined;
+  if (isPropertyAccessExpression(statement.expression) && idText(statement.expression.name) === "_tag") {
+    const target = translateExpression(context, incoming, statement.expression.expression);
+    if (typeof target === "string") return unsupportedFlow(incoming, target);
+    if (typeof target.sort === "string" || target.sort.kind !== "sum") return unsupportedFlow(incoming, "A switch discriminant '_tag' requires a sum verification type.");
+    variantTarget = target;
+  }
+  else {
+    const translated = translateExpression(context, incoming, statement.expression);
+    if (typeof translated === "string") return unsupportedFlow(incoming, translated);
+    discriminant = translated;
+  }
+  const clauses = statement.caseBlock.clauses;
+  const conditions = new Map<Node, VerificationExpression>();
+  for (const clause of clauses) {
+    if (!isCaseClause(clause)) continue;
+    let condition: VerificationExpression;
+    if (variantTarget) {
+      if (!isStringLiteral(clause.expression)) return unsupportedFlow(incoming, "A switch over '_tag' requires string-literal cases.");
+      const variantName = clause.expression.text;
+      const sumSort = variantTarget.sort as VerificationSumSort;
+      if (!sumSort.variants.some(variant => variant.name === variantName)) return unsupportedFlow(incoming, `Variant '${variantName}' does not belong to verification sort '${sumSort.name}'.`);
+      condition = verificationIsVariant(variantTarget.expression, sumSort, variantName);
+    }
+    else {
+      const caseValue = translateExpression(context, incoming, clause.expression);
+      if (typeof caseValue === "string") return unsupportedFlow(incoming, caseValue);
+      if (!verificationSortsEqual(discriminant!.sort, caseValue.sort)) return unsupportedFlow(incoming, "A switch case has an incompatible verification sort.");
+      condition = verificationApplication("=", discriminant!.expression, caseValue.expression);
+    }
+    conditions.set(clause, condition);
+  }
+  const allConditions = [...conditions.values()];
+  const precedingConditions: VerificationExpression[] = [];
+  let fallthrough: SymbolicState[] = [];
+  const exits: SymbolicState[] = [];
+  const returns: ReturnPath[] = [];
+  for (const clause of clauses) {
+    let direct: SymbolicState;
+    if (isCaseClause(clause)) {
+      const condition = conditions.get(clause)!;
+      direct = cloneState(incoming);
+      direct.facts.push(...precedingConditions.map(previous => verificationApplication("not", previous)), condition);
+      precedingConditions.push(condition);
+    }
+    else {
+      direct = cloneState(incoming);
+      direct.facts.push(...allConditions.map(condition => verificationApplication("not", condition)));
+    }
+    let live = [...fallthrough, direct];
+    for (const clauseStatement of clause.statements) {
+      if (isBreakStatement(clauseStatement)) {
+        if (clauseStatement.label) return unsupportedFlow(incoming, "Labeled break is outside the supported verification subset.");
+        exits.push(...live);
+        live = [];
+        break;
+      }
+      const next: SymbolicState[] = [];
+      for (const state of live) {
+        const result = executeStatement(context, clauseStatement, state);
+        next.push(...result.live);
+        returns.push(...result.returns);
+      }
+      live = next;
+    }
+    fallthrough = live;
+  }
+  const unmatched = clauses.some(clause => !isCaseClause(clause)) ? [] : [cloneState(incoming)];
+  if (unmatched.length) unmatched[0].facts.push(...allConditions.map(condition => verificationApplication("not", condition)));
+  return { live: [...exits, ...fallthrough, ...unmatched], returns };
 }
 
 function executeWhile(context: VerificationContext, statement: WhileStatement, incoming: SymbolicState): FlowResult {
@@ -490,10 +557,13 @@ function executeExpressionStatement(context: VerificationContext, state: Symboli
 function translateExpression(context: VerificationContext, state: SymbolicState, expression: Expression, result?: Term): Term | string {
   if (isParenthesizedExpression(expression)) return translateExpression(context, state, expression.expression, result);
   if (isCallExpression(expression)) return translateCallExpression(context, state, expression, /*resultUsed*/ true);
+  if (isObjectLiteralExpression(expression)) return translateObjectLiteral(context, state, expression, result);
   if (isIdentifier(expression)) {
     const name = idText(expression);
     if (name === "result") return result ?? "The implicit 'result' value is only available on an explicit return path.";
     if (name === "true" || name === "false") return { sort: "Bool", expression: verificationBoolean(name === "true") };
+    const variant = getDataVariantTarget(context.checker, expression);
+    if (variant && !variant.parameters?.length) return translateDataVariant(context, state, variant, [], result);
     return state.values.get(name) ?? `Identifier '${name}' has no supported symbolic value.`;
   }
   if (expression.kind === SyntaxKind.TrueKeyword) return { sort: "Bool", expression: verificationBoolean(/*value*/ true) };
@@ -538,6 +608,61 @@ function translateExpression(context: VerificationContext, state: SymbolicState,
     return { sort: comparison ? "Bool" : left.sort, expression: verificationApplication(operator, left.expression, right.expression) };
   }
   return `Expression '${sourceText(context, expression)}' is outside the supported verification subset.`;
+}
+
+function translateObjectLiteral(
+  context: VerificationContext,
+  state: SymbolicState,
+  expression: ObjectLiteralExpression,
+  result: Term | undefined,
+): Term | string {
+  const contextualType = context.checker.getContextualType(expression) ?? context.checker.getTypeAtLocation(expression);
+  const lowered = lowerVerificationType(context, contextualType);
+  if (verificationTypeLoweringFailed(lowered) || typeof lowered.sort === "string") {
+    return verificationTypeLoweringFailed(lowered) ? lowered.reason : "An object literal requires a structured verification type.";
+  }
+  const values = new Map<string, Expression>();
+  for (const property of expression.properties) {
+    if (isPropertyAssignment(property)) {
+      const name = propertyNameText(property.name);
+      if (!name) return "Computed object-literal properties are outside the supported verification subset.";
+      values.set(name, property.initializer);
+    }
+    else if (isShorthandPropertyAssignment(property)) values.set(idText(property.name), property.name);
+    else return "Object-literal spreads, methods, and accessors are outside the supported verification subset.";
+  }
+  if (lowered.sort.kind === "product") return constructFromFields(context, state, lowered.sort, lowered.sort.fields, values, result);
+  const tagExpression = values.get("_tag");
+  if (!tagExpression || !isStringLiteral(tagExpression)) return `A '${lowered.sort.name}' object literal requires a string-literal '_tag'.`;
+  const variant = lowered.sort.variants.find(candidate => candidate.name === tagExpression.text);
+  if (!variant) return `Variant '${tagExpression.text}' does not belong to verification sort '${lowered.sort.name}'.`;
+  values.delete("_tag");
+  return constructFromFields(context, state, lowered.sort, variant.fields, values, result, variant.name);
+}
+
+function constructFromFields(
+  context: VerificationContext,
+  state: SymbolicState,
+  sort: VerificationProductSort | VerificationSumSort,
+  fields: readonly import("./verificationIR.js").VerificationField[],
+  values: ReadonlyMap<string, Expression>,
+  result: Term | undefined,
+  variant?: string,
+): Term | string {
+  const terms: VerificationExpression[] = [];
+  for (const field of fields) {
+    const expression = values.get(field.name);
+    if (!expression) return `Structured value '${sort.name}' is missing field '${field.name}'.`;
+    const term = translateExpression(context, state, expression, result);
+    if (typeof term === "string") return term;
+    if (!verificationSortsEqual(term.sort, field.sort)) return `Field '${field.name}' has an incompatible verification sort.`;
+    terms.push(term.expression);
+  }
+  return { sort, expression: verificationConstruct(sort, terms, variant) };
+}
+
+function propertyNameText(name: import("./types.js").PropertyName): string | undefined {
+  return isIdentifier(name) || isStringLiteral(name) ? isIdentifier(name) ? idText(name) : name.text : undefined;
 }
 
 function translateVariantCheck(
@@ -605,9 +730,34 @@ function getNarrowedVariantName(checker: TypeChecker, type: Type): string | unde
 function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean): Term | string {
   const refinement = getRefinementTarget(context.checker, expression);
   if (refinement) return verifyRefinementIntroduction(context, state, expression, refinement);
+  const variant = isIdentifier(expression.expression) && getDataVariantTarget(context.checker, expression.expression);
+  if (variant) return translateDataVariant(context, state, variant, expression.arguments, /*result*/ undefined);
   const target = getCallTarget(context.checker, expression);
   if (!target) return `Call '${sourceText(context, expression)}' does not resolve to a supported project function declaration.`;
   return verifyCallPreconditions(context, state, expression, target, resultUsed);
+}
+
+function getDataVariantTarget(checker: TypeChecker, expression: Identifier): DataVariant | undefined {
+  const symbol = checker.getSymbolAtLocation(expression);
+  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+  return target?.declarations?.find(isDataVariant);
+}
+
+function translateDataVariant(
+  context: VerificationContext,
+  state: SymbolicState,
+  variantDeclaration: DataVariant,
+  argumentExpressions: readonly Expression[],
+  result: Term | undefined,
+): Term | string {
+  const lowered = lowerVerificationType(context, context.checker.getTypeAtLocation(variantDeclaration.parent.name));
+  if (verificationTypeLoweringFailed(lowered) || typeof lowered.sort === "string" || lowered.sort.kind !== "sum") {
+    return verificationTypeLoweringFailed(lowered) ? lowered.reason : `Data constructor '${idText(variantDeclaration.name)}' has no supported sum verification type.`;
+  }
+  const variant = lowered.sort.variants.find(candidate => candidate.name === idText(variantDeclaration.name));
+  if (!variant || argumentExpressions.length !== variant.fields.length) return `Data constructor '${idText(variantDeclaration.name)}' has an unsupported argument list.`;
+  const values = new Map(variant.fields.map((field, index) => [field.name, argumentExpressions[index]]));
+  return constructFromFields(context, state, lowered.sort, variant.fields, values, result, variant.name);
 }
 
 function getRefinementTarget(checker: TypeChecker, expression: CallExpression): NewtypeDeclaration | undefined {
@@ -694,7 +844,7 @@ function verifyRefinementTerm(
     numberModel: getNumberModel(target.withClause),
   };
   const expectedSort = getSort(refinementContext, target.type);
-  if (!expectedSort || expectedSort !== argument.sort) {
+  if (!expectedSort || !verificationSortsEqual(expectedSort, argument.sort)) {
     addUnknown(refinementContext, node, "refinement", "refinement-introduction", `${name} refinement`, `Value introduced into refinement type '${name}' has an unsupported or incompatible verification sort.`);
     return;
   }
@@ -762,7 +912,7 @@ function verifyCallPreconditions(
     const parameterName = idText(parameter.name as Identifier);
     const parameterSort = getSort(callContext, parameter.name);
     const argument = argumentTerms[i];
-    if (!parameterSort || parameterSort !== argument.sort) {
+    if (!parameterSort || !verificationSortsEqual(parameterSort, argument.sort)) {
       const reason = `Argument ${i + 1} of '${targetName}' has an unsupported or incompatible verification sort.`;
       for (let requirementIndex = 0; requirementIndex < requires.length; requirementIndex++) {
         addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${requirementIndex + 1}`, reason);
@@ -842,15 +992,6 @@ function getSort(context: VerificationContext, node: Node): Sort | undefined {
 function unsupportedTypeMessage(context: VerificationContext, node: Node): string {
   const lowered = lowerVerificationType(context, context.checker.getTypeAtLocation(node));
   return verificationTypeLoweringFailed(lowered) ? lowered.reason : `Type '${context.checker.typeToString(context.checker.getTypeAtLocation(node))}' could not be lowered for verification.`;
-}
-
-function freshConstant(context: VerificationContext, sourceName: string, sort: Sort): Term {
-  let smtName: string;
-  do smtName = `v${context.freshIndex++}`;
-  while (context.declarations.has(smtName));
-  context.declarations.set(smtName, sort);
-  context.symbolNames.set(smtName, sourceName);
-  return { expression: verificationConstant(smtName, sort), sort };
 }
 
 function addQuery(

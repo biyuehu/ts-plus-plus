@@ -8,12 +8,13 @@
 - [`04-refinement-types.tspp`](./src/04-refinement-types.tspp)：精化类型的引入、控制流证明和谓词传播；
 - [`05-refined-newtype.tspp`](./src/05-refined-newtype.tspp)：在 `newtype` 构造入口应用 `with` 谓词约束。
 - [`06-sum-types.tspp`](./src/06-sum-types.tspp)：把 `data` 和封闭判别联合降低为 Z3 和类型，并复用 TypeScript 的控制流窄化。
+- [`07-recursive-data.tspp`](./src/07-recursive-data.tspp)：递归 `data`、variant 构造器和由 checker 窄化的 `switch`。
 
 ## 积类型、和类型与 TypeScript 控制流
 
 验证器直接读取 TypeScript checker 在当前位置已经得到的窄化类型。带唯一字符串 `_tag` 的封闭判别联合和 TS++ `data` 声明会降低为 Verification IR 和类型，再编码为 Z3 datatype；variant 字段只能在 checker 已经确认对应分支后读取。验证层维护的符号状态只记录 SMT 值和证明事实，不重新实现 TypeScript 的结构兼容或控制流窄化。
 
-首版只接受非递归、字段可完整降低的封闭类型。可选字段、索引签名、开放联合和递归数据会得到明确的 `unknown`，不会通过删除无法编码的部分来伪装成证明成功。
+记录字面量、variant 构造器以及递归代数数据会直接编码成 Z3 datatype 构造项。可选字段、索引签名和开放联合仍会得到明确的 `unknown`，不会通过删除无法编码的部分来伪装成证明成功。`switch (value._tag)` 的分支事实来自 checker 在对应 case 中已经完成的窄化。
 
 ## 函数契约
 

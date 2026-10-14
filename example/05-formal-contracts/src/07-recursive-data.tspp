@@ -1,0 +1,21 @@
+data BigIntList = End | Link(head: bigint, tail: BigIntList);
+
+function singleton(value: bigint) with {
+  ensures: result._tag === "Link";
+}: BigIntList {
+  return Link(value, End);
+}
+
+function firstOrZero(input: BigIntList) with {
+  ensures: result === result;
+}: bigint {
+  switch (input._tag) {
+    case "Link":
+      return input.head;
+    case "End":
+      return 0n;
+  }
+}
+
+const values = singleton(42n);
+console.log(`firstOrZero(singleton(42)) = ${firstOrZero(values)}`);

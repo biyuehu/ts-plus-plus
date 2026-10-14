@@ -7,7 +7,11 @@ import {
   VerificationSumSort,
 } from "../../../compiler/verificationIR.js";
 import { encodeVerificationProblem } from "../../../compiler/verificationSmt.js";
-import { runVerificationQueries } from "../../../compiler/verificationWorker.js";
+import {
+  clearVerificationCache,
+  getVerificationCacheStats,
+  runVerificationQueries,
+} from "../../../compiler/verificationWorker.js";
 
 describe("unittests:: tspp:: verification IR", () => {
   it("encodes closed sum sorts as SMT datatypes", async () => {
@@ -46,5 +50,63 @@ describe("unittests:: tspp:: verification IR", () => {
       ],
     };
     assert.throws(() => encodeVerificationProblem({ declarations: [{ name: "value", sort: malformed }], assumptions: [], goal: verificationApplication("=", verificationInteger("0"), verificationInteger("0")) }), "Duplicate variant");
+  });
+
+  it("encodes recursive datatypes", async () => {
+    const list = { kind: "sum", name: "List", variants: [] } as unknown as VerificationSumSort;
+    (list as { variants: VerificationSumSort["variants"]; }).variants = [
+      { name: "Nil", fields: [] },
+      { name: "Cons", fields: [{ name: "head", sort: "Int" }, { name: "tail", sort: list }] },
+    ];
+    const value = verificationConstant("value", list);
+    const encoding = encodeVerificationProblem({
+      declarations: [{ name: "value", sort: list, sourceName: "value" }],
+      assumptions: [],
+      goal: verificationApplication("or", verificationIsVariant(value, list, "Nil"), verificationIsVariant(value, list, "Cons")),
+    });
+    assert.equal((await runVerificationQueries([encoding.solverInput]))[0].status, "proved");
+  });
+
+  it("reuses content-addressed verification results", async () => {
+    clearVerificationCache();
+    const input = encodeVerificationProblem({
+      declarations: [],
+      assumptions: [],
+      goal: verificationApplication("=", verificationInteger("1"), verificationInteger("1")),
+    }).solverInput;
+    await runVerificationQueries([input]);
+    await runVerificationQueries([input]);
+    assert.deepEqual(getVerificationCacheStats(), { hits: 1, misses: 1, size: 1 });
+  });
+
+  it("cancels an active solver worker", async () => {
+    clearVerificationCache();
+    let cancelled = false;
+    const token = {
+      isCancellationRequested: () => cancelled,
+      throwIfCancellationRequested: () => {
+        if (cancelled) throw new Error("cancelled");
+      },
+    };
+    const input = encodeVerificationProblem({
+      declarations: [],
+      assumptions: [],
+      goal: verificationApplication("=", verificationInteger("2"), verificationInteger("2")),
+    }).solverInput;
+    const pending = runVerificationQueries([input], /*budget*/ undefined, token);
+    cancelled = true;
+    const [result] = await pending;
+    assert.equal(result.reason?.code, "cancelled");
+  });
+
+  it("reports solver worker timeouts distinctly", async () => {
+    clearVerificationCache();
+    const input = encodeVerificationProblem({
+      declarations: [],
+      assumptions: [],
+      goal: verificationApplication("=", verificationInteger("3"), verificationInteger("3")),
+    }).solverInput;
+    const [result] = await runVerificationQueries([input], { minimumTimeoutMs: 1, timeoutPerQueryMs: 1, maxOldGenerationSizeMb: 256 });
+    assert.equal(result.reason?.code, "timeout");
   });
 });

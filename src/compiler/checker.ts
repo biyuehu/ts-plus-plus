@@ -28874,6 +28874,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function getResolvedSymbol(node: Identifier): Symbol {
     const links = getNodeLinks(node);
     if (!links.resolvedSymbol) {
+      const parameter = getContractParameter(node);
+      if (parameter) return links.resolvedSymbol = getSymbolOfDeclaration(parameter);
+      const implicitType = getContractResultType(node) ?? getRefinementValueType(node);
+      if (implicitType) {
+        const symbol = createSymbol(SymbolFlags.FunctionScopedVariable, node.escapedText);
+        symbol.links.type = implicitType;
+        return links.resolvedSymbol = symbol;
+      }
       links.resolvedSymbol = !nodeIsMissing(node) &&
           resolveName(
             node,
@@ -45415,11 +45423,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const clause = current.parent;
     const declaration = clause?.parent;
     return declaration && isFunctionDeclaration(declaration)
-      ? getReturnTypeOfSignature(getSignatureFromDeclaration(declaration))
+      ? declaration.type
+        ? getTypeFromTypeNode(declaration.type)
+        : getReturnTypeOfSignature(getSignatureFromDeclaration(declaration))
       : undefined;
   }
 
   function getContractParameterType(node: Identifier): Type | undefined {
+    const parameter = getContractParameter(node);
+    return parameter ? parameter.type ? getTypeFromTypeNode(parameter.type) : getTypeOfSymbol(getSymbolOfDeclaration(parameter)) : undefined;
+  }
+
+  function getContractParameter(node: Identifier): ParameterDeclaration | undefined {
     let current: Node | undefined = node.parent;
     while (current && !isWithProperty(current)) current = current.parent;
     if (!current || current.name === node) return undefined;
@@ -45427,8 +45442,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (propertyName !== "requires" && propertyName !== "ensures") return undefined;
     const declaration = current.parent?.parent;
     if (!declaration || !isFunctionDeclaration(declaration)) return undefined;
-    const parameter = declaration.parameters.find(candidate => isIdentifier(candidate.name) && idText(candidate.name) === idText(node));
-    return parameter ? getTypeOfSymbol(getSymbolOfDeclaration(parameter)) : undefined;
+    return declaration.parameters.find(candidate => isIdentifier(candidate.name) && idText(candidate.name) === idText(node));
   }
 
   function getRefinementValueType(node: Identifier): Type | undefined {
