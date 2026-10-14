@@ -156,6 +156,7 @@ export * from "./unittests/tspp/editorGrammars.js";
 export * from "./unittests/tspp/formalContracts.js";
 export * from "./unittests/tspp/macros.js";
 export * from "./unittests/tspp/newtypeData.js";
+export * from "./unittests/tspp/verificationIR.js";
 export * from "./unittests/tsserver/applyChangesToOpenFiles.js";
 export * from "./unittests/tsserver/autoImportProvider.js";
 export * from "./unittests/tsserver/auxiliaryProject.js";

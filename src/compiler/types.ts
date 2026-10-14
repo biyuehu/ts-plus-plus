@@ -4840,6 +4840,9 @@ export interface Program extends ScriptReferenceHost {
   /** Returns formal-verification obligations and their generated SMT-LIB. */
   getVerificationArtifacts?(fileName?: string): readonly VerificationArtifact[];
 
+  /** Returns all compiler analysis artifacts through their shared task protocol. */
+  getAnalysisArtifacts?(fileName?: string): readonly AnalysisTaskArtifact[];
+
   /**
    * Get a list of file names that were passed to 'createProgram' or referenced in a
    * program source file but could not be located.
@@ -5241,21 +5244,36 @@ export interface MacroContext {
 export type MacroFunction = (targets: readonly MacroTarget[], context: MacroContext) => MacroReturn;
 
 /** The source replacement produced for one compile-time macro invocation. */
-export interface MacroExpansion {
+export interface MacroExpansion extends AnalysisTaskArtifact {
+  readonly macroName: string;
+  readonly text: string;
+}
+
+/** The lifecycle-independent outcome shared by compiler analysis tasks. */
+export type AnalysisTaskOutcome = "succeeded" | "failed" | "unknown" | "error" | "cancelled" | "timedOut";
+
+/** A structured explanation for an analysis result that was not successful. */
+export interface AnalysisTaskReason {
+  readonly code: "unsupported" | "unavailable" | "timeout" | "cancelled" | "execution-error" | "solver-unknown";
+  readonly message: string;
+  readonly capability?: string;
+}
+
+/** Identity and common result fields shared by compiler analysis artifacts. */
+export interface AnalysisTaskArtifact {
+  readonly taskId: string;
+  readonly taskKind: "verification" | "macro" | "mltt";
+  readonly outcome: AnalysisTaskOutcome;
+  readonly reason?: AnalysisTaskReason;
   readonly fileName: string;
   readonly start: number;
   readonly length: number;
-  readonly macroName: string;
-  readonly text: string;
 }
 
 export type VerificationStatus = "proved" | "failed" | "unknown" | "error";
 
 /** A proof obligation and the exact SMT-LIB generated for it. */
-export interface VerificationArtifact {
-  readonly fileName: string;
-  readonly start: number;
-  readonly length: number;
+export interface VerificationArtifact extends AnalysisTaskArtifact {
   readonly kind: "function-contract" | "loop-invariant" | "call-precondition" | "refinement";
   readonly obligation: "precondition" | "postcondition" | "invariant-initialization" | "invariant-preservation" | "refinement-introduction";
   readonly name: string;

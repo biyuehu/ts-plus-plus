@@ -1,0 +1,13 @@
+data ParseResult = Parsed(value: bigint) | Rejected(code: string);
+
+function magnitude(input: ParseResult) with {
+  ensures: result >= 0n;
+}: bigint {
+  if (input._tag === "Parsed") {
+    if (input.value >= 0n) return input.value;
+    return -input.value;
+  }
+  return 0n;
+}
+
+console.log(`magnitude(Parsed(-5)) = ${magnitude(Parsed(-5n))}`);

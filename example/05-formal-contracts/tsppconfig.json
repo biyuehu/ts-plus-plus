@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "tsppFeatures": ["newtypeDeclarations", "formalContracts", "refinementTypes"]
+    "tsppFeatures": ["newtypeDeclarations", "dataDeclarations", "formalContracts", "refinementTypes"]
   }
 }

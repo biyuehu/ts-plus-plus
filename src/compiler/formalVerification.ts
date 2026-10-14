@@ -10,6 +10,7 @@ import {
   isNewtypeDeclaration,
   isParenthesizedExpression,
   isPrefixUnaryExpression,
+  isPropertyAccessExpression,
   isReturnStatement,
   isStringLiteral,
   isTypeAliasDeclaration,
@@ -19,12 +20,10 @@ import {
   isWhileStatement,
 } from "./factory/nodeTests.js";
 import { forEachChild } from "./parser.js";
-import { skipTrivia } from "./scanner.js";
 import {
   Block,
   CallExpression,
   Diagnostic,
-  DiagnosticCategory,
   Expression,
   FunctionDeclaration,
   Identifier,
@@ -35,6 +34,7 @@ import {
   Statement,
   SymbolFlags,
   SyntaxKind,
+  Type,
   TypeAliasDeclaration,
   TypeChecker,
   TypeFlags,
@@ -42,52 +42,56 @@ import {
   VerificationArtifact,
   WhileStatement,
   WithClause,
-  WithProperty,
 } from "./types.js";
 import {
   idText,
   isFunctionLike,
 } from "./utilitiesPublic.js";
 import {
+  isVerificationNumericSort,
   verificationApplication,
   verificationBoolean,
   verificationConstant,
   VerificationExpression,
   verificationInteger,
+  verificationIsVariant,
   VerificationProblem,
   verificationReal,
+  verificationSelect,
   VerificationSort,
+  verificationSortsEqual,
+  verificationString,
   VerificationTerm,
 } from "./verificationIR.js";
+import {
+  cloneVerificationRefinementState,
+  stopVerificationRefinement,
+  VerificationFlowResult as FlowResult,
+  VerificationRefinementState as SymbolicState,
+  VerificationReturnPath as ReturnPath,
+} from "./verificationRefinement.js";
 import { encodeVerificationProblem } from "./verificationSmt.js";
+import {
+  createVerificationArtifact,
+  createVerificationDiagnostic,
+  PendingVerificationTask,
+  updateVerificationArtifact,
+} from "./verificationTasks.js";
+import {
+  lowerVerificationType,
+  verificationTypeLoweringFailed,
+} from "./verificationTypeLowering.js";
+import { runVerificationQueries } from "./verificationWorker.js";
 
 type Sort = VerificationSort;
 type Term = VerificationTerm;
-interface SymbolicState {
-  readonly values: Map<string, Term>;
-  readonly facts: VerificationExpression[];
-  reason?: string;
-}
-interface ReturnPath {
-  readonly state: SymbolicState;
-  readonly value?: Term;
-  readonly node: Node;
-}
-interface FlowResult {
-  readonly live: SymbolicState[];
-  readonly returns: ReturnPath[];
-}
-interface PendingArtifact {
-  artifact: VerificationArtifact;
-  query?: string;
-}
 interface VerificationContext {
   readonly checker: TypeChecker;
   readonly sourceFile: SourceFile;
   readonly declaration: FunctionDeclaration | NewtypeDeclaration | TypeAliasDeclaration;
   readonly declarations: Map<string, Sort>;
   readonly symbolNames: Map<string, string>;
-  readonly pending: PendingArtifact[];
+  readonly pending: PendingVerificationTask[];
   readonly numberModel: boolean;
   freshIndex: number;
 }
@@ -97,12 +101,11 @@ export interface FormalVerificationResult {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-const verificationDiagnosticCode = 18090;
 const maximumPaths = 64;
 
 export async function verifyFormalContracts(program: Program): Promise<FormalVerificationResult> {
   const checker = program.getTypeChecker();
-  const pending: PendingArtifact[] = [];
+  const pending: PendingVerificationTask[] = [];
   for (const sourceFile of program.getSourceFiles()) {
     if (sourceFile.isDeclarationFile) continue;
     analyzeTopLevelCalls(checker, sourceFile, pending);
@@ -114,17 +117,17 @@ export async function verifyFormalContracts(program: Program): Promise<FormalVer
 
   const queries = pending.filter(item => item.query !== undefined);
   if (queries.length) {
-    const results = await runZ3(queries.map(item => item.query!));
+    const results = await runVerificationQueries(queries.map(item => item.query!));
     for (let i = 0; i < queries.length; i++) {
       const item = queries[i];
       const result = results[i];
-      item.artifact = {
-        ...item.artifact,
+      item.artifact = updateVerificationArtifact(item.artifact, {
         status: result.status,
         message: result.message,
         counterexample: result.counterexample,
         model: result.model,
-      };
+        reason: result.reason,
+      });
     }
   }
 
@@ -163,7 +166,7 @@ function needsVerification(checker: TypeChecker, declaration: FunctionDeclaratio
   return found;
 }
 
-function analyzeTopLevelCalls(checker: TypeChecker, sourceFile: SourceFile, pending: PendingArtifact[]): void {
+function analyzeTopLevelCalls(checker: TypeChecker, sourceFile: SourceFile, pending: PendingVerificationTask[]): void {
   const visitTopLevel = (node: Node): void => {
     if (node !== sourceFile && isFunctionLike(node)) return;
     if (isVariableDeclaration(node) && node.initializer) {
@@ -197,7 +200,7 @@ function createVerificationContext(
   checker: TypeChecker,
   sourceFile: SourceFile,
   declaration: FunctionDeclaration | NewtypeDeclaration | TypeAliasDeclaration,
-  pending: PendingArtifact[],
+  pending: PendingVerificationTask[],
   numberModel: boolean,
 ): VerificationContext {
   return {
@@ -212,7 +215,7 @@ function createVerificationContext(
   };
 }
 
-function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declaration: FunctionDeclaration, pending: PendingArtifact[]): void {
+function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declaration: FunctionDeclaration, pending: PendingVerificationTask[]): void {
   const returnRefinement = getRefinementTypeTarget(checker, declaration.type);
   const context = createVerificationContext(checker, sourceFile, declaration, pending, getNumberModel(declaration.withClause) || getNumberModel(returnRefinement?.withClause));
   const initial: SymbolicState = { values: new Map(), facts: [] };
@@ -333,7 +336,7 @@ function executeStatement(context: VerificationContext, statement: Statement, st
       if (declaration.initializer) {
         const value = translateExpression(context, state, declaration.initializer);
         if (typeof value === "string") return unsupportedFlow(state, value);
-        if (value.sort !== sort) return unsupportedFlow(state, `Initializer sort mismatch for '${name}'.`);
+        if (!verificationSortsEqual(value.sort, sort)) return unsupportedFlow(state, `Initializer sort mismatch for '${name}'.`);
         if (refinement) verifyRefinementTerm(context, state, declaration, refinement, value);
         state.values.set(name, value);
       }
@@ -464,7 +467,7 @@ function executeExpressionStatement(context: VerificationContext, state: Symboli
     if (!previous) return `Assignment to unknown variable '${name}' is unsupported.`;
     const right = translateExpression(context, state, expression.right);
     if (typeof right === "string") return right;
-    if (previous.sort !== right.sort) return `Assignment sort mismatch for '${name}'.`;
+    if (!verificationSortsEqual(previous.sort, right.sort)) return `Assignment sort mismatch for '${name}'.`;
     const operator = expression.operatorToken.kind;
     if (operator === SyntaxKind.EqualsToken) state.values.set(name, right);
     else {
@@ -477,7 +480,7 @@ function executeExpressionStatement(context: VerificationContext, state: Symboli
   if (isPrefixUnaryExpression(expression) && (expression.operator === SyntaxKind.PlusPlusToken || expression.operator === SyntaxKind.MinusMinusToken) && isIdentifier(expression.operand)) {
     const name = idText(expression.operand);
     const previous = state.values.get(name);
-    if (!previous || previous.sort === "Bool") return `Update of '${name}' is unsupported.`;
+    if (!previous || !isVerificationNumericSort(previous.sort)) return `Update of '${name}' is unsupported.`;
     state.values.set(name, { sort: previous.sort, expression: verificationApplication(expression.operator === SyntaxKind.PlusPlusToken ? "+" : "-", previous.expression, previous.sort === "Real" ? verificationReal("1") : verificationInteger("1")) });
     return undefined;
   }
@@ -502,14 +505,18 @@ function translateExpression(context: VerificationContext, state: SymbolicState,
     if (!/^\d+(?:\.\d+)?$/.test(text)) return `Numeric literal '${text}' is outside the mathematical-real encoding subset.`;
     return { sort: "Real", expression: verificationReal(text) };
   }
+  if (isStringLiteral(expression)) return { sort: "String", expression: verificationString(expression.text) };
+  if (isPropertyAccessExpression(expression)) return translatePropertyAccess(context, state, expression, result);
   if (isPrefixUnaryExpression(expression)) {
     const operand = translateExpression(context, state, expression.operand, result);
     if (typeof operand === "string") return operand;
     if (expression.operator === SyntaxKind.ExclamationToken && operand.sort === "Bool") return { sort: "Bool", expression: verificationApplication("not", operand.expression) };
-    if (expression.operator === SyntaxKind.MinusToken && operand.sort !== "Bool") return { sort: operand.sort, expression: verificationApplication("-", operand.expression) };
+    if (expression.operator === SyntaxKind.MinusToken && isVerificationNumericSort(operand.sort)) return { sort: operand.sort, expression: verificationApplication("-", operand.expression) };
     return `Unary expression '${sourceText(context, expression)}' is outside the supported verification subset.`;
   }
   if (isBinaryExpression(expression)) {
+    const variantCheck = translateVariantCheck(context, state, expression, result);
+    if (variantCheck) return variantCheck;
     const left = translateExpression(context, state, expression.left, result);
     if (typeof left === "string") return left;
     const right = translateExpression(context, state, expression.right, result);
@@ -519,18 +526,80 @@ function translateExpression(context: VerificationContext, state: SymbolicState,
       if (left.sort !== "Bool" || right.sort !== "Bool") return "Logical operators require Boolean SMT operands.";
       return { sort: "Bool", expression: verificationApplication(kind === SyntaxKind.AmpersandAmpersandToken ? "and" : "or", left.expression, right.expression) };
     }
-    if (left.sort !== right.sort) return `Operands of operator kind ${expression.operatorToken.kind} have incompatible SMT sorts.`;
+    if (!verificationSortsEqual(left.sort, right.sort)) return `Operands of operator kind ${expression.operatorToken.kind} have incompatible SMT sorts.`;
     if (kind === SyntaxKind.EqualsEqualsEqualsToken || kind === SyntaxKind.ExclamationEqualsEqualsToken) {
       const equality = verificationApplication("=", left.expression, right.expression);
       return { sort: "Bool", expression: kind === SyntaxKind.EqualsEqualsEqualsToken ? equality : verificationApplication("not", equality) };
     }
     const operator = binaryOperator(kind);
     if (!operator) return `Operator kind ${expression.operatorToken.kind} is outside the supported verification subset.`;
-    if (left.sort === "Bool") return `Operator '${operator}' does not accept Boolean SMT operands.`;
+    if (!isVerificationNumericSort(left.sort)) return `Operator '${operator}' requires numeric SMT operands.`;
     const comparison = kind === SyntaxKind.LessThanToken || kind === SyntaxKind.LessThanEqualsToken || kind === SyntaxKind.GreaterThanToken || kind === SyntaxKind.GreaterThanEqualsToken;
     return { sort: comparison ? "Bool" : left.sort, expression: verificationApplication(operator, left.expression, right.expression) };
   }
   return `Expression '${sourceText(context, expression)}' is outside the supported verification subset.`;
+}
+
+function translateVariantCheck(
+  context: VerificationContext,
+  state: SymbolicState,
+  expression: import("./types.js").BinaryExpression,
+  result: Term | undefined,
+): Term | string | undefined {
+  const kind = expression.operatorToken.kind;
+  if (kind !== SyntaxKind.EqualsEqualsEqualsToken && kind !== SyntaxKind.ExclamationEqualsEqualsToken) return undefined;
+  const left = getVariantCheckOperands(expression.left, expression.right);
+  const operands = left ?? getVariantCheckOperands(expression.right, expression.left);
+  if (!operands) return undefined;
+  const target = translateExpression(context, state, operands.target, result);
+  if (typeof target === "string") return target;
+  if (typeof target.sort === "string" || target.sort.kind !== "sum") return undefined;
+  if (!target.sort.variants.some(variant => variant.name === operands.variant)) {
+    return `Variant '${operands.variant}' does not belong to verification sort '${target.sort.name}'.`;
+  }
+  const check = verificationIsVariant(target.expression, target.sort, operands.variant);
+  return { sort: "Bool", expression: kind === SyntaxKind.EqualsEqualsEqualsToken ? check : verificationApplication("not", check) };
+}
+
+function getVariantCheckOperands(
+  tag: Expression,
+  value: Expression,
+): { readonly target: Expression; readonly variant: string; } | undefined {
+  return isPropertyAccessExpression(tag) && idText(tag.name) === "_tag" && isStringLiteral(value)
+    ? { target: tag.expression, variant: value.text }
+    : undefined;
+}
+
+function translatePropertyAccess(
+  context: VerificationContext,
+  state: SymbolicState,
+  expression: import("./types.js").PropertyAccessExpression,
+  result: Term | undefined,
+): Term | string {
+  const target = translateExpression(context, state, expression.expression, result);
+  if (typeof target === "string") return target;
+  if (typeof target.sort === "string") return `Property access '${sourceText(context, expression)}' requires a structured verification type.`;
+  const fieldName = idText(expression.name);
+  if (target.sort.kind === "product") {
+    const field = target.sort.fields.find(candidate => candidate.name === fieldName);
+    return field
+      ? { sort: field.sort, expression: verificationSelect(target.expression, target.sort, fieldName) }
+      : `Property '${fieldName}' does not belong to verification sort '${target.sort.name}'.`;
+  }
+  if (fieldName === "_tag") return "A discriminant value is only supported in a direct comparison with a string literal.";
+  const narrowedType = context.checker.getTypeAtLocation(expression.expression);
+  const variantName = getNarrowedVariantName(context.checker, narrowedType);
+  if (!variantName) return `Property '${fieldName}' requires TypeScript control-flow narrowing to one '${target.sort.name}' variant.`;
+  const variant = target.sort.variants.find(candidate => candidate.name === variantName);
+  const field = variant?.fields.find(candidate => candidate.name === fieldName);
+  return variant && field
+    ? { sort: field.sort, expression: verificationSelect(target.expression, target.sort, fieldName, variant.name) }
+    : `Property '${fieldName}' does not belong to variant '${variantName}'.`;
+}
+
+function getNarrowedVariantName(checker: TypeChecker, type: Type): string | undefined {
+  const tag = checker.getTypeOfPropertyOfType(type, "_tag");
+  return tag && tag.flags & TypeFlags.StringLiteral ? (tag as Type & { readonly value: string; }).value : undefined;
 }
 
 function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean): Term | string {
@@ -766,18 +835,13 @@ function collectWrites(node: Node, writes: Set<string>, report: (reason: string)
 }
 
 function getSort(context: VerificationContext, node: Node): Sort | undefined {
-  const flags = context.checker.getTypeAtLocation(node).flags;
-  if (flags & TypeFlags.BooleanLike) return "Bool";
-  if (flags & TypeFlags.BigIntLike) return "Int";
-  if (flags & TypeFlags.NumberLike && context.numberModel) return "Real";
-  return undefined;
+  const lowered = lowerVerificationType(context, context.checker.getTypeAtLocation(node));
+  return verificationTypeLoweringFailed(lowered) ? undefined : lowered.sort;
 }
 
 function unsupportedTypeMessage(context: VerificationContext, node: Node): string {
-  const type = context.checker.typeToString(context.checker.getTypeAtLocation(node));
-  return type === "number"
-    ? 'TypeScript number requires numberModel: "mathematical-real".'
-    : `Type '${type}' is outside the supported verification subset (boolean, bigint, and opted-in mathematical-real number).`;
+  const lowered = lowerVerificationType(context, context.checker.getTypeAtLocation(node));
+  return verificationTypeLoweringFailed(lowered) ? lowered.reason : `Type '${context.checker.typeToString(context.checker.getTypeAtLocation(node))}' could not be lowered for verification.`;
 }
 
 function freshConstant(context: VerificationContext, sourceName: string, sort: Sort): Term {
@@ -806,7 +870,7 @@ function addQuery(
   const { solverInput, replayableSmtLib } = encodeVerificationProblem(problem);
   context.pending.push({
     query: solverInput,
-    artifact: createArtifact(context.sourceFile, node, kind, obligation, name, "unknown", solverInput, replayableSmtLib, "Waiting for Z3."),
+    artifact: createVerificationArtifact(context.sourceFile, node, kind, obligation, name, "unknown", solverInput, replayableSmtLib, "Waiting for Z3."),
   });
 }
 
@@ -819,41 +883,20 @@ function addUnknown(
   message: string,
 ): void {
   const text = `; No SMT query was executed.\n; Unsupported: ${message.replace(/[\r\n]/g, " ")}\n`;
-  context.pending.push({ artifact: createArtifact(context.sourceFile, node, kind, obligation, name, "unknown", text, text, message) });
-}
-
-function createArtifact(
-  sourceFile: SourceFile,
-  node: Node,
-  kind: VerificationArtifact["kind"],
-  obligation: VerificationArtifact["obligation"],
-  name: string,
-  status: VerificationArtifact["status"],
-  solverInput: string,
-  replayableSmtLib: string,
-  message: string,
-): VerificationArtifact {
-  const target = node.kind === SyntaxKind.WithProperty ? (node as WithProperty).value : node;
-  const start = skipTrivia(sourceFile.text, target.pos);
-  return { fileName: sourceFile.fileName, start, length: target.end - start, kind, obligation, name, status, solverInput, replayableSmtLib, message };
-}
-
-function createVerificationDiagnostic(program: Program, artifact: VerificationArtifact): Diagnostic {
-  const file = program.getSourceFile(artifact.fileName);
-  return {
-    category: DiagnosticCategory.Error,
-    code: verificationDiagnosticCode,
-    file,
-    start: artifact.start,
-    length: artifact.length,
-    source: "TS++ verification",
-    messageText: formatVerificationMessage(artifact),
-  };
-}
-
-export function formatVerificationMessage(artifact: VerificationArtifact): string {
-  const summary = `${artifact.name}: ${artifact.status === "failed" ? "proof failed" : "verification unknown"}. ${artifact.message}`;
-  return artifact.counterexample ? `${summary} Counterexample: ${artifact.counterexample}.` : summary;
+  context.pending.push({
+    artifact: createVerificationArtifact(
+      context.sourceFile,
+      node,
+      kind,
+      obligation,
+      name,
+      "unknown",
+      text,
+      text,
+      message,
+      { code: "unsupported", message },
+    ),
+  });
 }
 
 function getProperties(clause: WithClause | undefined, name: string) {
@@ -873,106 +916,9 @@ function sourceText(context: VerificationContext, node: Node): string {
 }
 
 function cloneState(state: SymbolicState): SymbolicState {
-  return { values: new Map(state.values), facts: [...state.facts], reason: state.reason };
+  return cloneVerificationRefinementState(state);
 }
 
 function unsupportedFlow(state: SymbolicState, reason: string): FlowResult {
-  state.reason = reason;
-  return { live: [state], returns: [] };
+  return stopVerificationRefinement(state, reason);
 }
-
-interface SolverResult {
-  readonly status: "proved" | "failed" | "unknown" | "error";
-  readonly message: string;
-  readonly counterexample?: string;
-  readonly model?: string;
-}
-
-async function runZ3(inputs: readonly string[]): Promise<readonly SolverResult[]> {
-  try {
-    if (typeof require !== "function") return inputs.map(() => unavailableResult("Z3 is unavailable in this runtime."));
-    const { Worker } = require("node:worker_threads") as typeof import("node:worker_threads");
-    const z3Path = require.resolve("z3-solver");
-    return await new Promise<readonly SolverResult[]>((resolve, reject) => {
-      const worker = new Worker(z3WorkerScript, { eval: true, workerData: { inputs, z3Path } });
-      const timer = globalThis.setTimeout(() => {
-        void worker.terminate();
-        reject(new Error("Z3 verification worker timed out."));
-      }, Math.max(30_000, inputs.length * 12_000));
-      worker.once("message", (message: { ok: boolean; results?: SolverResult[]; error?: string; }) => {
-        globalThis.clearTimeout(timer);
-        void worker.terminate();
-        if (message.ok && message.results) resolve(message.results);
-        else reject(new Error(message.error ?? "Z3 verification worker failed."));
-      });
-      worker.once("error", error => {
-        globalThis.clearTimeout(timer);
-        void worker.terminate();
-        reject(error);
-      });
-    });
-  }
-  catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return inputs.map(() => unavailableResult(`Z3 could not run: ${message}`));
-  }
-}
-
-function unavailableResult(message: string): SolverResult {
-  return { status: "unknown", message };
-}
-
-const z3WorkerScript = String.raw`
-const { parentPort, workerData } = require("node:worker_threads");
-
-async function run() {
-  const z3 = require(workerData.z3Path);
-  const api = await z3.init();
-  const context = new api.Context("tspp-verification");
-  const results = [];
-  for (const input of workerData.inputs) {
-    try {
-      const solver = new context.Solver();
-      solver.fromString(input);
-      const answer = await solver.check();
-      if (answer === "unsat") results.push({ status: "proved", message: "Z3 proved the negated obligation unsatisfiable." });
-      else if (answer === "sat") {
-        const modelObject = solver.model();
-        const model = modelObject.toString();
-        const declarations = [...input.matchAll(/\(declare-const\s+([^\s()]+)\s+(Int|Real|Bool)\)/g)];
-        const sourceNames = new Map([...input.matchAll(/^;\s*([^\s=]+)\s*=\s*(.+)$/gm)].map(match => [match[1], match[2].trim()]));
-        const modeledNames = new Set([...model.matchAll(/\(define-fun\s+([^\s()]+)/g)].map(match => match[1]));
-        const selected = modeledNames.size ? declarations.filter(match => modeledNames.has(match[1])) : declarations;
-        const duplicateSourceNames = new Set();
-        const seenSourceNames = new Set();
-        for (const match of selected) {
-          const sourceName = sourceNames.get(match[1]) || match[1];
-          if (seenSourceNames.has(sourceName)) duplicateSourceNames.add(sourceName);
-          seenSourceNames.add(sourceName);
-        }
-        const assignments = selected.map(match => {
-          const [, symbolName, sort] = match;
-          const sourceName = sourceNames.get(symbolName) || symbolName;
-          const label = duplicateSourceNames.has(sourceName) ? sourceName + " (" + symbolName + ")" : sourceName;
-          const symbol = context[sort].const(symbolName);
-          const value = modelObject.eval(symbol, true).toString()
-            .replace(/^\(-\s+([^()\s]+)\)$/, "-$1")
-            .replace(/^\(\/\s+([^()\s]+)\s+([^()\s]+)\)$/, "$1/$2");
-          return label + " = " + value;
-        });
-        results.push({ status: "failed", message: "Z3 found a counterexample.", counterexample: assignments.join(", ") || "the obligation is false for every assignment", model });
-      }
-      else results.push({ status: "unknown", message: "Z3 returned unknown: " + solver.reasonUnknown() });
-    }
-    catch (error) {
-      results.push({ status: "error", message: error instanceof Error ? error.message : String(error) });
-    }
-  }
-  return results;
-}
-
-run().then(
-  results => parentPort.postMessage({ ok: true, results }),
-  error => parentPort.postMessage({ ok: false, error: error instanceof Error ? error.message : String(error) }),
-);
-`;

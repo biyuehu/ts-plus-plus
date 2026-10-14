@@ -56,6 +56,10 @@ describe("unittests:: tspp:: formal contracts", () => {
     const artifacts = program.getVerificationArtifacts!();
     assert.lengthOf(artifacts, 5);
     assert.isTrue(artifacts.every(artifact => artifact.status === "proved"));
+    assert.isTrue(artifacts.every(artifact => artifact.taskKind === "verification"));
+    assert.isTrue(artifacts.every(artifact => artifact.outcome === "succeeded"));
+    assert.equal(new Set(artifacts.map(artifact => artifact.taskId)).size, artifacts.length);
+    assert.deepEqual(program.getAnalysisArtifacts!(), artifacts);
     assert.isTrue(artifacts.every(artifact => artifact.replayableSmtLib.includes("(check-sat)")));
     const sourceFile = program.getSourceFile("/file.tspp")!;
     assert.isTrue(artifacts.every(artifact => !sourceFile.text.slice(artifact.start, artifact.start + artifact.length).includes("\n")));
@@ -143,6 +147,8 @@ describe("unittests:: tspp:: formal contracts", () => {
     `);
     const artifact = program.getVerificationArtifacts!().find(candidate => candidate.kind === "call-precondition")!;
     assert.equal(artifact.status, "unknown");
+    assert.equal(artifact.outcome, "unknown");
+    assert.equal(artifact.reason?.code, "unsupported");
     assert.include(artifact.message, "outside the supported verification subset");
   });
 
@@ -185,6 +191,97 @@ describe("unittests:: tspp:: formal contracts", () => {
     const artifacts = program.getVerificationArtifacts!();
     assert.lengthOf(artifacts, 2);
     assert.isTrue(artifacts.every(artifact => artifact.status === "proved"));
+  });
+
+  it("uses TypeScript control-flow narrowing for discriminated unions", async () => {
+    const { program } = await createProgram(`
+      type Result =
+        | { _tag: "Success"; value: bigint }
+        | { _tag: "Failure"; code: bigint };
+
+      function extract(input: Result) with { ensures: result === result; }: bigint {
+        if (input._tag === "Success") return input.value;
+        return input.code;
+      }
+    `);
+    const artifacts = program.getVerificationArtifacts!();
+    assert.lengthOf(artifacts, 2);
+    assert.isTrue(artifacts.every(artifact => artifact.status === "proved"));
+    assert.isTrue(artifacts.every(artifact => artifact.solverInput.includes("declare-datatypes")));
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
+  it("lowers TS++ data declarations through their checker union type", async () => {
+    const { program } = await createProgram(
+      `
+      data Result = Success(value: bigint) | Failure(code: bigint);
+
+      function extract(input: Result) with { ensures: result === result; }: bigint {
+        if (input._tag === "Success") return input.value;
+        return input.code;
+      }
+    `,
+      ["dataDeclarations", "formalContracts"],
+    );
+    const artifacts = program.getVerificationArtifacts!();
+    assert.lengthOf(artifacts, 2);
+    assert.isTrue(artifacts.every(artifact => artifact.status === "proved"));
+    assert.isTrue(artifacts.every(artifact => artifact.solverInput.includes("tspp.ctor")));
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
+  it("proves contracts over non-recursive record fields", async () => {
+    const { program } = await createProgram(`
+      function sum(point: { x: bigint; y: bigint }) with {
+        ensures: result === result;
+      }: bigint {
+        return point.x + point.y;
+      }
+    `);
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.status, "proved");
+    assert.include(artifact.solverInput, "declare-datatypes");
+    const diagnostics = program.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")).join("\n"));
+  });
+
+  it("supports string equality without treating strings as arithmetic", async () => {
+    const { program } = await createProgram(`
+      function echo(value: string) with { ensures: result === value; }: string {
+        return value;
+      }
+    `);
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.status, "proved");
+    assert.include(artifact.solverInput, "String");
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
+  it("reports unsupported optional and recursive structures as unknown", async () => {
+    const optional = await createProgram(`
+      type OptionalResult =
+        | { _tag: "Some"; value?: bigint }
+        | { _tag: "None" };
+      function inspect(input: OptionalResult) with { ensures: result === result; }: bigint {
+        return 0n;
+      }
+    `);
+    const [optionalArtifact] = optional.program.getVerificationArtifacts!();
+    assert.equal(optionalArtifact.status, "unknown");
+    assert.include(optionalArtifact.message, "Optional property");
+
+    const recursive = await createProgram(
+      `
+      data List = Nil | Cons(head: bigint, tail: List);
+      function inspect(input: List) with { ensures: result === result; }: bigint {
+        return 0n;
+      }
+    `,
+      ["dataDeclarations", "formalContracts"],
+    );
+    const [recursiveArtifact] = recursive.program.getVerificationArtifacts!();
+    assert.equal(recursiveArtifact.status, "unknown");
+    assert.include(recursiveArtifact.message, "Recursive type");
   });
 
   it("reports unsupported expressions as unknown without invoking Z3", async () => {

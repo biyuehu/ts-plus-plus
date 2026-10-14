@@ -351,10 +351,8 @@ import {
   writeFileEnsuringDirectories,
 } from "./_namespaces/ts.js";
 import * as performance from "./_namespaces/ts.performance.js";
-import {
-  formatVerificationMessage,
-  verifyFormalContracts,
-} from "./formalVerification.js";
+import { createAnalysisTaskId } from "./analysisTasks.js";
+import { verifyFormalContracts } from "./formalVerification.js";
 import {
   canUseMacroWorkers,
   MacroWorkerError,
@@ -362,6 +360,10 @@ import {
   runMacroExpansionWorker,
 } from "./macroWorker.js";
 import { hasTsppFeature } from "./tsppFeatures.js";
+import {
+  createVerificationArtifact,
+  formatVerificationMessage,
+} from "./verificationTasks.js";
 
 export function findConfigFile(searchPath: string, fileExists: (fileName: string) => boolean, configName = "tsconfig.json"): string | undefined {
   return forEachAncestorDirectory(searchPath, ancestor => {
@@ -2304,6 +2306,9 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
       if (fileName !== undefined && comparePaths(expandedFileName, fileName, currentDirectory, !host.useCaseSensitiveFileNames()) !== Comparison.EqualTo) continue;
       for (const invocation of expanded.invocations) {
         result.push({
+          taskId: createAnalysisTaskId("macro", expandedFileName, invocation.start, invocation.end - invocation.start, invocation.macroName),
+          taskKind: "macro",
+          outcome: "succeeded",
           fileName: expandedFileName,
           start: invocation.start,
           length: invocation.end - invocation.start,
@@ -2314,6 +2319,7 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
     }
     return result;
   };
+  expandedProgram.getAnalysisArtifacts = expandedProgram.getMacroExpansions;
   if (expansion.diagnostics.length) {
     const original = expandedProgram.getSemanticDiagnostics.bind(expandedProgram) as (...args: any[]) => readonly Diagnostic[];
     (expandedProgram as any).getSemanticDiagnostics = (sourceFile?: SourceFile, ...args: any[]) => {
@@ -2332,7 +2338,8 @@ async function attachFormalVerification(program: Program, host: CompilerHost): P
 
 function attachFormalVerificationArtifacts(program: Program, artifacts: readonly VerificationArtifact[], host?: CompilerHost): Program {
   const currentDirectory = host?.getCurrentDirectory();
-  program.getVerificationArtifacts = (fileName?: string) =>
+  const previousAnalysisArtifacts = program.getAnalysisArtifacts;
+  const getVerificationArtifacts = (fileName?: string) =>
     fileName === undefined
       ? artifacts
       : artifacts.filter(artifact =>
@@ -2340,6 +2347,11 @@ function attachFormalVerificationArtifacts(program: Program, artifacts: readonly
           ? comparePaths(artifact.fileName, fileName, currentDirectory!, !host.useCaseSensitiveFileNames()) === Comparison.EqualTo
           : artifact.fileName === fileName
       );
+  program.getVerificationArtifacts = getVerificationArtifacts;
+  program.getAnalysisArtifacts = (fileName?: string) => [
+    ...(previousAnalysisArtifacts?.(fileName) ?? emptyArray),
+    ...getVerificationArtifacts(fileName),
+  ];
   const diagnostics: Diagnostic[] = artifacts
     .filter(artifact => artifact.status !== "proved")
     .map(artifact => ({
@@ -2889,6 +2901,9 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
             if (fileName !== undefined && comparePaths(expandedFileName, fileName, currentDirectory, !host.useCaseSensitiveFileNames()) !== Comparison.EqualTo) continue;
             for (const invocation of expanded.invocations) {
               result.push({
+                taskId: createAnalysisTaskId("macro", expandedFileName, invocation.start, invocation.end - invocation.start, invocation.macroName),
+                taskKind: "macro",
+                outcome: "succeeded",
                 fileName: expandedFileName,
                 start: invocation.start,
                 length: invocation.end - invocation.start,
@@ -2899,6 +2914,7 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
           }
           return result;
         };
+        expandedProgram.getAnalysisArtifacts = expandedProgram.getMacroExpansions;
         if (expansion.diagnostics.length) {
           const original = expandedProgram.getSemanticDiagnostics.bind(expandedProgram) as (...args: any[]) => readonly Diagnostic[];
           (expandedProgram as any).getSemanticDiagnostics = (sourceFile?: SourceFile, ...args: any[]) => {
@@ -5805,6 +5821,11 @@ function attachSynchronousFormalVerification(program: Program, host: CompilerHos
     }
     const artifacts = createPlaceholderFormalArtifacts(program, "Formal verification is running asynchronously.");
     program.getVerificationArtifacts = (fileName?: string) => fileName === undefined ? artifacts : artifacts.filter(artifact => artifact.fileName === fileName);
+    const previousAnalysisArtifacts = program.getAnalysisArtifacts;
+    program.getAnalysisArtifacts = (fileName?: string) => [
+      ...(previousAnalysisArtifacts?.(fileName) ?? emptyArray),
+      ...program.getVerificationArtifacts!(fileName),
+    ];
     return program;
   }
 
@@ -5841,6 +5862,7 @@ function getFormalVerificationKey(program: Program): string {
 function createPlaceholderFormalArtifacts(program: Program, message: string, status: VerificationArtifact["status"] = "unknown"): VerificationArtifact[] {
   const artifacts: VerificationArtifact[] = [];
   const checker = program.getTypeChecker();
+  const reason = { code: status === "error" ? "execution-error" as const : "unavailable" as const, message };
   for (const sourceFile of program.getSourceFiles()) {
     if (sourceFile.isDeclarationFile) continue;
     forEachChildRecursively(sourceFile, node => {
@@ -5854,19 +5876,18 @@ function createPlaceholderFormalArtifacts(program: Program, message: string, sta
           const refinement = target?.declarations?.find(isTypeAliasDeclaration);
           if (refinement?.withClause?.properties.some(property => String(property.name.escapedText) === "predicate")) {
             const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
-            const start = skipTrivia(sourceFile.text, node.pos);
-            artifacts.push({
-              fileName: sourceFile.fileName,
-              start,
-              length: node.end - start,
-              kind: "refinement",
-              obligation: "refinement-introduction",
-              name: `${String(refinement.name.escapedText)} refinement`,
+            artifacts.push(createVerificationArtifact(
+              sourceFile,
+              node,
+              "refinement",
+              "refinement-introduction",
+              `${String(refinement.name.escapedText)} refinement`,
               status,
-              solverInput: smt,
-              replayableSmtLib: smt,
+              smt,
+              smt,
               message,
-            });
+              reason,
+            ));
             return undefined;
           }
         }
@@ -5879,19 +5900,18 @@ function createPlaceholderFormalArtifacts(program: Program, message: string, sta
           const refinement = target?.declarations?.find(isTypeAliasDeclaration);
           if (refinement?.withClause?.properties.some(property => String(property.name.escapedText) === "predicate")) {
             const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
-            const start = skipTrivia(sourceFile.text, variable.pos);
-            artifacts.push({
-              fileName: sourceFile.fileName,
-              start,
-              length: variable.end - start,
-              kind: "refinement",
-              obligation: "refinement-introduction",
-              name: `${String(refinement.name.escapedText)} refinement`,
+            artifacts.push(createVerificationArtifact(
+              sourceFile,
+              variable,
+              "refinement",
+              "refinement-introduction",
+              `${String(refinement.name.escapedText)} refinement`,
               status,
-              solverInput: smt,
-              replayableSmtLib: smt,
+              smt,
+              smt,
               message,
-            });
+              reason,
+            ));
             return undefined;
           }
         }
@@ -5904,19 +5924,18 @@ function createPlaceholderFormalArtifacts(program: Program, message: string, sta
           const refinement = target?.declarations?.find(isNewtypeDeclaration);
           if (refinement?.withClause?.properties.some(property => String(property.name.escapedText) === "predicate")) {
             const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
-            const start = skipTrivia(sourceFile.text, call.pos);
-            artifacts.push({
-              fileName: sourceFile.fileName,
-              start,
-              length: call.end - start,
-              kind: "refinement",
-              obligation: "refinement-introduction",
-              name: `${String(refinement.name.escapedText)} refinement`,
+            artifacts.push(createVerificationArtifact(
+              sourceFile,
+              call,
+              "refinement",
+              "refinement-introduction",
+              `${String(refinement.name.escapedText)} refinement`,
               status,
-              solverInput: smt,
-              replayableSmtLib: smt,
+              smt,
+              smt,
               message,
-            });
+              reason,
+            ));
             return undefined;
           }
         }
@@ -5924,21 +5943,20 @@ function createPlaceholderFormalArtifacts(program: Program, message: string, sta
         if (declaration?.kind !== SyntaxKind.FunctionDeclaration) return undefined;
         const requirements = declaration.withClause?.properties.filter(property => String(property.name.escapedText) === "requires") ?? emptyArray;
         const targetName = declaration.name ? String(declaration.name.escapedText) : "anonymous function";
-        const start = skipTrivia(sourceFile.text, call.pos);
         for (let i = 0; i < requirements.length; i++) {
           const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
-          artifacts.push({
-            fileName: sourceFile.fileName,
-            start,
-            length: call.end - start,
-            kind: "call-precondition",
-            obligation: "precondition",
-            name: `${targetName} precondition ${i + 1}`,
+          artifacts.push(createVerificationArtifact(
+            sourceFile,
+            call,
+            "call-precondition",
+            "precondition",
+            `${targetName} precondition ${i + 1}`,
             status,
-            solverInput: smt,
-            replayableSmtLib: smt,
+            smt,
+            smt,
             message,
-          });
+            reason,
+          ));
         }
         return undefined;
       }
@@ -5949,19 +5967,18 @@ function createPlaceholderFormalArtifacts(program: Program, message: string, sta
       const kind = name === "ensures" ? "function-contract" : "loop-invariant";
       const obligation = name === "ensures" ? "postcondition" : "invariant-preservation";
       const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
-      const start = skipTrivia(sourceFile.text, property.value.pos);
-      artifacts.push({
-        fileName: sourceFile.fileName,
-        start,
-        length: property.value.end - start,
+      artifacts.push(createVerificationArtifact(
+        sourceFile,
+        property,
         kind,
         obligation,
-        name: `${name} verification`,
+        `${name} verification`,
         status,
-        solverInput: smt,
-        replayableSmtLib: smt,
+        smt,
+        smt,
         message,
-      });
+        reason,
+      ));
       return undefined;
     });
   }
