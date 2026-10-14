@@ -48,6 +48,14 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "refinementTypes",
+    dependencies: ["formalContracts"],
+    initComments: [
+      "获得：由 Z3 验证类型引入点的谓词精化类型别名。",
+      "影响：TS超集=是；透明擦除=是。",
+    ],
+  },
+  {
     name: "typeUniverses",
     dependencies: ["higherKindedTypes"],
     initComments: [

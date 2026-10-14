@@ -193,6 +193,7 @@ import {
   isExportModifier,
   isExternalModule,
   isExternalModuleNameRelative,
+  isFunctionLike,
   isIdentifier,
   isIdentifierText,
   isImportCall,
@@ -204,11 +205,13 @@ import {
   isJSDocImportTag,
   isModifier,
   isModuleDeclaration,
+  isNewtypeDeclaration,
   isObjectLiteralExpression,
   isParameter,
   isPlainJsFile,
   isPropertyAssignment,
   isRequireCall,
+  isReturnStatement,
   isRootedDiskPath,
   isSourceFileJS,
   isStatement,
@@ -216,6 +219,8 @@ import {
   isStringLiteral,
   isStringLiteralLike,
   isTraceEnabled,
+  isTypeAliasDeclaration,
+  isTypeReferenceNode,
   JSDocImportTag,
   JsonSourceFile,
   JsxEmit,
@@ -5820,12 +5825,86 @@ function createPlaceholderFormalArtifacts(program: Program, message: string, sta
   for (const sourceFile of program.getSourceFiles()) {
     if (sourceFile.isDeclarationFile) continue;
     forEachChildRecursively(sourceFile, node => {
+      if (isReturnStatement(node) && node.expression) {
+        let owner: Node | undefined = node.parent;
+        while (owner && !isFunctionLike(owner)) owner = owner.parent;
+        const type = owner?.kind === SyntaxKind.FunctionDeclaration ? owner.type : undefined;
+        if (type && isTypeReferenceNode(type) && isIdentifier(type.typeName)) {
+          const symbol = checker.getSymbolAtLocation(type.typeName);
+          const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+          const refinement = target?.declarations?.find(isTypeAliasDeclaration);
+          if (refinement?.withClause?.properties.some(property => String(property.name.escapedText) === "predicate")) {
+            const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
+            const start = skipTrivia(sourceFile.text, node.pos);
+            artifacts.push({
+              fileName: sourceFile.fileName,
+              start,
+              length: node.end - start,
+              kind: "refinement",
+              obligation: "refinement-introduction",
+              name: `${String(refinement.name.escapedText)} refinement`,
+              status,
+              solverInput: smt,
+              replayableSmtLib: smt,
+              message,
+            });
+            return undefined;
+          }
+        }
+      }
+      if (node.kind === SyntaxKind.VariableDeclaration) {
+        const variable = node as VariableDeclaration;
+        if (variable.initializer && variable.type && isTypeReferenceNode(variable.type) && isIdentifier(variable.type.typeName)) {
+          const symbol = checker.getSymbolAtLocation(variable.type.typeName);
+          const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+          const refinement = target?.declarations?.find(isTypeAliasDeclaration);
+          if (refinement?.withClause?.properties.some(property => String(property.name.escapedText) === "predicate")) {
+            const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
+            const start = skipTrivia(sourceFile.text, variable.pos);
+            artifacts.push({
+              fileName: sourceFile.fileName,
+              start,
+              length: variable.end - start,
+              kind: "refinement",
+              obligation: "refinement-introduction",
+              name: `${String(refinement.name.escapedText)} refinement`,
+              status,
+              solverInput: smt,
+              replayableSmtLib: smt,
+              message,
+            });
+            return undefined;
+          }
+        }
+      }
       if (node.kind === SyntaxKind.CallExpression) {
         const call = node as CallExpression;
+        if (isIdentifier(call.expression)) {
+          const symbol = checker.getSymbolAtLocation(call.expression);
+          const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+          const refinement = target?.declarations?.find(isNewtypeDeclaration);
+          if (refinement?.withClause?.properties.some(property => String(property.name.escapedText) === "predicate")) {
+            const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
+            const start = skipTrivia(sourceFile.text, call.pos);
+            artifacts.push({
+              fileName: sourceFile.fileName,
+              start,
+              length: call.end - start,
+              kind: "refinement",
+              obligation: "refinement-introduction",
+              name: `${String(refinement.name.escapedText)} refinement`,
+              status,
+              solverInput: smt,
+              replayableSmtLib: smt,
+              message,
+            });
+            return undefined;
+          }
+        }
         const declaration = checker.getResolvedSignature(call)?.declaration;
         if (declaration?.kind !== SyntaxKind.FunctionDeclaration) return undefined;
-        const requirements = (declaration as FunctionDeclaration).withClause?.properties.filter(property => String(property.name.escapedText) === "requires") ?? emptyArray;
-        const targetName = (declaration as FunctionDeclaration).name ? String((declaration as FunctionDeclaration).name!.escapedText) : "anonymous function";
+        const requirements = declaration.withClause?.properties.filter(property => String(property.name.escapedText) === "requires") ?? emptyArray;
+        const targetName = declaration.name ? String(declaration.name.escapedText) : "anonymous function";
         const start = skipTrivia(sourceFile.text, call.pos);
         for (let i = 0; i < requirements.length; i++) {
           const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;

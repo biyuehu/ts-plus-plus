@@ -3692,6 +3692,7 @@ export interface TypeAliasDeclaration extends DeclarationStatement, JSDocContain
   /** The explicitly declared result kind of this type alias. An omitted result kind defaults to `Type0`. */
   readonly kindType?: KindNode;
   readonly type: TypeNode;
+  readonly withClause?: WithClause;
 }
 
 export interface NewtypeDeclaration extends DeclarationStatement, JSDocContainer, LocalsContainer {
@@ -3700,6 +3701,7 @@ export interface NewtypeDeclaration extends DeclarationStatement, JSDocContainer
   readonly name: Identifier;
   readonly typeParameters?: NodeArray<TypeParameterDeclaration>;
   readonly type: TypeNode;
+  readonly withClause?: WithClause;
 }
 
 export interface DataVariant extends NamedDeclaration, JSDocContainer, LocalsContainer {
@@ -5254,8 +5256,8 @@ export interface VerificationArtifact {
   readonly fileName: string;
   readonly start: number;
   readonly length: number;
-  readonly kind: "function-contract" | "loop-invariant" | "call-precondition";
-  readonly obligation: "precondition" | "postcondition" | "invariant-initialization" | "invariant-preservation";
+  readonly kind: "function-contract" | "loop-invariant" | "call-precondition" | "refinement";
+  readonly obligation: "precondition" | "postcondition" | "invariant-initialization" | "invariant-preservation" | "refinement-introduction";
   readonly name: string;
   readonly status: VerificationStatus;
   readonly solverInput: string;
@@ -9361,10 +9363,10 @@ export interface NodeFactory {
   updateClassDeclaration(node: ClassDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly ClassElement[]): ClassDeclaration;
   createInterfaceDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;
   updateInterfaceDeclaration(node: InterfaceDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;
-  createTypeAliasDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode): TypeAliasDeclaration;
-  updateTypeAliasDeclaration(node: TypeAliasDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode): TypeAliasDeclaration;
-  createNewtypeDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode): NewtypeDeclaration;
-  updateNewtypeDeclaration(node: NewtypeDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode): NewtypeDeclaration;
+  createTypeAliasDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): TypeAliasDeclaration;
+  updateTypeAliasDeclaration(node: TypeAliasDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): TypeAliasDeclaration;
+  createNewtypeDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, withClause?: WithClause): NewtypeDeclaration;
+  updateNewtypeDeclaration(node: NewtypeDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, withClause?: WithClause): NewtypeDeclaration;
   createDataVariant(name: string | Identifier, parameters: readonly ParameterDeclaration[] | undefined): DataVariant;
   updateDataVariant(node: DataVariant, name: Identifier, parameters: readonly ParameterDeclaration[] | undefined): DataVariant;
   createDataDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, variants: readonly DataVariant[]): DataDeclaration;

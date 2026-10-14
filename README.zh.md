@@ -27,6 +27,7 @@ tspp --init
       "newtypeDeclarations",
       "dataDeclarations",
       "formalContracts",
+      "refinementTypes",
       "typeUniverses"
     ]
   }
@@ -52,6 +53,7 @@ tspp --init
 | `newtypeDeclarations` | `newtype` 名义类型声明与对应构造器 | 无 | 是 | 否（生成运行时构造器） |
 | `dataDeclarations` | `data` 可辨识联合声明与对应变体构造器 | 无 | 是 | 否（生成运行时变体值与构造器） |
 | `formalContracts` | 由 Z3 验证的 `requires`、`ensures` 和 `while` 循环不变式 | 无 | 是 | 是 |
+| `refinementTypes` | 由 Z3 验证结构类型别名引入点的谓词 | `formalContracts` | 是 | 是 |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |
 | `dependentFunctionTypes` | Pi 类型，以及显式的 `Lam`/`Ann` MLTT 项 | `typeUniverses` | 是 | 是 |
 | `dependentFunctionInterop` | Pi 类型与 TypeScript 泛型函数之间的赋值和调用 | `dependentFunctionTypes` | 是 | 是 |
@@ -62,6 +64,12 @@ tspp --init
 | `sigmaTypes` | `Sigma`、`Pair`、`First`、`Second` 依赖对及投影 | `dependentFunctionTypes` | 是 | 是 |
 
 自动生成的配置是与编译器版本对应的权威特性说明。本项目仍处于实验阶段；表中的结论描述当前实现，不是对未来新增特性的永久承诺。
+
+## 验证架构
+
+契约、控制流事实和精化谓词都会降低到与求解器无关的 Verification IR。只有 SMT 后端负责把这份 IR 序列化为 SMT-LIB 并调用 Z3；TypeScript 自身的控制流分析仍作为事实来源被复用，而不是被替换。
+
+MLTT Core 继续保留自己的项、归约和定义相等性。将来若加入 MLTT 精化，应只通过适配器把其中可判定的算术/相等片段降低到 Verification IR，而不把 MLTT Core 与 SMT 表示合并。
 
 ## 形式化契约
 

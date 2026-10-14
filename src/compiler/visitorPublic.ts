@@ -1518,6 +1518,7 @@ const visitEachChildTable: VisitEachChildTable = {
       typeParameters,
       type,
       kindType,
+      nodeVisitor(node.withClause, visitor, isWithClause),
     );
   },
 
@@ -1528,6 +1529,7 @@ const visitEachChildTable: VisitEachChildTable = {
       Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
       nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration),
       Debug.checkDefined(nodeVisitor(node.type, visitor, isTypeNode)),
+      nodeVisitor(node.withClause, visitor, isWithClause),
     );
   },
 

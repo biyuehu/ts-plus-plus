@@ -1,0 +1,27 @@
+type Positive = bigint with {
+  predicate: value > 0n;
+};
+
+type NonNegative = bigint with {
+  predicate: value >= 0n;
+};
+
+const age: Positive = 18n;
+
+function positiveOrOne(value: bigint): Positive {
+  if (value > 0n) return value;
+  return 1n;
+}
+
+// Positive's stronger predicate is available as a fact inside the function,
+// so Z3 can prove that the value also satisfies NonNegative.
+function widen(value: Positive): NonNegative {
+  return value;
+}
+
+console.log(`positive age = ${age}`);
+console.log(`positive fallback = ${positiveOrOne(-1n)}`);
+console.log(`propagated non-negative = ${widen(age)}`);
+
+// Uncomment to see a Z3 counterexample:
+// const invalid: Positive = -1n;

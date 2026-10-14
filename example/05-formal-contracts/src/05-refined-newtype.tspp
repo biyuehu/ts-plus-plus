@@ -1,0 +1,16 @@
+newtype Port = bigint with {
+  predicate: value > 0n && value <= 65535n;
+};
+
+const http = Port(80n);
+
+function portOrDefault(value: bigint): Port {
+  if (value > 0n && value <= 65535n) return Port(value);
+  return Port(8080n);
+}
+
+console.log(`HTTP port = ${http}`);
+console.log(`default port = ${portOrDefault(-1n)}`);
+
+// Uncomment to see a Z3 counterexample:
+// const invalid = Port(70000n);

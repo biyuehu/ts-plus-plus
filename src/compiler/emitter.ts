@@ -3717,6 +3717,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writePunctuation("=");
     writeSpace();
     emit(node.type);
+    if (node.withClause) {
+      writeSpace();
+      emit(node.withClause);
+    }
     writeTrailingSemicolon();
   }
 
@@ -3730,6 +3734,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writePunctuation("=");
     writeSpace();
     emit(node.type);
+    if (node.withClause) {
+      writeSpace();
+      emit(node.withClause);
+    }
     writeTrailingSemicolon();
   }
 

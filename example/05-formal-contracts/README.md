@@ -1,10 +1,12 @@
 # 05 — 形式化契约与循环不变式
 
-这个示例展示 `formalContracts` 的三个基础场景：
+这个示例按文件分别展示 `formalContracts` 和 `refinementTypes`：
 
 - [`01-function-contracts.tspp`](./src/01-function-contracts.tspp)：`requires`、`ensures`、隐式返回值 `result` 和多返回路径；
 - [`02-loop-invariants.tspp`](./src/02-loop-invariants.tspp)：循环不变式的初始化与保持性证明；
-- [`03-number-model.tspp`](./src/03-number-model.tspp)：显式选择数学实数模型后验证 `number`。
+- [`03-number-model.tspp`](./src/03-number-model.tspp)：显式选择数学实数模型后验证 `number`；
+- [`04-refinement-types.tspp`](./src/04-refinement-types.tspp)：精化类型的引入、控制流证明和谓词传播；
+- [`05-refined-newtype.tspp`](./src/05-refined-newtype.tspp)：在 `newtype` 构造入口应用 `with` 谓词约束。
 
 ## 函数契约
 
@@ -64,6 +66,37 @@ function scaledSum(left: number, right: number) with {
 
 这项证明只说明数学实数模型下的结论，不代表对所有 IEEE-754 边界值都成立。没有这个属性
 时，涉及 `number` 的证明会得到 `unknown`。
+
+## 精化类型与传播
+
+精化直接写在普通结构类型别名上，不依赖 `newtype`：
+
+```ts
+type Positive = bigint with { predicate: value > 0n; };
+type NonNegative = bigint with { predicate: value >= 0n; };
+
+const age: Positive = 18n;
+
+function widen(value: Positive): NonNegative {
+  return value;
+}
+```
+
+`value` 表示正在引入精化类型的值。函数参数的精化谓词会作为函数体内的已知事实，因此 Z3 可以证明 `value > 0n` 蕴含 `value >= 0n`。精化类型在 JavaScript 中完全擦除，不生成构造器。
+
+## 带约束的 `newtype`
+
+`with` 谓词也可以附加到 `newtype`。此时每次显式调用构造器都会生成证明义务：
+
+```ts
+newtype Port = bigint with {
+  predicate: value > 0n && value <= 65535n;
+};
+
+const http = Port(80n); // proved
+```
+
+它与结构精化类型的区别是：`newtype` 仍保持名义边界并生成原有的轻量构造器；谓词本身仍只在编译期存在，不进入 JavaScript。
 
 ## 查看 SMT-LIB
 

@@ -28,6 +28,7 @@ Enable features manually:
       "dataDeclarations",
       "macros",
       "formalContracts",
+      "refinementTypes",
       "typeUniverses"
     ]
   }
@@ -54,6 +55,7 @@ Current features:
 | `dataDeclarations` | `data` discriminated unions and variant constructors | — | Yes | No (emits runtime variant values and constructors) |
 | `macros` | `macro function` declarations and compile-time `macro f(Target);` statement expansion | — | Yes | No (macro calls can replace emitted statements) |
 | `formalContracts` | Z3-backed `requires`, `ensures`, and `while` invariants | — | Yes | Yes |
+| `refinementTypes` | Z3-verified predicates on structural type aliases | `formalContracts` | Yes | Yes |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
@@ -64,6 +66,12 @@ Current features:
 | `sigmaTypes` | `Sigma`, `Pair`, `First`, and `Second` | `dependentFunctionTypes` | Yes | Yes |
 
 The generated configuration is the authoritative, compiler-version-specific feature guide. The project is still experimental; these classifications describe the listed implementation, not a permanent promise about future features.
+
+## Verification architecture
+
+Contracts, control-flow facts, and refinement predicates lower to a solver-independent Verification IR. The SMT backend is the only layer that serializes that IR to SMT-LIB and invokes Z3, so TypeScript's own control-flow analysis is reused as a source of facts rather than replaced.
+
+The MLTT core keeps its own terms, normalization, and definitional equality. A future MLTT refinement bridge should translate only its decidable arithmetic/equality fragment into Verification IR; it should not merge the MLTT core with the SMT representation.
 
 ## Formal contracts
 
