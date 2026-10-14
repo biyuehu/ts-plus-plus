@@ -36,55 +36,58 @@ export interface VerificationTypeLoweringContext {
  * @internal
  */
 export function lowerVerificationType(context: VerificationTypeLoweringContext, type: Type): VerificationTypeLoweringResult {
-  const active = new Set<Type>();
-  return lowerTypeWorker(context, type, active);
+  return lowerTypeWorker(context, type, new Map());
 }
 
-function lowerTypeWorker(context: VerificationTypeLoweringContext, type: Type, active: Set<Type>): VerificationTypeLoweringResult {
+function lowerTypeWorker(context: VerificationTypeLoweringContext, type: Type, loweredTypes: Map<Type, VerificationSort>): VerificationTypeLoweringResult {
   if (type.flags & TypeFlags.BooleanLike) return { sort: "Bool" };
   if (type.flags & TypeFlags.BigIntLike) return { sort: "Int" };
   if (type.flags & TypeFlags.NumberLike) {
     return context.numberModel ? { sort: "Real" } : { reason: 'TypeScript number requires numberModel: "mathematical-real".' };
   }
   if (type.flags & TypeFlags.StringLike) return { sort: "String" };
-  if (active.has(type)) return { reason: `Recursive type '${context.checker.typeToString(type)}' is outside the supported verification subset.` };
-  active.add(type);
+  const existing = loweredTypes.get(type);
+  if (existing) return { sort: existing };
   const result = type.flags & TypeFlags.Union
-    ? lowerDiscriminatedUnion(context, type as UnionType, active)
+    ? lowerDiscriminatedUnion(context, type as UnionType, loweredTypes)
     : type.flags & TypeFlags.Object
-    ? lowerRecord(context, type, active)
+    ? lowerRecord(context, type, loweredTypes)
     : { reason: `Type '${context.checker.typeToString(type)}' is outside the supported verification subset.` };
-  active.delete(type);
   return result;
 }
 
-function lowerDiscriminatedUnion(context: VerificationTypeLoweringContext, type: UnionType, active: Set<Type>): VerificationTypeLoweringResult {
+function lowerDiscriminatedUnion(context: VerificationTypeLoweringContext, type: UnionType, loweredTypes: Map<Type, VerificationSort>): VerificationTypeLoweringResult {
+  const sort = { kind: "sum", name: context.checker.typeToString(type), variants: [] } as unknown as VerificationSumSort;
+  loweredTypes.set(type, sort);
   const variants: VerificationSumSort["variants"][number][] = [];
   const variantNames = new Set<string>();
   for (const member of type.types) {
     const tag = getStringDiscriminant(context.checker, member);
-    if (!tag) return { reason: `Union '${context.checker.typeToString(type)}' is not a closed union with a unique string '_tag' discriminant.` };
-    if (variantNames.has(tag)) return { reason: `Union '${context.checker.typeToString(type)}' has duplicate '_tag' value '${tag}'.` };
+    if (!tag) return loweringFailure(loweredTypes, type, `Union '${context.checker.typeToString(type)}' is not a closed union with a unique string '_tag' discriminant.`);
+    if (variantNames.has(tag)) return loweringFailure(loweredTypes, type, `Union '${context.checker.typeToString(type)}' has duplicate '_tag' value '${tag}'.`);
     variantNames.add(tag);
-    const fields = lowerProperties(context, member, active, /*omitTag*/ true);
-    if (propertyLoweringFailed(fields)) return fields;
+    const fields = lowerProperties(context, member, loweredTypes, /*omitTag*/ true);
+    if (propertyLoweringFailed(fields)) return loweringFailure(loweredTypes, type, fields.reason);
     variants.push({ name: tag, fields: fields.fields });
   }
-  return { sort: { kind: "sum", name: context.checker.typeToString(type), variants } };
+  (sort as { variants: readonly VerificationSumSort["variants"][number][]; }).variants = variants;
+  return { sort };
 }
 
-function lowerRecord(context: VerificationTypeLoweringContext, type: Type, active: Set<Type>): VerificationTypeLoweringResult {
+function lowerRecord(context: VerificationTypeLoweringContext, type: Type, loweredTypes: Map<Type, VerificationSort>): VerificationTypeLoweringResult {
   if (context.checker.getIndexInfosOfType(type).length) return { reason: `Indexed type '${context.checker.typeToString(type)}' is outside the supported verification subset.` };
-  const fields = lowerProperties(context, type, active, /*omitTag*/ false);
-  if (propertyLoweringFailed(fields)) return fields;
-  const sort: VerificationProductSort = { kind: "product", name: context.checker.typeToString(type), fields: fields.fields };
+  const sort = { kind: "product", name: context.checker.typeToString(type), fields: [] } as unknown as VerificationProductSort;
+  loweredTypes.set(type, sort);
+  const fields = lowerProperties(context, type, loweredTypes, /*omitTag*/ false);
+  if (propertyLoweringFailed(fields)) return loweringFailure(loweredTypes, type, fields.reason);
+  (sort as { fields: readonly VerificationField[]; }).fields = fields.fields;
   return { sort };
 }
 
 function lowerProperties(
   context: VerificationTypeLoweringContext,
   type: Type,
-  active: Set<Type>,
+  loweredTypes: Map<Type, VerificationSort>,
   omitTag: boolean,
 ): { readonly fields: readonly VerificationField[]; } | { readonly reason: string; } {
   const fields: VerificationField[] = [];
@@ -94,11 +97,16 @@ function lowerProperties(
     if (property.flags & SymbolFlags.Optional) return { reason: `Optional property '${name}' is outside the supported verification subset.` };
     const propertyType = context.checker.getTypeOfPropertyOfType(type, name);
     if (!propertyType) return { reason: `Property '${name}' has no type available for verification.` };
-    const lowered = lowerTypeWorker(context, propertyType, active);
+    const lowered = lowerTypeWorker(context, propertyType, loweredTypes);
     if (verificationTypeLoweringFailed(lowered)) return { reason: `Property '${name}' cannot be lowered: ${lowered.reason}` };
     fields.push({ name, sort: lowered.sort });
   }
   return { fields };
+}
+
+function loweringFailure(loweredTypes: Map<Type, VerificationSort>, type: Type, reason: string): VerificationTypeLoweringResult {
+  loweredTypes.delete(type);
+  return { reason };
 }
 
 function propertyLoweringFailed(

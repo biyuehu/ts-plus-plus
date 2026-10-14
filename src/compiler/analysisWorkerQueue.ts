@@ -1,3 +1,8 @@
+import {
+  CancellationToken,
+  OperationCanceledException,
+} from "./types.js";
+
 /** A shared bounded scheduler for compiler analysis workers. */
 
 interface QueuedAnalysisWorkerTask {
@@ -13,11 +18,21 @@ interface AnalysisWorkerQueue {
 const queues = new Map<string, AnalysisWorkerQueue>();
 
 /** @internal */
-export function scheduleAnalysisWorker<T>(queueName: string, start: () => Promise<T>): Promise<T> {
+export function scheduleAnalysisWorker<T>(queueName: string, start: () => Promise<T>, cancellationToken?: CancellationToken): Promise<T> {
   const queue = getQueue(queueName);
   return new Promise<T>((resolve, reject) => {
-    queue.tasks.push({
+    cancellationToken?.throwIfCancellationRequested();
+    let cancellationPoll: ReturnType<typeof setInterval> | undefined;
+    const task: QueuedAnalysisWorkerTask = {
       start: () => {
+        if (cancellationPoll) globalThis.clearInterval(cancellationPoll);
+        try {
+          cancellationToken?.throwIfCancellationRequested();
+        }
+        catch (error) {
+          reject(error);
+          return;
+        }
         queue.activeCount++;
         let result: Promise<T>;
         try {
@@ -31,7 +46,18 @@ export function scheduleAnalysisWorker<T>(queueName: string, start: () => Promis
           drainQueue(queue);
         });
       },
-    });
+    };
+    queue.tasks.push(task);
+    if (cancellationToken) {
+      cancellationPoll = globalThis.setInterval(() => {
+        if (!cancellationToken.isCancellationRequested()) return;
+        const index = queue.tasks.indexOf(task);
+        if (index < 0) return;
+        queue.tasks.splice(index, 1);
+        globalThis.clearInterval(cancellationPoll);
+        reject(new OperationCanceledException());
+      }, 25);
+    }
     drainQueue(queue);
   });
 }

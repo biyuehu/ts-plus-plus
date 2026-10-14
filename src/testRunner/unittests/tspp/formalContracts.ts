@@ -257,7 +257,7 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.isEmpty(program.getSemanticDiagnostics());
   });
 
-  it("reports unsupported optional and recursive structures as unknown", async () => {
+  it("reports optional structures as unknown and supports recursive data", async () => {
     const optional = await createProgram(`
       type OptionalResult =
         | { _tag: "Some"; value?: bigint }
@@ -280,8 +280,7 @@ describe("unittests:: tspp:: formal contracts", () => {
       ["dataDeclarations", "formalContracts"],
     );
     const [recursiveArtifact] = recursive.program.getVerificationArtifacts!();
-    assert.equal(recursiveArtifact.status, "unknown");
-    assert.include(recursiveArtifact.message, "Recursive type");
+    assert.equal(recursiveArtifact.status, "proved");
   });
 
   it("reports unsupported expressions as unknown without invoking Z3", async () => {
@@ -534,5 +533,103 @@ describe("unittests:: tspp:: formal contracts", () => {
     const diagnostics = service.getSemanticDiagnostics(fileName);
     assert.notStrictEqual(service.getCurrentProgram(), pendingProgram);
     assert.include(ts.flattenDiagnosticMessageText(diagnostics.find(diagnostic => diagnostic.code === 18090)!.messageText, "\n"), "proof failed");
+  });
+
+  it("constructs and verifies record literals", async () => {
+    const { program } = await createProgram(`
+      type Point = { x: bigint; y: bigint };
+      function origin() with {
+        ensures: result.x === 0n;
+        ensures: result.y === 0n;
+      }: Point {
+        return { x: 0n, y: 0n };
+      }
+    `);
+    assert.deepEqual(program.getVerificationArtifacts!().map(artifact => artifact.status), ["proved", "proved"]);
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
+  it("resolves structured parameters and result inside contracts", async () => {
+    const { program } = await createProgram(`
+      type Point = { x: bigint; y: bigint };
+      function copy(point: Point) with {
+        ensures: result.x === point.x;
+        ensures: result.y === point.y;
+      }: Point {
+        return point;
+      }
+    `);
+    assert.isTrue(program.getVerificationArtifacts!().every(artifact => artifact.status === "proved"));
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
+  it("constructs TS++ data variants and recursive data", async () => {
+    const { program } = await createProgram(
+      `
+      data List = Nil | Cons(head: bigint, tail: List);
+      function singleton(value: bigint) with {
+        ensures: result._tag === "Cons";
+      }: List {
+        return Cons(value, Nil);
+      }
+    `,
+      ["formalContracts", "dataDeclarations"],
+    );
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.status, "proved");
+    assert.include(artifact.solverInput, "declare-datatypes");
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
+  it("uses checker-narrowed switch control flow", async () => {
+    const { program } = await createProgram(
+      `
+      data ParseResult = Parsed(value: bigint) | Rejected(code: string);
+      function magnitude(input: ParseResult) with { ensures: result >= 0n; }: bigint {
+        switch (input._tag) {
+          case "Parsed":
+            if (input.value >= 0n) return input.value;
+            return -input.value;
+          case "Rejected":
+            return 0n;
+        }
+      }
+    `,
+      ["formalContracts", "dataDeclarations"],
+    );
+    assert.isTrue(program.getVerificationArtifacts!().every(artifact => artifact.status === "proved"));
+  });
+
+  it("decodes structured counterexamples", async () => {
+    const { program } = await createProgram(`
+      type Point = { x: bigint; y: bigint };
+      function bad(point: Point) with { ensures: result.x === 0n; }: Point {
+        return point;
+      }
+    `);
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.status, "failed");
+    assert.match(artifact.counterexample!, /^point = \{ x: -?\d+, y: -?\d+ \}$/);
+  });
+
+  it("propagates an already requested cancellation", async () => {
+    const token: ts.CancellationToken = {
+      isCancellationRequested: () => true,
+      throwIfCancellationRequested: () => {
+        throw new ts.OperationCanceledException();
+      },
+    };
+    let error: unknown;
+    try {
+      await ts.createProgramAsync({
+        rootNames: [],
+        options: { noLib: true, tsppFeatures: ["formalContracts"] },
+        cancellationToken: token,
+      });
+    }
+    catch (caught) {
+      error = caught;
+    }
+    assert.instanceOf(error, ts.OperationCanceledException);
   });
 });

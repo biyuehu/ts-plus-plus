@@ -135,10 +135,17 @@ export function isVerificationNumericSort(sort: VerificationSort): sort is "Int"
 }
 
 export function verificationSortKey(sort: VerificationSort): string {
+  return verificationSortKeyWorker(sort, new Set());
+}
+
+function verificationSortKeyWorker(sort: VerificationSort, active: Set<VerificationProductSort | VerificationSumSort>): string {
   if (typeof sort === "string") return sort;
+  if (active.has(sort)) return `ref:${sort.kind}:${sort.name}`;
+  active.add(sort);
   const members = sort.kind === "product"
-    ? sort.fields.map(field => `${field.name}:${verificationSortKey(field.sort)}`).join(",")
-    : sort.variants.map(variant => `${variant.name}(${variant.fields.map(field => `${field.name}:${verificationSortKey(field.sort)}`).join(",")})`).join("|");
+    ? sort.fields.map(field => `${field.name}:${verificationSortKeyWorker(field.sort, active)}`).join(",")
+    : sort.variants.map(variant => `${variant.name}(${variant.fields.map(field => `${field.name}:${verificationSortKeyWorker(field.sort, active)}`).join(",")})`).join("|");
+  active.delete(sort);
   return `${sort.kind}:${sort.name}:${members}`;
 }
 

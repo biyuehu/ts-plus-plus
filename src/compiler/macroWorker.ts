@@ -5,7 +5,9 @@ import {
 import { scheduleAnalysisWorker } from "./analysisWorkerQueue.js";
 import {
   AnalysisTaskArtifact,
+  CancellationToken,
   CompilerOptions,
+  OperationCanceledException,
   Program,
   ProjectReference,
 } from "./types.js";
@@ -163,8 +165,9 @@ export function runMacroExpansionWorker(
   macroTimeoutMs: number | undefined,
   macroBenchmarkMs: number | undefined,
   options: MacroWorkerOptions = {},
+  cancellationToken?: CancellationToken,
 ): Promise<MacroWorkerResult> {
-  return scheduleAnalysisWorker("compiler-analysis", () => startMacroExpansionWorker(program, compilerOptions, projectReferences, macroTimeoutMs, macroBenchmarkMs, options));
+  return scheduleAnalysisWorker("compiler-analysis", () => startMacroExpansionWorker(program, compilerOptions, projectReferences, macroTimeoutMs, macroBenchmarkMs, options, cancellationToken), cancellationToken);
 }
 
 function startMacroExpansionWorker(
@@ -174,6 +177,7 @@ function startMacroExpansionWorker(
   macroTimeoutMs: number | undefined,
   macroBenchmarkMs: number | undefined,
   options: MacroWorkerOptions,
+  cancellationToken: CancellationToken | undefined,
 ): Promise<MacroWorkerResult> {
   const normalizedOptions = { ...defaultMacroWorkerOptions, ...options };
   const path = require("node:path") as typeof import("node:path");
@@ -209,13 +213,17 @@ function startMacroExpansionWorker(
     });
     let settled = false;
     let timeout: ReturnType<typeof globalThis.setTimeout> | undefined;
+    const cancellationPoll = cancellationToken && globalThis.setInterval(() => {
+      if (cancellationToken.isCancellationRequested()) fail(new OperationCanceledException());
+    }, 25);
     let activeMacro: Extract<MacroWorkerMessage, { readonly type: "macro-start"; }> | undefined;
 
     const cleanup = () => {
       if (timeout !== undefined) globalThis.clearTimeout(timeout);
+      if (cancellationPoll) globalThis.clearInterval(cancellationPoll);
       worker.removeAllListeners();
     };
-    const fail = (error: Error, terminate = true) => {
+    const fail = (error: Error | OperationCanceledException, terminate = true) => {
       if (settled) return;
       settled = true;
       cleanup();

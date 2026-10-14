@@ -8001,6 +8001,8 @@ export interface CreateProgramOptions {
   host?: CompilerHost;
   oldProgram?: Program;
   configFileParsingDiagnostics?: readonly Diagnostic[];
+  /** Cancels compiler-hosted analysis work, including queued or active formal verification. */
+  cancellationToken?: CancellationToken;
   /** @internal */
   typeScriptVersion?: string;
 }
