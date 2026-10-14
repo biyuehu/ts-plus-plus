@@ -26,6 +26,7 @@ export interface StandardPredicateDefinition {
 }
 
 /** @internal */
+
 export const standardPredicateDefinitions: readonly StandardPredicateDefinition[] = [
   { name: "isEven", kind: "even", arity: 1 },
   { name: "isOdd", kind: "odd", arity: 1 },
