@@ -60,9 +60,6 @@ function activate(context) {
   status.tooltip = `Using ${compilerPath}. Click to choose an example.`;
   status.show();
 
-  const macroDiagnostics = vscode.languages.createDiagnosticCollection("tspp");
-  context.subscriptions.push(macroDiagnostics);
-
   const macroExpansionCache = new Map();
   let macroExpansionQueue = Promise.resolve();
 
@@ -89,7 +86,6 @@ function activate(context) {
   async function computeDocumentAnalysis(document) {
     let expansions = [];
     let artifacts = [];
-    const documentVersion = document.version;
     try {
       const ts = require(typescriptPath);
       const configPath = ts.findConfigFile(path.dirname(document.fileName), ts.sys.fileExists, "tsppconfig.json");
@@ -112,32 +108,11 @@ function activate(context) {
       const program = await ts.createProgramAsync({ rootNames, options: parsed.options, host });
       expansions = program.getMacroExpansions?.(document.fileName) || [];
       artifacts = program.getVerificationArtifacts?.(document.fileName) || [];
-      const sourceFile = program.getSourceFile(document.fileName);
-      const diagnostics = sourceFile
-        ? program.getSemanticDiagnostics(sourceFile).filter(diagnostic => diagnostic.code >= 18080 && diagnostic.code <= 18085)
-        : [];
-      if (!document.isClosed && document.version === documentVersion) {
-        macroDiagnostics.set(document.uri, diagnostics.map(diagnostic => toVscodeDiagnostic(ts, document, diagnostic)));
-      }
     }
     catch {
-      // Keep previews and fallback diagnostics unavailable while the source is incomplete.
-      if (!document.isClosed && document.version === documentVersion) macroDiagnostics.delete(document.uri);
+      // Keep previews unavailable while the source is incomplete.
     }
     return { expansions, artifacts };
-  }
-
-  function toVscodeDiagnostic(ts, document, diagnostic) {
-    const start = Math.max(0, Math.min(document.getText().length, diagnostic.start || 0));
-    const end = Math.max(start, Math.min(document.getText().length, start + (diagnostic.length || 0)));
-    const result = new vscode.Diagnostic(
-      new vscode.Range(document.positionAt(start), document.positionAt(end)),
-      ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
-      vscode.DiagnosticSeverity.Error,
-    );
-    result.code = diagnostic.code;
-    result.source = diagnostic.source || "TS++";
-    return result;
   }
 
   async function expansionAt(document, position) {
@@ -262,39 +237,13 @@ function activate(context) {
       if (smtDocument.languageId !== languageId) smtDocument = await vscode.languages.setTextDocumentLanguage(smtDocument, languageId);
       await vscode.window.showTextDocument(smtDocument, { viewColumn: vscode.ViewColumn.Beside, preview: true });
     }),
-    vscode.workspace.onDidChangeTextDocument(event => {
+    vscode.workspace.onDidChangeTextDocument(() => {
       macroExpansionCache.clear();
-      scheduleMacroDiagnostics(event.document);
     }),
-    vscode.workspace.onDidSaveTextDocument(document => {
+    vscode.workspace.onDidSaveTextDocument(() => {
       macroExpansionCache.clear();
-      scheduleMacroDiagnostics(document, /*delay*/ 0);
     }),
-    vscode.workspace.onDidOpenTextDocument(document => scheduleMacroDiagnostics(document, /*delay*/ 0)),
-    vscode.workspace.onDidCloseTextDocument(document => macroDiagnostics.delete(document.uri)),
   );
-
-  const macroDiagnosticTimers = new Map();
-  context.subscriptions.push({
-    dispose() {
-      for (const timer of macroDiagnosticTimers.values()) clearTimeout(timer);
-      macroDiagnosticTimers.clear();
-    },
-  });
-
-  function scheduleMacroDiagnostics(document, delay = 250) {
-    if (document.uri.scheme !== "file" || path.extname(document.fileName).toLowerCase() !== ".tspp") return;
-    const key = document.uri.toString();
-    const previous = macroDiagnosticTimers.get(key);
-    if (previous) clearTimeout(previous);
-    const timer = setTimeout(() => {
-      macroDiagnosticTimers.delete(key);
-      void getDocumentAnalysis(document);
-    }, delay);
-    macroDiagnosticTimers.set(key, timer);
-  }
-
-  for (const document of vscode.workspace.textDocuments) scheduleMacroDiagnostics(document, /*delay*/ 0);
 
   async function openExample(example, viewColumn = vscode.ViewColumn.Active) {
     const document = await vscode.workspace.openTextDocument(path.join(example.directory, example.entry));

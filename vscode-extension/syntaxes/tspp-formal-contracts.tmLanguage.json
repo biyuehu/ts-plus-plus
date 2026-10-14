@@ -12,10 +12,6 @@
     {
       "match": "\\bresult\\b",
       "name": "variable.language.result.tspp"
-    },
-    {
-      "match": "<=|>=|<|>",
-      "name": "keyword.operator.relational.ts"
     }
   ]
 }
