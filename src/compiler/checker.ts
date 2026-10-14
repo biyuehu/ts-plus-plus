@@ -32190,6 +32190,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (contractResultType) return contractResultType;
     const contractParameterType = getContractParameterType(node);
     if (contractParameterType) return contractParameterType;
+    const refinementValueType = getRefinementValueType(node);
+    if (refinementValueType) return refinementValueType;
 
     const symbol = getResolvedSymbol(node);
     if (symbol === unknownSymbol) {
@@ -45429,6 +45431,17 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return parameter ? getTypeOfSymbol(getSymbolOfDeclaration(parameter)) : undefined;
   }
 
+  function getRefinementValueType(node: Identifier): Type | undefined {
+    if (idText(node) !== "value") return undefined;
+    let current: Node | undefined = node.parent;
+    while (current && !isWithProperty(current)) current = current.parent;
+    if (!current || current.name === node || idText(current.name) !== "predicate") return undefined;
+    const declaration = current.parent?.parent;
+    return declaration?.kind === SyntaxKind.NewtypeDeclaration || declaration?.kind === SyntaxKind.TypeAliasDeclaration
+      ? getTypeFromTypeNode((declaration as NewtypeDeclaration | TypeAliasDeclaration).type)
+      : undefined;
+  }
+
   function isValidMacroTimeoutExpression(expression: Expression): boolean {
     if (!isObjectLiteralExpression(expression)) return false;
     const properties = new Map<string, PropertyAssignment>();
@@ -49181,6 +49194,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
       registerForUnusedIdentifiersCheck(node);
     }
+    checkRefinementClause(node);
   }
 
   function checkNewtypeDeclaration(node: NewtypeDeclaration) {
@@ -49194,10 +49208,42 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (underlyingType.flags & (TypeFlags.Any | TypeFlags.Unknown | TypeFlags.Never)) {
       error(node.type, Diagnostics.A_newtype_cannot_use_any_unknown_or_never_as_its_underlying_type);
     }
+    checkRefinementClause(node);
     // Resolve the declared type and the constructor type so that circularity errors surface on the declaration.
     // Not registered for the unused identifier check: checkUnusedIdentifiers rejects node kinds it does not know.
     getTypeOfNominalConstructor(getSymbolOfDeclaration(node), node);
     // TODO(HKT): kind checks as in checkTypeAliasDeclaration.
+  }
+
+  function checkRefinementClause(node: NewtypeDeclaration | TypeAliasDeclaration): void {
+    if (!node.withClause) return;
+    requireTsppFeature(node.withClause, "refinementTypes");
+    const seen = new Set<string>();
+    let hasPredicate = false;
+    for (const property of node.withClause.properties) {
+      const name = idText(property.name);
+      if (seen.has(name)) {
+        error(property.name, Diagnostics.The_with_property_0_may_only_be_specified_once, name);
+        continue;
+      }
+      seen.add(name);
+      if (name !== "predicate" && name !== "numberModel") {
+        error(property.name, Diagnostics.The_with_property_0_is_not_supported_on_1, name, "a refinement type");
+        continue;
+      }
+      if (name === "numberModel") {
+        if (!isStringLiteralLike(property.value) || property.value.text !== "mathematical-real") {
+          error(property.name, Diagnostics.The_with_property_0_is_not_supported_on_1, `${name}: invalid value`, "a refinement type");
+        }
+      }
+      else {
+        hasPredicate = true;
+        checkTruthinessExpression(property.value);
+      }
+    }
+    if (!hasPredicate) {
+      error(node.withClause, Diagnostics.The_with_property_0_is_not_supported_on_1, "missing predicate", "a refinement type");
+    }
   }
 
   function checkDataDeclaration(node: DataDeclaration) {

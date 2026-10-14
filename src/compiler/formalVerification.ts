@@ -7,10 +7,14 @@ import {
   isFunctionDeclaration,
   isIdentifier,
   isIfStatement,
+  isNewtypeDeclaration,
   isParenthesizedExpression,
   isPrefixUnaryExpression,
   isReturnStatement,
   isStringLiteral,
+  isTypeAliasDeclaration,
+  isTypeReferenceNode,
+  isVariableDeclaration,
   isVariableStatement,
   isWhileStatement,
 } from "./factory/nodeTests.js";
@@ -24,13 +28,17 @@ import {
   Expression,
   FunctionDeclaration,
   Identifier,
+  NewtypeDeclaration,
   Node,
   Program,
   SourceFile,
   Statement,
+  SymbolFlags,
   SyntaxKind,
+  TypeAliasDeclaration,
   TypeChecker,
   TypeFlags,
+  TypeNode,
   VerificationArtifact,
   WhileStatement,
   WithClause,
@@ -40,15 +48,24 @@ import {
   idText,
   isFunctionLike,
 } from "./utilitiesPublic.js";
+import {
+  verificationApplication,
+  verificationBoolean,
+  verificationConstant,
+  VerificationExpression,
+  verificationInteger,
+  VerificationProblem,
+  verificationReal,
+  VerificationSort,
+  VerificationTerm,
+} from "./verificationIR.js";
+import { encodeVerificationProblem } from "./verificationSmt.js";
 
-type Sort = "Bool" | "Int" | "Real";
-interface Term {
-  readonly text: string;
-  readonly sort: Sort;
-}
+type Sort = VerificationSort;
+type Term = VerificationTerm;
 interface SymbolicState {
   readonly values: Map<string, Term>;
-  readonly facts: string[];
+  readonly facts: VerificationExpression[];
   reason?: string;
 }
 interface ReturnPath {
@@ -67,7 +84,7 @@ interface PendingArtifact {
 interface VerificationContext {
   readonly checker: TypeChecker;
   readonly sourceFile: SourceFile;
-  readonly declaration: FunctionDeclaration;
+  readonly declaration: FunctionDeclaration | NewtypeDeclaration | TypeAliasDeclaration;
   readonly declarations: Map<string, Sort>;
   readonly symbolNames: Map<string, string>;
   readonly pending: PendingArtifact[];
@@ -133,10 +150,13 @@ function needsVerification(checker: TypeChecker, declaration: FunctionDeclaratio
       return name === "requires" || name === "ensures";
     })
   ) return true;
+  if (getRefinementTypeTarget(checker, declaration.type)) return true;
   let found = false;
   if (declaration.body) {
     visit(declaration.body, node => {
       if (isWhileStatement(node) && getProperties(node.withClause, "invariant").length) found = true;
+      else if (isCallExpression(node) && getRefinementTarget(checker, node)) found = true;
+      else if (isVariableDeclaration(node) && getRefinementTypeTarget(checker, node.type)) found = true;
       else if (isCallExpression(node) && getCallTarget(checker, node)?.withClause?.properties.some(property => idText(property.name) === "requires")) found = true;
     });
   }
@@ -146,7 +166,19 @@ function needsVerification(checker: TypeChecker, declaration: FunctionDeclaratio
 function analyzeTopLevelCalls(checker: TypeChecker, sourceFile: SourceFile, pending: PendingArtifact[]): void {
   const visitTopLevel = (node: Node): void => {
     if (node !== sourceFile && isFunctionLike(node)) return;
+    if (isVariableDeclaration(node) && node.initializer) {
+      const refinement = getRefinementTypeTarget(checker, node.type);
+      if (refinement) {
+        const context = createVerificationContext(checker, sourceFile, refinement, pending, getNumberModel(refinement.withClause));
+        verifyRefinementValue(context, { values: new Map(), facts: [] }, node, refinement, node.initializer);
+      }
+    }
     if (isCallExpression(node)) {
+      const refinement = getRefinementTarget(checker, node);
+      if (refinement) {
+        const context = createVerificationContext(checker, sourceFile, refinement, pending, getNumberModel(refinement.withClause));
+        verifyRefinementIntroduction(context, { values: new Map(), facts: [] }, node, refinement);
+      }
       const target = getCallTarget(checker, node);
       if (target && getProperties(target.withClause, "requires").length) {
         const context = createVerificationContext(checker, sourceFile, target, pending, getNumberModel(target.withClause));
@@ -164,7 +196,7 @@ function analyzeTopLevelCalls(checker: TypeChecker, sourceFile: SourceFile, pend
 function createVerificationContext(
   checker: TypeChecker,
   sourceFile: SourceFile,
-  declaration: FunctionDeclaration,
+  declaration: FunctionDeclaration | NewtypeDeclaration | TypeAliasDeclaration,
   pending: PendingArtifact[],
   numberModel: boolean,
 ): VerificationContext {
@@ -181,25 +213,45 @@ function createVerificationContext(
 }
 
 function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declaration: FunctionDeclaration, pending: PendingArtifact[]): void {
-  const context = createVerificationContext(checker, sourceFile, declaration, pending, getNumberModel(declaration.withClause));
+  const returnRefinement = getRefinementTypeTarget(checker, declaration.type);
+  const context = createVerificationContext(checker, sourceFile, declaration, pending, getNumberModel(declaration.withClause) || getNumberModel(returnRefinement?.withClause));
   const initial: SymbolicState = { values: new Map(), facts: [] };
   for (const parameter of declaration.parameters) {
     if (!isIdentifier(parameter.name)) {
       initial.reason = "Destructured parameters are outside the supported verification subset.";
       continue;
     }
-    const sort = getSort(context, parameter.name);
+    const refinement = getRefinementTypeTarget(checker, parameter.type);
+    const sort = refinement
+      ? getSort({ ...context, numberModel: getNumberModel(refinement.withClause) }, refinement.type)
+      : getSort(context, parameter.name);
     if (!sort) {
       initial.reason = unsupportedTypeMessage(context, parameter.name);
       continue;
     }
-    initial.values.set(idText(parameter.name), freshConstant(context, idText(parameter.name), sort));
+    const value = freshConstant(context, idText(parameter.name), sort);
+    initial.values.set(idText(parameter.name), value);
+    if (refinement) {
+      const predicate = getProperties(refinement.withClause, "predicate")[0];
+      const refinementContext: VerificationContext = {
+        ...context,
+        declaration: refinement,
+        numberModel: getNumberModel(refinement.withClause),
+      };
+      const predicateState = cloneState(initial);
+      predicateState.values.set("value", value);
+      const assumption = predicate && translateExpression(refinementContext, predicateState, predicate.value);
+      if (!assumption) initial.reason = `Refinement type '${idText(refinement.name)}' requires a predicate.`;
+      else if (typeof assumption === "string") initial.reason = assumption;
+      else if (assumption.sort !== "Bool") initial.reason = "A refinement predicate must have Boolean verification semantics.";
+      else initial.facts.push(assumption.expression);
+    }
   }
   for (const property of getProperties(declaration.withClause, "requires")) {
     const term = translateExpression(context, initial, property.value);
     if (typeof term === "string") initial.reason = term;
     else if (term.sort !== "Bool") initial.reason = "A requires expression must have Boolean SMT semantics.";
-    else initial.facts.push(term.text);
+    else initial.facts.push(term.expression);
   }
 
   const ensures = getProperties(declaration.withClause, "ensures");
@@ -210,6 +262,16 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
     return;
   }
   const flow = executeBlock(context, declaration.body!, [initial]);
+  if (returnRefinement) {
+    for (const path of flow.returns) {
+      if (path.state.reason || !path.value) {
+        addUnknown(context, path.node, "refinement", "refinement-introduction", `${idText(returnRefinement.name)} refinement`, path.state.reason ?? "A refined return requires an explicit supported value.");
+      }
+      else {
+        verifyRefinementTerm(context, path.state, path.node, returnRefinement, path.value);
+      }
+    }
+  }
   if (ensures.length) {
     if (!flow.returns.length) {
       for (let ensureIndex = 0; ensureIndex < ensures.length; ensureIndex++) {
@@ -228,7 +290,7 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
         const goal = translateExpression(context, path.state, property.value, path.value);
         if (typeof goal === "string") addUnknown(context, property, "function-contract", "postcondition", name, goal);
         else if (goal.sort !== "Bool") addUnknown(context, property, "function-contract", "postcondition", name, "An ensures expression must have Boolean SMT semantics.");
-        else addQuery(context, property, "function-contract", "postcondition", name, path.state.facts, goal.text);
+        else addQuery(context, property, "function-contract", "postcondition", name, path.state.facts, goal.expression);
       }
     }
   }
@@ -263,12 +325,16 @@ function executeStatement(context: VerificationContext, statement: Statement, st
       if (!isIdentifier(declaration.name)) return unsupportedFlow(state, "Destructured local declarations are outside the supported verification subset.");
       const name = idText(declaration.name);
       if (state.values.has(name)) return unsupportedFlow(state, `Shadowed local '${name}' is outside the supported verification subset.`);
-      const sort = getSort(context, declaration.name);
+      const refinement = getRefinementTypeTarget(context.checker, declaration.type);
+      const sort = refinement
+        ? getSort({ ...context, numberModel: getNumberModel(refinement.withClause) }, refinement.type)
+        : getSort(context, declaration.name);
       if (!sort) return unsupportedFlow(state, unsupportedTypeMessage(context, declaration.name));
       if (declaration.initializer) {
         const value = translateExpression(context, state, declaration.initializer);
         if (typeof value === "string") return unsupportedFlow(state, value);
         if (value.sort !== sort) return unsupportedFlow(state, `Initializer sort mismatch for '${name}'.`);
+        if (refinement) verifyRefinementTerm(context, state, declaration, refinement, value);
         state.values.set(name, value);
       }
       else state.values.set(name, freshConstant(context, name, sort));
@@ -284,10 +350,10 @@ function executeStatement(context: VerificationContext, statement: Statement, st
     if (typeof condition === "string") return unsupportedFlow(state, condition);
     if (condition.sort !== "Bool") return unsupportedFlow(state, "An if condition must have Boolean SMT semantics.");
     const thenState = cloneState(state);
-    thenState.facts.push(condition.text);
+    thenState.facts.push(condition.expression);
     const thenFlow = executeStatement(context, statement.thenStatement, thenState);
     const elseState = cloneState(state);
-    elseState.facts.push(`(not ${condition.text})`);
+    elseState.facts.push(verificationApplication("not", condition.expression));
     const elseFlow = statement.elseStatement
       ? executeStatement(context, statement.elseStatement, elseState)
       : { live: [elseState], returns: [] };
@@ -322,7 +388,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
       const goal = translateExpression(context, incoming, property.value);
       if (typeof goal === "string") addUnknown(context, property, "loop-invariant", "invariant-initialization", `${name} initialization`, goal);
       else if (goal.sort !== "Bool") addUnknown(context, property, "loop-invariant", "invariant-initialization", `${name} initialization`, "An invariant must have Boolean SMT semantics.");
-      else addQuery(context, property, "loop-invariant", "invariant-initialization", `${name} initialization`, incoming.facts, goal.text);
+      else addQuery(context, property, "loop-invariant", "invariant-initialization", `${name} initialization`, incoming.facts, goal.expression);
     }
   }
 
@@ -332,12 +398,12 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
     if (!current) writeReason ??= `Assignment to unknown variable '${name}' is unsupported.`;
     else head.values.set(name, freshConstant(context, name, current.sort));
   }
-  const invariantTerms: string[] = [];
+  const invariantTerms: VerificationExpression[] = [];
   for (const property of invariants) {
     const term = translateExpression(context, head, property.value);
     if (typeof term === "string") writeReason ??= term;
     else if (term.sort !== "Bool") writeReason ??= "An invariant must have Boolean SMT semantics.";
-    else invariantTerms.push(term.text);
+    else invariantTerms.push(term.expression);
   }
   const condition = translateExpression(context, head, statement.expression);
   if (typeof condition === "string") writeReason ??= condition;
@@ -350,7 +416,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
     return unsupportedFlow(incoming, writeReason);
   }
 
-  head.facts.push(...invariantTerms, (condition as Term).text);
+  head.facts.push(...invariantTerms, (condition as Term).expression);
   const bodyFlow = executeStatement(context, statement.statement, head);
   if (bodyFlow.returns.length) {
     const reason = "return inside a verified loop is outside the supported verification subset.";
@@ -365,7 +431,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
       else {
         const goal = translateExpression(context, state, property.value);
         if (typeof goal === "string") addUnknown(context, property, "loop-invariant", "invariant-preservation", name, goal);
-        else addQuery(context, property, "loop-invariant", "invariant-preservation", name, state.facts, goal.text);
+        else addQuery(context, property, "loop-invariant", "invariant-preservation", name, state.facts, goal.expression);
       }
     }
   }
@@ -379,10 +445,10 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
   const afterCondition = translateExpression(context, after, statement.expression);
   for (const term of afterInvariantTerms) {
     if (typeof term === "string") return unsupportedFlow(after, term);
-    after.facts.push(term.text);
+    after.facts.push(term.expression);
   }
   if (typeof afterCondition === "string") return unsupportedFlow(after, afterCondition);
-  after.facts.push(`(not ${afterCondition.text})`);
+  after.facts.push(verificationApplication("not", afterCondition.expression));
   return { live: [after], returns: [] };
 }
 
@@ -404,7 +470,7 @@ function executeExpressionStatement(context: VerificationContext, state: Symboli
     else {
       const smtOperator = operator === SyntaxKind.PlusEqualsToken ? "+" : operator === SyntaxKind.MinusEqualsToken ? "-" : operator === SyntaxKind.AsteriskEqualsToken ? "*" : undefined;
       if (!smtOperator) return `Assignment operator kind ${expression.operatorToken.kind} is unsupported.`;
-      state.values.set(name, { sort: previous.sort, text: `(${smtOperator} ${previous.text} ${right.text})` });
+      state.values.set(name, { sort: previous.sort, expression: verificationApplication(smtOperator, previous.expression, right.expression) });
     }
     return undefined;
   }
@@ -412,7 +478,7 @@ function executeExpressionStatement(context: VerificationContext, state: Symboli
     const name = idText(expression.operand);
     const previous = state.values.get(name);
     if (!previous || previous.sort === "Bool") return `Update of '${name}' is unsupported.`;
-    state.values.set(name, { sort: previous.sort, text: `(${expression.operator === SyntaxKind.PlusPlusToken ? "+" : "-"} ${previous.text} 1)` });
+    state.values.set(name, { sort: previous.sort, expression: verificationApplication(expression.operator === SyntaxKind.PlusPlusToken ? "+" : "-", previous.expression, previous.sort === "Real" ? verificationReal("1") : verificationInteger("1")) });
     return undefined;
   }
   return `Expression statement '${sourceText(context, expression)}' is outside the supported verification subset.`;
@@ -424,23 +490,23 @@ function translateExpression(context: VerificationContext, state: SymbolicState,
   if (isIdentifier(expression)) {
     const name = idText(expression);
     if (name === "result") return result ?? "The implicit 'result' value is only available on an explicit return path.";
-    if (name === "true" || name === "false") return { sort: "Bool", text: name };
+    if (name === "true" || name === "false") return { sort: "Bool", expression: verificationBoolean(name === "true") };
     return state.values.get(name) ?? `Identifier '${name}' has no supported symbolic value.`;
   }
-  if (expression.kind === SyntaxKind.TrueKeyword) return { sort: "Bool", text: "true" };
-  if (expression.kind === SyntaxKind.FalseKeyword) return { sort: "Bool", text: "false" };
-  if (expression.kind === SyntaxKind.BigIntLiteral) return { sort: "Int", text: sourceText(context, expression).replace(/n$/i, "") };
+  if (expression.kind === SyntaxKind.TrueKeyword) return { sort: "Bool", expression: verificationBoolean(/*value*/ true) };
+  if (expression.kind === SyntaxKind.FalseKeyword) return { sort: "Bool", expression: verificationBoolean(/*value*/ false) };
+  if (expression.kind === SyntaxKind.BigIntLiteral) return { sort: "Int", expression: verificationInteger(sourceText(context, expression).replace(/n$/i, "")) };
   if (expression.kind === SyntaxKind.NumericLiteral) {
     if (!context.numberModel) return 'TypeScript number requires numberModel: "mathematical-real".';
     const text = sourceText(context, expression);
     if (!/^\d+(?:\.\d+)?$/.test(text)) return `Numeric literal '${text}' is outside the mathematical-real encoding subset.`;
-    return { sort: "Real", text };
+    return { sort: "Real", expression: verificationReal(text) };
   }
   if (isPrefixUnaryExpression(expression)) {
     const operand = translateExpression(context, state, expression.operand, result);
     if (typeof operand === "string") return operand;
-    if (expression.operator === SyntaxKind.ExclamationToken && operand.sort === "Bool") return { sort: "Bool", text: `(not ${operand.text})` };
-    if (expression.operator === SyntaxKind.MinusToken && operand.sort !== "Bool") return { sort: operand.sort, text: `(- ${operand.text})` };
+    if (expression.operator === SyntaxKind.ExclamationToken && operand.sort === "Bool") return { sort: "Bool", expression: verificationApplication("not", operand.expression) };
+    if (expression.operator === SyntaxKind.MinusToken && operand.sort !== "Bool") return { sort: operand.sort, expression: verificationApplication("-", operand.expression) };
     return `Unary expression '${sourceText(context, expression)}' is outside the supported verification subset.`;
   }
   if (isBinaryExpression(expression)) {
@@ -451,26 +517,130 @@ function translateExpression(context: VerificationContext, state: SymbolicState,
     const kind = expression.operatorToken.kind;
     if (kind === SyntaxKind.AmpersandAmpersandToken || kind === SyntaxKind.BarBarToken) {
       if (left.sort !== "Bool" || right.sort !== "Bool") return "Logical operators require Boolean SMT operands.";
-      return { sort: "Bool", text: `(${kind === SyntaxKind.AmpersandAmpersandToken ? "and" : "or"} ${left.text} ${right.text})` };
+      return { sort: "Bool", expression: verificationApplication(kind === SyntaxKind.AmpersandAmpersandToken ? "and" : "or", left.expression, right.expression) };
     }
     if (left.sort !== right.sort) return `Operands of operator kind ${expression.operatorToken.kind} have incompatible SMT sorts.`;
     if (kind === SyntaxKind.EqualsEqualsEqualsToken || kind === SyntaxKind.ExclamationEqualsEqualsToken) {
-      const equality = `(= ${left.text} ${right.text})`;
-      return { sort: "Bool", text: kind === SyntaxKind.EqualsEqualsEqualsToken ? equality : `(not ${equality})` };
+      const equality = verificationApplication("=", left.expression, right.expression);
+      return { sort: "Bool", expression: kind === SyntaxKind.EqualsEqualsEqualsToken ? equality : verificationApplication("not", equality) };
     }
     const operator = binaryOperator(kind);
     if (!operator) return `Operator kind ${expression.operatorToken.kind} is outside the supported verification subset.`;
     if (left.sort === "Bool") return `Operator '${operator}' does not accept Boolean SMT operands.`;
     const comparison = kind === SyntaxKind.LessThanToken || kind === SyntaxKind.LessThanEqualsToken || kind === SyntaxKind.GreaterThanToken || kind === SyntaxKind.GreaterThanEqualsToken;
-    return { sort: comparison ? "Bool" : left.sort, text: `(${operator} ${left.text} ${right.text})` };
+    return { sort: comparison ? "Bool" : left.sort, expression: verificationApplication(operator, left.expression, right.expression) };
   }
   return `Expression '${sourceText(context, expression)}' is outside the supported verification subset.`;
 }
 
 function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean): Term | string {
+  const refinement = getRefinementTarget(context.checker, expression);
+  if (refinement) return verifyRefinementIntroduction(context, state, expression, refinement);
   const target = getCallTarget(context.checker, expression);
   if (!target) return `Call '${sourceText(context, expression)}' does not resolve to a supported project function declaration.`;
   return verifyCallPreconditions(context, state, expression, target, resultUsed);
+}
+
+function getRefinementTarget(checker: TypeChecker, expression: CallExpression): NewtypeDeclaration | undefined {
+  if (!isIdentifier(expression.expression)) return undefined;
+  const symbol = checker.getSymbolAtLocation(expression.expression);
+  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+  return target?.declarations?.find(isNewtypeDeclaration)?.withClause?.properties.some(property => idText(property.name) === "predicate")
+    ? target.declarations.find(isNewtypeDeclaration)
+    : undefined;
+}
+
+function getRefinementTypeTarget(checker: TypeChecker, type: TypeNode | undefined): TypeAliasDeclaration | undefined {
+  if (!type || !isTypeReferenceNode(type) || !isIdentifier(type.typeName)) return undefined;
+  const symbol = checker.getSymbolAtLocation(type.typeName);
+  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+  const declaration = target?.declarations?.find(isTypeAliasDeclaration);
+  return declaration?.withClause?.properties.some(property => idText(property.name) === "predicate") ? declaration : undefined;
+}
+
+function verifyRefinementIntroduction(
+  context: VerificationContext,
+  callerState: SymbolicState,
+  expression: CallExpression,
+  target: NewtypeDeclaration,
+): Term | string {
+  const predicate = getProperties(target.withClause, "predicate")[0];
+  const name = idText(target.name);
+  if (!predicate || expression.arguments.length !== 1) {
+    const reason = `Refinement constructor '${name}' requires exactly one argument and one predicate.`;
+    addUnknown(context, expression, "refinement", "refinement-introduction", `${name} refinement`, reason);
+    return reason;
+  }
+  const refinementContext: VerificationContext = {
+    ...context,
+    declaration: target,
+    numberModel: getNumberModel(target.withClause),
+  };
+  const argument = translateExpression(refinementContext, callerState, expression.arguments[0]);
+  if (typeof argument === "string") {
+    addUnknown(refinementContext, expression, "refinement", "refinement-introduction", `${name} refinement`, argument);
+    return argument;
+  }
+  verifyRefinementTerm(refinementContext, callerState, expression, target, argument);
+  return argument;
+}
+
+function verifyRefinementValue(
+  context: VerificationContext,
+  state: SymbolicState,
+  node: Node,
+  target: TypeAliasDeclaration,
+  expression: Expression,
+): Term | string {
+  const refinementContext: VerificationContext = {
+    ...context,
+    declaration: target,
+    numberModel: getNumberModel(target.withClause),
+  };
+  const value = translateExpression(refinementContext, state, expression);
+  if (typeof value === "string") {
+    addUnknown(refinementContext, node, "refinement", "refinement-introduction", `${idText(target.name)} refinement`, value);
+    return value;
+  }
+  verifyRefinementTerm(refinementContext, state, node, target, value);
+  return value;
+}
+
+function verifyRefinementTerm(
+  context: VerificationContext,
+  callerState: SymbolicState,
+  node: Node,
+  target: NewtypeDeclaration | TypeAliasDeclaration,
+  argument: Term,
+): void {
+  const predicate = getProperties(target.withClause, "predicate")[0];
+  const name = idText(target.name);
+  if (!predicate) {
+    addUnknown(context, node, "refinement", "refinement-introduction", `${name} refinement`, `Refinement type '${name}' requires a predicate.`);
+    return;
+  }
+  const refinementContext: VerificationContext = {
+    ...context,
+    declaration: target,
+    numberModel: getNumberModel(target.withClause),
+  };
+  const expectedSort = getSort(refinementContext, target.type);
+  if (!expectedSort || expectedSort !== argument.sort) {
+    addUnknown(refinementContext, node, "refinement", "refinement-introduction", `${name} refinement`, `Value introduced into refinement type '${name}' has an unsupported or incompatible verification sort.`);
+    return;
+  }
+  const predicateState = cloneState(callerState);
+  predicateState.values.set("value", argument);
+  const goal = translateExpression(refinementContext, predicateState, predicate.value);
+  if (typeof goal === "string") {
+    addUnknown(refinementContext, node, "refinement", "refinement-introduction", `${name} refinement`, goal);
+  }
+  else if (goal.sort !== "Bool") {
+    addUnknown(refinementContext, node, "refinement", "refinement-introduction", `${name} refinement`, "A refinement predicate must have Boolean verification semantics.");
+  }
+  else {
+    addQuery(refinementContext, node, "refinement", "refinement-introduction", `${name} refinement`, predicateState.facts, goal.expression);
+  }
 }
 
 function getCallTarget(checker: TypeChecker, expression: CallExpression): FunctionDeclaration | undefined {
@@ -499,7 +669,7 @@ function verifyCallPreconditions(
     return reason;
   }
 
-  const arguments_: Term[] = [];
+  const argumentTerms: Term[] = [];
   for (const argument of expression.arguments) {
     const term = translateExpression(callContext, callerState, argument);
     if (typeof term === "string") {
@@ -508,7 +678,7 @@ function verifyCallPreconditions(
       }
       return term;
     }
-    arguments_.push(term);
+    argumentTerms.push(term);
   }
   if (callerState.reason) {
     for (let i = 0; i < requires.length; i++) {
@@ -522,7 +692,7 @@ function verifyCallPreconditions(
     const parameter = target.parameters[i];
     const parameterName = idText(parameter.name as Identifier);
     const parameterSort = getSort(callContext, parameter.name);
-    const argument = arguments_[i];
+    const argument = argumentTerms[i];
     if (!parameterSort || parameterSort !== argument.sort) {
       const reason = `Argument ${i + 1} of '${targetName}' has an unsupported or incompatible verification sort.`;
       for (let requirementIndex = 0; requirementIndex < requires.length; requirementIndex++) {
@@ -532,7 +702,7 @@ function verifyCallPreconditions(
     }
     const parameterTerm = freshConstant(callContext, parameterName, parameterSort);
     calleeState.values.set(parameterName, parameterTerm);
-    calleeState.facts.push(`(= ${parameterTerm.text} ${argument.text})`);
+    calleeState.facts.push(verificationApplication("=", parameterTerm.expression, argument.expression));
   }
 
   for (let i = 0; i < requires.length; i++) {
@@ -540,7 +710,7 @@ function verifyCallPreconditions(
     const name = `${targetName} precondition ${i + 1}`;
     if (typeof requirement === "string") addUnknown(callContext, expression, "call-precondition", "precondition", name, requirement);
     else if (requirement.sort !== "Bool") addUnknown(callContext, expression, "call-precondition", "precondition", name, "A requires expression must have Boolean SMT semantics.");
-    else addQuery(callContext, expression, "call-precondition", "precondition", name, calleeState.facts, requirement.text);
+    else addQuery(callContext, expression, "call-precondition", "precondition", name, calleeState.facts, requirement.expression);
   }
 
   const returnSort = getSort(callContext, expression);
@@ -551,7 +721,7 @@ function verifyCallPreconditions(
   return freshConstant(callContext, `${targetName} result`, returnSort);
 }
 
-function binaryOperator(kind: SyntaxKind): string | undefined {
+function binaryOperator(kind: SyntaxKind): "+" | "-" | "*" | "<" | "<=" | ">" | ">=" | undefined {
   switch (kind) {
     case SyntaxKind.PlusToken:
       return "+";
@@ -616,7 +786,7 @@ function freshConstant(context: VerificationContext, sourceName: string, sort: S
   while (context.declarations.has(smtName));
   context.declarations.set(smtName, sort);
   context.symbolNames.set(smtName, sourceName);
-  return { text: smtName, sort };
+  return { expression: verificationConstant(smtName, sort), sort };
 }
 
 function addQuery(
@@ -625,22 +795,15 @@ function addQuery(
   kind: VerificationArtifact["kind"],
   obligation: VerificationArtifact["obligation"],
   name: string,
-  facts: readonly string[],
-  goal: string,
+  facts: readonly VerificationExpression[],
+  goal: VerificationExpression,
 ): void {
-  const declarations = [...context.declarations].map(([symbol, sort]) => `(declare-const ${symbol} ${sort})`);
-  const mapping = [...context.symbolNames].map(([symbol, source]) => `; ${symbol} = ${source.replace(/[\r\n]/g, " ")}`);
-  const assertions = facts.map(fact => `(assert ${fact})`);
-  const solverInput = [
-    "; Generated by TS++ formalContracts",
-    `(set-option :timeout 10000)`,
-    `(set-logic ALL)`,
-    ...mapping,
-    ...declarations,
-    ...assertions,
-    `(assert (not ${goal}))`,
-  ].join("\n") + "\n";
-  const replayableSmtLib = `${solverInput}(check-sat)\n(get-model)\n`;
+  const problem: VerificationProblem = {
+    declarations: [...context.declarations].map(([symbol, sort]) => ({ name: symbol, sort, sourceName: context.symbolNames.get(symbol) })),
+    assumptions: facts,
+    goal,
+  };
+  const { solverInput, replayableSmtLib } = encodeVerificationProblem(problem);
   context.pending.push({
     query: solverInput,
     artifact: createArtifact(context.sourceFile, node, kind, obligation, name, "unknown", solverInput, replayableSmtLib, "Waiting for Z3."),
@@ -701,7 +864,7 @@ function getNumberModel(clause: WithClause | undefined): boolean {
   return clause?.properties.some(property => idText(property.name) === "numberModel" && isStringLiteral(property.value) && property.value.text === "mathematical-real") === true;
 }
 
-function contractName(declaration: FunctionDeclaration): string {
+function contractName(declaration: FunctionDeclaration | NewtypeDeclaration | TypeAliasDeclaration): string {
   return declaration.name ? idText(declaration.name) : "anonymous function";
 }
 

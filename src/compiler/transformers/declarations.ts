@@ -1434,6 +1434,7 @@ export function transformDeclarations(context: TransformationContext): Transform
           visitNodes(input.typeParameters, visitDeclarationSubtree, isTypeParameterDeclaration),
           Debug.checkDefined(visitNode(input.type, visitDeclarationSubtree, isTypeNode)),
           input.kindType,
+          input.withClause,
         ));
         needsDeclare = previousNeedsDeclare;
         return clean;
@@ -1446,6 +1447,7 @@ export function transformDeclarations(context: TransformationContext): Transform
           input.name,
           visitNodes(input.typeParameters, visitDeclarationSubtree, isTypeParameterDeclaration),
           Debug.checkDefined(visitNode(input.type, visitDeclarationSubtree, isTypeNode)),
+          input.withClause,
         ));
         needsDeclare = previousNeedsDeclare;
         return clean;

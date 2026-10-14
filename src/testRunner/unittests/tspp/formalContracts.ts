@@ -5,13 +5,13 @@ import * as ts from "../../_namespaces/ts.js";
 import * as vfs from "../../_namespaces/vfs.js";
 
 describe("unittests:: tspp:: formal contracts", () => {
-  async function createProgram(content: string) {
+  async function createProgram(content: string, tsppFeatures: string[] = ["formalContracts"]) {
     const fileName = "/file.tspp";
     const options: ts.CompilerOptions = {
       noLib: true,
       noImplicitAny: false,
       target: ts.ScriptTarget.ES2022,
-      tsppFeatures: ["formalContracts"],
+      tsppFeatures,
     };
     const fs = vfs.createFromFileSystem(
       Harness.IO,
@@ -218,6 +218,109 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.equal(withModel.program.getVerificationArtifacts!()[0].status, "proved");
   });
 
+  it("parses and prints refinement type aliases", () => {
+    const file = ts.createSourceFile(
+      "/file.tspp",
+      'type Positive = number with { numberModel: "mathematical-real"; predicate: value > 0; };',
+      ts.ScriptTarget.Latest,
+      /*setParentNodes*/ true,
+    );
+    assert.isEmpty(file.parseDiagnostics);
+    const declaration = file.statements[0] as ts.TypeAliasDeclaration;
+    assert.equal(declaration.withClause?.properties.length, 2);
+    assert.include(ts.createPrinter().printFile(file), 'with { numberModel: "mathematical-real"; predicate: value > 0; }');
+  });
+
+  it("proves refinement type introduction and erases its predicate", async () => {
+    const { fs, program } = await createProgram(
+      `
+      type Positive = number with {
+        numberModel: "mathematical-real";
+        predicate: value > 0;
+      };
+      const age: Positive = 18;
+    `,
+      ["formalContracts", "refinementTypes"],
+    );
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.kind, "refinement");
+    assert.equal(artifact.obligation, "refinement-introduction");
+    assert.equal(artifact.status, "proved");
+    assert.isEmpty(program.getSemanticDiagnostics());
+    const emit = program.emit();
+    assert.isFalse(emit.emitSkipped);
+    const js = fs.readFileSync("/file.js").toString();
+    assert.include(js, "const age = 18");
+    assert.notInclude(js, "predicate");
+  });
+
+  it("proves with constraints on newtype constructor calls", async () => {
+    const { fs, program } = await createProgram(
+      `
+      newtype Port = bigint with {
+        predicate: value > 0n && value <= 65535n;
+      };
+      const http = Port(80n);
+    `,
+      ["newtypeDeclarations", "formalContracts", "refinementTypes"],
+    );
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.kind, "refinement");
+    assert.equal(artifact.status, "proved");
+    assert.isEmpty(program.getSemanticDiagnostics());
+    const emit = program.emit();
+    assert.isFalse(emit.emitSkipped);
+    const js = fs.readFileSync("/file.js").toString();
+    assert.include(js, "function Port(value)");
+    assert.notInclude(js, "predicate");
+  });
+
+  it("rejects a refinement type introduction with a counterexample", async () => {
+    const { program } = await createProgram(
+      `
+      type Positive = bigint with { predicate: value > 0n; };
+      const bad: Positive = -1n;
+    `,
+      ["formalContracts", "refinementTypes"],
+    );
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.kind, "refinement");
+    assert.equal(artifact.status, "failed");
+    assert.include(ts.flattenDiagnosticMessageText(program.getSemanticDiagnostics()[0].messageText, "\n"), "proof failed");
+  });
+
+  it("uses branch facts when proving refinement introduction", async () => {
+    const { program } = await createProgram(
+      `
+      type Positive = bigint with { predicate: value > 0n; };
+      function guarded(value: bigint): Positive {
+        if (value > 0n) return value;
+        return 1n;
+      }
+    `,
+      ["formalContracts", "refinementTypes"],
+    );
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.kind, "refinement");
+    assert.equal(artifact.status, "proved");
+  });
+
+  it("propagates a stronger refinement through a function parameter", async () => {
+    const { program } = await createProgram(
+      `
+      type Positive = bigint with { predicate: value > 0n; };
+      type NonNegative = bigint with { predicate: value >= 0n; };
+      function widen(value: Positive): NonNegative {
+        return value;
+      }
+    `,
+      ["formalContracts", "refinementTypes"],
+    );
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.kind, "refinement");
+    assert.equal(artifact.status, "proved");
+  });
+
   it("does not silently accept contracts through the synchronous API", () => {
     const fileName = "/sync.tspp";
     const content = "function same(x: bigint) with { ensures: result === x; }: bigint { return x; }";
@@ -230,6 +333,31 @@ describe("unittests:: tspp:: formal contracts", () => {
     const host = new fakes.CompilerHost(fs, options);
     const program = ts.createProgram({ host, rootNames: [fileName], options });
     const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.status, "unknown");
+    assert.include(artifact.message, "createProgramAsync");
+    assert.include(ts.flattenDiagnosticMessageText(program.getSemanticDiagnostics()[0].messageText, "\n"), "verification unknown");
+  });
+
+  it("does not silently accept refinement construction through the synchronous API", () => {
+    const fileName = "/sync-refinement.tspp";
+    const content = `
+      type Positive = bigint with { predicate: value > 0n; };
+      const value: Positive = 1n;
+    `;
+    const options: ts.CompilerOptions = {
+      noLib: true,
+      target: ts.ScriptTarget.ES2022,
+      tsppFeatures: ["formalContracts", "refinementTypes"],
+    };
+    const fs = vfs.createFromFileSystem(
+      Harness.IO,
+      /*ignoreCase*/ true,
+      { documents: [new documents.TextDocument(fileName, content)], cwd: "/" },
+    );
+    const host = new fakes.CompilerHost(fs, options);
+    const program = ts.createProgram({ host, rootNames: [fileName], options });
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.kind, "refinement");
     assert.equal(artifact.status, "unknown");
     assert.include(artifact.message, "createProgramAsync");
     assert.include(ts.flattenDiagnosticMessageText(program.getSemanticDiagnostics()[0].messageText, "\n"), "verification unknown");

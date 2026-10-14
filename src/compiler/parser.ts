@@ -942,13 +942,15 @@ const forEachChildTable: ForEachChildTable = {
       visitNode(cbNode, node.name) ||
       visitNodes(cbNode, cbNodes, node.typeParameters) ||
       visitNode(cbNode, node.kindType) ||
-      visitNode(cbNode, node.type);
+      visitNode(cbNode, node.type) ||
+      visitNode(cbNode, node.withClause);
   },
   [SyntaxKind.NewtypeDeclaration]: function forEachChildInNewtypeDeclaration<T>(node: NewtypeDeclaration, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
       visitNode(cbNode, node.name) ||
       visitNodes(cbNode, cbNodes, node.typeParameters) ||
-      visitNode(cbNode, node.type);
+      visitNode(cbNode, node.type) ||
+      visitNode(cbNode, node.withClause);
   },
   [SyntaxKind.DataDeclaration]: function forEachChildInDataDeclaration<T>(node: DataDeclaration, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
@@ -8460,8 +8462,9 @@ namespace Parser {
     const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseKind() : undefined;
     parseExpected(SyntaxKind.EqualsToken);
     const type = token() === SyntaxKind.IntrinsicKeyword && tryParse(parseKeywordAndNoDot) || parseType();
+    const withClause = parseWithClause();
     parseSemicolon();
-    const node = factory.createTypeAliasDeclaration(modifiers, name, typeParameters, type, kindType);
+    const node = factory.createTypeAliasDeclaration(modifiers, name, typeParameters, type, kindType, withClause);
     return withJSDoc(finishNode(node, pos), hasJSDoc);
   }
 
@@ -8474,8 +8477,9 @@ namespace Parser {
     const typeParameters = parseTypeParameters();
     parseExpected(SyntaxKind.EqualsToken);
     const type = parseType();
+    const withClause = parseWithClause();
     parseSemicolon();
-    const node = factory.createNewtypeDeclaration(modifiers, name, typeParameters, type);
+    const node = factory.createNewtypeDeclaration(modifiers, name, typeParameters, type, withClause);
     return withJSDoc(finishNode(node, pos), hasJSDoc);
   }
 
