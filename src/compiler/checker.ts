@@ -29281,7 +29281,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
             symbol.links.type = anyType;
             predicateLinks.resolvedSymbol = symbol;
           }
-          return predicateLinks.resolvedSymbol!;
+          return predicateLinks.resolvedSymbol;
         }
       }
     }
