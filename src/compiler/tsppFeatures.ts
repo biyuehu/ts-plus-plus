@@ -48,6 +48,14 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "standardLibraryPredicates",
+    dependencies: ["formalContracts"],
+    initComments: [
+      "获得：标准库整数谓词 isEven、isOdd、isPositive、isNonNegative、isZero、divides、between。",
+      "影响：TS超集=是；透明擦除=是。",
+    ],
+  },
+  {
     name: "refinementTypes",
     dependencies: ["formalContracts"],
     initComments: [

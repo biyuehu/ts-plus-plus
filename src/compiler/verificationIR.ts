@@ -50,6 +50,7 @@ export type VerificationOperator =
   | "+"
   | "-"
   | "*"
+  | "mod"
   | "="
   | "<"
   | "<="

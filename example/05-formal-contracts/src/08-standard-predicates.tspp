@@ -1,0 +1,43 @@
+type Even = bigint with {
+  predicate: isEven(value);
+};
+
+type Odd = bigint with {
+  predicate: isOdd(value);
+};
+
+type PositiveNumber = bigint with {
+  predicate: isPositive(value);
+};
+
+type NonNegativeNumber = bigint with {
+  predicate: isNonNegative(value);
+};
+
+type Zero = bigint with {
+  predicate: isZero(value);
+};
+
+type DivisibleByThree = bigint with {
+  predicate: divides(3n, value);
+};
+
+type Teen = bigint with {
+  predicate: between(value, 10n, 19n);
+};
+
+const even: Even = 42n;
+const odd: Odd = 43n;
+const positive: PositiveNumber = 42n;
+const nonNegative: NonNegativeNumber = 0n;
+const zero: Zero = 0n;
+const divisibleByThree: DivisibleByThree = 42n;
+const teen: Teen = 17n;
+
+console.log(`even = ${even}`);
+console.log(`odd = ${odd}`);
+console.log(`positive = ${positive}`);
+console.log(`non-negative = ${nonNegative}`);
+console.log(`zero = ${zero}`);
+console.log(`divisible by three = ${divisibleByThree}`);
+console.log(`teen = ${teen}`);

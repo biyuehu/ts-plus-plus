@@ -1,6 +1,6 @@
 # 05 — 形式化契约与循环不变式
 
-这个示例按文件分别展示 `formalContracts` 和 `refinementTypes`：
+这个示例按文件分别展示 `formalContracts`、`refinementTypes` 和 `standardLibraryPredicates`：
 
 - [`01-function-contracts.tspp`](./src/01-function-contracts.tspp)：`requires`、`ensures`、隐式返回值 `result` 和多返回路径；
 - [`02-loop-invariants.tspp`](./src/02-loop-invariants.tspp)：循环不变式的初始化与保持性证明；
@@ -9,6 +9,9 @@
 - [`05-refined-newtype.tspp`](./src/05-refined-newtype.tspp)：在 `newtype` 构造入口应用 `with` 谓词约束。
 - [`06-sum-types.tspp`](./src/06-sum-types.tspp)：把 `data` 和封闭判别联合降低为 Z3 和类型，并复用 TypeScript 的控制流窄化。
 - [`07-recursive-data.tspp`](./src/07-recursive-data.tspp)：递归 `data`、variant 构造器和由 checker 窄化的 `switch`。
+- [`08-standard-predicates.tspp`](./src/08-standard-predicates.tspp)：标准库整数谓词 `isEven`、`isOdd`、`isPositive`、`isNonNegative`、`isZero`、`divides` 与 `between` 的精化类型引入。
+
+`divides(a, b)` 表示 `a` 整除 `b`；`between(value, lower, upper)` 是闭区间判断，即 `lower <= value <= upper`。
 
 ## 积类型、和类型与 TypeScript 控制流
 
@@ -145,6 +148,13 @@ absolute(-5) = 5
 successor(5) = 6
 countTo(4) = 4
 scaledSum(2, 6) = 4
+even = 42
+odd = 43
+positive = 42
+non-negative = 0
+zero = 0
+divisible by three = 42
+teen = 17
 ```
 
 可以在 `dist` 中确认生成的 JavaScript 不包含 `with`、`requires`、`ensures` 或 `invariant`。
