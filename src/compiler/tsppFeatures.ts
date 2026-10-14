@@ -32,6 +32,14 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "typeComputation",
+    dependencies: [],
+    initComments: [
+      "获得：增强类型计算的语法：类型层局部绑定 let X = T in U（后续还包括类型层 match 与 type lambda）。",
+      "影响：TS超集=是；透明擦除=是。",
+    ],
+  },
+  {
     name: "macros",
     dependencies: [],
     initComments: [

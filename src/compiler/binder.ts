@@ -240,6 +240,7 @@ import {
   length,
   LiteralLikeElementAccessExpression,
   MappedTypeNode,
+  MatchTypeArm,
   MetaProperty,
   MethodDeclaration,
   ModifierFlags,
@@ -3773,9 +3774,12 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
       : declareSymbolAndAddToSymbolTable(node, symbolFlags, symbolExcludes);
   }
 
-  function getInferTypeContainer(node: Node): ConditionalTypeNode | undefined {
+  function getInferTypeContainer(node: Node): ConditionalTypeNode | MatchTypeArm | undefined {
     const extendsType = findAncestor(node, n => n.parent && isConditionalTypeNode(n.parent) && n.parent.extendsType === n);
-    return extendsType && extendsType.parent as ConditionalTypeNode;
+    if (extendsType) return extendsType.parent as ConditionalTypeNode;
+    // `infer` in the pattern of a type-level `match` arm is declared in that arm's scope.
+    const pattern = findAncestor(node, n => n.parent && n.parent.kind === SyntaxKind.MatchTypeArm && (n.parent as MatchTypeArm).pattern === n);
+    return pattern && pattern.parent as MatchTypeArm;
   }
 
   function bindTypeParameter(node: TypeParameterDeclaration) {
@@ -3855,6 +3859,8 @@ export function getContainerFlags(node: Node): ContainerFlags {
     case SyntaxKind.DataVariant:
     case SyntaxKind.MappedType:
     case SyntaxKind.IndexSignature:
+    case SyntaxKind.LetType:
+    case SyntaxKind.MatchTypeArm:
       return ContainerFlags.IsContainer | ContainerFlags.HasLocals;
 
     case SyntaxKind.SourceFile:

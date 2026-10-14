@@ -1012,6 +1012,24 @@ export function transformDeclarations(context: TransformationContext): Transform
 
   function visitDeclarationSubtree(input: Node): VisitResult<Node | undefined> {
     if (shouldStripInternal(input)) return;
+    if (input.kind === SyntaxKind.LetType) {
+      // The binding of `let X = V in B` is not a visible declaration, so it must not go through the visibility checks below.
+      const letType = input as import("../_namespaces/ts.js").LetTypeNode;
+      const binding = letType.binding;
+      return factory.updateLetTypeNode(
+        letType,
+        factory.updateTypeAliasDeclaration(
+          binding,
+          binding.modifiers,
+          binding.name,
+          binding.typeParameters,
+          Debug.checkDefined(visitNode(binding.type, visitDeclarationSubtree, isTypeNode)),
+          binding.kindType,
+          binding.withClause,
+        ),
+        Debug.checkDefined(visitNode(letType.body, visitDeclarationSubtree, isTypeNode)),
+      );
+    }
     if (isDeclaration(input)) {
       if (isDeclarationAndNotVisible(input)) return;
       if (hasDynamicName(input)) {

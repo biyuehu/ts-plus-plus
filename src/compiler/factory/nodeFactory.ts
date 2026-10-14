@@ -300,10 +300,13 @@ import {
   LanguageVariant,
   lastOrUndefined,
   LeftHandSideExpression,
+  LetTypeNode,
   LiteralToken,
   LiteralTypeNode,
   MacroInvocationStatement,
   MappedTypeNode,
+  MatchTypeArm,
+  MatchTypeNode,
   MemberName,
   memoize,
   memoizeOne,
@@ -626,6 +629,12 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateConditionalTypeNode,
     createInferTypeNode,
     updateInferTypeNode,
+    createLetTypeNode,
+    updateLetTypeNode,
+    createMatchTypeArm,
+    updateMatchTypeArm,
+    createMatchTypeNode,
+    updateMatchTypeNode,
     createImportTypeNode,
     updateImportTypeNode,
     createParenthesizedType,
@@ -2681,6 +2690,60 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     node.typeParameter = typeParameter;
     node.transformFlags = TransformFlags.ContainsTypeScript;
     return node;
+  }
+
+  // @api
+  function createMatchTypeArm(pattern: TypeNode, result: TypeNode) {
+    const node = createBaseNode<MatchTypeArm>(SyntaxKind.MatchTypeArm);
+    node.pattern = pattern;
+    node.result = result;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+
+    node.locals = undefined; // initialized by binder (LocalsContainer)
+    node.nextContainer = undefined; // initialized by binder (LocalsContainer)
+    return node;
+  }
+
+  // @api
+  function updateMatchTypeArm(node: MatchTypeArm, pattern: TypeNode, result: TypeNode) {
+    return node.pattern !== pattern || node.result !== result
+      ? update(createMatchTypeArm(pattern, result), node)
+      : node;
+  }
+
+  // @api
+  function createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[]) {
+    const node = createBaseNode<MatchTypeNode>(SyntaxKind.MatchType);
+    node.scrutinee = scrutinee;
+    node.arms = createNodeArray(arms);
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+    return node;
+  }
+
+  // @api
+  function updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[]) {
+    return node.scrutinee !== scrutinee || node.arms !== arms
+      ? update(createMatchTypeNode(scrutinee, arms), node)
+      : node;
+  }
+
+  // @api
+  function createLetTypeNode(binding: TypeAliasDeclaration, body: TypeNode) {
+    const node = createBaseNode<LetTypeNode>(SyntaxKind.LetType);
+    node.binding = binding;
+    node.body = body;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+
+    node.locals = undefined; // initialized by binder (LocalsContainer)
+    node.nextContainer = undefined; // initialized by binder (LocalsContainer)
+    return node;
+  }
+
+  // @api
+  function updateLetTypeNode(node: LetTypeNode, binding: TypeAliasDeclaration, body: TypeNode) {
+    return node.binding !== binding || node.body !== body
+      ? update(createLetTypeNode(binding, body), node)
+      : node;
   }
 
   // @api

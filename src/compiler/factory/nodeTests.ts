@@ -143,9 +143,12 @@ import {
   JsxText,
   KindNode,
   LabeledStatement,
+  LetTypeNode,
   LiteralTypeNode,
   MacroInvocationStatement,
   MappedTypeNode,
+  MatchTypeArm,
+  MatchTypeNode,
   MetaProperty,
   MethodDeclaration,
   MethodSignature,
@@ -532,6 +535,18 @@ export function isConditionalTypeNode(node: Node): node is ConditionalTypeNode {
 
 export function isInferTypeNode(node: Node): node is InferTypeNode {
   return node.kind === SyntaxKind.InferType;
+}
+
+export function isLetTypeNode(node: Node): node is LetTypeNode {
+  return node.kind === SyntaxKind.LetType;
+}
+
+export function isMatchTypeNode(node: Node): node is MatchTypeNode {
+  return node.kind === SyntaxKind.MatchType;
+}
+
+export function isMatchTypeArm(node: Node): node is MatchTypeArm {
+  return node.kind === SyntaxKind.MatchTypeArm;
 }
 
 export function isParenthesizedTypeNode(node: Node): node is ParenthesizedTypeNode {

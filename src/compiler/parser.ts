@@ -248,6 +248,7 @@ import {
   LanguageVariant,
   lastOrUndefined,
   LeftHandSideExpression,
+  LetTypeNode,
   LiteralExpression,
   LiteralLikeNode,
   LiteralTypeNode,
@@ -255,6 +256,8 @@ import {
   map,
   mapDefined,
   MappedTypeNode,
+  MatchTypeArm,
+  MatchTypeNode,
   MemberExpression,
   MetaProperty,
   MethodDeclaration,
@@ -720,6 +723,18 @@ const forEachChildTable: ForEachChildTable = {
       visitNode(cbNode, node.extendsType) ||
       visitNode(cbNode, node.trueType) ||
       visitNode(cbNode, node.falseType);
+  },
+  [SyntaxKind.MatchType]: function forEachChildInMatchType<T>(node: MatchTypeNode, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.scrutinee) ||
+      visitNodes(cbNode, cbNodes, node.arms);
+  },
+  [SyntaxKind.MatchTypeArm]: function forEachChildInMatchTypeArm<T>(node: MatchTypeArm, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.pattern) ||
+      visitNode(cbNode, node.result);
+  },
+  [SyntaxKind.LetType]: function forEachChildInLetType<T>(node: LetTypeNode, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.binding) ||
+      visitNode(cbNode, node.body);
   },
   [SyntaxKind.InferType]: function forEachChildInInferType<T>(node: InferTypeNode, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNode(cbNode, node.typeParameter);
@@ -4624,6 +4639,61 @@ namespace Parser {
     return withJSDoc(finishNode(node, pos), hasJSDoc);
   }
 
+  function isStartOfMatchType(): boolean {
+    if (token() !== SyntaxKind.Identifier || scanner.getTokenValue() !== "match") return false;
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    return lookAhead(() => {
+      nextToken();
+      if (scanner.hasPrecedingLineBreak()) return false;
+      parseUnionTypeOrHigher();
+      return token() === SyntaxKind.OpenBraceToken;
+    });
+  }
+
+  function parseMatchType(): MatchTypeNode {
+    const pos = getNodePos();
+    nextToken(); // `match`
+    const scrutinee = parseUnionTypeOrHigher();
+    parseExpected(SyntaxKind.OpenBraceToken);
+    const armsPos = getNodePos();
+    const arms: MatchTypeArm[] = [];
+    while (token() !== SyntaxKind.CloseBraceToken && token() !== SyntaxKind.EndOfFileToken) {
+      const armPos = getNodePos();
+      const pattern = parseType();
+      parseExpected(SyntaxKind.EqualsGreaterThanToken);
+      const result = parseType();
+      arms.push(finishNode(factory.createMatchTypeArm(pattern, result), armPos));
+      if (!parseOptional(SyntaxKind.CommaToken)) break;
+    }
+    const armList = createNodeArray(arms, armsPos);
+    parseExpected(SyntaxKind.CloseBraceToken);
+    return finishNode(factory.createMatchTypeNode(scrutinee, armList), pos);
+  }
+
+  function isStartOfLetType(): boolean {
+    if (token() !== SyntaxKind.LetKeyword) return false;
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    return lookAhead(() => {
+      nextToken();
+      if (!isIdentifier()) return false;
+      nextToken();
+      return token() === SyntaxKind.EqualsToken;
+    });
+  }
+
+  function parseLetType(): LetTypeNode {
+    const pos = getNodePos();
+    parseExpected(SyntaxKind.LetKeyword);
+    const bindingPos = getNodePos();
+    const name = parseIdentifier();
+    parseExpected(SyntaxKind.EqualsToken);
+    const value = parseType();
+    const binding = finishNode(factory.createTypeAliasDeclaration(/*modifiers*/ undefined, name, /*typeParameters*/ undefined, value), bindingPos);
+    parseExpected(SyntaxKind.InKeyword);
+    const body = parseType();
+    return finishNode(factory.createLetTypeNode(binding, body), pos);
+  }
+
   function isStartOfDependentFunctionType(): boolean {
     if (token() !== SyntaxKind.OpenParenToken) return false;
     if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
@@ -5082,6 +5152,12 @@ namespace Parser {
   function parseType(): TypeNode {
     if (contextFlags & NodeFlags.TypeExcludesFlags) {
       return doOutsideOfContext(NodeFlags.TypeExcludesFlags, parseType);
+    }
+    if (isStartOfLetType()) {
+      return parseLetType();
+    }
+    if (isStartOfMatchType()) {
+      return parseMatchType();
     }
     if (isStartOfDependentFunctionType()) {
       return parseDependentFunctionType();

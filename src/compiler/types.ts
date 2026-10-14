@@ -265,6 +265,8 @@ export const enum SyntaxKind {
   IntersectionType,
   ConditionalType,
   InferType,
+  LetType,
+  MatchType,
   ParenthesizedType,
   ThisType,
   TypeOperator,
@@ -345,6 +347,7 @@ export const enum SyntaxKind {
   TypeAliasDeclaration,
   NewtypeDeclaration,
   DataDeclaration,
+  MatchTypeArm,
   EnumDeclaration,
   ModuleDeclaration,
   ModuleBlock,
@@ -735,6 +738,8 @@ export type TypeNodeSyntaxKind =
   | SyntaxKind.IntersectionType
   | SyntaxKind.ConditionalType
   | SyntaxKind.InferType
+  | SyntaxKind.LetType
+  | SyntaxKind.MatchType
   | SyntaxKind.ParenthesizedType
   | SyntaxKind.ThisType
   | SyntaxKind.TypeOperator
@@ -1114,6 +1119,9 @@ export type HasChildren =
   | IntersectionTypeNode
   | ConditionalTypeNode
   | InferTypeNode
+  | LetTypeNode
+  | MatchTypeNode
+  | MatchTypeArm
   | ImportTypeNode
   | ImportTypeAssertionContainer
   | NamedTupleMember
@@ -1566,6 +1574,8 @@ export type HasLocals =
   | CatchClause
   | ClassStaticBlockDeclaration
   | ConditionalTypeNode
+  | LetTypeNode
+  | MatchTypeArm
   | ConstructorDeclaration
   | ConstructorTypeNode
   | ConstructSignatureDeclaration
@@ -2390,6 +2400,28 @@ export interface ConditionalTypeNode extends TypeNode, LocalsContainer {
 export interface InferTypeNode extends TypeNode {
   readonly kind: SyntaxKind.InferType;
   readonly typeParameter: TypeParameterDeclaration;
+}
+
+/** One arm `Pattern => Result` of a type-level `match`. `infer` bindings of `Pattern` are visible in `Result`. */
+export interface MatchTypeArm extends Node, LocalsContainer {
+  readonly kind: SyntaxKind.MatchTypeArm;
+  readonly parent: MatchTypeNode;
+  readonly pattern: TypeNode;
+  readonly result: TypeNode;
+}
+
+/** `match Scrutinee { Pattern => Result, ... }`: type-level pattern matching, the first matching arm wins. */
+export interface MatchTypeNode extends TypeNode {
+  readonly kind: SyntaxKind.MatchType;
+  readonly scrutinee: TypeNode;
+  readonly arms: NodeArray<MatchTypeArm>;
+}
+
+/** `let X = Value in Body`: a type-level local binding. `X` is only visible in `Body`. */
+export interface LetTypeNode extends TypeNode, LocalsContainer {
+  readonly kind: SyntaxKind.LetType;
+  readonly binding: TypeAliasDeclaration;
+  readonly body: TypeNode;
 }
 
 export interface ParenthesizedTypeNode extends TypeNode {
@@ -6490,6 +6522,7 @@ export interface EvaluatorResult<T extends string | number | undefined = string 
 // dprint-ignore
 /** @internal */
 export interface NodeLinks {
+  isResolvingLetBinding?: boolean; // Set while the value of a type-level `let` binding is being resolved
     flags: NodeCheckFlags;              // Set of flags specific to Node
     calculatedFlags: NodeCheckFlags;    // Set of flags which have definitely been calculated already
     resolvedType?: Type;                // Cached type of type node
@@ -9210,6 +9243,12 @@ export interface NodeFactory {
   updateConditionalTypeNode(node: ConditionalTypeNode, checkType: TypeNode, extendsType: TypeNode, trueType: TypeNode, falseType: TypeNode): ConditionalTypeNode;
   createInferTypeNode(typeParameter: TypeParameterDeclaration): InferTypeNode;
   updateInferTypeNode(node: InferTypeNode, typeParameter: TypeParameterDeclaration): InferTypeNode;
+  createLetTypeNode(binding: TypeAliasDeclaration, body: TypeNode): LetTypeNode;
+  updateLetTypeNode(node: LetTypeNode, binding: TypeAliasDeclaration, body: TypeNode): LetTypeNode;
+  createMatchTypeArm(pattern: TypeNode, result: TypeNode): MatchTypeArm;
+  updateMatchTypeArm(node: MatchTypeArm, pattern: TypeNode, result: TypeNode): MatchTypeArm;
+  createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[]): MatchTypeNode;
+  updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[]): MatchTypeNode;
   createImportTypeNode(argument: TypeNode, attributes?: ImportAttributes, qualifier?: EntityName, typeArguments?: readonly TypeNode[], isTypeOf?: boolean): ImportTypeNode;
   updateImportTypeNode(node: ImportTypeNode, argument: TypeNode, attributes: ImportAttributes | undefined, qualifier: EntityName | undefined, typeArguments: readonly TypeNode[] | undefined, isTypeOf?: boolean): ImportTypeNode;
   createParenthesizedType(type: TypeNode): ParenthesizedTypeNode;
