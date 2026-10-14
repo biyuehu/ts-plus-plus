@@ -907,6 +907,30 @@ const visitEachChildTable: VisitEachChildTable = {
     );
   },
 
+  [SyntaxKind.MatchType]: function visitEachChildOfMatchTypeNode(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateMatchTypeNode(
+      node,
+      Debug.checkDefined(nodeVisitor(node.scrutinee, visitor, isTypeNode)),
+      Debug.checkDefined(nodesVisitor(node.arms, visitor, (n): n is typeof node.arms[number] => n.kind === SyntaxKind.MatchTypeArm)),
+    );
+  },
+
+  [SyntaxKind.MatchTypeArm]: function visitEachChildOfMatchTypeArm(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateMatchTypeArm(
+      node,
+      Debug.checkDefined(nodeVisitor(node.pattern, visitor, isTypeNode)),
+      Debug.checkDefined(nodeVisitor(node.result, visitor, isTypeNode)),
+    );
+  },
+
+  [SyntaxKind.LetType]: function visitEachChildOfLetTypeNode(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateLetTypeNode(
+      node,
+      Debug.checkDefined(nodeVisitor(node.binding, visitor)) as typeof node.binding,
+      Debug.checkDefined(nodeVisitor(node.body, visitor, isTypeNode)),
+    );
+  },
+
   [SyntaxKind.InferType]: function visitEachChildOfInferTypeNode(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
     return context.factory.updateInferTypeNode(
       node,

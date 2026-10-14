@@ -880,6 +880,7 @@ import {
   LateVisibilityPaintedStatement,
   LazyNodeCheckFlags,
   length,
+  LetTypeNode,
   LiteralExpression,
   LiteralType,
   LiteralTypeNode,
@@ -890,6 +891,8 @@ import {
   MappedType,
   MappedTypeNode,
   MatchingKeys,
+  MatchTypeArm,
+  MatchTypeNode,
   maybeBind,
   MemberOverrideStatus,
   MetaProperty,
@@ -17544,6 +17547,23 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
       return errorType;
     }
+    const letDeclaration = symbol.declarations?.find(d => d.kind === SyntaxKind.TypeAliasDeclaration && d.parent.kind === SyntaxKind.LetType);
+    if (letDeclaration) {
+      // A `let X = V in B` binding is substituted directly, so outer type parameters in `V` are mapped by the surrounding instantiation.
+      // `X` is not visible in `V`, so a reference to it from inside its own value is circular.
+      const letLinks = getNodeLinks(letDeclaration);
+      if (letLinks.isResolvingLetBinding) {
+        error(node, Diagnostics.Type_alias_0_circularly_references_itself, symbolToString(symbol));
+        return errorType;
+      }
+      letLinks.isResolvingLetBinding = true;
+      try {
+        return getTypeFromTypeNode((letDeclaration as TypeAliasDeclaration).type);
+      }
+      finally {
+        letLinks.isResolvingLetBinding = false;
+      }
+    }
     const type = getDeclaredTypeOfSymbol(symbol);
     const kind = getKindOfType(type);
     if (kind.flags === KindFlags.Function) {
@@ -20476,6 +20496,43 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     );
   }
 
+  function isWildcardPattern(pattern: TypeNode): boolean {
+    return isTypeReferenceNode(pattern) && isIdentifier(pattern.typeName) && idText(pattern.typeName) === "_" && !pattern.typeArguments;
+  }
+
+  /**
+   * `match S { P1 => R1, P2 => R2 }` is evaluated as the non-distributive chain
+   * `[S] extends [P1] ? R1 : [S] extends [P2] ? R2 : never`, built from synthetic conditional nodes
+   * so that `infer` capture and literal matching reuse the conditional type machinery.
+   * The arm's own `locals` hold its `infer` type parameters. `_` matches anything.
+   */
+  function getTypeFromMatchTypeNode(node: MatchTypeNode): Type {
+    const links = getNodeLinks(node);
+    if (!links.resolvedType) {
+      let next: TypeNode = factory.createKeywordTypeNode(SyntaxKind.NeverKeyword);
+      let nextParent: Node = node;
+      setParent(next, nextParent);
+      for (let i = node.arms.length - 1; i >= 0; i--) {
+        const arm = node.arms[i];
+        const isWildcard = isWildcardPattern(arm.pattern);
+        const patternNode: TypeNode = isWildcard ? factory.createKeywordTypeNode(SyntaxKind.UnknownKeyword) : arm.pattern;
+        const checkTuple = factory.createTupleTypeNode([node.scrutinee]);
+        const extendsTuple = factory.createTupleTypeNode([patternNode]);
+        const conditional = factory.createConditionalTypeNode(checkTuple, extendsTuple, arm.result, next);
+        conditional.locals = arm.locals;
+        setParent(conditional, node);
+        setParent(checkTuple, conditional);
+        setParent(extendsTuple, conditional);
+        if (isWildcard) setParent(patternNode, extendsTuple);
+        setParent(next, conditional);
+        next = conditional;
+        nextParent = conditional;
+      }
+      links.resolvedType = getTypeFromTypeNode(next);
+    }
+    return links.resolvedType;
+  }
+
   function getTypeFromConditionalTypeNode(node: ConditionalTypeNode): Type {
     const links = getNodeLinks(node);
     if (!links.resolvedType) {
@@ -21984,6 +22041,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return getTypeFromConditionalTypeNode(node as ConditionalTypeNode);
       case SyntaxKind.InferType:
         return getTypeFromInferTypeNode(node as InferTypeNode);
+      case SyntaxKind.LetType:
+        // `let X = V in B` is the type of `B`; `X` is an ordinary local alias resolved through the binder scope.
+        return getTypeFromTypeNode((node as LetTypeNode).body);
+      case SyntaxKind.MatchType:
+        return getTypeFromMatchTypeNode(node as MatchTypeNode);
       case SyntaxKind.TemplateLiteralType:
         return getTypeFromTemplateTypeNode(node as TemplateLiteralTypeNode);
       case SyntaxKind.ImportType:
@@ -22294,7 +22356,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (tp.symbol && tp.symbol.declarations && tp.symbol.declarations.length === 1) {
       const container = tp.symbol.declarations[0].parent;
       for (let n = node; n !== container; n = n.parent) {
-        if (!n || n.kind === SyntaxKind.Block || n.kind === SyntaxKind.ConditionalType && forEachChild((n as ConditionalTypeNode).extendsType, containsReference)) {
+        if (!n || n.kind === SyntaxKind.Block || n.kind === SyntaxKind.LetType || n.kind === SyntaxKind.ConditionalType && forEachChild((n as ConditionalTypeNode).extendsType, containsReference)) {
           return true;
         }
       }
@@ -44562,9 +44624,27 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     forEachChild(node, checkSourceElement);
   }
 
+  function checkMatchType(node: MatchTypeNode) {
+    requireTsppFeature(node, "typeComputation");
+    forEachChild(node, checkSourceElement);
+  }
+
+  function checkMatchTypeArm(node: MatchTypeArm) {
+    if (!isWildcardPattern(node.pattern)) {
+      checkSourceElement(node.pattern);
+    }
+    checkSourceElement(node.result);
+  }
+
+  function checkLetType(node: LetTypeNode) {
+    requireTsppFeature(node, "typeComputation");
+    forEachChild(node, checkSourceElement);
+  }
+
   function checkInferType(node: InferTypeNode) {
     if (
       !findAncestor(node, n => n.parent && n.parent.kind === SyntaxKind.ConditionalType && (n.parent as ConditionalTypeNode).extendsType === n) &&
+      !findAncestor(node, n => n.parent && n.parent.kind === SyntaxKind.MatchTypeArm && (n.parent as MatchTypeArm).pattern === n) &&
       !isInferTypeInMlttTypeMatchPattern(node)
     ) {
       grammarErrorOnNode(node, Diagnostics.infer_declarations_are_only_permitted_in_the_extends_clause_of_a_conditional_type);
@@ -51030,6 +51110,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return checkConditionalType(node as ConditionalTypeNode);
       case SyntaxKind.InferType:
         return checkInferType(node as InferTypeNode);
+      case SyntaxKind.LetType:
+        return checkLetType(node as LetTypeNode);
+      case SyntaxKind.MatchType:
+        return checkMatchType(node as MatchTypeNode);
+      case SyntaxKind.MatchTypeArm:
+        return checkMatchTypeArm(node as MatchTypeArm);
       case SyntaxKind.TemplateLiteralType:
         return checkTemplateLiteralType(node as TemplateLiteralTypeNode);
       case SyntaxKind.ImportType:

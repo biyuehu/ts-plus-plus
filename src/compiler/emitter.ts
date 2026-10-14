@@ -290,6 +290,7 @@ import {
   lastOrUndefined,
   LateBoundDeclaration,
   length,
+  LetTypeNode,
   ListFormat,
   LiteralExpression,
   LiteralLikeNode,
@@ -297,6 +298,7 @@ import {
   MacroInvocationStatement,
   makeIdentifierFromModuleName,
   MappedTypeNode,
+  MatchTypeNode,
   memoize,
   MetaProperty,
   MethodDeclaration,
@@ -1662,6 +1664,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitConditionalType(node as ConditionalTypeNode);
         case SyntaxKind.InferType:
           return emitInferType(node as InferTypeNode);
+        case SyntaxKind.LetType:
+          return emitLetType(node as LetTypeNode);
+        case SyntaxKind.MatchType:
+          return emitMatchType(node as MatchTypeNode);
         case SyntaxKind.ParenthesizedType:
           return emitParenthesizedType(node as ParenthesizedTypeNode);
         case SyntaxKind.ExpressionWithTypeArguments:
@@ -2526,6 +2532,39 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writePunctuation(":");
     writeSpace();
     emit(node.falseType);
+  }
+
+  function emitMatchType(node: MatchTypeNode) {
+    writeKeyword("match");
+    writeSpace();
+    emit(node.scrutinee);
+    writeSpace();
+    writePunctuation("{");
+    node.arms.forEach((arm, index) => {
+      if (index > 0) writePunctuation(",");
+      writeSpace();
+      emit(arm.pattern);
+      writeSpace();
+      writePunctuation("=>");
+      writeSpace();
+      emit(arm.result);
+    });
+    writeSpace();
+    writePunctuation("}");
+  }
+
+  function emitLetType(node: LetTypeNode) {
+    writeKeyword("let");
+    writeSpace();
+    emit(node.binding.name);
+    writeSpace();
+    writePunctuation("=");
+    writeSpace();
+    emit(node.binding.type);
+    writeSpace();
+    writeKeyword("in");
+    writeSpace();
+    emit(node.body);
   }
 
   function emitInferType(node: InferTypeNode) {
