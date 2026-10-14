@@ -2714,6 +2714,9 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
         });
       }
     }
+    if (!options.noLib && hasTsppFeature(options, "standardLibraryPredicates")) {
+      processRootFile(pathForLibFile("lib.tspp.d.ts"), /*isDefaultLib*/ true, { kind: FileIncludeKind.LibFile });
+    }
 
     files = toSorted(processingDefaultLibFiles, compareDefaultLibFiles).concat(processingOtherFiles);
     processingDefaultLibFiles = undefined;

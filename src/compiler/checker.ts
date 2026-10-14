@@ -1203,6 +1203,10 @@ import {
   printMlttTerm,
   weakHeadNormalizeMltt,
 } from "./mlttCore.js";
+import {
+  getStandardPredicateDefinition,
+  type StandardPredicateName,
+} from "./standardPredicates.js";
 import { hasTsppFeature } from "./tsppFeatures.js";
 
 const ambientModuleSymbolRegex = /^".+"$/;
@@ -29267,6 +29271,20 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getResolvedSymbol(node: Identifier): Symbol {
+    {
+      if (hasTsppFeature(compilerOptions, "standardLibraryPredicates")) {
+        const name = idText(node);
+        if (getStandardPredicateDefinition(name) && !globals.get(node.escapedText)) {
+          const predicateLinks = getNodeLinks(node);
+          if (!predicateLinks.resolvedSymbol) {
+            const symbol = createSymbol(SymbolFlags.FunctionScopedVariable, node.escapedText);
+            symbol.links.type = anyType;
+            predicateLinks.resolvedSymbol = symbol;
+          }
+          return predicateLinks.resolvedSymbol!;
+        }
+      }
+    }
     const links = getNodeLinks(node);
     if (!links.resolvedSymbol) {
       const parameter = getContractParameter(node);
@@ -45822,7 +45840,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         }
       }
       else {
-        checkTruthinessExpression(property.value);
+        if (!checkVerificationPredicateExpression(property.value)) {
+          checkTruthinessExpression(property.value);
+        }
       }
     }
   }
@@ -47178,7 +47198,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           }
         }
         else {
-          checkTruthinessExpression(property.value);
+          if (!checkVerificationPredicateExpression(property.value)) {
+            checkTruthinessExpression(property.value);
+          }
         }
       }
     }
@@ -47241,7 +47263,52 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function checkTruthinessExpression(node: Expression, checkMode?: CheckMode) {
+    if (isVerificationPredicateContext(node)) {
+      const predicateResult = checkVerificationPredicateExpression(node, checkMode);
+      if (predicateResult) return predicateResult;
+    }
     return checkTruthinessOfType(checkExpression(node, checkMode), node);
+  }
+
+  function isVerificationPredicateContext(node: Node): boolean {
+    let current: Node | undefined = node;
+    while (current && !isWithProperty(current)) current = current.parent;
+    if (!current || !isWithProperty(current)) return false;
+    const name = idText(current.name);
+    return name === "requires" || name === "ensures" || name === "predicate" || name === "invariant";
+  }
+
+  function getVerificationPredicateName(node: Expression): StandardPredicateName | undefined {
+    if (!isCallExpression(node)) return undefined;
+    const callee = node.expression;
+    if (!isIdentifier(callee) || globals.get(callee.escapedText)) return undefined;
+    return getStandardPredicateDefinition(idText(callee))?.name;
+  }
+
+  function checkVerificationPredicateCall(node: CallExpression, checkMode?: CheckMode): Type {
+    requireTsppFeature(node, "standardLibraryPredicates");
+    for (const argument of node.arguments) checkExpression(argument, checkMode);
+    return booleanType;
+  }
+
+  function checkVerificationPredicateExpression(node: Expression, checkMode?: CheckMode): Type | undefined {
+    if (getVerificationPredicateName(node)) return checkVerificationPredicateCall(node as CallExpression, checkMode);
+    if (isParenthesizedExpression(node)) return checkVerificationPredicateExpression(node.expression, checkMode);
+    if (isPrefixUnaryExpression(node) && node.operator === SyntaxKind.ExclamationToken) {
+      return checkVerificationPredicateExpression(node.operand, checkMode);
+    }
+    if (
+      isBinaryExpression(node) &&
+      (node.operatorToken.kind === SyntaxKind.AmpersandAmpersandToken || node.operatorToken.kind === SyntaxKind.BarBarToken)
+    ) {
+      const left = checkVerificationPredicateExpression(node.left, checkMode);
+      const right = checkVerificationPredicateExpression(node.right, checkMode);
+      if (!left && !right) return undefined;
+      if (!left) checkExpression(node.left, checkMode);
+      if (!right) checkExpression(node.right, checkMode);
+      return booleanType;
+    }
+    return undefined;
   }
 
   function checkForStatement(node: ForStatement) {
@@ -49667,7 +49734,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
       else {
         hasPredicate = true;
-        checkTruthinessExpression(property.value);
+        if (!checkVerificationPredicateExpression(property.value)) {
+          hasPredicate = true;
+          checkTruthinessExpression(property.value);
+        }
       }
     }
     if (!hasPredicate) {
