@@ -28,6 +28,11 @@ import {
 } from "./factory/nodeTests.js";
 import { forEachChild } from "./parser.js";
 import {
+  getStandardPredicateDefinition,
+  type StandardPredicateDefinition,
+  type StandardPredicateName,
+} from "./standardPredicates.js";
+import {
   Block,
   CallExpression,
   CancellationToken,
@@ -728,6 +733,8 @@ function getNarrowedVariantName(checker: TypeChecker, type: Type): string | unde
 }
 
 function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean): Term | string {
+  const standardPredicate = getStandardPredicateName(expression);
+  if (standardPredicate) return translateStandardPredicate(context, state, expression, standardPredicate);
   const refinement = getRefinementTarget(context.checker, expression);
   if (refinement) return verifyRefinementIntroduction(context, state, expression, refinement);
   const variant = isIdentifier(expression.expression) && getDataVariantTarget(context.checker, expression.expression);
@@ -735,6 +742,145 @@ function translateCallExpression(context: VerificationContext, state: SymbolicSt
   const target = getCallTarget(context.checker, expression);
   if (!target) return `Call '${sourceText(context, expression)}' does not resolve to a supported project function declaration.`;
   return verifyCallPreconditions(context, state, expression, target, resultUsed);
+}
+
+function getStandardPredicateName(expression: CallExpression): StandardPredicateName | undefined {
+  if (!isIdentifier(expression.expression)) return undefined;
+  return getStandardPredicateDefinition(idText(expression.expression))?.name;
+}
+
+function zeroForSort(sort: VerificationSort): VerificationExpression {
+  return sort === "Real" ? verificationReal("0") : verificationInteger("0");
+}
+
+function integerExpression(term: Term): VerificationExpression {
+  return term.sort === "Int" ? term.expression : verificationApplication("to_int", term.expression);
+}
+
+function constrainToInteger(term: Term, expression: VerificationExpression): VerificationExpression {
+  return term.sort === "Int" ? expression : verificationApplication("and", verificationApplication("is_int", term.expression), expression);
+}
+
+function translateStandardPredicateForReal(
+  name: StandardPredicateName,
+  definition: StandardPredicateDefinition,
+  argumentTerms: readonly Term[],
+): Term | string {
+  if (argumentTerms.some(argument => argument.sort !== "Real")) {
+    return `Standard predicate '${name}' requires arguments of the same numeric type.`;
+  }
+  switch (definition.kind) {
+    case "even":
+    case "odd": {
+      const value = argumentTerms[0];
+      const parity = verificationApplication(
+        "=",
+        verificationApplication("mod", integerExpression(value), verificationInteger("2")),
+        definition.kind === "even" ? verificationInteger("0") : verificationInteger("1"),
+      );
+      return {
+        sort: "Bool",
+        expression: constrainToInteger(value, parity),
+      };
+    }
+    case "positive":
+      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
+    case "nonNegative":
+      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
+    case "zero":
+      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
+    case "divides": {
+      const [divisor, value] = argumentTerms;
+      return {
+        sort: "Bool",
+        expression: verificationApplication(
+          "and",
+          verificationApplication("is_int", divisor.expression),
+          verificationApplication("is_int", value.expression),
+          verificationApplication("not", verificationApplication("=", divisor.expression, zeroForSort(divisor.sort))),
+          verificationApplication(
+            "=",
+            verificationApplication("mod", integerExpression(value), integerExpression(divisor)),
+            verificationInteger("0"),
+          ),
+        ),
+      };
+    }
+    case "between":
+      return {
+        sort: "Bool",
+        expression: verificationApplication(
+          "and",
+          verificationApplication(">=", argumentTerms[0].expression, argumentTerms[1].expression),
+          verificationApplication("<=", argumentTerms[0].expression, argumentTerms[2].expression),
+        ),
+      };
+    default:
+      return `Unsupported standard predicate '${name}'.`;
+  }
+}
+
+function translateStandardPredicate(
+  context: VerificationContext,
+  state: SymbolicState,
+  expression: CallExpression,
+  name: StandardPredicateName,
+): Term | string {
+  const definition = getStandardPredicateDefinition(name);
+  if (!definition) return `Unknown standard predicate '${name}'.`;
+  if (expression.arguments.length !== definition.arity) {
+    return `Standard predicate '${name}' expects ${definition.arity} argument(s).`;
+  }
+
+  const argumentTerms: Term[] = [];
+  for (const argument of expression.arguments) {
+    const term = translateExpression(context, state, argument);
+    if (typeof term === "string") return term;
+    if (!isVerificationNumericSort(term.sort)) return `Standard predicate '${name}' requires bigint or number arguments.`;
+    argumentTerms.push(term);
+  }
+  if (argumentTerms.some(term => term.sort === "Real")) {
+    return translateStandardPredicateForReal(name, definition, argumentTerms);
+  }
+
+  switch (definition.kind) {
+    case "even":
+      return {
+        sort: "Bool",
+        expression: verificationApplication("=", verificationApplication("mod", argumentTerms[0].expression, verificationInteger("2")), verificationInteger("0")),
+      };
+    case "odd":
+      return {
+        sort: "Bool",
+        expression: verificationApplication("=", verificationApplication("mod", argumentTerms[0].expression, verificationInteger("2")), verificationInteger("1")),
+      };
+    case "positive":
+      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, verificationInteger("0")) };
+    case "nonNegative":
+      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, verificationInteger("0")) };
+    case "zero":
+      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, verificationInteger("0")) };
+    case "divides":
+      return {
+        sort: "Bool",
+        expression: verificationApplication(
+          "and",
+          verificationApplication("not", verificationApplication("=", argumentTerms[0].expression, verificationInteger("0"))),
+          verificationApplication("=", verificationApplication("mod", argumentTerms[1].expression, argumentTerms[0].expression), verificationInteger("0")),
+        ),
+      };
+    case "between":
+      return {
+        sort: "Bool",
+        expression: verificationApplication(
+          "and",
+          verificationApplication(">=", argumentTerms[0].expression, argumentTerms[1].expression),
+          verificationApplication("<=", argumentTerms[0].expression, argumentTerms[2].expression),
+        ),
+      };
+    default:
+      return `Unsupported standard predicate '${name}'.`;
+  }
 }
 
 function getDataVariantTarget(checker: TypeChecker, expression: Identifier): DataVariant | undefined {
