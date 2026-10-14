@@ -102,6 +102,7 @@
     "lint": "hereby lint",
     "knip": "hereby knip",
     "format": "dprint fmt",
+    "contributors": "npx tsx scripts/generate-contributors.ts",
     "setup-hooks": "node scripts/link-hooks.mjs"
   },
   "browser": {
