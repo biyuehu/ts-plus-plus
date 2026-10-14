@@ -1,0 +1,83 @@
+// =============================================================================
+// 依赖对篇：把数据与关于它的证据放在一起
+// =============================================================================
+//
+// 普通 tuple 的第二项类型固定；Sigma 允许第二项类型引用第一项的实际值。
+
+// -----------------------------------------------------------------------------
+// 1. 从普通 pair 到依赖 pair
+// -----------------------------------------------------------------------------
+//
+// [A, B] 中的 B 与第一项无关。
+// Sigma<(value: A) -> B> 中，B 可以引用 value。
+//
+// 例如，下面的第二项必须证明第一项 value 等于 Zero。
+
+export type SingletonNat: Type0 =
+  Sigma<(value: Nat) -> Eq<Nat, value, Zero>>;
+
+// 这可直观理解为“一个自然数，以及它确实是 0 的证据”。
+// 依赖对常用于把数据和由该数据决定的不变量一起传递。
+
+// -----------------------------------------------------------------------------
+// 2. Pair 构造依赖对
+// -----------------------------------------------------------------------------
+//
+// Pair 显式接收 Sigma 类型、第一项和第二项。显式写出 Sigma 能让 checker
+// 在检查第二项时知道它必须满足哪个依赖类型。
+
+export type SelfWitness: Type0 =
+  (N: Nat) ->
+  Sigma<(value: Nat) -> Eq<Nat, value, N>>;
+
+export type SelfWitnessIsConstructible: Type0 =
+  (N: Nat) ->
+  Eq<
+    Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+    Pair<
+      Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+      N,
+      Refl<Nat, N>
+    >,
+    Pair<
+      Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+      N,
+      Refl<Nat, N>
+    >
+  >;
+
+// -----------------------------------------------------------------------------
+// 3. First 和 Second 投影
+// -----------------------------------------------------------------------------
+//
+// First 的结果是第一项。Second 的类型则要把 Sigma binder 替换成实际第一项。
+
+export type SigmaFirstComputation: Type0 =
+  (N: Nat) ->
+  Eq<
+    Nat,
+    First<Pair<
+      Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+      N,
+      Refl<Nat, N>
+    >>,
+    N
+  >;
+
+export type SigmaSecondComputation: Type0 =
+  (N: Nat) ->
+  Eq<
+    Eq<Nat, N, N>,
+    Second<Pair<
+      Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+      N,
+      Refl<Nat, N>
+    >>,
+    Refl<Nat, N>
+  >;
+
+// 计算规则：
+//
+//   First<Pair<SigmaType, first, second>>  → first
+//   Second<Pair<SigmaType, first, second>> → second
+

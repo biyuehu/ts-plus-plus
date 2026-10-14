@@ -1,169 +1,87 @@
-# 02 — 不需要 MLTT 基础的依赖类型入门
+# 02 — 依赖类型：从“返回原类型”到“数据携带证明”
 
-这个示例从普通 TypeScript 使用者熟悉的“值有类型”出发，逐步解释 TS++ 中的类型宇宙、依赖函数、类型族，以及它们与原生 TypeScript 类型的关系。
+这是一套面向 TypeScript 使用者的渐进教程，不要求预先了解 MLTT。每个源码文件只回答一个主要问题；建议按编号阅读，并在编辑器中悬停查看归约后的类型。
 
 ## 学习路线
 
-示例拆分在 `src` 目录中，建议按顺序阅读：
+| 章节 | 要回答的问题 | 新概念 |
+| --- | --- | --- |
+| [`01-basics.tspp`](./src/01-basics.tspp) | 类型本身属于什么？返回类型如何引用参数？ | universe、Pi、binder、类型族 |
+| [`02-booleans.tspp`](./src/02-booleans.tspp) | 返回类型如何随布尔值变化？ | motive、`BoolElim`、`If` |
+| [`03-type-matching.tspp`](./src/03-type-matching.tspp) | 如何对类型本身做精确分支？ | `IfType`、`TypeMatch`、equal/apart/stuck |
+| [`04-naturals.tspp`](./src/04-naturals.tspp) | 如何用自然数表达长度并做递归？ | `Nat`、`NatAdd`、`NatElim` |
+| [`05-equality.tspp`](./src/05-equality.tspp) | “算出来相同”和“有相等证明”有何区别？ | 定义相等、`Eq`、`Refl`、`J` |
+| [`06-sigma.tspp`](./src/06-sigma.tspp) | 如何把数据与关于它的证明打包？ | `Sigma`、`Pair`、投影 |
+| [`07-boundaries.tspp`](./src/07-boundaries.tspp) | 当前实现会明确拒绝什么？ | MLTT/TS 分工、运行时边界 |
 
-1. [`01-basics.tspp`](./src/01-basics.tspp)：从值与类型开始，逐步学习 universe、Pi、类型族和 TS 函数桥接；
-2. [`02-advanced.tspp`](./src/02-advanced.tspp)：依次学习 Nat 索引、类型级计算、消去器、相等证明和 Sigma；
-3. [`03-boundaries.tspp`](./src/03-boundaries.tspp)：了解 MLTT/TS 分工、表面语法入口、运行时边界和错误诊断。
-
-三个文件分别对应基础、进阶和边界探索，既可以连续阅读，也可以单独实验。
-
-第一次接触依赖类型时，不建议跳过基础篇。高级篇中的概念有明确依赖关系：
+前四章建立计算能力，第五章才正式讨论证明，第六章再组合数据与证明。`07` 中的反例适合最后阅读，不应作为语法入门材料。
 
 ```text
-Nat 数据 → NatAdd 计算 → NatElim 递归 → Eq/Refl/J 证明 → Sigma 携带证明
+universe 与 Pi
+      ↓
+Bool 的依值计算 ──→ 类型的精确匹配
+      ↓
+Nat 的索引与递归
+      ↓
+定义相等 vs Eq 证明
+      ↓
+Sigma：数据 + 依赖证据
 ```
 
-遇到陌生术语时，可以先采用下面的直观理解：
+## 阅读时只需先记住四件事
 
-| 术语 | 暂时可以理解成 |
+1. 普通值有普通类型，普通类型位于 `Type0`，`Type0` 位于 `Type1`。
+2. TypeScript 函数类型写 `(x: A) => B`；TS++ 的 Pi 类型写 `(x: A) -> B`，后面的 `B` 可以引用 `x`。
+3. 类型族就是“输入类型或索引，输出类型”的函数；`F<A>` 是对它的应用。
+4. 实现仍是普通 JavaScript/TypeScript 函数。TS++ 新增的是编译期类型与计算规则，不是另一套运行时语言。
+
+如果遇到术语，可以先采用下面的直观解释：
+
+| 术语 | 入门理解 |
 | --- | --- |
-| binder | 声明一个可供右侧引用的名字 |
+| binder | 引入一个可供右侧引用的名字 |
 | Pi | 返回类型可以依赖参数的函数类型 |
-| type family | 输入类型或索引、输出类型的函数 |
-| eliminator | 使用某类数据时允许采用的递归原则 |
+| motive | 描述消去结果怎样随被检查值变化的类型族 |
+| eliminator | 一类数据允许采用的递归/分情况规则 |
 | proof object | 某个命题类型的值 |
-| Sigma | 后一项类型可以依赖前一项的 pair |
+| Sigma | 第二项类型可以依赖第一项的 pair |
 
-## 先建立一个心智模型
+## 两种相等不要混淆
 
-在普通 TypeScript 里，我们经常写：
+| 相等 | 谁来判断 | 是否有证明值 | 例子 |
+| --- | --- | --- | --- |
+| 定义相等 | checker 归一化后判断 | 否 | `NatAdd<1, 1>` 与 `2` |
+| 命题相等 `Eq<A, x, y>` | 写在系统内部的类型 | 是 | `Refl<A, x>` 证明 `x = x` |
 
-```ts
-const count: number = 1;
-```
+alpha 改名、beta 归约以及 `If`、`NatElim`、`J`、Sigma 投影等内建计算规则都参与定义相等。拥有一个 `Eq` 证明不会自动开启相等反射；需要使用相等证明时，由 `J` 表达其消去原则。完整解释在 [`05-equality.tspp`](./src/05-equality.tspp)。
 
-`count` 是值，`number` 是它的类型。依赖类型系统还需要继续问一句：**类型本身属于哪一层？**
+## 类型匹配为什么单独成章
 
-TS++ 使用 `Type0`、`Type1`、`Type2`……表示逐级升高的类型宇宙：
+`If` 根据 `Bool` 值分支；`IfType` 和 `TypeMatch` 根据类型的定义相等分支。这种类型反射不是普通参数多态，而是 TS++ 明确提供的受控能力。
 
-```text
-普通值  ──属于──> 普通类型
-普通类型──属于──> Type0
-Type0   ──属于──> Type1
-Type1   ──属于──> Type2
-```
+- 比较是精确相等，不是单向的 TypeScript `extends`；
+- 开放 binder 信息不足时得到 `stuck`，不会提前选择后备分支；
+- union 作为整体比较，不做分布式匹配；
+- `TypeMatch` 按顺序检查 `Case`，并以 `Default` 结束。
 
-宇宙分层避免让一个宇宙把自己包含进去。入门时只需记住：普通类型在 `Type0` 中，`Type0` 自身在 `Type1` 中。
+这些规则和运行时桥接示例集中在 [`03-type-matching.tspp`](./src/03-type-matching.tspp)。
 
-```ts
-type UniverseZero: Type1 = Type0;
-```
+## TypeScript 与 MLTT 如何分工
 
-这里冒号右侧的 `Type1` 是左侧类型表达式的 **kind**，也就是“类型的类型”。
+TS++ 是在 TypeScript 中嵌入一小块 MLTT，而不是替换 TypeScript 类型系统。
 
-## 什么是依赖函数
+- object、union、`keyof`、mapped/conditional type 和结构类型关系仍由 TypeScript checker 处理；
+- universe、Pi、Bool/Nat 消去、`Eq`/`J`、Sigma、归约和定义相等由 MLTT 内核处理；
+- external bridge 把可表示的 Pi 类型投影为普通 TypeScript 泛型调用签名。
 
-原生语法是：
+例如 `(A: Type0) -> (value: A) -> A` 可以连接到 `<A>(value: A) => A`。Bool binder 会投影成布尔泛型参数；Nat binder 只接受非负安全整数字面量。具体限制集中在 [`07-boundaries.tspp`](./src/07-boundaries.tspp)。
 
-```ts
-(参数名: 参数类型) -> 返回类型
-```
+## 实验特性
 
-两种箭头并存，各自承担不同角色：
-
-| 写法 | 含义 |
-| --- | --- |
-| `(value: string) => string` | 原有 TypeScript 函数类型 |
-| `(A: Type0) -> A` | MLTT 依赖函数类型，右侧可以引用左侧的 `A` |
-
-普通函数的返回类型通常是预先固定的；依赖函数允许返回类型引用前面的参数：
-
-```ts
-type PolymorphicIdentity: Type1 =
-  (A: Type0) -> (value: A) -> A;
-```
-
-可以从左到右把它读成：
-
-1. 调用者先选择一个普通类型，命名为 `A`。
-2. 调用者再提供一个类型为 `A` 的值，命名为 `value`。
-3. 结果也必须是 `A`。
-
-`value` 的类型和最终结果都取决于第一次选择的 `A`，这就是“依赖”的含义。它对应 MLTT 中的 Pi 类型，但理解和使用这段代码并不要求先掌握这个术语。
-
-如果右侧没有使用参数名，依赖关系就退化成普通情况：
-
-```ts
-type TypeFamilyShape: Type1 =
-  (A: Type0) -> Type0;
-```
-
-这表示一个“输入普通类型、输出普通类型”的形状。
-
-## 类型族与应用
-
-类型族可以理解成类型层面的函数。下面的 `F` 接收某个 `A: Type0`，返回另一个 `Type0`：
-
-```ts
-type ApplyTypeFamily: Type1 =
-  (F: (A: Type0) -> Type0) ->
-  (A: Type0) ->
-  F<A>;
-```
-
-最后的 `F<A>` 是类型应用：把类型族 `F` 应用到类型 `A`。这个例子同时展示了高阶参数和真正依赖前文参数的结果。
-
-## 名称、作用域与“定义相等”
-
-以下两个类型只改了 binder 的名字：
-
-```ts
-(A: Type0) -> (value: A) -> A
-(T: Type0) -> (item: T) -> T
-```
-
-它们表达同一个结构。checker 不会因为 `A` 和 `T` 拼写不同就认为类型不同；elaborator 会把名称转换成 De Bruijn index，MLTT 内核再通过归一化和定义相等比较它们。
-
-如果暂时不熟悉这些内部术语，可以把它理解为：**变量名用于阅读，绑定关系才决定类型含义。**
-
-## 编译器内部经过哪些步骤
-
-```text
-.tspp 原生语法
-    ↓ parser
-DependentFunctionTypeNode
-    ↓ elaboration（解析 binder 和作用域）
-MLTT term（De Bruijn 表示）
-    ↓ 类型推导、归一化、定义相等
-DependentFunctionType compiler Type
-    ↓
-kind 检查、别名传播、类型打印和关系判断
-```
-
-这不是字符串桥接。checker 会创建带有 `TypeFlags.DependentFunction` 的正式 compiler type；普通别名可以继续传播它，诊断和声明文件也会保留原生语法。
-
-## 当前示例覆盖的语言边界
-
-目前的 MLTT 子语言支持本示例所需的：
-
-- `Type0`、`Type1` 等宇宙；
-- `(A: Type0) -> ...` 依赖函数；
-- 对已绑定名称的引用；
-- `F<A>` 形式的类型应用；
-- `Lam<(x: A) -> term>` term-level lambda 与 `Ann<term, type>` 显式类型标注；
-- 内建 `Nat`、`Zero`、`Succ<N>` 自然数索引，以及可归约的 `NatAdd<A, B>`；
-- `Bool`、`True`、`False`，以及 `BoolElim`/`If` 依值分支与计算规则；
-- `IfType<A, P, T, F>` 精确类型分支，以及由 `Case`/`Default` 组成的有序 `TypeMatch`；
-- `NatElim` 依赖消去器与对 `Zero`/`Succ` 的计算规则；
-- `Eq<A, x, y>`、`Refl<A, x>` identity type 和反身证明，以及 `J` path induction；
-- `Sigma<(x: A) -> B>`、`Pair`、`First`、`Second` 依赖对及投影归约；
-- 由原 TypeScript checker 检查的 primitive、union/intersection、普通泛型引用、`keyof`、indexed access、mapped type 和 conditional type；
-- alpha/beta 与内建 eliminator 计算规则构成的定义相等，以及 universe/kind 检查；
-- 将形如 `(A: Type0) -> (value: A) -> A` 的 Pi 类型与显式注解的
-  TypeScript 泛型函数互相赋值，并复用 TypeScript 的调用推断。
-
-嵌入 MLTT 的 TypeScript 类型会保留其真实 kind，并继续采用 TypeScript 的结构类型语义；别名名称不同但结构相同的类型不会因此变成不同的依赖类型。union/intersection 也不能用来把高层 universe 的类型伪装成 `Type0`。
-
-项目使用独立的 `tsppconfig.json` 开启这项实验能力：
+本项目通过 [`tsppconfig.json`](./tsppconfig.json) 显式启用教程所需能力。普通 `.ts` 文件不会因为同一项目的配置而获得 `.tspp` 语法。
 
 ```json
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
     "tsppFeatures": [
       "higherKindedTypes",
@@ -183,42 +101,17 @@ kind 检查、别名传播、类型打印和关系判断
 }
 ```
 
-每个能力及其依赖都必须显式列出，编译器不会自动补齐。普通 `.ts` 文件永远不会启用依赖语法，即使同一项目开启了这些特性；其中原有的 `=>` 函数类型也不受影响。
-
-闭合的 `Eq`、`Sigma` 等 MLTT 类型现在可以直接写在类型别名右侧，不再需要人为包一层 Pi。
-
-目前没有新增一套运行时函数语法；实现仍写成普通 TypeScript 泛型函数。
-`02-advanced.tspp` 演示了它如何赋给 Pi 类型并以依赖函数的类型直接调用。
-这个桥接暂时要求函数签名完整注解，不包括可选/剩余参数、默认/约束类型参数等扩展形式。
-
-Pi 仍负责引入依赖 binder；`Eq`、`NatElim`、`J` 和 `Sigma` 等构造也可以在 `.tspp`
-的闭合类型位置直接 elaboration。运行时 `Bool` binder 会成为 `B extends boolean`
-和布尔参数：字面量调用精确归约 `If`，动态 `boolean` 得到两个分支的 union。
-运行时 `Nat` binder 仍只接受非负安全整数的字面量类型，因此负数、小数和无法静态
-确定的 `number` 会在调用点报错。具体示例见高级篇和边界篇。
+能力及其依赖必须显式列出，编译器不会自动补齐。
 
 ## 运行与实验
 
-### 在 VS Code 开发窗口中运行
-
-在仓库根目录按 `F5`，然后选择：
-
-- **TS++: Run Example 02 — Dependent Types**：只打开本教程；
-- **TS++: Run All Examples**：打开整个 `example` 目录，并排显示两个示例。
-
-开发窗口左下角的 **TS++ Examples** 状态栏按钮也可以随时切换或同时打开示例。
-
-第一次运行时，如果 VS Code 询问是否允许使用工作区版本的 TypeScript，请选择 **Allow**。
-
-### 使用命令行
-
-先在仓库根目录构建 compiler，然后进入本目录运行：
+先在仓库根目录构建 compiler，再进入本目录运行：
 
 ```powershell
 npm run check
 npm run emit-declarations
 ```
 
-第二条命令会在 `dist` 中按课程文件生成对应的 `.d.tspp` 声明。依赖函数会保持 `(A: Type0) -> ...`，不会退化成 `unknown`。
+`check` 也会验证 [`07-boundaries.tspp`](./src/07-boundaries.tspp) 中由 `@ts-expect-error` 保护的反例。`emit-declarations` 会在 `dist` 中按章节生成 `.d.tspp`，依赖函数语法会被保留。
 
-阅读完正常示例后，可以查看 [`03-boundaries.tspp`](./src/03-boundaries.tspp) 中由 `// @ts-expect-error` 保护的错误案例。运行 `npm run check` 会同时验证未绑定变量、错误 universe 和非法组合仍能产生诊断；如果某个反例不再报错，编译器会报告该指令未使用。
+在仓库根目录按 `F5`，选择 **TS++: Run Example 02 — Dependent Types**，可以在 VS Code Extension Development Host 中阅读悬停结果。若 VS Code 询问是否允许工作区版本的 TypeScript，请选择 **Allow**。

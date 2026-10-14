@@ -1,0 +1,94 @@
+// =============================================================================
+// 布尔篇：让结果类型随值变化
+// =============================================================================
+//
+// 本篇只回答一个问题：函数已经能接收 Bool，返回类型怎样依赖这个 Bool？
+// 先理解 BoolElim 的四个部分，再把 If 看成它的便捷写法。
+
+// -----------------------------------------------------------------------------
+// 1. Bool、True 和 False
+// -----------------------------------------------------------------------------
+//
+// Bool 是类型，True 和 False 是它的两个构造。它们会在运行时边界分别
+// 对应 TypeScript 的 true 和 false，但在 MLTT 内核中仍是可计算的项。
+
+export type BooleanConsumer: Type0 =
+  (value: Bool) -> Bool;
+
+// -----------------------------------------------------------------------------
+// 2. motive 描述“结果类型怎样变化”
+// -----------------------------------------------------------------------------
+//
+// 普通 if 的两个分支通常共享一个固定结果类型。依赖 if 更一般：
+// 它先接收一个类型族 P，再要求两个分支分别给出 P<True> 和 P<False>。
+// 这个描述结果类型变化方式的 P 叫 motive（动机）。
+
+export type BooleanElimination: Type1 =
+  (P: (value: Bool) -> Type0) ->
+  (whenTrue: P<True>) ->
+  (whenFalse: P<False>) ->
+  (value: Bool) ->
+  P<value>;
+
+// 从最后一行读起最容易：输入 value 后，结果不是固定的 T，而是 P<value>。
+// BoolElim 的计算规则是：
+//
+//   BoolElim<P, whenTrue, whenFalse, True>  → whenTrue
+//   BoolElim<P, whenTrue, whenFalse, False> → whenFalse
+
+// -----------------------------------------------------------------------------
+// 3. If 是 BoolElim 的便捷写法
+// -----------------------------------------------------------------------------
+//
+// If<value, P, whenTrue, whenFalse> 使用完全相同的 motive 和计算规则。
+// Lam 构造一个匿名类型族；Ann 为它补上内核检查所需的显式类型。
+// 这里的 motive 不使用 ignored，但两个分支仍可返回不同类型。
+
+export type TrueResult: Type0 =
+  If<
+    True,
+    Ann<Lam<(ignored: Bool) -> Type0>, (ignored: Bool) -> Type1>,
+    string,
+    number
+  >;
+
+export type FalseResult: Type0 =
+  If<
+    False,
+    Ann<Lam<(ignored: Bool) -> Type0>, (ignored: Bool) -> Type1>,
+    string,
+    number
+  >;
+
+// TrueResult 会归约为 string，FalseResult 会归约为 number。
+// 这种由内核计算得到的“相同”叫定义相等；05-equality 会把它和需要证明的
+// 命题相等放在一起比较。
+
+// -----------------------------------------------------------------------------
+// 4. 运行时仍然调用普通 JavaScript 函数
+// -----------------------------------------------------------------------------
+
+export type BooleanChooser: Type0 =
+  (value: Bool) ->
+  If<
+    value,
+    Ann<Lam<(ignored: Bool) -> Type0>, (ignored: Bool) -> Type1>,
+    string,
+    number
+  >;
+
+export declare const chooseByBoolean: BooleanChooser;
+
+// 字面量在编译期已知，因此结果可以精确归约。
+export const chosenString = chooseByBoolean(true);   // string
+export const chosenNumber = chooseByBoolean(false); // number
+
+// 动态 boolean 可能走任一分支，TypeScript 边界因此得到 union。
+declare let dynamicBoolean: boolean;
+export const chosenUnion = chooseByBoolean(dynamicBoolean); // string | number
+
+// 等价的 TypeScript 泛型签名可以赋给这个 Pi 类型。
+declare const ordinaryBooleanChooser:
+  <B extends boolean>(value: B) => B extends true ? string : number;
+
+export const bridgedBooleanChooser: BooleanChooser = ordinaryBooleanChooser;

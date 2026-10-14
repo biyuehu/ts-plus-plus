@@ -1,0 +1,92 @@
+// =============================================================================
+// 边界篇：知道系统拒绝什么，和知道它支持什么同样重要
+// =============================================================================
+//
+// 本篇不引入新概念。反例均由 @ts-expect-error 保护，npm run check 会验证
+// 它们确实仍被拒绝。
+
+// -----------------------------------------------------------------------------
+// 1. MLTT 内核和 TypeScript checker 各自负责什么
+// -----------------------------------------------------------------------------
+//
+// TypeScript checker：object、union、keyof、mapped/conditional type、结构类型。
+// MLTT 内核：universe、Pi、Bool/Nat 消去、Eq/J、Sigma、归约和定义相等。
+// external 边界：把可表示的 Pi 签名投影为普通 TypeScript 调用签名。
+// 当前归约由 MLTT 定义相等和这个调用桥接消费；普通 TS 变量赋值关系不会
+// 把独立的 If/IfType/TypeMatch 别名自动改写成某个分支类型。
+
+export type Identity: Type1 = (A: Type0) -> A;
+
+// external alias 保留真实 kind；Identity 位于 Type1，不会降级为 Type0。
+export type HigherCodomain: Type1 =
+  (ignored: string) -> Identity;
+
+// 闭合的 MLTT 类型不需要人为包一层 Pi。
+export type DirectProof: Type0 = Eq<Nat, Zero, Zero>;
+export type DirectSigma: Type0 =
+  Sigma<(value: Nat) -> Eq<Nat, value, Zero>>;
+
+// -----------------------------------------------------------------------------
+// 2. 名称、universe 和构造参数都会被检查
+// -----------------------------------------------------------------------------
+
+// @ts-expect-error -- Missing 没有被任何 binder 引入
+export type UnboundName: Type1 = (A: Type0) -> Missing;
+
+// @ts-expect-error -- (A: Type0) -> A 实际位于 Type1
+export type WrongUniverse: Type0 = (A: Type0) -> A;
+
+// @ts-expect-error -- Succ 只能接收 Nat 项
+export type WrongSuccessor: Type0 = (N: Nat) -> Succ<string>;
+
+// -----------------------------------------------------------------------------
+// 3. Nat 运行时桥接只接受可静态验证的自然数
+// -----------------------------------------------------------------------------
+
+export declare const buildAt: (N: Nat) -> { index: N };
+
+// @ts-expect-error -- 负数不是 Nat
+buildAt(-1);
+// @ts-expect-error -- 小数不是 Nat
+buildAt(1.5);
+// @ts-expect-error -- 超出安全整数范围
+buildAt(9007199254740992);
+
+declare let dynamicNumber: number;
+// @ts-expect-error -- 宽泛 number 无法证明自己是 Nat
+buildAt(dynamicNumber);
+
+// -----------------------------------------------------------------------------
+// 4. 依赖构造必须满足由前项决定的类型
+// -----------------------------------------------------------------------------
+
+export type WrongPair: Type0 =
+  // @ts-expect-error -- Zero 不是任意 N = N 的证明
+  (N: Nat) ->
+  Eq<
+    Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+    Pair<Sigma<(value: Nat) -> Eq<Nat, value, N>>, N, Zero>,
+    Pair<
+      Sigma<(value: Nat) -> Eq<Nat, value, N>>,
+      N,
+      Refl<Nat, N>
+    >
+  >;
+
+// union/intersection 不能把高层 universe 的类型伪装成 Type0。
+export type HiddenHigherUniverse: Type1 =
+  // @ts-expect-error -- union 的右侧位于 Type1
+  (A: Type0) -> A | ((B: Type0) -> B);
+
+// -----------------------------------------------------------------------------
+// 5. 当前有意保留的边界
+// -----------------------------------------------------------------------------
+//
+//   - 用户可声明的通用 inductive family；
+//   - 分解任意构造器的 dependent pattern matching；
+//   - 隐式参数、holes 和通用 unification；
+//   - 可选/剩余运行时 binder、默认/约束类型参数；
+//   - 让任意 JavaScript 表达式参与类型级计算。
+//
+// IfType/TypeMatch 是精确“类型相等”匹配，不等于通用 dependent pattern
+// matching。类型级计算只执行内核已知且可证明终止的规则。
