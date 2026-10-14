@@ -147,6 +147,7 @@ kind 检查、别名传播、类型打印和关系判断
 - `F<A>` 形式的类型应用；
 - `Lam<(x: A) -> term>` term-level lambda 与 `Ann<term, type>` 显式类型标注；
 - 内建 `Nat`、`Zero`、`Succ<N>` 自然数索引，以及可归约的 `NatAdd<A, B>`；
+- `Bool`、`True`、`False`，以及 `BoolElim`/`If` 依值分支与计算规则；
 - `NatElim` 依赖消去器与对 `Zero`/`Succ` 的计算规则；
 - `Eq<A, x, y>`、`Refl<A, x>` identity type 和反身证明，以及 `J` path induction；
 - `Sigma<(x: A) -> B>`、`Pair`、`First`、`Second` 依赖对及投影归约；
@@ -171,6 +172,8 @@ kind 检查、别名传播、类型打印和关系判断
       "naturalNumbers",
       "naturalNumberAddition",
       "naturalNumberElimination",
+      "booleans",
+      "booleanElimination",
       "identityTypes",
       "sigmaTypes"
     ]
@@ -187,8 +190,10 @@ kind 检查、别名传播、类型打印和关系判断
 这个桥接暂时要求函数签名完整注解，不包括可选/剩余参数、默认/约束类型参数等扩展形式。
 
 Pi 仍负责引入依赖 binder；`Eq`、`NatElim`、`J` 和 `Sigma` 等构造也可以在 `.tspp`
-的闭合类型位置直接 elaboration。运行时 `Nat` binder 只接受非负安全整数的字面量类型，
-因此负数、小数和无法静态确定的 `number` 会在调用点报错。具体示例见高级篇和边界篇。
+的闭合类型位置直接 elaboration。运行时 `Bool` binder 会成为 `B extends boolean`
+和布尔参数：字面量调用精确归约 `If`，动态 `boolean` 得到两个分支的 union。
+运行时 `Nat` binder 仍只接受非负安全整数的字面量类型，因此负数、小数和无法静态
+确定的 `number` 会在调用点报错。具体示例见高级篇和边界篇。
 
 ## 运行与实验
 

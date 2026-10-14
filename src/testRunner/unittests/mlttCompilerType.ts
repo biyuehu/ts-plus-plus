@@ -13,6 +13,8 @@ describe("unittests:: MLTT compiler type", () => {
     "naturalNumbers",
     "naturalNumberAddition",
     "naturalNumberElimination",
+    "booleans",
+    "booleanElimination",
     "identityTypes",
     "sigmaTypes",
   ];
@@ -218,6 +220,76 @@ describe("unittests:: MLTT compiler type", () => {
     );
 
     assert.isEmpty(proofs.getSemanticDiagnostics());
+  });
+
+  it("exposes dependent Bool elimination and If sugar", () => {
+    const booleans = createProgram(
+      "/booleans.tspp",
+      `
+      type ReflexiveBool: Type0 = (value: Bool) -> Eq<Bool, value, value>;
+      type Motive: Type1 = (value: Bool) -> Type0;
+
+      type TrueComputation: Type0 = Eq<
+        Eq<Bool, True, True>,
+        BoolElim<
+          Ann<Lam<(value: Bool) -> Eq<Bool, value, value>>, (value: Bool) -> Type0>,
+          Refl<Bool, True>,
+          Refl<Bool, False>,
+          True
+        >,
+        Refl<Bool, True>
+      >;
+
+      type FalseComputation: Type0 = Eq<
+        Nat,
+        If<
+          False,
+          Ann<Lam<(value: Bool) -> Nat>, (value: Bool) -> Type0>,
+          Succ<Zero>,
+          Zero
+        >,
+        Zero
+      >;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const diagnostics = booleans.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+  });
+
+  it("bridges Bool binders to runtime boolean arguments and preserves dependent results", () => {
+    const callable = createProgram(
+      "/boolean-calls.tspp",
+      `
+      type Choose: Type0 =
+        (value: Bool) ->
+        If<
+          value,
+          Ann<Lam<(ignored: Bool) -> Type0>, (ignored: Bool) -> Type1>,
+          string,
+          number
+        >;
+      declare const choose: Choose;
+      declare const ordinaryChoose: <B extends boolean>(value: B) => B extends true ? string : number;
+      const bridgedChoose: Choose = ordinaryChoose;
+      declare let dynamicBoolean: boolean;
+      const whenTrue = choose(true);
+      const whenFalse = choose(false);
+      const whenDynamic = choose(dynamicBoolean);
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const diagnostics = callable.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+    const checker = callable.getTypeChecker();
+    const file = callable.getSourceFile("/boolean-calls.tspp")!;
+    const declarations = file.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[4].name)), "string");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[5].name)), "number");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[6].name)), "string | number");
   });
 
   it("exposes path induction and its reflexivity computation rule", () => {

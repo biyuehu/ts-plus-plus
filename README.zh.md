@@ -60,6 +60,8 @@ tspp --init
 | `naturalNumbers` | `Nat`、`Zero`、`Succ` 类型级自然数 | `dependentFunctionTypes` | 是 | 是 |
 | `naturalNumberAddition` | 可归约的 `NatAdd` 类型级加法 | `naturalNumbers` | 是 | 是 |
 | `naturalNumberElimination` | `NatElim` 依赖消去器 | `naturalNumbers` | 是 | 是 |
+| `booleans` | `Bool`、`True`、`False` 类型级布尔值 | `dependentFunctionTypes` | 是 | 是 |
+| `booleanElimination` | `BoolElim` 依赖消去器与 `If` 依值分支 | `booleans` | 是 | 是 |
 | `identityTypes` | `Eq`、`Refl`，以及 `J` 路径归纳 | `dependentFunctionTypes` | 是 | 是 |
 | `sigmaTypes` | `Sigma`、`Pair`、`First`、`Second` 依赖对及投影 | `dependentFunctionTypes` | 是 | 是 |
 

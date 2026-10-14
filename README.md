@@ -62,6 +62,8 @@ Current features:
 | `naturalNumbers` | `Nat`, `Zero`, and `Succ` type-level naturals | `dependentFunctionTypes` | Yes | Yes |
 | `naturalNumberAddition` | Reducible `NatAdd` | `naturalNumbers` | Yes | Yes |
 | `naturalNumberElimination` | The dependent `NatElim` eliminator | `naturalNumbers` | Yes | Yes |
+| `booleans` | `Bool`, `True`, and `False` type-level booleans | `dependentFunctionTypes` | Yes | Yes |
+| `booleanElimination` | The dependent `BoolElim` eliminator and `If` | `booleans` | Yes | Yes |
 | `identityTypes` | `Eq`, `Refl`, and `J` path induction | `dependentFunctionTypes` | Yes | Yes |
 | `sigmaTypes` | `Sigma`, `Pair`, `First`, and `Second` | `dependentFunctionTypes` | Yes | Yes |
 

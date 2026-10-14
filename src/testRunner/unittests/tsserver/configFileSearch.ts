@@ -1,7 +1,9 @@
+import * as ts from "../../_namespaces/ts.js";
 import {
   baselineTsserverLogs,
   closeFilesForSession,
   openFilesForSession,
+  protocolFileLocationFromSubstring,
   TestSession,
 } from "../helpers/tsserver.js";
 import {
@@ -27,6 +29,42 @@ describe("unittests:: tsserver:: configFileSearch:: searching for config file", 
     assert.lengthOf(projects, 1);
     assert.strictEqual(projects[0].getConfigFilePath(), configFile.path);
     assert.deepEqual(projects[0].getCompilationSettings().tsppFeatures, ["higherKindedTypes", "typeUniverses", "dependentFunctionTypes"]);
+  });
+
+  it("serializes instantiated dependent Boolean signatures in quick info", () => {
+    const file = {
+      path: "/home/src/workspaces/project/index.tspp",
+      content: `
+type BooleanChooser: Type0 =
+  (value: Bool) ->
+  If<
+    value,
+    Ann<Lam<(ignored: Bool) -> Type0>, (ignored: Bool) -> Type1>,
+    string,
+    number
+  >;
+declare const chooseByBoolean: BooleanChooser;
+const chosenString = chooseByBoolean(true);
+`,
+    };
+    const configFile = {
+      path: "/home/src/workspaces/project/tsppconfig.json",
+      content: JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          tsppFeatures: ["higherKindedTypes", "typeUniverses", "dependentFunctionTypes", "dependentFunctionInterop", "booleans", "booleanElimination"],
+        },
+      }),
+    };
+    const host = TestServerHost.createServerHost([file, configFile]);
+    const session = new TestSession(host);
+    openFilesForSession([file], session);
+
+    const response = session.executeCommandSeq<ts.server.protocol.QuickInfoRequest>({
+      command: ts.server.protocol.CommandTypes.Quickinfo,
+      arguments: protocolFileLocationFromSubstring(file, "chooseByBoolean(true)"),
+    }).response as ts.server.protocol.QuickInfoResponseBody;
+    assert.strictEqual(response.displayString, "const chooseByBoolean: <true>(value: true) => string");
   });
 
   it("should stop at projectRootPath if given", () => {

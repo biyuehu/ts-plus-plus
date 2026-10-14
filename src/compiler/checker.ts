@@ -1172,8 +1172,11 @@ import {
   inferMlttType,
   mlttAnnotation,
   mlttApplication,
+  mlttBoolElim,
+  mlttBoolType,
   MlttExternal,
   mlttExternal,
+  mlttFalse,
   mlttFirst,
   mlttIdentityElim,
   mlttIdentityType,
@@ -1188,6 +1191,7 @@ import {
   mlttSigma,
   mlttSuccessor,
   MlttTerm,
+  mlttTrue,
   MlttTypeError,
   mlttUniverse,
   mlttVariable,
@@ -20978,12 +20982,20 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function isStandaloneMlttTypeReference(node: TypeReferenceNode): boolean {
     if (currentMlttTypeBindings || !isIdentifier(node.typeName)) return false;
-    const sourceFileName = getSourceFileOfNode(node).fileName;
+    // Projected dependent signatures use synthetic type-reference nodes whose
+    // types are supplied through NodeLinks. They need not belong to a source
+    // file, especially when a signature is instantiated for a tsserver
+    // QuickInfo request.
+    const sourceFile = getSourceFileOfNode(node);
+    if (!sourceFile) return false;
+    const sourceFileName = sourceFile.fileName;
     if (!fileExtensionIs(sourceFileName, Extension.Tspp) && !fileExtensionIs(sourceFileName, Extension.Dtspp)) return false;
     const name = idText(node.typeName);
     const feature = name === "Nat" || name === "Zero" || name === "Succ" ? "naturalNumbers"
       : name === "NatAdd" ? "naturalNumberAddition"
       : name === "NatElim" ? "naturalNumberElimination"
+      : name === "Bool" || name === "True" || name === "False" ? "booleans"
+      : name === "BoolElim" || name === "If" ? "booleanElimination"
       : name === "Eq" || name === "Refl" || name === "J" ? "identityTypes"
       : name === "Lam" || name === "Ann" ? "dependentFunctionTypes"
       : name === "Sigma" || name === "Pair" || name === "First" || name === "Second" ? "sigmaTypes"
@@ -21056,6 +21068,36 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const term = getMlttTermFromTypeNode(reference.typeArguments[0], scope);
         const type = getMlttTermFromTypeNode(reference.typeArguments[1], scope);
         return term && type ? mlttAnnotation(term, type) : undefined;
+      }
+      if (name === "Bool" || name === "True" || name === "False") {
+        if (!requireTsppFeature(node, "booleans")) return undefined;
+        if (reference.typeArguments?.length) {
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `'${name}' does not accept type arguments.`);
+          return undefined;
+        }
+        return name === "Bool" ? mlttBoolType() : name === "True" ? mlttTrue() : mlttFalse();
+      }
+      if (name === "BoolElim" || name === "If") {
+        if (!requireTsppFeature(node, "booleanElimination")) return undefined;
+        if (reference.typeArguments?.length !== 4) {
+          const requirement = name === "If"
+            ? "a scrutinee, motive, true case, and false case"
+            : "a motive, true case, false case, and scrutinee";
+          error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `'${name}' requires ${requirement}.`);
+          return undefined;
+        }
+        // If<b, P, t, f> is the surface form of BoolElim<P, t, f, b>.
+        const orderedArguments = name === "If"
+          ? [reference.typeArguments[1], reference.typeArguments[2], reference.typeArguments[3], reference.typeArguments[0]] as const
+          : reference.typeArguments;
+        const [motiveNode, trueCaseNode, falseCaseNode, scrutineeNode] = orderedArguments;
+        const motive = getMlttTermFromTypeNode(motiveNode, scope);
+        const trueCase = getMlttTermFromTypeNode(trueCaseNode, scope);
+        const falseCase = getMlttTermFromTypeNode(falseCaseNode, scope);
+        const scrutinee = getMlttTermFromTypeNode(scrutineeNode, scope);
+        return motive && trueCase && falseCase && scrutinee
+          ? mlttBoolElim(motive, trueCase, falseCase, scrutinee)
+          : undefined;
       }
       if (name === "Nat" || name === "Zero") {
         if (!requireTsppFeature(node, "naturalNumbers")) return undefined;
@@ -21357,6 +21399,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function isDependentFunctionRelatedToType(dependent: DependentFunctionType, other: Type): boolean {
     const signatures = getSignaturesOfType(other, SignatureKind.Call);
     if (signatures.length !== 1) return false;
+    const projectedSignature = getCallSignatureFromDependentFunctionType(dependent);
+    if (
+      projectedSignature &&
+      isSignatureAssignableTo(signatures[0], projectedSignature, /*ignoreReturnTypes*/ false) &&
+      isSignatureAssignableTo(projectedSignature, signatures[0], /*ignoreReturnTypes*/ false)
+    ) {
+      return true;
+    }
     const signatureTerm = getMlttTermFromSignature(signatures[0]);
     return !!signatureTerm && areMlttTermsDefinitionallyEqual(dependent.mlttTerm, signatureTerm, compareMlttExternalTerms);
   }
@@ -21388,18 +21438,19 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     while (isMlttDependentFunctionTypeNode(node)) {
       const isNatIndex = isMlttNatTypeNode(node.parameterType);
+      const isBoolIndex = isMlttBoolTypeNode(node.parameterType);
       const name = idText(node.parameterName);
       let parameterType: Type | undefined;
       let binding: MlttTypeBinding;
-      if (isNatIndex) {
+      if (isNatIndex || isBoolIndex) {
         const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
         const typeParameter = createTypeParameter(symbol);
-        typeParameter.constraint = numberType;
+        typeParameter.constraint = isNatIndex ? numberType : booleanType;
         typeParameter.typeKind = ordinaryTypeKind;
         typeParameters.push(typeParameter);
         parameterType = typeParameter;
         binding = { name, placeholderName: name, compilerType: typeParameter };
-        naturalParameterIndices.push(parameters.length);
+        if (isNatIndex) naturalParameterIndices.push(parameters.length);
       }
       else {
         parameterType = getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
@@ -21451,12 +21502,17 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return isTypeReferenceNode(node) && !node.typeArguments && isIdentifier(node.typeName) && idText(node.typeName) === "Nat";
   }
 
+  function isMlttBoolTypeNode(node: TypeNode): boolean {
+    return isTypeReferenceNode(node) && !node.typeArguments && isIdentifier(node.typeName) && idText(node.typeName) === "Bool";
+  }
+
   function isMlttDependentFunctionTypeNode(node: TypeNode): node is DependentFunctionTypeNode {
     return node.kind === SyntaxKind.DependentFunctionType;
   }
 
   function getCompilerTypeFromMlttTypeNode(node: TypeNode, scope: readonly MlttTypeBinding[]): Type | undefined {
     if (isMlttNatTypeNode(node)) return numberType;
+    if (isMlttBoolTypeNode(node)) return booleanType;
     const savedBindings = currentMlttTypeBindings;
     currentMlttTypeBindings = scope;
     try {
@@ -21470,6 +21526,50 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function getCompilerTypeFromMlttTerm(term: MlttTerm, scope: readonly MlttTypeBinding[]): Type | undefined {
     if (term.kind === "variable") return scope[term.index]?.compilerType;
+    if (term.kind === "bool-type") return booleanType;
+    if (term.kind === "true") return regularTrueType;
+    if (term.kind === "false") return regularFalseType;
+    if (term.kind === "bool-elim") {
+      const scrutinee = getCompilerTypeFromMlttTerm(term.scrutinee, scope);
+      const trueCase = getCompilerTypeFromMlttTerm(term.trueCase, scope);
+      const falseCase = getCompilerTypeFromMlttTerm(term.falseCase, scope);
+      if (!scrutinee || !trueCase || !falseCase) return undefined;
+      if (scrutinee.flags & TypeFlags.BooleanLiteral) {
+        return (scrutinee as IntrinsicType).intrinsicName === "true" ? trueCase : falseCase;
+      }
+      if (!(scrutinee.flags & TypeFlags.TypeParameter)) return undefined;
+
+      const checkTypeNode = factory.createTypeReferenceNode("__mltt_bool_check", /*typeArguments*/ undefined);
+      const extendsTypeNode = factory.createTypeReferenceNode("__mltt_bool_true", /*typeArguments*/ undefined);
+      const trueTypeNode = factory.createTypeReferenceNode("__mltt_true_case", /*typeArguments*/ undefined);
+      const falseTypeNode = factory.createTypeReferenceNode("__mltt_false_case", /*typeArguments*/ undefined);
+      const conditionalNode = factory.createConditionalTypeNode(checkTypeNode, extendsTypeNode, trueTypeNode, falseTypeNode);
+      setParent(conditionalNode, currentNode);
+      setParent(checkTypeNode, conditionalNode);
+      setParent(extendsTypeNode, conditionalNode);
+      setParent(trueTypeNode, conditionalNode);
+      setParent(falseTypeNode, conditionalNode);
+      getNodeLinks(checkTypeNode).resolvedType = scrutinee;
+      getNodeLinks(extendsTypeNode).resolvedType = regularTrueType;
+      getNodeLinks(trueTypeNode).resolvedType = trueCase;
+      getNodeLinks(falseTypeNode).resolvedType = falseCase;
+      const outerTypeParameters = mapDefined(scope, binding => binding.compilerType.flags & TypeFlags.TypeParameter ? binding.compilerType : undefined);
+      const root: ConditionalRoot = {
+        node: conditionalNode,
+        checkType: scrutinee,
+        extendsType: regularTrueType,
+        isDistributive: true,
+        inferTypeParameters: undefined,
+        outerTypeParameters,
+        instantiations: undefined,
+        aliasSymbol: undefined,
+        aliasTypeArguments: undefined,
+      };
+      const conditionalType = getConditionalType(root, /*mapper*/ undefined, /*forConstraint*/ false);
+      root.instantiations = new Map<string, Type>();
+      root.instantiations.set(getTypeListId(outerTypeParameters), conditionalType);
+      return conditionalType;
+    }
     if (term.kind === "nat-type") return numberType;
     if (term.kind === "zero") return getNumberLiteralType(0);
     if (term.kind === "successor") {
@@ -48141,6 +48241,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         (typeName === "Nat" || typeName === "Zero" || typeName === "Succ") && hasTsppFeature(compilerOptions, "naturalNumbers") ||
         typeName === "NatAdd" && hasTsppFeature(compilerOptions, "naturalNumberAddition") ||
         typeName === "NatElim" && hasTsppFeature(compilerOptions, "naturalNumberElimination") ||
+        (typeName === "Bool" || typeName === "True" || typeName === "False") && hasTsppFeature(compilerOptions, "booleans") ||
+        (typeName === "BoolElim" || typeName === "If") && hasTsppFeature(compilerOptions, "booleanElimination") ||
         (typeName === "Lam" || typeName === "Ann") && hasTsppFeature(compilerOptions, "dependentFunctionTypes") ||
         (typeName === "Eq" || typeName === "Refl" || typeName === "J") && hasTsppFeature(compilerOptions, "identityTypes") ||
         (typeName === "Sigma" || typeName === "Pair" || typeName === "First" || typeName === "Second") && hasTsppFeature(compilerOptions, "sigmaTypes"))

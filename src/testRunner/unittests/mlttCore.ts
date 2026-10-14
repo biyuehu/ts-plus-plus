@@ -29,6 +29,38 @@ describe("unittests:: MLTT core", () => {
     assert.deepEqual(mltt.inferMlttType(mltt.mlttUniverse(4)), mltt.mlttUniverse(5));
   });
 
+  it("checks and computes the dependent Bool eliminator", () => {
+    const bool = mltt.mlttBoolType();
+    const motive = mltt.mlttAnnotation(
+      mltt.mlttLambda("value", mltt.mlttIdentityType(bool, mltt.mlttVariable(0), mltt.mlttVariable(0))),
+      mltt.mlttPi("value", bool, type0),
+    );
+    const trueCase = mltt.mlttRefl(bool, mltt.mlttTrue());
+    const falseCase = mltt.mlttRefl(bool, mltt.mlttFalse());
+    const whenTrue = mltt.mlttBoolElim(motive, trueCase, falseCase, mltt.mlttTrue());
+    const whenFalse = mltt.mlttBoolElim(motive, trueCase, falseCase, mltt.mlttFalse());
+
+    assert.deepEqual(mltt.inferMlttType(bool), type0);
+    assert.deepEqual(mltt.inferMlttType(mltt.mlttTrue()), bool);
+    assert.deepEqual(mltt.inferMlttType(mltt.mlttFalse()), bool);
+    assert.deepEqual(mltt.normalizeMlttTerm(whenTrue), trueCase);
+    assert.deepEqual(mltt.normalizeMlttTerm(whenFalse), falseCase);
+    assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(whenTrue, trueCase));
+    assert.isTrue(mltt.areMlttTermsDefinitionallyEqual(whenFalse, falseCase));
+  });
+
+  it("rejects Bool elimination with a non-Bool scrutinee", () => {
+    const bool = mltt.mlttBoolType();
+    const motive = mltt.mlttAnnotation(
+      mltt.mlttLambda("value", mltt.mlttNatType()),
+      mltt.mlttPi("value", bool, type0),
+    );
+    assertMlttError(
+      () => mltt.inferMlttType(mltt.mlttBoolElim(motive, mltt.mlttZero(), mltt.mlttZero(), mltt.mlttZero())),
+      "type-mismatch",
+    );
+  });
+
   it("provides Nat, Zero, and Succ as typed core primitives", () => {
     assert.deepEqual(mltt.inferMlttType(mltt.mlttNatType()), type0);
     assert.deepEqual(mltt.inferMlttType(mltt.mlttZero()), mltt.mlttNatType());

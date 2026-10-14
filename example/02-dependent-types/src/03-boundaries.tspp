@@ -35,10 +35,12 @@ export type DirectSigma: Type0 =
 // 3. 运行时桥接的边界
 // -----------------------------------------------------------------------------
 //
-// 目前主要支持：前导 Type0 binder + 普通值参数 + Nat 索引参数。
+// 目前主要支持：前导 Type0 binder + 普通值参数 + Nat/Bool 索引参数。
 // Type0 binder 成为擦除的 TS 类型参数；Nat binder 同时成为
 // `N extends number` 和运行时数字参数；调用点还要求实参具有非负安全整数
 // 字面量类型。动态 number、负数和小数会被拒绝，避免破坏 Nat 语义。
+// Bool binder 成为 `B extends boolean` 和运行时布尔参数；true/false 精确
+// 选择分支，动态 boolean 的结果则是两个分支的 union。
 //
 // 尚未纳入桥接的有：可选/剩余参数、默认/约束类型参数、
 // 高阶运行时 binder，以及 Sigma 的专用 JavaScript 运行时表示。
