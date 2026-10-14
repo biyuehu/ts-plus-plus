@@ -10,6 +10,7 @@ describe("unittests:: MLTT compiler type", () => {
     "typeUniverses",
     "dependentFunctionTypes",
     "dependentFunctionInterop",
+    "typeMatching",
     "naturalNumbers",
     "naturalNumberAddition",
     "naturalNumberElimination",
@@ -290,6 +291,73 @@ describe("unittests:: MLTT compiler type", () => {
     assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[4].name)), "string");
     assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[5].name)), "number");
     assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[6].name)), "string | number");
+  });
+
+  it("exposes exact IfType and ordered TypeMatch reduction", () => {
+    const matching = createProgram(
+      "/type-matching.tspp",
+      `
+      type IfTypeHit: Type1 = Eq<Type0, IfType<number, number, Bool, string>, Bool>;
+      type IfTypeMiss: Type1 = Eq<Type0, IfType<string, number, Bool, string>, string>;
+      type NumericAlias = number;
+      type AliasHit: Type1 = Eq<Type0, IfType<NumericAlias, number, Bool, string>, Bool>;
+      type OrderedHit: Type1 = Eq<
+        Type0,
+        TypeMatch<
+          string,
+          Case<number, Bool>,
+          Case<string, Nat>,
+          Default<boolean>
+        >,
+        Nat
+      >;
+      type OpenMatch: Type1 =
+        (A: Type0) ->
+        TypeMatch<A, Case<number, Bool>, Case<string, Nat>, Default<boolean>>;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const diagnostics = matching.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+  });
+
+  it("projects open type matches to exact TypeScript conditional results", () => {
+    const callable = createProgram(
+      "/type-matching-calls.tspp",
+      `
+      type MatchValue: Type1 =
+        (A: Type0) ->
+        (value: A) ->
+        TypeMatch<
+          A,
+          Case<string, number>,
+          Case<number, string>,
+          Default<boolean>
+        >;
+      declare const matchValue: MatchValue;
+      declare let text: string;
+      declare let count: number;
+      declare let flag: boolean;
+      declare let textOrCount: string | number;
+      const textResult = matchValue(text);
+      const numberResult = matchValue(count);
+      const defaultResult = matchValue(flag);
+      const unionResult = matchValue(textOrCount);
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const diagnostics = callable.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+    const checker = callable.getTypeChecker();
+    const file = callable.getSourceFile("/type-matching-calls.tspp")!;
+    const declarations = file.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[5].name)), "number");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[6].name)), "string");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[7].name)), "boolean");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[8].name)), "boolean");
   });
 
   it("exposes path induction and its reflexivity computation rule", () => {

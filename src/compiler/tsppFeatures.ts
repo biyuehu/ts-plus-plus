@@ -80,6 +80,14 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "typeMatching",
+    dependencies: ["dependentFunctionTypes"],
+    initComments: [
+      "获得：IfType 精确类型分支与有序 TypeMatch 类型匹配。",
+      "影响：TS超集=是；透明擦除=是；开放类型保持为中性项。",
+    ],
+  },
+  {
     name: "naturalNumbers",
     dependencies: ["dependentFunctionTypes"],
     initComments: [

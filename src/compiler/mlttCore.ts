@@ -9,7 +9,7 @@
  * @internal
  */
 
-export type MlttTerm = MlttUniverse | MlttBoolType | MlttTrue | MlttFalse | MlttBoolElim | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttNatElim | MlttIdentityType | MlttRefl | MlttIdentityElim | MlttSigma | MlttPair | MlttFirst | MlttSecond | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
+export type MlttTerm = MlttUniverse | MlttBoolType | MlttTrue | MlttFalse | MlttBoolElim | MlttTypeMatch | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttNatElim | MlttIdentityType | MlttRefl | MlttIdentityElim | MlttSigma | MlttPair | MlttFirst | MlttSecond | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
 
 export interface MlttUniverse {
   readonly kind: "universe";
@@ -37,6 +37,21 @@ export interface MlttBoolElim {
   readonly falseCase: MlttTerm;
   readonly scrutinee: MlttTerm;
 }
+
+export interface MlttTypeMatchCase {
+  readonly pattern: MlttTerm;
+  readonly result: MlttTerm;
+}
+
+/** Ordered, non-parametric matching on the definitional shape of a type. */
+export interface MlttTypeMatch {
+  readonly kind: "type-match";
+  readonly scrutinee: MlttTerm;
+  readonly cases: readonly MlttTypeMatchCase[];
+  readonly defaultCase: MlttTerm;
+}
+
+export type MlttDefinitionalComparison = "equal" | "apart" | "stuck";
 
 /** The built-in type of unary natural numbers. */
 export interface MlttNatType {
@@ -208,6 +223,10 @@ export function mlttBoolElim(motive: MlttTerm, trueCase: MlttTerm, falseCase: Ml
   return { kind: "bool-elim", motive, trueCase, falseCase, scrutinee };
 }
 
+export function mlttTypeMatch(scrutinee: MlttTerm, cases: readonly MlttTypeMatchCase[], defaultCase: MlttTerm): MlttTypeMatch {
+  return { kind: "type-match", scrutinee, cases, defaultCase };
+}
+
 export function mlttNatType(): MlttNatType {
   return { kind: "nat-type" };
 }
@@ -321,6 +340,28 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
       checkMlttType(term.falseCase, mlttApplication(term.motive, mlttFalse()), context);
       checkMlttType(term.scrutinee, mlttBoolType(), context);
       return mlttApplication(term.motive, term.scrutinee);
+    }
+
+    case "type-match": {
+      const scrutineeLevel = inferMlttUniverseLevel(term.scrutinee, context);
+      const resultLevel = inferMlttUniverseLevel(term.defaultCase, context);
+      for (const matchCase of term.cases) {
+        const patternLevel = inferMlttUniverseLevel(matchCase.pattern, context);
+        if (patternLevel !== scrutineeLevel) {
+          throw new MlttTypeError(
+            "type-mismatch",
+            `Type-match pattern ${printMlttTerm(matchCase.pattern)} belongs to Type${patternLevel}, but the scrutinee belongs to Type${scrutineeLevel}.`,
+          );
+        }
+        const caseResultLevel = inferMlttUniverseLevel(matchCase.result, context);
+        if (caseResultLevel !== resultLevel) {
+          throw new MlttTypeError(
+            "type-mismatch",
+            `Type-match result ${printMlttTerm(matchCase.result)} belongs to Type${caseResultLevel}, but the default result belongs to Type${resultLevel}.`,
+          );
+        }
+      }
+      return mlttUniverse(resultLevel);
     }
 
     case "nat-type":
@@ -513,7 +554,7 @@ export function checkMlttType(term: MlttTerm, expectedType: MlttTerm, context: M
 }
 
 /** Reduce only far enough to expose the outer constructor. */
-export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
+export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExternalEqualityComparer): MlttTerm {
   let current = term;
   while (true) {
     if (current.kind === "annotation") {
@@ -521,7 +562,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
       continue;
     }
     if (current.kind === "bool-elim") {
-      const scrutinee = weakHeadNormalizeMltt(current.scrutinee);
+      const scrutinee = weakHeadNormalizeMltt(current.scrutinee, compareExternal);
       if (scrutinee.kind === "true") {
         current = current.trueCase;
         continue;
@@ -534,8 +575,29 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
         ? current
         : mlttBoolElim(current.motive, current.trueCase, current.falseCase, scrutinee);
     }
+    if (current.kind === "type-match") {
+      const typeMatch = current;
+      const scrutinee = weakHeadNormalizeMltt(typeMatch.scrutinee, compareExternal);
+      let matched = false;
+      for (const matchCase of typeMatch.cases) {
+        const comparison = compareMlttTermsDefinitionally(scrutinee, matchCase.pattern, compareExternal);
+        if (comparison === "equal") {
+          current = matchCase.result;
+          matched = true;
+          break;
+        }
+        if (comparison === "stuck") {
+          return scrutinee === typeMatch.scrutinee
+            ? typeMatch
+            : mlttTypeMatch(scrutinee, typeMatch.cases, typeMatch.defaultCase);
+        }
+      }
+      if (matched) continue;
+      current = typeMatch.defaultCase;
+      continue;
+    }
     if (current.kind === "nat-add") {
-      const left = weakHeadNormalizeMltt(current.left);
+      const left = weakHeadNormalizeMltt(current.left, compareExternal);
       if (left.kind === "zero") {
         current = current.right;
         continue;
@@ -547,7 +609,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
       return left === current.left ? current : mlttNatAdd(left, current.right);
     }
     if (current.kind === "nat-elim") {
-      const scrutinee = weakHeadNormalizeMltt(current.scrutinee);
+      const scrutinee = weakHeadNormalizeMltt(current.scrutinee, compareExternal);
       if (scrutinee.kind === "zero") {
         current = current.zeroCase;
         continue;
@@ -564,7 +626,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
         : mlttNatElim(current.motive, current.zeroCase, current.successorCase, scrutinee);
     }
     if (current.kind === "identity-elim") {
-      const equality = weakHeadNormalizeMltt(current.equality);
+      const equality = weakHeadNormalizeMltt(current.equality, compareExternal);
       if (equality.kind === "refl") {
         current = mlttApplication(current.reflexivityCase, equality.term);
         continue;
@@ -574,7 +636,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
         : mlttIdentityElim(current.type, current.motive, current.reflexivityCase, current.left, current.right, equality);
     }
     if (current.kind === "first" || current.kind === "second") {
-      const pair = weakHeadNormalizeMltt(current.pair);
+      const pair = weakHeadNormalizeMltt(current.pair, compareExternal);
       if (pair.kind === "pair") {
         current = current.kind === "first" ? pair.first : pair.second;
         continue;
@@ -583,7 +645,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
     }
     if (current.kind !== "application") return current;
 
-    const functionTerm = weakHeadNormalizeMltt(current.functionTerm);
+    const functionTerm = weakHeadNormalizeMltt(current.functionTerm, compareExternal);
     if (functionTerm.kind !== "lambda") {
       return functionTerm === current.functionTerm ? current : mlttApplication(functionTerm, current.argument);
     }
@@ -592,8 +654,9 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
 }
 
 /** Compute a beta-normal form. Binder names are retained only for diagnostics. */
-export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
-  const head = weakHeadNormalizeMltt(term);
+export function normalizeMlttTerm(term: MlttTerm, compareExternal?: MlttExternalEqualityComparer): MlttTerm {
+  const head = weakHeadNormalizeMltt(term, compareExternal);
+  const normalize = (nested: MlttTerm) => normalizeMlttTerm(nested, compareExternal);
   switch (head.kind) {
     case "universe":
     case "bool-type":
@@ -605,54 +668,60 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
       return head;
     case "bool-elim":
       return mlttBoolElim(
-        normalizeMlttTerm(head.motive),
-        normalizeMlttTerm(head.trueCase),
-        normalizeMlttTerm(head.falseCase),
-        normalizeMlttTerm(head.scrutinee),
+        normalize(head.motive),
+        normalize(head.trueCase),
+        normalize(head.falseCase),
+        normalize(head.scrutinee),
+      );
+    case "type-match":
+      return mlttTypeMatch(
+        normalize(head.scrutinee),
+        head.cases.map(matchCase => ({ pattern: normalize(matchCase.pattern), result: normalize(matchCase.result) })),
+        normalize(head.defaultCase),
       );
     case "successor":
-      return mlttSuccessor(normalizeMlttTerm(head.predecessor));
+      return mlttSuccessor(normalize(head.predecessor));
     case "nat-add":
-      return mlttNatAdd(normalizeMlttTerm(head.left), normalizeMlttTerm(head.right));
+      return mlttNatAdd(normalize(head.left), normalize(head.right));
     case "nat-elim":
       return mlttNatElim(
-        normalizeMlttTerm(head.motive),
-        normalizeMlttTerm(head.zeroCase),
-        normalizeMlttTerm(head.successorCase),
-        normalizeMlttTerm(head.scrutinee),
+        normalize(head.motive),
+        normalize(head.zeroCase),
+        normalize(head.successorCase),
+        normalize(head.scrutinee),
       );
     case "identity-type":
-      return mlttIdentityType(normalizeMlttTerm(head.type), normalizeMlttTerm(head.left), normalizeMlttTerm(head.right));
+      return mlttIdentityType(normalize(head.type), normalize(head.left), normalize(head.right));
     case "refl":
-      return mlttRefl(normalizeMlttTerm(head.type), normalizeMlttTerm(head.term));
+      return mlttRefl(normalize(head.type), normalize(head.term));
     case "identity-elim":
       return mlttIdentityElim(
-        normalizeMlttTerm(head.type),
-        normalizeMlttTerm(head.motive),
-        normalizeMlttTerm(head.reflexivityCase),
-        normalizeMlttTerm(head.left),
-        normalizeMlttTerm(head.right),
-        normalizeMlttTerm(head.equality),
+        normalize(head.type),
+        normalize(head.motive),
+        normalize(head.reflexivityCase),
+        normalize(head.left),
+        normalize(head.right),
+        normalize(head.equality),
       );
     case "sigma":
-      return mlttSigma(head.parameterName, normalizeMlttTerm(head.domain), normalizeMlttTerm(head.codomain));
+      return mlttSigma(head.parameterName, normalize(head.domain), normalize(head.codomain));
     case "pair":
-      return mlttPair(normalizeMlttTerm(head.sigmaType), normalizeMlttTerm(head.first), normalizeMlttTerm(head.second));
+      return mlttPair(normalize(head.sigmaType), normalize(head.first), normalize(head.second));
     case "first":
-      return mlttFirst(normalizeMlttTerm(head.pair));
+      return mlttFirst(normalize(head.pair));
     case "second":
-      return mlttSecond(normalizeMlttTerm(head.pair));
+      return mlttSecond(normalize(head.pair));
     case "pi":
-      return mlttPi(head.parameterName, normalizeMlttTerm(head.domain), normalizeMlttTerm(head.codomain));
+      return mlttPi(head.parameterName, normalize(head.domain), normalize(head.codomain));
     case "lambda":
-      return mlttLambda(head.parameterName, normalizeMlttTerm(head.body), head.parameterType && normalizeMlttTerm(head.parameterType));
+      return mlttLambda(head.parameterName, normalize(head.body), head.parameterType && normalize(head.parameterType));
     case "application":
-      return mlttApplication(normalizeMlttTerm(head.functionTerm), normalizeMlttTerm(head.argument));
+      return mlttApplication(normalize(head.functionTerm), normalize(head.argument));
     case "annotation":
       // weakHeadNormalizeMltt always removes an outer annotation.
-      return normalizeMlttTerm(head.term);
+      return normalize(head.term);
     case "external":
-      return mlttExternal(head.key, head.displayName, head.arguments.map(normalizeMlttTerm), normalizeMlttTerm(head.type), head.identity);
+      return mlttExternal(head.key, head.displayName, head.arguments.map(normalize), normalize(head.type), head.identity);
   }
 }
 
@@ -662,7 +731,19 @@ export function areMlttTermsDefinitionallyEqual(
   right: MlttTerm,
   compareExternal?: MlttExternalEqualityComparer,
 ): boolean {
-  return structurallyEqualMlttTerms(normalizeMlttTerm(left), normalizeMlttTerm(right), compareExternal);
+  return structurallyEqualMlttTerms(normalizeMlttTerm(left, compareExternal), normalizeMlttTerm(right, compareExternal), compareExternal);
+}
+
+/** Decide equality when possible without treating an open neutral term as unequal. */
+export function compareMlttTermsDefinitionally(
+  left: MlttTerm,
+  right: MlttTerm,
+  compareExternal?: MlttExternalEqualityComparer,
+): MlttDefinitionalComparison {
+  const normalizedLeft = normalizeMlttTerm(left, compareExternal);
+  const normalizedRight = normalizeMlttTerm(right, compareExternal);
+  if (structurallyEqualMlttTerms(normalizedLeft, normalizedRight, compareExternal)) return "equal";
+  return hasFreeMlttVariable(normalizedLeft) || hasFreeMlttVariable(normalizedRight) ? "stuck" : "apart";
 }
 
 export function printMlttTerm(term: MlttTerm): string {
@@ -681,6 +762,58 @@ function extendContext(context: MlttContext, type: MlttTerm): MlttContext {
   return [type, ...context];
 }
 
+function hasFreeMlttVariable(term: MlttTerm, binderDepth = 0): boolean {
+  switch (term.kind) {
+    case "universe":
+    case "bool-type":
+    case "true":
+    case "false":
+    case "nat-type":
+    case "zero":
+      return false;
+    case "variable":
+      return term.index >= binderDepth;
+    case "bool-elim":
+      return hasFreeMlttVariable(term.motive, binderDepth) || hasFreeMlttVariable(term.trueCase, binderDepth) ||
+        hasFreeMlttVariable(term.falseCase, binderDepth) || hasFreeMlttVariable(term.scrutinee, binderDepth);
+    case "type-match":
+      return hasFreeMlttVariable(term.scrutinee, binderDepth) ||
+        term.cases.some(matchCase => hasFreeMlttVariable(matchCase.pattern, binderDepth) || hasFreeMlttVariable(matchCase.result, binderDepth)) ||
+        hasFreeMlttVariable(term.defaultCase, binderDepth);
+    case "successor":
+      return hasFreeMlttVariable(term.predecessor, binderDepth);
+    case "nat-add":
+      return hasFreeMlttVariable(term.left, binderDepth) || hasFreeMlttVariable(term.right, binderDepth);
+    case "nat-elim":
+      return hasFreeMlttVariable(term.motive, binderDepth) || hasFreeMlttVariable(term.zeroCase, binderDepth) ||
+        hasFreeMlttVariable(term.successorCase, binderDepth) || hasFreeMlttVariable(term.scrutinee, binderDepth);
+    case "identity-type":
+      return hasFreeMlttVariable(term.type, binderDepth) || hasFreeMlttVariable(term.left, binderDepth) || hasFreeMlttVariable(term.right, binderDepth);
+    case "refl":
+      return hasFreeMlttVariable(term.type, binderDepth) || hasFreeMlttVariable(term.term, binderDepth);
+    case "identity-elim":
+      return hasFreeMlttVariable(term.type, binderDepth) || hasFreeMlttVariable(term.motive, binderDepth) ||
+        hasFreeMlttVariable(term.reflexivityCase, binderDepth) || hasFreeMlttVariable(term.left, binderDepth) ||
+        hasFreeMlttVariable(term.right, binderDepth) || hasFreeMlttVariable(term.equality, binderDepth);
+    case "sigma":
+    case "pi":
+      return hasFreeMlttVariable(term.domain, binderDepth) || hasFreeMlttVariable(term.codomain, binderDepth + 1);
+    case "pair":
+      return hasFreeMlttVariable(term.sigmaType, binderDepth) || hasFreeMlttVariable(term.first, binderDepth) || hasFreeMlttVariable(term.second, binderDepth);
+    case "first":
+    case "second":
+      return hasFreeMlttVariable(term.pair, binderDepth);
+    case "lambda":
+      return !!term.parameterType && hasFreeMlttVariable(term.parameterType, binderDepth) || hasFreeMlttVariable(term.body, binderDepth + 1);
+    case "application":
+      return hasFreeMlttVariable(term.functionTerm, binderDepth) || hasFreeMlttVariable(term.argument, binderDepth);
+    case "annotation":
+      return hasFreeMlttVariable(term.term, binderDepth) || hasFreeMlttVariable(term.type, binderDepth);
+    case "external":
+      return term.arguments.some(argument => hasFreeMlttVariable(argument, binderDepth)) || hasFreeMlttVariable(term.type, binderDepth);
+  }
+}
+
 function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
   switch (term.kind) {
     case "universe":
@@ -696,6 +829,15 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
         shiftMlttTerm(term.trueCase, amount, cutoff),
         shiftMlttTerm(term.falseCase, amount, cutoff),
         shiftMlttTerm(term.scrutinee, amount, cutoff),
+      );
+    case "type-match":
+      return mlttTypeMatch(
+        shiftMlttTerm(term.scrutinee, amount, cutoff),
+        term.cases.map(matchCase => ({
+          pattern: shiftMlttTerm(matchCase.pattern, amount, cutoff),
+          result: shiftMlttTerm(matchCase.result, amount, cutoff),
+        })),
+        shiftMlttTerm(term.defaultCase, amount, cutoff),
       );
     case "successor":
       return mlttSuccessor(shiftMlttTerm(term.predecessor, amount, cutoff));
@@ -777,6 +919,15 @@ function substituteMltt(term: MlttTerm, variableIndex: number, replacement: Mltt
         substituteMltt(term.trueCase, variableIndex, replacement, binderDepth),
         substituteMltt(term.falseCase, variableIndex, replacement, binderDepth),
         substituteMltt(term.scrutinee, variableIndex, replacement, binderDepth),
+      );
+    case "type-match":
+      return mlttTypeMatch(
+        substituteMltt(term.scrutinee, variableIndex, replacement, binderDepth),
+        term.cases.map(matchCase => ({
+          pattern: substituteMltt(matchCase.pattern, variableIndex, replacement, binderDepth),
+          result: substituteMltt(matchCase.result, variableIndex, replacement, binderDepth),
+        })),
+        substituteMltt(term.defaultCase, variableIndex, replacement, binderDepth),
       );
     case "successor":
       return mlttSuccessor(substituteMltt(term.predecessor, variableIndex, replacement, binderDepth));
@@ -889,6 +1040,16 @@ function structurallyEqualMlttTerms(
         structurallyEqualMlttTerms(left.falseCase, rightElim.falseCase, compareExternal) &&
         structurallyEqualMlttTerms(left.scrutinee, rightElim.scrutinee, compareExternal);
     }
+    case "type-match": {
+      const rightMatch = right as MlttTypeMatch;
+      return left.cases.length === rightMatch.cases.length &&
+        structurallyEqualMlttTerms(left.scrutinee, rightMatch.scrutinee, compareExternal) &&
+        left.cases.every((matchCase, index) =>
+          structurallyEqualMlttTerms(matchCase.pattern, rightMatch.cases[index].pattern, compareExternal) &&
+          structurallyEqualMlttTerms(matchCase.result, rightMatch.cases[index].result, compareExternal)
+        ) &&
+        structurallyEqualMlttTerms(left.defaultCase, rightMatch.defaultCase, compareExternal);
+    }
     case "successor":
       return structurallyEqualMlttTerms(left.predecessor, (right as MlttSuccessor).predecessor, compareExternal);
     case "nat-add": {
@@ -975,6 +1136,8 @@ function printMlttTermWorker(term: MlttTerm, names: readonly string[]): string {
       return "False";
     case "bool-elim":
       return `BoolElim<${printMlttTermWorker(term.motive, names)}, ${printMlttTermWorker(term.trueCase, names)}, ${printMlttTermWorker(term.falseCase, names)}, ${printMlttTermWorker(term.scrutinee, names)}>`;
+    case "type-match":
+      return `TypeMatch<${printMlttTermWorker(term.scrutinee, names)}, ${term.cases.map(matchCase => `Case<${printMlttTermWorker(matchCase.pattern, names)}, ${printMlttTermWorker(matchCase.result, names)}>`).join(", ")}, Default<${printMlttTermWorker(term.defaultCase, names)}>>`;
     case "nat-type":
       return "Nat";
     case "zero":

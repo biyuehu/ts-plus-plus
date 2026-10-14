@@ -61,6 +61,48 @@ describe("unittests:: MLTT core", () => {
     );
   });
 
+  it("compares type shapes with equal, apart, and stuck outcomes", () => {
+    assert.strictEqual(mltt.compareMlttTermsDefinitionally(mltt.mlttBoolType(), mltt.mlttBoolType()), "equal");
+    assert.strictEqual(mltt.compareMlttTermsDefinitionally(mltt.mlttBoolType(), mltt.mlttNatType()), "apart");
+    assert.strictEqual(mltt.compareMlttTermsDefinitionally(mltt.mlttVariable(0), mltt.mlttBoolType()), "stuck");
+  });
+
+  it("computes ordered type matches and keeps open matches stuck", () => {
+    const closed = mltt.mlttTypeMatch(
+      mltt.mlttBoolType(),
+      [
+        { pattern: mltt.mlttNatType(), result: mltt.mlttNatType() },
+        { pattern: mltt.mlttBoolType(), result: mltt.mlttBoolType() },
+      ],
+      mltt.mlttNatType(),
+    );
+    const open = mltt.mlttTypeMatch(
+      mltt.mlttVariable(0),
+      [{ pattern: mltt.mlttBoolType(), result: mltt.mlttNatType() }],
+      mltt.mlttBoolType(),
+    );
+
+    assert.deepEqual(mltt.inferMlttType(closed), type0);
+    assert.deepEqual(mltt.normalizeMlttTerm(closed), mltt.mlttBoolType());
+    assert.deepEqual(mltt.inferMlttType(open, [type0]), type0);
+    assert.deepEqual(mltt.normalizeMlttTerm(open), open);
+
+    const applied = mltt.mlttApplication(mltt.mlttLambda("A", open), mltt.mlttBoolType());
+    assert.deepEqual(mltt.normalizeMlttTerm(applied), mltt.mlttNatType());
+  });
+
+  it("requires every type-match result to inhabit the same universe", () => {
+    assertMlttError(
+      () =>
+        mltt.inferMlttType(mltt.mlttTypeMatch(
+          mltt.mlttBoolType(),
+          [{ pattern: mltt.mlttBoolType(), result: type0 }],
+          mltt.mlttNatType(),
+        )),
+      "type-mismatch",
+    );
+  });
+
   it("provides Nat, Zero, and Succ as typed core primitives", () => {
     assert.deepEqual(mltt.inferMlttType(mltt.mlttNatType()), type0);
     assert.deepEqual(mltt.inferMlttType(mltt.mlttZero()), mltt.mlttNatType());
