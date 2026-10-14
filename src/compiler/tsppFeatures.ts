@@ -104,6 +104,22 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "booleans",
+    dependencies: ["dependentFunctionTypes"],
+    initComments: [
+      "获得：Bool、True、False 类型级布尔值。",
+      "影响：TS超集=是；透明擦除=是。",
+    ],
+  },
+  {
+    name: "booleanElimination",
+    dependencies: ["booleans"],
+    initComments: [
+      "获得：BoolElim 依赖消去器与 If 依值分支。",
+      "影响：TS超集=是；透明擦除=是。",
+    ],
+  },
+  {
     name: "identityTypes",
     dependencies: ["dependentFunctionTypes"],
     initComments: [

@@ -9,11 +9,33 @@
  * @internal
  */
 
-export type MlttTerm = MlttUniverse | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttNatElim | MlttIdentityType | MlttRefl | MlttIdentityElim | MlttSigma | MlttPair | MlttFirst | MlttSecond | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
+export type MlttTerm = MlttUniverse | MlttBoolType | MlttTrue | MlttFalse | MlttBoolElim | MlttNatType | MlttZero | MlttSuccessor | MlttNatAdd | MlttNatElim | MlttIdentityType | MlttRefl | MlttIdentityElim | MlttSigma | MlttPair | MlttFirst | MlttSecond | MlttVariable | MlttPi | MlttLambda | MlttApplication | MlttAnnotation | MlttExternal;
 
 export interface MlttUniverse {
   readonly kind: "universe";
   readonly level: number;
+}
+
+/** The built-in type of type-level booleans. */
+export interface MlttBoolType {
+  readonly kind: "bool-type";
+}
+
+export interface MlttTrue {
+  readonly kind: "true";
+}
+
+export interface MlttFalse {
+  readonly kind: "false";
+}
+
+/** The dependent eliminator for Bool. */
+export interface MlttBoolElim {
+  readonly kind: "bool-elim";
+  readonly motive: MlttTerm;
+  readonly trueCase: MlttTerm;
+  readonly falseCase: MlttTerm;
+  readonly scrutinee: MlttTerm;
 }
 
 /** The built-in type of unary natural numbers. */
@@ -170,6 +192,22 @@ export function mlttUniverse(level: number): MlttUniverse {
   return { kind: "universe", level };
 }
 
+export function mlttBoolType(): MlttBoolType {
+  return { kind: "bool-type" };
+}
+
+export function mlttTrue(): MlttTrue {
+  return { kind: "true" };
+}
+
+export function mlttFalse(): MlttFalse {
+  return { kind: "false" };
+}
+
+export function mlttBoolElim(motive: MlttTerm, trueCase: MlttTerm, falseCase: MlttTerm, scrutinee: MlttTerm): MlttBoolElim {
+  return { kind: "bool-elim", motive, trueCase, falseCase, scrutinee };
+}
+
 export function mlttNatType(): MlttNatType {
   return { kind: "nat-type" };
 }
@@ -263,6 +301,27 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
   switch (term.kind) {
     case "universe":
       return mlttUniverse(term.level + 1);
+
+    case "bool-type":
+      return mlttUniverse(0);
+
+    case "true":
+    case "false":
+      return mlttBoolType();
+
+    case "bool-elim": {
+      const motiveType = weakHeadNormalizeMltt(inferMlttType(term.motive, context));
+      if (motiveType.kind !== "pi" || !areMlttTermsDefinitionallyEqual(motiveType.domain, mlttBoolType())) {
+        throw new MlttTypeError("type-mismatch", "Expected the Bool eliminator motive to have a Pi type over Bool.");
+      }
+      if (weakHeadNormalizeMltt(motiveType.codomain).kind !== "universe") {
+        throw new MlttTypeError("expected-type", "Expected the Bool eliminator motive to return a type.");
+      }
+      checkMlttType(term.trueCase, mlttApplication(term.motive, mlttTrue()), context);
+      checkMlttType(term.falseCase, mlttApplication(term.motive, mlttFalse()), context);
+      checkMlttType(term.scrutinee, mlttBoolType(), context);
+      return mlttApplication(term.motive, term.scrutinee);
+    }
 
     case "nat-type":
       return mlttUniverse(0);
@@ -461,6 +520,20 @@ export function weakHeadNormalizeMltt(term: MlttTerm): MlttTerm {
       current = current.term;
       continue;
     }
+    if (current.kind === "bool-elim") {
+      const scrutinee = weakHeadNormalizeMltt(current.scrutinee);
+      if (scrutinee.kind === "true") {
+        current = current.trueCase;
+        continue;
+      }
+      if (scrutinee.kind === "false") {
+        current = current.falseCase;
+        continue;
+      }
+      return scrutinee === current.scrutinee
+        ? current
+        : mlttBoolElim(current.motive, current.trueCase, current.falseCase, scrutinee);
+    }
     if (current.kind === "nat-add") {
       const left = weakHeadNormalizeMltt(current.left);
       if (left.kind === "zero") {
@@ -523,10 +596,20 @@ export function normalizeMlttTerm(term: MlttTerm): MlttTerm {
   const head = weakHeadNormalizeMltt(term);
   switch (head.kind) {
     case "universe":
+    case "bool-type":
+    case "true":
+    case "false":
     case "nat-type":
     case "zero":
     case "variable":
       return head;
+    case "bool-elim":
+      return mlttBoolElim(
+        normalizeMlttTerm(head.motive),
+        normalizeMlttTerm(head.trueCase),
+        normalizeMlttTerm(head.falseCase),
+        normalizeMlttTerm(head.scrutinee),
+      );
     case "successor":
       return mlttSuccessor(normalizeMlttTerm(head.predecessor));
     case "nat-add":
@@ -601,9 +684,19 @@ function extendContext(context: MlttContext, type: MlttTerm): MlttContext {
 function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
   switch (term.kind) {
     case "universe":
+    case "bool-type":
+    case "true":
+    case "false":
     case "nat-type":
     case "zero":
       return term;
+    case "bool-elim":
+      return mlttBoolElim(
+        shiftMlttTerm(term.motive, amount, cutoff),
+        shiftMlttTerm(term.trueCase, amount, cutoff),
+        shiftMlttTerm(term.falseCase, amount, cutoff),
+        shiftMlttTerm(term.scrutinee, amount, cutoff),
+      );
     case "successor":
       return mlttSuccessor(shiftMlttTerm(term.predecessor, amount, cutoff));
     case "nat-add":
@@ -672,9 +765,19 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
 function substituteMltt(term: MlttTerm, variableIndex: number, replacement: MlttTerm, binderDepth = 0): MlttTerm {
   switch (term.kind) {
     case "universe":
+    case "bool-type":
+    case "true":
+    case "false":
     case "nat-type":
     case "zero":
       return term;
+    case "bool-elim":
+      return mlttBoolElim(
+        substituteMltt(term.motive, variableIndex, replacement, binderDepth),
+        substituteMltt(term.trueCase, variableIndex, replacement, binderDepth),
+        substituteMltt(term.falseCase, variableIndex, replacement, binderDepth),
+        substituteMltt(term.scrutinee, variableIndex, replacement, binderDepth),
+      );
     case "successor":
       return mlttSuccessor(substituteMltt(term.predecessor, variableIndex, replacement, binderDepth));
     case "nat-add":
@@ -773,9 +876,19 @@ function structurallyEqualMlttTerms(
   switch (left.kind) {
     case "universe":
       return left.level === (right as MlttUniverse).level;
+    case "bool-type":
+    case "true":
+    case "false":
     case "nat-type":
     case "zero":
       return true;
+    case "bool-elim": {
+      const rightElim = right as MlttBoolElim;
+      return structurallyEqualMlttTerms(left.motive, rightElim.motive, compareExternal) &&
+        structurallyEqualMlttTerms(left.trueCase, rightElim.trueCase, compareExternal) &&
+        structurallyEqualMlttTerms(left.falseCase, rightElim.falseCase, compareExternal) &&
+        structurallyEqualMlttTerms(left.scrutinee, rightElim.scrutinee, compareExternal);
+    }
     case "successor":
       return structurallyEqualMlttTerms(left.predecessor, (right as MlttSuccessor).predecessor, compareExternal);
     case "nat-add": {
@@ -854,6 +967,14 @@ function printMlttTermWorker(term: MlttTerm, names: readonly string[]): string {
   switch (term.kind) {
     case "universe":
       return `Type${term.level}`;
+    case "bool-type":
+      return "Bool";
+    case "true":
+      return "True";
+    case "false":
+      return "False";
+    case "bool-elim":
+      return `BoolElim<${printMlttTermWorker(term.motive, names)}, ${printMlttTermWorker(term.trueCase, names)}, ${printMlttTermWorker(term.falseCase, names)}, ${printMlttTermWorker(term.scrutinee, names)}>`;
     case "nat-type":
       return "Nat";
     case "zero":

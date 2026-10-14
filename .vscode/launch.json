@@ -7,6 +7,7 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
+        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
         "${workspaceFolder}/example"
       ],
@@ -18,6 +19,7 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
+        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
         "${workspaceFolder}/example/01-higher-kinded-types"
       ],
@@ -29,6 +31,7 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
+        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
         "${workspaceFolder}/example/02-dependent-types"
       ],

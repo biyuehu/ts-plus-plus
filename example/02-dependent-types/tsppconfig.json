@@ -9,6 +9,8 @@
       "naturalNumbers",
       "naturalNumberAddition",
       "naturalNumberElimination",
+      "booleans",
+      "booleanElimination",
       "identityTypes",
       "sigmaTypes"
     ]

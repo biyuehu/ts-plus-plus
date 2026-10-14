@@ -41,7 +41,55 @@ export type IdentityWithA: Type1 = (A: Type0) -> (value: A) -> A;
 export type IdentityWithT: Type1 = (T: Type0) -> (item: T) -> T;
 
 // -----------------------------------------------------------------------------
-// 2. Nat：把数字放进类型
+// 2. BoolElim：结果类型可以依赖被检查的布尔值
+// -----------------------------------------------------------------------------
+//
+// Bool 有 True 和 False 两个构造。BoolElim 的 motive P 描述结果类型怎样
+// 随布尔值变化；两个分支分别提供 P<True> 和 P<False>。
+export type BooleanElimination: Type1 =
+  (P: (value: Bool) -> Type0) ->
+  (whenTrue: P<True>) ->
+  (whenFalse: P<False>) ->
+  (value: Bool) ->
+  P<value>;
+
+// If<value, P, whenTrue, whenFalse> 是 BoolElim<P, whenTrue, whenFalse, value>
+// 的依值分支写法，并采用同样的定义相等规则。
+export type IfFalseComputation: Type0 = Eq<
+  Nat,
+  If<
+    False,
+    Ann<Lam<(value: Bool) -> Nat>, (value: Bool) -> Type0>,
+    Succ<Zero>,
+    Zero
+  >,
+  Zero
+>;
+
+// Bool binder 会桥接到运行时 boolean。字面量调用精确选择分支，动态
+// boolean 则在 TypeScript 边界得到两个分支的 union。
+export type BooleanChooser: Type0 =
+  (value: Bool) ->
+  If<
+    value,
+    Ann<Lam<(ignored: Bool) -> Type0>, (ignored: Bool) -> Type1>,
+    string,
+    number
+  >;
+
+export declare const chooseByBoolean: BooleanChooser;
+export const chosenString = chooseByBoolean(true); // string
+export const chosenNumber = chooseByBoolean(false); // number
+declare let dynamicBoolean: boolean;
+export const chosenUnion = chooseByBoolean(dynamicBoolean); // string | number
+
+// 等价的 TypeScript 泛型签名可以赋给 Bool Pi 类型。
+declare const ordinaryBooleanChooser:
+  <B extends boolean>(value: B) => B extends true ? string : number;
+export const bridgedBooleanChooser: BooleanChooser = ordinaryBooleanChooser;
+
+// -----------------------------------------------------------------------------
+// 3. Nat：把数字放进类型
 // -----------------------------------------------------------------------------
 //
 // Nat 是自然数的类型；Zero 是 0，Succ<N> 表示 N 的后继。
@@ -76,7 +124,7 @@ declare let dynamicLength: number;
 buildVector("item", dynamicLength);
 
 // -----------------------------------------------------------------------------
-// 3. NatAdd：受限但可预测的类型级计算
+// 4. NatAdd：受限但可预测的类型级计算
 // -----------------------------------------------------------------------------
 //
 //   NatAdd<Zero, M>    → M
@@ -88,7 +136,7 @@ export type ComputedTwoVector: Type1 =
   Vector<NatAdd<Succ<Zero>, Succ<Zero>>, A>;
 
 // -----------------------------------------------------------------------------
-// 4. NatElim：把“对自然数做递归”写成规则
+// 5. NatElim：把“对自然数做递归”写成规则
 // -----------------------------------------------------------------------------
 //
 // P 是命题或结果类型，可以随 N 变化。要得到 P<N>，需要：
@@ -126,7 +174,7 @@ export type ClosedNatElimComputation: Type0 = Eq<
 >;
 
 // -----------------------------------------------------------------------------
-// 5. Eq 和 Refl：命题也是类型
+// 6. Eq 和 Refl：命题也是类型
 // -----------------------------------------------------------------------------
 //
 // Eq<A, left, right> 表示“A 中的 left 和 right 相等”。
@@ -148,7 +196,7 @@ export type ReflexivityProof: Type1 =
 export type ZeroEqualsZero: Type0 = Eq<Nat, Zero, Zero>;
 
 // -----------------------------------------------------------------------------
-// 6. J：从反身情况推广到任意相等证明
+// 7. J：从反身情况推广到任意相等证明
 // -----------------------------------------------------------------------------
 //
 // Motive 描述要对 left、right 和它们的相等证明建立什么结论；
@@ -192,7 +240,7 @@ export type ClosedPathComputation: Type0 = Eq<
 >;
 
 // -----------------------------------------------------------------------------
-// 7. Sigma：第二项的类型依赖第一项
+// 8. Sigma：第二项的类型依赖第一项
 // -----------------------------------------------------------------------------
 //
 // 普通 tuple [A, B] 的第二项类型 B 是固定的。
