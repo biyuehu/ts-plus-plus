@@ -51,7 +51,7 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     name: "standardLibraryPredicates",
     dependencies: ["formalContracts"],
     initComments: [
-      "获得：标准库整数谓词 isEven、isOdd、isPositive、isNonNegative、isZero、divides、between。",
+      '获得：标准库数值谓词 isEven、isOdd、isPositive、isNonNegative、isZero、divides、between；number 需 numberModel: "mathematical-real"。',
       "影响：TS超集=是；透明擦除=是。",
     ],
   },

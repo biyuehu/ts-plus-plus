@@ -6,11 +6,11 @@ type Odd = bigint with {
   predicate: isOdd(value);
 };
 
-type PositiveNumber = bigint with {
+type PositiveInteger = bigint with {
   predicate: isPositive(value);
 };
 
-type NonNegativeNumber = bigint with {
+type NonNegativeInteger = bigint with {
   predicate: isNonNegative(value);
 };
 
@@ -26,13 +26,56 @@ type Teen = bigint with {
   predicate: between(value, 10n, 19n);
 };
 
+type EvenReal = number with {
+  numberModel: "mathematical-real";
+  predicate: isEven(value);
+};
+
+type OddReal = number with {
+  numberModel: "mathematical-real";
+  predicate: isOdd(value);
+};
+
+type PositiveReal = number with {
+  numberModel: "mathematical-real";
+  predicate: isPositive(value);
+};
+
+type NonNegativeReal = number with {
+  numberModel: "mathematical-real";
+  predicate: isNonNegative(value);
+};
+
+type ZeroReal = number with {
+  numberModel: "mathematical-real";
+  predicate: isZero(value);
+};
+
+type DivisibleByThreeReal = number with {
+  numberModel: "mathematical-real";
+  predicate: divides(3, value);
+};
+
+type TeenReal = number with {
+  numberModel: "mathematical-real";
+  predicate: between(value, 1.5, 2.5);
+};
+
 const even: Even = 42n;
 const odd: Odd = 43n;
-const positive: PositiveNumber = 42n;
-const nonNegative: NonNegativeNumber = 0n;
+const positive: PositiveInteger = 42n;
+const nonNegative: NonNegativeInteger = 0n;
 const zero: Zero = 0n;
 const divisibleByThree: DivisibleByThree = 42n;
 const teen: Teen = 17n;
+
+const evenReal: EvenReal = 42;
+const oddReal: OddReal = 43;
+const positiveReal: PositiveReal = 42;
+const nonNegativeReal: NonNegativeReal = 0;
+const zeroReal: ZeroReal = 0;
+const divisibleByThreeReal: DivisibleByThreeReal = 42;
+const teenReal: TeenReal = 2;
 
 console.log(`even = ${even}`);
 console.log(`odd = ${odd}`);
@@ -41,3 +84,10 @@ console.log(`non-negative = ${nonNegative}`);
 console.log(`zero = ${zero}`);
 console.log(`divisible by three = ${divisibleByThree}`);
 console.log(`teen = ${teen}`);
+console.log(`even real = ${evenReal}`);
+console.log(`odd real = ${oddReal}`);
+console.log(`positive real = ${positiveReal}`);
+console.log(`non-negative real = ${nonNegativeReal}`);
+console.log(`zero real = ${zeroReal}`);
+console.log(`divisible by three real = ${divisibleByThreeReal}`);
+console.log(`teen real = ${teenReal}`);

@@ -55,7 +55,7 @@ Current features:
 | `dataDeclarations` | `data` discriminated unions and variant constructors | — | Yes | No (emits runtime variant values and constructors) |
 | `macros` | `macro function` declarations and compile-time `macro f(Target);` statement expansion | — | Yes | No (macro calls can replace emitted statements) |
 | `formalContracts` | Z3-backed `requires`, `ensures`, and `while` invariants | — | Yes | Yes |
-| `standardLibraryPredicates` | Built-in integer predicates `isEven`, `isOdd`, `isPositive`, `isNonNegative`, `isZero`, `divides`, and `between` | `formalContracts` | Yes | Yes |
+| `standardLibraryPredicates` | Built-in numeric predicates `isEven`, `isOdd`, `isPositive`, `isNonNegative`, `isZero`, `divides`, and `between`; `number` requires `numberModel: "mathematical-real"` | `formalContracts` | Yes | Yes |
 | `refinementTypes` | Z3-verified predicates on structural type aliases | `formalContracts` | Yes | Yes |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
