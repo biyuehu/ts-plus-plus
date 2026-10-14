@@ -360,6 +360,130 @@ describe("unittests:: MLTT compiler type", () => {
     assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[8].name)), "boolean");
   });
 
+  it("destructures generic type applications with case-local infer captures", () => {
+    const callable = createProgram(
+      "/type-pattern-calls.tspp",
+      `
+      interface Box<T> { value: T }
+      interface FancyBox<T> extends Box<T> { extra: true }
+      interface SameShape<T> { value: T }
+      type BoxAlias<T> = Box<T>;
+      interface Duo<L, R> { left: L; right: R }
+      type Unwrap: Type1 =
+        (A: Type0) ->
+        (value: A) ->
+        TypeMatch<
+          A,
+          Case<Box<Box<infer T>>, T>,
+          Case<Box<infer T>, T>,
+          Default<A>
+        >;
+      type Unpair: Type1 =
+        (A: Type0) ->
+        (value: A) ->
+        TypeMatch<A, Case<Duo<infer L, infer R>, [L, R]>, Default<A>>;
+      declare const unwrap: Unwrap;
+      declare const unpair: Unpair;
+      declare let nested: Box<Box<number>>;
+      declare let boxed: Box<string>;
+      declare let plain: boolean;
+      declare let pair: Duo<string, number>;
+      declare let union: Box<string> | Box<number>;
+      declare let fancy: FancyBox<string>;
+      declare let aliased: BoxAlias<string>;
+      declare let sameShape: SameShape<string>;
+      declare let intersected: Box<string> & { tag: true };
+      const nestedResult = unwrap(nested);
+      const boxedResult = unwrap(boxed);
+      const plainResult = unwrap(plain);
+      const pairResult = unpair(pair);
+      const unionResult = unwrap(union);
+      const fancyResult = unwrap(fancy);
+      const aliasResult = unwrap(aliased);
+      const sameShapeResult = unwrap(sameShape);
+      const intersectionResult = unwrap(intersected);
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const diagnostics = callable.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+    const checker = callable.getTypeChecker();
+    const file = callable.getSourceFile("/type-pattern-calls.tspp")!;
+    const declarations = file.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[11].name)), "number");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[12].name)), "string");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[13].name)), "boolean");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[14].name)), "[string, number]");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[15].name)), "Box<number> | Box<string>");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[16].name)), "FancyBox<string>");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[17].name)), "string");
+    // Calls cross the TypeScript signature bridge. Its conditional-type projection
+    // is necessarily structural, so this is the documented approximation boundary.
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[18].name)), "string");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[19].name)), "Box<string> & { tag: true; }");
+  });
+
+  it("matches closed capture patterns by generic constructor identity", () => {
+    const matching = createProgram(
+      "/constructor-patterns.tspp",
+      `
+      interface Box<T> { value: T }
+      interface SameShape<T> { value: T }
+      interface DerivedBox<T> extends Box<T> { extra: true }
+      type BoxAlias<T> = Box<T>;
+      type AliasDecision: Type0 = (value: boolean) ->
+        TypeMatch<BoxAlias<string>, Case<Box<infer T>, "matched">, Default<"fallback">>;
+      type SameShapeDecision: Type0 = (value: boolean) ->
+        TypeMatch<SameShape<string>, Case<Box<infer T>, "matched">, Default<"fallback">>;
+      type DerivedDecision: Type0 = (value: boolean) ->
+        TypeMatch<DerivedBox<string>, Case<Box<infer T>, "matched">, Default<"fallback">>;
+      type IntersectionDecision: Type0 = (value: boolean) ->
+        TypeMatch<Box<string> & { tag: true }, Case<Box<infer T>, "matched">, Default<"fallback">>;
+      declare const aliasDecision: AliasDecision;
+      declare const sameShapeDecision: SameShapeDecision;
+      declare const derivedDecision: DerivedDecision;
+      declare const intersectionDecision: IntersectionDecision;
+      const aliasResult = aliasDecision(true);
+      const sameShapeResult = sameShapeDecision(true);
+      const derivedResult = derivedDecision(true);
+      const intersectionResult = intersectionDecision(true);
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const diagnostics = matching.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+    const checker = matching.getTypeChecker();
+    const file = matching.getSourceFile("/constructor-patterns.tspp")!;
+    const declarations = file.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+    const resultTypes = declarations.slice(-4).map(declaration => checker.typeToString(checker.getTypeAtLocation(declaration.name)));
+    assert.deepEqual(resultTypes, ['"matched"', '"fallback"', '"fallback"', '"fallback"']);
+  });
+
+  it("rejects invalid type-pattern captures", () => {
+    const invalid = createProgram(
+      "/invalid-type-patterns.tspp",
+      `
+      interface Duo<L, R> { left: L; right: R }
+      type DirectCapture: Type1 =
+        (A: Type0) -> TypeMatch<A, Case<infer T, T>, Default<A>>;
+      type DuplicateCapture: Type1 =
+        (A: Type0) -> TypeMatch<A, Case<Duo<infer T, infer T>, T>, Default<A>>;
+      type ConstrainedCapture: Type1 =
+        (A: Type0) -> TypeMatch<A, Case<Array<infer T extends string>, T>, Default<A>>;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+
+    const messages = invalid.getSemanticDiagnostics().map(diagnostic => diagnostic.messageText.toString());
+    assert.isTrue(messages.some(message => /generic type reference/.test(message)));
+    assert.isTrue(messages.some(message => /Duplicate type-match capture/.test(message)));
+    assert.isTrue(messages.some(message => /do not support constraints/.test(message)));
+  });
+
   it("exposes path induction and its reflexivity computation rule", () => {
     const pathInduction = createProgram(
       "/path-induction.tspp",

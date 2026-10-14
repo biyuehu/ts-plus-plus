@@ -83,10 +83,13 @@ export type HiddenHigherUniverse: Type1 =
 // -----------------------------------------------------------------------------
 //
 //   - 用户可声明的通用 inductive family；
-//   - 分解任意构造器的 dependent pattern matching；
+//   - 分解任意 MLTT 构造器的 dependent pattern matching；
 //   - 隐式参数、holes 和通用 unification；
 //   - 可选/剩余运行时 binder、默认/约束类型参数；
 //   - 让任意 JavaScript 表达式参与类型级计算。
 //
-// IfType/TypeMatch 是精确“类型相等”匹配，不等于通用 dependent pattern
-// matching。类型级计算只执行内核已知且可证明终止的规则。
+// TypeMatch 可以用 Case<Array<infer T>, T> 单向解构 external 泛型应用，
+// 但它不做高阶 unification，也不等于通用 dependent pattern matching。
+// TS++ 内核按归约后的构造器身份匹配；生成到 .d.ts 的 conditional type
+// 只能借用 TypeScript 的结构类型关系来近似这一规则，两者边界不能混淆。
+// 类型级计算只执行内核已知且可证明终止的规则。

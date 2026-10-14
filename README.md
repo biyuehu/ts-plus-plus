@@ -59,7 +59,7 @@ Current features:
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
-| `typeMatching` | Exact `IfType` branching and ordered `TypeMatch` over definitional equality | `dependentFunctionTypes` | Yes | Yes |
+| `typeMatching` | Exact `IfType`, ordered `TypeMatch`, and case-local `infer` captures using generic-constructor identity | `dependentFunctionTypes` | Yes | Yes |
 | `naturalNumbers` | `Nat`, `Zero`, and `Succ` type-level naturals | `dependentFunctionTypes` | Yes | Yes |
 | `naturalNumberAddition` | Reducible `NatAdd` | `naturalNumbers` | Yes | Yes |
 | `naturalNumberElimination` | The dependent `NatElim` eliminator | `naturalNumbers` | Yes | Yes |

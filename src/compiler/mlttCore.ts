@@ -40,7 +40,14 @@ export interface MlttBoolElim {
 
 export interface MlttTypeMatchCase {
   readonly pattern: MlttTerm;
+  /** Capture binders, ordered from the nearest De Bruijn binder outwards. */
+  readonly captures?: readonly MlttTypeMatchCapture[];
   readonly result: MlttTerm;
+}
+
+export interface MlttTypeMatchCapture {
+  readonly name: string;
+  readonly type: MlttTerm;
 }
 
 /** Ordered, non-parametric matching on the definitional shape of a type. */
@@ -186,6 +193,16 @@ export interface MlttExternal {
 }
 
 export type MlttExternalEqualityComparer = (left: MlttExternal, right: MlttExternal) => boolean;
+
+export type MlttTypePatternMatch =
+  | { readonly kind: "matched"; readonly captures: readonly MlttTerm[]; }
+  | { readonly kind: "apart" | "stuck"; };
+
+export type MlttExternalPatternMatcher = (
+  scrutinee: MlttExternal,
+  pattern: MlttExternal,
+  captures: readonly MlttTypeMatchCapture[],
+) => MlttTypePatternMatch;
 
 /** Types for free variables, ordered from the nearest binder outwards. */
 export type MlttContext = readonly MlttTerm[];
@@ -346,14 +363,16 @@ export function inferMlttType(term: MlttTerm, context: MlttContext = []): MlttTe
       const scrutineeLevel = inferMlttUniverseLevel(term.scrutinee, context);
       const resultLevel = inferMlttUniverseLevel(term.defaultCase, context);
       for (const matchCase of term.cases) {
-        const patternLevel = inferMlttUniverseLevel(matchCase.pattern, context);
+        const captures = matchCase.captures ?? [];
+        const caseContext: MlttContext = [...captures.map(capture => capture.type), ...context];
+        const patternLevel = inferMlttUniverseLevel(matchCase.pattern, caseContext);
         if (patternLevel !== scrutineeLevel) {
           throw new MlttTypeError(
             "type-mismatch",
             `Type-match pattern ${printMlttTerm(matchCase.pattern)} belongs to Type${patternLevel}, but the scrutinee belongs to Type${scrutineeLevel}.`,
           );
         }
-        const caseResultLevel = inferMlttUniverseLevel(matchCase.result, context);
+        const caseResultLevel = inferMlttUniverseLevel(matchCase.result, caseContext);
         if (caseResultLevel !== resultLevel) {
           throw new MlttTypeError(
             "type-mismatch",
@@ -554,7 +573,11 @@ export function checkMlttType(term: MlttTerm, expectedType: MlttTerm, context: M
 }
 
 /** Reduce only far enough to expose the outer constructor. */
-export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExternalEqualityComparer): MlttTerm {
+export function weakHeadNormalizeMltt(
+  term: MlttTerm,
+  compareExternal?: MlttExternalEqualityComparer,
+  matchExternalPattern?: MlttExternalPatternMatcher,
+): MlttTerm {
   let current = term;
   while (true) {
     if (current.kind === "annotation") {
@@ -562,7 +585,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExte
       continue;
     }
     if (current.kind === "bool-elim") {
-      const scrutinee = weakHeadNormalizeMltt(current.scrutinee, compareExternal);
+      const scrutinee = weakHeadNormalizeMltt(current.scrutinee, compareExternal, matchExternalPattern);
       if (scrutinee.kind === "true") {
         current = current.trueCase;
         continue;
@@ -577,9 +600,34 @@ export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExte
     }
     if (current.kind === "type-match") {
       const typeMatch = current;
-      const scrutinee = weakHeadNormalizeMltt(typeMatch.scrutinee, compareExternal);
+      const scrutinee = weakHeadNormalizeMltt(typeMatch.scrutinee, compareExternal, matchExternalPattern);
       let matched = false;
       for (const matchCase of typeMatch.cases) {
+        const captures = matchCase.captures ?? [];
+        if (captures.length) {
+          if (scrutinee.kind === "variable" || hasFreeMlttVariable(scrutinee)) {
+            return scrutinee === typeMatch.scrutinee
+              ? typeMatch
+              : mlttTypeMatch(scrutinee, typeMatch.cases, typeMatch.defaultCase);
+          }
+          if (scrutinee.kind !== "external" || matchCase.pattern.kind !== "external" || !matchExternalPattern) {
+            return scrutinee === typeMatch.scrutinee
+              ? typeMatch
+              : mlttTypeMatch(scrutinee, typeMatch.cases, typeMatch.defaultCase);
+          }
+          const patternMatch = matchExternalPattern(scrutinee, matchCase.pattern, captures);
+          if (patternMatch.kind === "matched") {
+            current = substituteMlttTypeMatchCaptures(matchCase.result, patternMatch.captures);
+            matched = true;
+            break;
+          }
+          if (patternMatch.kind === "stuck") {
+            return scrutinee === typeMatch.scrutinee
+              ? typeMatch
+              : mlttTypeMatch(scrutinee, typeMatch.cases, typeMatch.defaultCase);
+          }
+          continue;
+        }
         const comparison = compareMlttTermsDefinitionally(scrutinee, matchCase.pattern, compareExternal);
         if (comparison === "equal") {
           current = matchCase.result;
@@ -597,7 +645,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExte
       continue;
     }
     if (current.kind === "nat-add") {
-      const left = weakHeadNormalizeMltt(current.left, compareExternal);
+      const left = weakHeadNormalizeMltt(current.left, compareExternal, matchExternalPattern);
       if (left.kind === "zero") {
         current = current.right;
         continue;
@@ -609,7 +657,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExte
       return left === current.left ? current : mlttNatAdd(left, current.right);
     }
     if (current.kind === "nat-elim") {
-      const scrutinee = weakHeadNormalizeMltt(current.scrutinee, compareExternal);
+      const scrutinee = weakHeadNormalizeMltt(current.scrutinee, compareExternal, matchExternalPattern);
       if (scrutinee.kind === "zero") {
         current = current.zeroCase;
         continue;
@@ -626,7 +674,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExte
         : mlttNatElim(current.motive, current.zeroCase, current.successorCase, scrutinee);
     }
     if (current.kind === "identity-elim") {
-      const equality = weakHeadNormalizeMltt(current.equality, compareExternal);
+      const equality = weakHeadNormalizeMltt(current.equality, compareExternal, matchExternalPattern);
       if (equality.kind === "refl") {
         current = mlttApplication(current.reflexivityCase, equality.term);
         continue;
@@ -636,7 +684,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExte
         : mlttIdentityElim(current.type, current.motive, current.reflexivityCase, current.left, current.right, equality);
     }
     if (current.kind === "first" || current.kind === "second") {
-      const pair = weakHeadNormalizeMltt(current.pair, compareExternal);
+      const pair = weakHeadNormalizeMltt(current.pair, compareExternal, matchExternalPattern);
       if (pair.kind === "pair") {
         current = current.kind === "first" ? pair.first : pair.second;
         continue;
@@ -645,7 +693,7 @@ export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExte
     }
     if (current.kind !== "application") return current;
 
-    const functionTerm = weakHeadNormalizeMltt(current.functionTerm, compareExternal);
+    const functionTerm = weakHeadNormalizeMltt(current.functionTerm, compareExternal, matchExternalPattern);
     if (functionTerm.kind !== "lambda") {
       return functionTerm === current.functionTerm ? current : mlttApplication(functionTerm, current.argument);
     }
@@ -653,10 +701,22 @@ export function weakHeadNormalizeMltt(term: MlttTerm, compareExternal?: MlttExte
   }
 }
 
+function substituteMlttTypeMatchCaptures(body: MlttTerm, captures: readonly MlttTerm[]): MlttTerm {
+  let result = body;
+  for (const capture of captures) {
+    result = substituteMlttTop(capture, result);
+  }
+  return result;
+}
+
 /** Compute a beta-normal form. Binder names are retained only for diagnostics. */
-export function normalizeMlttTerm(term: MlttTerm, compareExternal?: MlttExternalEqualityComparer): MlttTerm {
-  const head = weakHeadNormalizeMltt(term, compareExternal);
-  const normalize = (nested: MlttTerm) => normalizeMlttTerm(nested, compareExternal);
+export function normalizeMlttTerm(
+  term: MlttTerm,
+  compareExternal?: MlttExternalEqualityComparer,
+  matchExternalPattern?: MlttExternalPatternMatcher,
+): MlttTerm {
+  const head = weakHeadNormalizeMltt(term, compareExternal, matchExternalPattern);
+  const normalize = (nested: MlttTerm) => normalizeMlttTerm(nested, compareExternal, matchExternalPattern);
   switch (head.kind) {
     case "universe":
     case "bool-type":
@@ -676,7 +736,11 @@ export function normalizeMlttTerm(term: MlttTerm, compareExternal?: MlttExternal
     case "type-match":
       return mlttTypeMatch(
         normalize(head.scrutinee),
-        head.cases.map(matchCase => ({ pattern: normalize(matchCase.pattern), result: normalize(matchCase.result) })),
+        head.cases.map(matchCase => ({
+          pattern: normalize(matchCase.pattern),
+          ...(matchCase.captures ? { captures: matchCase.captures.map(capture => ({ ...capture, type: normalize(capture.type) })) } : {}),
+          result: normalize(matchCase.result),
+        })),
         normalize(head.defaultCase),
       );
     case "successor":
@@ -730,8 +794,13 @@ export function areMlttTermsDefinitionallyEqual(
   left: MlttTerm,
   right: MlttTerm,
   compareExternal?: MlttExternalEqualityComparer,
+  matchExternalPattern?: MlttExternalPatternMatcher,
 ): boolean {
-  return structurallyEqualMlttTerms(normalizeMlttTerm(left, compareExternal), normalizeMlttTerm(right, compareExternal), compareExternal);
+  return structurallyEqualMlttTerms(
+    normalizeMlttTerm(left, compareExternal, matchExternalPattern),
+    normalizeMlttTerm(right, compareExternal, matchExternalPattern),
+    compareExternal,
+  );
 }
 
 /** Decide equality when possible without treating an open neutral term as unequal. */
@@ -739,9 +808,10 @@ export function compareMlttTermsDefinitionally(
   left: MlttTerm,
   right: MlttTerm,
   compareExternal?: MlttExternalEqualityComparer,
+  matchExternalPattern?: MlttExternalPatternMatcher,
 ): MlttDefinitionalComparison {
-  const normalizedLeft = normalizeMlttTerm(left, compareExternal);
-  const normalizedRight = normalizeMlttTerm(right, compareExternal);
+  const normalizedLeft = normalizeMlttTerm(left, compareExternal, matchExternalPattern);
+  const normalizedRight = normalizeMlttTerm(right, compareExternal, matchExternalPattern);
   if (structurallyEqualMlttTerms(normalizedLeft, normalizedRight, compareExternal)) return "equal";
   return hasFreeMlttVariable(normalizedLeft) || hasFreeMlttVariable(normalizedRight) ? "stuck" : "apart";
 }
@@ -778,7 +848,12 @@ function hasFreeMlttVariable(term: MlttTerm, binderDepth = 0): boolean {
         hasFreeMlttVariable(term.falseCase, binderDepth) || hasFreeMlttVariable(term.scrutinee, binderDepth);
     case "type-match":
       return hasFreeMlttVariable(term.scrutinee, binderDepth) ||
-        term.cases.some(matchCase => hasFreeMlttVariable(matchCase.pattern, binderDepth) || hasFreeMlttVariable(matchCase.result, binderDepth)) ||
+        term.cases.some(matchCase => {
+          const captureDepth = binderDepth + (matchCase.captures?.length ?? 0);
+          return matchCase.captures?.some(capture => hasFreeMlttVariable(capture.type, binderDepth)) ||
+            hasFreeMlttVariable(matchCase.pattern, captureDepth) ||
+            hasFreeMlttVariable(matchCase.result, captureDepth);
+        }) ||
         hasFreeMlttVariable(term.defaultCase, binderDepth);
     case "successor":
       return hasFreeMlttVariable(term.predecessor, binderDepth);
@@ -833,10 +908,16 @@ function shiftMlttTerm(term: MlttTerm, amount: number, cutoff = 0): MlttTerm {
     case "type-match":
       return mlttTypeMatch(
         shiftMlttTerm(term.scrutinee, amount, cutoff),
-        term.cases.map(matchCase => ({
-          pattern: shiftMlttTerm(matchCase.pattern, amount, cutoff),
-          result: shiftMlttTerm(matchCase.result, amount, cutoff),
-        })),
+        term.cases.map(matchCase => {
+          const captureCount = matchCase.captures?.length ?? 0;
+          return {
+            pattern: shiftMlttTerm(matchCase.pattern, amount, cutoff + captureCount),
+            ...(matchCase.captures ? {
+              captures: matchCase.captures.map(capture => ({ ...capture, type: shiftMlttTerm(capture.type, amount, cutoff) })),
+            } : {}),
+            result: shiftMlttTerm(matchCase.result, amount, cutoff + captureCount),
+          };
+        }),
         shiftMlttTerm(term.defaultCase, amount, cutoff),
       );
     case "successor":
@@ -923,10 +1004,19 @@ function substituteMltt(term: MlttTerm, variableIndex: number, replacement: Mltt
     case "type-match":
       return mlttTypeMatch(
         substituteMltt(term.scrutinee, variableIndex, replacement, binderDepth),
-        term.cases.map(matchCase => ({
-          pattern: substituteMltt(matchCase.pattern, variableIndex, replacement, binderDepth),
-          result: substituteMltt(matchCase.result, variableIndex, replacement, binderDepth),
-        })),
+        term.cases.map(matchCase => {
+          const captureCount = matchCase.captures?.length ?? 0;
+          return {
+            pattern: substituteMltt(matchCase.pattern, variableIndex, replacement, binderDepth + captureCount),
+            ...(matchCase.captures ? {
+              captures: matchCase.captures.map(capture => ({
+                ...capture,
+                type: substituteMltt(capture.type, variableIndex, replacement, binderDepth),
+              })),
+            } : {}),
+            result: substituteMltt(matchCase.result, variableIndex, replacement, binderDepth + captureCount),
+          };
+        }),
         substituteMltt(term.defaultCase, variableIndex, replacement, binderDepth),
       );
     case "successor":
@@ -1044,10 +1134,15 @@ function structurallyEqualMlttTerms(
       const rightMatch = right as MlttTypeMatch;
       return left.cases.length === rightMatch.cases.length &&
         structurallyEqualMlttTerms(left.scrutinee, rightMatch.scrutinee, compareExternal) &&
-        left.cases.every((matchCase, index) =>
-          structurallyEqualMlttTerms(matchCase.pattern, rightMatch.cases[index].pattern, compareExternal) &&
-          structurallyEqualMlttTerms(matchCase.result, rightMatch.cases[index].result, compareExternal)
-        ) &&
+        left.cases.every((matchCase, index) => {
+          const rightCase = rightMatch.cases[index];
+          const captures = matchCase.captures ?? [];
+          const rightCaptures = rightCase.captures ?? [];
+          return captures.length === rightCaptures.length &&
+            captures.every((capture, captureIndex) => structurallyEqualMlttTerms(capture.type, rightCaptures[captureIndex].type, compareExternal)) &&
+            structurallyEqualMlttTerms(matchCase.pattern, rightCase.pattern, compareExternal) &&
+            structurallyEqualMlttTerms(matchCase.result, rightCase.result, compareExternal);
+        }) &&
         structurallyEqualMlttTerms(left.defaultCase, rightMatch.defaultCase, compareExternal);
     }
     case "successor":
@@ -1137,7 +1232,12 @@ function printMlttTermWorker(term: MlttTerm, names: readonly string[]): string {
     case "bool-elim":
       return `BoolElim<${printMlttTermWorker(term.motive, names)}, ${printMlttTermWorker(term.trueCase, names)}, ${printMlttTermWorker(term.falseCase, names)}, ${printMlttTermWorker(term.scrutinee, names)}>`;
     case "type-match":
-      return `TypeMatch<${printMlttTermWorker(term.scrutinee, names)}, ${term.cases.map(matchCase => `Case<${printMlttTermWorker(matchCase.pattern, names)}, ${printMlttTermWorker(matchCase.result, names)}>`).join(", ")}, Default<${printMlttTermWorker(term.defaultCase, names)}>>`;
+      return `TypeMatch<${printMlttTermWorker(term.scrutinee, names)}, ${
+        term.cases.map(matchCase => {
+          const captureNames = (matchCase.captures ?? []).map(capture => capture.name);
+          return `Case<${printMlttTermWorker(matchCase.pattern, [...captureNames, ...names])}, ${printMlttTermWorker(matchCase.result, [...captureNames, ...names])}>`;
+        }).join(", ")
+      }, Default<${printMlttTermWorker(term.defaultCase, names)}>>`;
     case "nat-type":
       return "Nat";
     case "zero":
