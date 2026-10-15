@@ -3769,6 +3769,11 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writeSpace();
     emit(node.name);
     emitTypeParameters(node, node.typeParameters);
+    if (node.kindType && (!currentSourceFile || fileExtensionIs(currentSourceFile.fileName, Extension.Tspp) || fileExtensionIs(currentSourceFile.fileName, Extension.Dtspp))) {
+      writePunctuation(":");
+      writeSpace();
+      emitKind(node.kindType);
+    }
     writeSpace();
     writePunctuation("=");
     writeSpace();
@@ -3786,6 +3791,11 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writeSpace();
     emit(node.name);
     emitTypeParameters(node, node.typeParameters);
+    if (node.kindType && (!currentSourceFile || fileExtensionIs(currentSourceFile.fileName, Extension.Tspp) || fileExtensionIs(currentSourceFile.fileName, Extension.Dtspp))) {
+      writePunctuation(":");
+      writeSpace();
+      emitKind(node.kindType);
+    }
     writeSpace();
     writePunctuation("=");
     writeSpace();

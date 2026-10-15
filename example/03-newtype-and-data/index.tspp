@@ -85,3 +85,22 @@ const keys: "x" | "y" = "x" satisfies keyof Point;
 
 export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, nothing, rightArm, singleItem, something, tag };
 export type { Either, List, Option, OrderId, Point, Some, StringOrNumber, UserId };
+
+
+// -----------------------------------------------------------------------------
+// 4. 与高阶类型的交互
+// -----------------------------------------------------------------------------
+//
+// 毫无疑问，当然是天然支持作为一等传递的，data 与 newtype 的类型构造器并不是特例
+
+type Apply<A: Type => Type, B> = A<B>
+
+newtype Pack<A> = List<A>
+
+type Numbers = Apply<Pack, number>
+
+const numbers: Numbers = Pack(Nil)
+
+data FF<F: Type => Type, A> = B | C(x: F<A>)
+
+// const ff: FF<List, string> = C(Cons("",Nil) as List<string>)

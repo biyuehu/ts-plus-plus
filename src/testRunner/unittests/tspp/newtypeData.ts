@@ -18,14 +18,14 @@ describe("unittests:: tspp:: newtype and data", () => {
     return program.getSemanticDiagnostics().map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
   }
 
-  function emitDeclarations(content: string) {
+  function emitDeclarations(content: string, extraFeatures?: readonly string[]) {
     const fileName = "/file.tspp";
     const options: ts.CompilerOptions = {
       declaration: true,
       emitDeclarationOnly: true,
       noLib: true,
       strict: true,
-      tsppFeatures: ["newtypeDeclarations", "dataDeclarations"],
+      tsppFeatures: ["newtypeDeclarations", "dataDeclarations", ...(extraFeatures ?? [])],
     };
     const fs = vfs.createFromFileSystem(
       Harness.IO,
@@ -70,6 +70,19 @@ describe("unittests:: tspp:: newtype and data", () => {
 
       assert.include(output, "export newtype UserId = number;");
       assert.include(output, "export data Option<T> = None | Some(value: T);");
+    });
+
+    it("preserves kind annotations in declaration output", () => {
+      const output = emitDeclarations(
+        `
+        export newtype Box<T>: Type = T[];
+        export data Option<T>: Type = None | Some(value: T);
+      `,
+        ["higherKindedTypes"],
+      );
+
+      assert.include(output, "export newtype Box<T>: Type = T[];");
+      assert.include(output, "export data Option<T>: Type = None | Some(value: T);");
     });
   });
 
@@ -150,6 +163,19 @@ describe("unittests:: tspp:: newtype and data", () => {
       const declaration = file.statements.filter(ts.isVariableStatement)
         .flatMap(statement => [...statement.declarationList.declarations])[0];
       assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declaration.name)), "UserId");
+    });
+
+    it("supports kind annotations on newtype declarations", () => {
+      const program = createProgram(
+        "/file.tspp",
+        `
+        type Apply<F: Type => Type, A> = F<A>;
+        newtype Box<T>: Type = T[];
+        type Applied = Apply<Box, number>;
+      `,
+        { tsppFeatures: ["newtypeDeclarations", "dataDeclarations", "higherKindedTypes"] },
+      );
+      assert.isEmpty(semanticMessages(program));
     });
   });
 
@@ -284,6 +310,19 @@ describe("unittests:: tspp:: newtype and data", () => {
       );
       assert.isNotEmpty(semanticMessages(program));
     });
+
+    it("supports kind annotations on data declarations", () => {
+      const program = createProgram(
+        "/file.tspp",
+        `
+        type Apply<F: Type => Type, A> = F<A>;
+        data Option<T>: Type = None | Some(value: T);
+        type Applied = Apply<Option, number>;
+      `,
+        { tsppFeatures: ["newtypeDeclarations", "dataDeclarations", "higherKindedTypes"] },
+      );
+      assert.isEmpty(semanticMessages(program));
+    });
   });
 
   describe("newtype", () => {
@@ -411,6 +450,31 @@ describe("unittests:: tspp:: newtype and data", () => {
       const text = ts.displayPartsToString(info.displayParts);
       assert.include(text, "UserId", text);
       assert.notInclude(text, "__@nominal@", text);
+    });
+
+    it("displays kindType and formatted variants in hover", () => {
+      const content = `
+        newtype Box<T>: Type = T;
+        data Option<T>: Type = None | Some(value: T);
+      `;
+      const adapter = new Harness.LanguageService.NativeLanguageServiceAdapter(/*cancellationToken*/ undefined, {
+        noLib: true,
+        strict: true,
+        tsppFeatures: ["newtypeDeclarations", "dataDeclarations", "higherKindedTypes"],
+      });
+      const host = adapter.getHost();
+      host.addScript("file.tspp", content, /*isRootFile*/ true);
+      const service = adapter.getLanguageService();
+
+      const boxInfo = service.getQuickInfoAtPosition("file.tspp", content.indexOf("Box"));
+      assert.isDefined(boxInfo);
+      const boxText = ts.displayPartsToString(boxInfo.displayParts);
+      assert.include(boxText, "newtype Box<T>: Type = T");
+
+      const optInfo = service.getQuickInfoAtPosition("file.tspp", content.indexOf("Option"));
+      assert.isDefined(optInfo);
+      const optText = ts.displayPartsToString(optInfo.displayParts);
+      assert.include(optText, "data Option<T>: Type = None | Some(value: T)");
     });
 
     it("rejects underlying types that erase the nominal brand", () => {

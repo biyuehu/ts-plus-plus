@@ -1547,23 +1547,35 @@ const visitEachChildTable: VisitEachChildTable = {
   },
 
   [SyntaxKind.NewtypeDeclaration]: function visitEachChildOfNewtypeDeclaration(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    const modifiers = nodesVisitor(node.modifiers, visitor, isModifierLike);
+    const name = Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier));
+    const typeParameters = nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration);
+    const kindType = nodeVisitor(node.kindType, visitor, isKindNode);
+    const type = Debug.checkDefined(nodeVisitor(node.type, visitor, isTypeNode));
     return context.factory.updateNewtypeDeclaration(
       node,
-      nodesVisitor(node.modifiers, visitor, isModifierLike),
-      Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
-      nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration),
-      Debug.checkDefined(nodeVisitor(node.type, visitor, isTypeNode)),
+      modifiers,
+      name,
+      typeParameters,
+      type,
+      kindType,
       nodeVisitor(node.withClause, visitor, isWithClause),
     );
   },
 
   [SyntaxKind.DataDeclaration]: function visitEachChildOfDataDeclaration(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    const modifiers = nodesVisitor(node.modifiers, visitor, isModifierLike);
+    const name = Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier));
+    const typeParameters = nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration);
+    const variants = nodesVisitor(node.variants, visitor, isDataVariant);
+    const kindType = nodeVisitor(node.kindType, visitor, isKindNode);
     return context.factory.updateDataDeclaration(
       node,
-      nodesVisitor(node.modifiers, visitor, isModifierLike),
-      Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
-      nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration),
-      nodesVisitor(node.variants, visitor, isDataVariant),
+      modifiers,
+      name,
+      typeParameters,
+      variants,
+      kindType,
     );
   },
 

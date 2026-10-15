@@ -514,25 +514,59 @@ function getSymbolDisplayPartsDocumentationAndSymbolKindWorker(
         });
         displayParts.push(punctuationPart(SyntaxKind.GreaterThanToken));
       }
+      if (nominalDeclaration.kindType) {
+        displayParts.push(punctuationPart(SyntaxKind.ColonToken));
+        displayParts.push(spacePart());
+        displayParts.push(textPart(nominalDeclaration.kindType.getText()));
+      }
     }
     else {
       writeTypeParametersOfSymbol(symbol, sourceFile);
+      const typeAlias = symbol.declarations?.find(isTypeAliasDeclaration);
+      if (typeAlias?.kindType) {
+        displayParts.push(punctuationPart(SyntaxKind.ColonToken));
+        displayParts.push(spacePart());
+        displayParts.push(textPart(typeAlias.kindType.getText()));
+      }
     }
     displayParts.push(spacePart());
     displayParts.push(operatorPart(SyntaxKind.EqualsToken));
     displayParts.push(spacePart());
-    addRange(
-      displayParts,
-      typeToDisplayParts(
-        typeChecker,
-        location.parent && isConstTypeReference(location.parent) ? typeChecker.getTypeAtLocation(location.parent) : getDisplayedAliasedType(typeChecker, symbol),
-        enclosingDeclaration,
-        TypeFormatFlags.InTypeAlias,
-        maximumLength,
-        verbosityLevel,
-        typeWriterOut,
-      ),
-    );
+    if (nominalDeclaration && nominalDeclaration.kind === SyntaxKind.DataDeclaration) {
+      nominalDeclaration.variants.forEach((variant, index) => {
+        if (index > 0) {
+          displayParts.push(spacePart());
+          displayParts.push(punctuationPart(SyntaxKind.BarToken));
+          displayParts.push(spacePart());
+        }
+        displayParts.push(textPart(idText(variant.name)));
+        if (variant.parameters && variant.parameters.length) {
+          displayParts.push(punctuationPart(SyntaxKind.OpenParenToken));
+          variant.parameters.forEach((param, pIdx) => {
+            if (pIdx > 0) {
+              displayParts.push(punctuationPart(SyntaxKind.CommaToken));
+              displayParts.push(spacePart());
+            }
+            displayParts.push(textPart(getTextOfNode(param)));
+          });
+          displayParts.push(punctuationPart(SyntaxKind.CloseParenToken));
+        }
+      });
+    }
+    else {
+      addRange(
+        displayParts,
+        typeToDisplayParts(
+          typeChecker,
+          location.parent && isConstTypeReference(location.parent) ? typeChecker.getTypeAtLocation(location.parent) : getDisplayedAliasedType(typeChecker, symbol),
+          enclosingDeclaration,
+          TypeFormatFlags.InTypeAlias,
+          maximumLength,
+          verbosityLevel,
+          typeWriterOut,
+        ),
+      );
+    }
   }
   if (symbolFlags & SymbolFlags.Enum) {
     prefixNextMeaning();

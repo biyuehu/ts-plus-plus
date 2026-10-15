@@ -3732,6 +3732,7 @@ export interface NewtypeDeclaration extends DeclarationStatement, JSDocContainer
   readonly modifiers?: NodeArray<ModifierLike>;
   readonly name: Identifier;
   readonly typeParameters?: NodeArray<TypeParameterDeclaration>;
+  readonly kindType?: KindNode;
   readonly type: TypeNode;
   readonly withClause?: WithClause;
 }
@@ -3750,6 +3751,7 @@ export interface DataDeclaration extends DeclarationStatement, JSDocContainer, L
   readonly modifiers?: NodeArray<ModifierLike>;
   readonly name: Identifier;
   readonly typeParameters?: NodeArray<TypeParameterDeclaration>;
+  readonly kindType?: KindNode;
   readonly variants: NodeArray<DataVariant>;
 }
 
@@ -9424,12 +9426,12 @@ export interface NodeFactory {
   updateInterfaceDeclaration(node: InterfaceDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;
   createTypeAliasDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): TypeAliasDeclaration;
   updateTypeAliasDeclaration(node: TypeAliasDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): TypeAliasDeclaration;
-  createNewtypeDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, withClause?: WithClause): NewtypeDeclaration;
-  updateNewtypeDeclaration(node: NewtypeDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, withClause?: WithClause): NewtypeDeclaration;
+  createNewtypeDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): NewtypeDeclaration;
+  updateNewtypeDeclaration(node: NewtypeDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): NewtypeDeclaration;
   createDataVariant(name: string | Identifier, parameters: readonly ParameterDeclaration[] | undefined): DataVariant;
   updateDataVariant(node: DataVariant, name: Identifier, parameters: readonly ParameterDeclaration[] | undefined): DataVariant;
-  createDataDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, variants: readonly DataVariant[]): DataDeclaration;
-  updateDataDeclaration(node: DataDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, variants: readonly DataVariant[]): DataDeclaration;
+  createDataDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, variants: readonly DataVariant[], kindType?: KindNode): DataDeclaration;
+  updateDataDeclaration(node: DataDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, variants: readonly DataVariant[], kindType?: KindNode): DataDeclaration;
   createEnumDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, members: readonly EnumMember[]): EnumDeclaration;
   updateEnumDeclaration(node: EnumDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, members: readonly EnumMember[]): EnumDeclaration;
   createModuleDeclaration(modifiers: readonly ModifierLike[] | undefined, name: ModuleName, body: ModuleBody | undefined, flags?: NodeFlags): ModuleDeclaration;
