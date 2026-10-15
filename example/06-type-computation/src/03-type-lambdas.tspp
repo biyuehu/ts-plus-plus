@@ -1,0 +1,79 @@
+// ─────────────────────────────────────────────────────────────────
+// TS++ Type Computation: 类型层 Lambda（Type Lambdas）
+// ─────────────────────────────────────────────────────────────────
+export {};
+
+// 语法：<T, ...> =>> Body
+// 提供了第一等（first-class）匿名类型构造器语法，使用 `=>>` 避免与普通函数签名 `=>` 混淆。
+
+// 1. 基础：恒等、投影与交换
+// 最基础的类型 lambda：原样返回其类型参数
+type Id = <T> =>> T;
+
+type IdNumber = Id<number>;  // number
+type IdString = Id<string>;  // string
+
+// 二元 lambda：选取第一个参数
+type Fst = <A, B> =>> A;
+type FstResult = Fst<boolean, string>;  // boolean
+
+// 二元 lambda：交换元组
+type Swap = <A, B> =>> [B, A];
+type SwapResult = Swap<string, number>;  // [number, string]
+
+const idNum: IdNumber = 42;
+const swapped: SwapResult = [100, "hello"];
+
+// 2. 柯里化：嵌套类型 Lambda
+// CurriedPair<A> 的 kind 是 Type => Type，逐步传递类型参数
+type CurriedPair = <A> =>> <B> =>> [A, B];
+
+type PairWithString = CurriedPair<string>;        // <B> =>> [string, B]
+type StringAndNumber = PairWithString<number>;    // [string, number]
+
+const curriedVal: StringAndNumber = ["left", 123];
+
+// 3. 与高阶类型参数（Higher-Kinded Types）结合
+// Apply 接受任意 kind 为 Type => Type 的类型构造器 F 与参数 X
+type Apply<F: Type => Type, X> = F<X>;
+
+// 传入匿名类型 lambda：构造单元素元组
+type AppliedTuple = Apply<<T> =>> [T], boolean>; // [boolean]
+
+// 传入类型 lambda：构造数组
+type AppliedArray = Apply<<T> =>> T[], number>;   // number[]
+
+const appTuple: AppliedTuple = [true];
+const appArr: AppliedArray = [1, 2, 3];
+
+// 4. 类型层组合子（Combinators）
+// Compose 组合两个一元类型构造器：F(G(X))
+type Compose<F: Type => Type, G: Type => Type> = <X> =>> F<G<X>>;
+
+// 双层数组组合
+type Twice = Compose<Array, Array>;
+type TwiceResult = Twice<string>; // string[][]
+
+const twVal: TwiceResult = [["a", "b"]];
+
+// 5. 具名别名与装箱
+type Box = <T> =>> { readonly value: T };
+type BoxedNum = Box<number>; // { readonly value: number }
+
+const boxVal: BoxedNum = { value: 999 };
+
+// 6. 带约束的类型 Lambda
+type OnlyString = <T extends string> =>> { tag: T };
+type ValidTag = OnlyString<"user">;
+
+const tagVal: ValidTag = { tag: "user" };
+
+// 7. 错误用法测试（由 @ts-expect-error 保护）
+// @ts-expect-error 参数数量不匹配：Swap 需要两个参数
+type BadSwap = Swap<string>;
+
+// @ts-expect-error kind 不兼容：string 不是 Type => Type
+type BadApply = Apply<string, number>;
+
+// @ts-expect-error 违反类型参数约束：number 不继承 string
+type BadTag = OnlyString<number>;

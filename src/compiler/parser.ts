@@ -4667,10 +4667,15 @@ namespace Parser {
     while (token() !== SyntaxKind.CloseBraceToken && token() !== SyntaxKind.EndOfFileToken) {
       const armPos = getNodePos();
       const pattern = parseType();
-      parseExpected(SyntaxKind.EqualsGreaterThanToken);
+      if (token() === SyntaxKind.ColonToken) {
+        nextToken();
+      }
+      else {
+        parseExpected(SyntaxKind.EqualsGreaterThanToken);
+      }
       const result = parseType();
       arms.push(finishNode(factory.createMatchTypeArm(pattern, result), armPos));
-      if (!parseOptional(SyntaxKind.CommaToken)) break;
+      if (!parseOptional(SyntaxKind.CommaToken) && !parseOptional(SyntaxKind.SemicolonToken)) break;
     }
     const armList = createNodeArray(arms, armsPos);
     parseExpected(SyntaxKind.CloseBraceToken);
@@ -4744,7 +4749,9 @@ namespace Parser {
     if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     return lookAhead(() => {
       const typeParameters = parseTypeParameters();
-      return !!typeParameters && token() === SyntaxKind.EqualsGreaterThanToken;
+      if (!typeParameters || token() !== SyntaxKind.EqualsGreaterThanToken) return false;
+      nextToken();
+      return token() === SyntaxKind.GreaterThanToken;
     });
   }
 
@@ -4752,6 +4759,7 @@ namespace Parser {
     const pos = getNodePos();
     const typeParameters = Debug.checkDefined(parseTypeParameters());
     parseExpected(SyntaxKind.EqualsGreaterThanToken);
+    parseExpected(SyntaxKind.GreaterThanToken);
     const body = parseType();
     return finishNode(factory.createTypeLambdaNode(typeParameters, body), pos);
   }

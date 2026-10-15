@@ -67,7 +67,7 @@ Current features:
 | `formalContracts` | Z3-backed `requires`, `ensures`, and `while` invariants | — | Yes | Yes |
 | `standardLibraryPredicates` | Built-in numeric predicates `isEven`, `isOdd`, `isPositive`, `isNonNegative`, `isZero`, `divides`, and `between`; `number` requires `numberModel: "mathematical-real"` | `formalContracts` | Yes | Yes |
 | `refinementTypes` | Z3-verified predicates on structural type aliases | `formalContracts` | Yes | Yes |
-| `typeComputation` | Type-level `let X = T in U` bindings and anonymous type-level lambdas `<T> => Body` | — | Yes | Yes |
+| `typeComputation` | Type-level `let X = T in U` bindings, pattern matching `match T { ... }`, and type lambdas `<T> =>> Body` | — | Yes | Yes |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
@@ -112,30 +112,43 @@ The current subset covers `boolean`, `bigint`, and `string`, local variables, as
 
 Every obligation is reported as `proved`, `failed`, `unknown`, or `error`, with task outcomes distinguishing cancellation and timeout. Unsupported syntax and unavailable solver environments are compilation errors with an `unknown` result, never a successful proof. `Program.getVerificationArtifacts()` exposes the exact solver input, replayable SMT-LIB, status, decoded source-level counterexample, raw model, and source location. The development extension's **TS++: Show Verification SMT-LIB** command opens that replayable input beside the source.
 
-## Type-level lambdas
+## Type computation: let-in, match, and type lambdas
 
-Enable `typeComputation`, then write anonymous type-level functions using `<T> => Body` syntax:
+Enable `typeComputation`, then use local type bindings, pattern matching, and anonymous type-level functions:
 
 ```typescript
-// Anonymous identity functor: takes a type, returns it unchanged.
-type Id = <T> => T;
-type IdNumber = Id<number>; // number
+// 1. Scoped local let-in bindings
+type UserResponse<T> = let Payload = { data: T; timestamp: number } in {
+  response: Payload;
+  backup: Payload;
+};
 
-// Multi-parameter lambda: swap the two components of a pair.
-type Swap = <A, B> => [B, A];
+// 2. Type-level pattern matching (structural infer, ADT constructors, primitives, and literals)
+type Classify<T> = match T {
+  [infer Head, ...infer Tail]: { head: Head; tail: Tail },
+  Array<infer U>: [U, "array"],
+  1: "one",
+  string: "is-string",
+  _: "other"
+};
+
+// 3. Anonymous type lambdas (<T> =>> Body)
+type Id = <T> =>> T;
+type Swap = <A, B> =>> [B, A];
+
 type Swapped = Swap<string, number>; // [number, string]
 ```
 
-Type lambdas integrate with higher-kinded parameters. A lambda `<T> => Body` has kind `Type => Type` and can be passed anywhere a type constructor is expected:
+Type lambdas integrate with higher-kinded parameters. A lambda `<T> =>> Body` has kind `Type => Type` and can be passed anywhere a type constructor is expected:
 
 ```typescript
 // Require typeComputation + higherKindedTypes.
 type Apply<F: Type => Type, X> = F<X>;
 
-type Doubled = Apply<<T> => [T, T], boolean>; // [boolean, boolean]
+type Doubled = Apply<<T> =>> [T, T], boolean>; // [boolean, boolean]
 ```
 
-The lambda body may reference any type in scope. The parameters are erased like all other TS++ type syntax and produce no JavaScript output.
+The lambda body may reference any type in scope. All type computation syntax is erased and produces no JavaScript output.
 
 ## License
 

@@ -1,0 +1,98 @@
+// ─────────────────────────────────────────────────────────────────
+// TS++ Type Computation: match 模式匹配类型
+// ─────────────────────────────────────────────────────────────────
+// 语法：match Scrutinee { Pattern: Result, ... }
+// 支持使用冒号 `:` 分隔模式与结果，使用逗号 `,` 或分号 `;` 分隔分支。
+// 匹配自上而下求值，支持 infer 结构解构、ADT 构造器、基础类型、字面量以及通配符 _。
+
+export {};
+
+// 0. ADT 类型构造器定义（代数数据类型）
+data Maybe<T> = Nothing | Just(value: T);
+data Either<L, R> = Left(left: L) | Right(right: R);
+data Tree<A> = Leaf | Branch(val: A, left: Tree<A>, right: Tree<A>);
+
+// 1. 结构化解构与 infer 任意结构
+// 支持元组、嵌套对象、数组等任意复合结构
+type UnpackStructural<T> = match T {
+    // 元组模式解构（放在通用数组前优先匹配固定元组）
+    [infer Head, ...infer Tail]: { head: Head; tail: Tail },
+
+    // 数组结构解构（支持冒号与逗号分隔）
+    Array<infer U>: [U, "array"],
+
+    // 对象属性深层解构
+    { data: infer D, status: 200 }: D,
+
+    // 通配符保底
+    _: never
+};
+
+type TArr = UnpackStructural<number[]>;              // [number, "array"]
+type TTuple = UnpackStructural<[string, number]>;   // { head: string; tail: [number] }
+type TObj = UnpackStructural<{ data: boolean; status: 200 }>; // boolean
+
+const tarr: TArr = [123, "array"];
+const ttuple: TTuple = { head: "ok", tail: [1] };
+const tobj: TObj = true;
+
+// 2. 匹配 ADT 类型构造器
+// 支持代数数据类型的类型构造器（如 Maybe<infer U>、Either<infer L, infer R>）
+type UnwrapADT<T> = match T {
+    Maybe<infer U>: U,
+    Either<infer L, infer R>: [L, R],
+    Tree<infer NodeVal>: NodeVal,
+    _: never
+};
+
+type TMaybe = UnwrapADT<Maybe<string>>;            // string
+type TEither = UnwrapADT<Either<number, boolean>>; // [number, boolean]
+type TTree = UnwrapADT<Tree<bigint>>;              // bigint
+
+const maybeVal: TMaybe = "unwrapped";
+const eitherVal: TEither = [42, true];
+const treeVal: TTree = 100n;
+
+// 3. 字面量类型与基础无参数类型的直接匹配
+// 无需 infer U，直接匹配 TS 原生字面量与基础基元类型
+type Classify<T> = match T {
+    // 字面量类型分支（严格优先匹配具体字面量）
+    0: "zero",
+    1: "one",
+    true: "boolean-true",
+    false: "boolean-false",
+    "ping": "pong",
+
+    // 原生基元类型（无需类型参数与 infer）
+    string: "any-string",
+    number: "any-number",
+    boolean: "any-boolean",
+
+    // 结构模式
+    { id: infer Id }: ["id-present", Id],
+
+    // 通配符分支
+    _: "unknown"
+};
+
+type R0 = Classify<0>;             // "zero"
+type R1 = Classify<1>;             // "one"
+type R2 = Classify<42>;            // "any-number"
+type R3 = Classify<true>;          // "boolean-true"
+type R4 = Classify<false>;         // "boolean-false"
+type R5 = Classify<boolean>;       // "any-boolean"
+type R6 = Classify<"ping">;        // "pong"
+type R7 = Classify<"other">;       // "any-string"
+type R8 = Classify<{ id: string }>; // ["id-present", string]
+type R9 = Classify<symbol>;        // "unknown"
+
+const c0: R0 = "zero";
+const c1: R1 = "one";
+const c2: R2 = "any-number";
+const c3: R3 = "boolean-true";
+const c4: R4 = "boolean-false";
+const c5: R5 = "any-boolean";
+const c6: R6 = "pong";
+const c7: R7 = "any-string";
+const c8: R8 = ["id-present", "user-123"];
+const c9: R9 = "unknown";

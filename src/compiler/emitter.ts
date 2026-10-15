@@ -2547,8 +2547,7 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
       if (index > 0) writePunctuation(",");
       writeSpace();
       emit(arm.pattern);
-      writeSpace();
-      writePunctuation("=>");
+      writePunctuation(":");
       writeSpace();
       emit(arm.result);
     });
@@ -2573,7 +2572,7 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
   function emitTypeLambda(node: TypeLambdaNode) {
     emitTypeParameters(node, node.typeParameters);
     writeSpace();
-    writePunctuation("=>");
+    writePunctuation("=>>");
     writeSpace();
     emit(node.body);
   }

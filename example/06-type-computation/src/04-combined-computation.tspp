@@ -1,0 +1,62 @@
+// ─────────────────────────────────────────────────────────────────
+// TS++ Type Computation: 综合计算（let-in + match + lambda 协同）
+// ─────────────────────────────────────────────────────────────────
+// 本示例演示如何将 TS++ 类型计算的三大核心支柱无缝结合：
+// 1. let ... in 局部绑定中间类型
+// 2. match 模式匹配解构输入
+// 3. =>> 类型 Lambda 作为一等公民变换函数
+
+export {};
+
+data Maybe<T> = Nothing | Just(value: T);
+data Result<T, E> = Ok(value: T) | Err(error: E);
+
+// 1. 类型层 Map 变换器：
+// 接受一个类型变换函数 F: Type => Type，并将变换递归应用到容器或基元上
+type Transform<Container, F: Type => Type> = match Container {
+    // 匹配 Maybe ADT 构造器并解构
+    Maybe<infer U>:
+        let Transformed = F<U> in
+        Maybe<Transformed>,
+
+    // 匹配 Result ADT 构造器并解构成功值
+    Result<infer T, infer E>:
+        let NextT = F<T> in
+        Result<NextT, E>,
+
+    // 匹配数组结构
+    Array<infer U>:
+        let Elem = F<U> in
+        Array<Elem>,
+
+    // 匹配二元元组
+    [infer A, infer B]:
+        let NextA = F<A> in
+        let NextB = F<B> in
+        [NextA, NextB],
+
+    // 匹配字面量与基元（直接应用变换）
+    infer Other: F<Other>
+};
+
+// 2. 定义可复用的类型 Lambda
+type WrapInArray = <T> =>> T[];
+type PairWithSelf = <T> =>> [T, T];
+type ToResponse = <T> =>> { success: true; data: T };
+
+// 3. 应用综合计算
+type T1 = Transform<Maybe<number>, WrapInArray>;       // Maybe<number[]>
+type T2 = Transform<[string, boolean], PairWithSelf>;   // [[string, string], [boolean, boolean]]
+type T3 = Transform<Result<string, Error>, ToResponse>; // Result<{ success: true; data: string }, Error>
+type T4 = Transform<string, WrapInArray>;               // string[]
+
+// 4. 验证类型计算结果
+declare const opt: T1;
+declare const tuple: T2;
+declare const res: T3;
+declare const arr: T4;
+
+const test1: T1 = opt;
+const test2: T2 = tuple;
+const test3: T3 = res;
+const test4: T4 = arr;

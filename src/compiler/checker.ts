@@ -4621,10 +4621,16 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const message = meaning === namespaceMeaning || nodeIsSynthesized(name) ? Diagnostics.Cannot_find_namespace_0 : getCannotFindNameDiagnosticForName(getFirstIdentifier(name));
       const symbolFromJSPrototype = isInJSFile(name) && !nodeIsSynthesized(name) ? resolveEntityNameFromAssignmentDeclaration(name, meaning) : undefined;
       const letBinding = findAncestor(name, n => isTypeAliasDeclaration(n) && n.parent.kind === SyntaxKind.LetType) as TypeAliasDeclaration | undefined;
-      const initialMessage = letBinding ? undefined : ignoreErrors || symbolFromJSPrototype ? undefined : message;
+      const isSelfShadowing = !!(letBinding && name.escapedText === letBinding.name.escapedText);
+      const initialMessage = isSelfShadowing ? undefined : ignoreErrors || symbolFromJSPrototype ? undefined : message;
       symbol = getMergedSymbol(resolveName(location || name, name, meaning, initialMessage, /*isUse*/ true, /*excludeGlobals*/ false));
-      if (letBinding && symbol === getSymbolOfDeclaration(letBinding)) {
-        symbol = getMergedSymbol(resolveName(letBinding.parent.parent, name, meaning, ignoreErrors ? undefined : message, /*isUse*/ true, /*excludeGlobals*/ false));
+      if (isSelfShadowing) {
+        if (symbol === getSymbolOfDeclaration(letBinding)) {
+          symbol = getMergedSymbol(resolveName(letBinding.parent.parent, name, meaning, ignoreErrors ? undefined : message, /*isUse*/ true, /*excludeGlobals*/ false));
+        }
+        else if (!symbol && !ignoreErrors && !symbolFromJSPrototype) {
+          error(name, message, idText(name));
+        }
       }
       if (!symbol) {
         return getMergedSymbol(symbolFromJSPrototype);
@@ -5712,7 +5718,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function kindToKindNode(kind: Kind): KindNode {
-    if (kind.flags === KindFlags.Type) return factory.createTypeKindNode(kind.typeLevel === "0" ? undefined : kind.typeLevel);
+    if (kind.flags === KindFlags.Type) {
+      const level = hasTsppFeature(compilerOptions, "typeUniverses") ? (kind.typeLevel ?? "0") : (kind.typeLevel === "0" ? undefined : kind.typeLevel);
+      return factory.createTypeKindNode(level);
+    }
     const functionKind = kind;
     return factory.createFunctionKindNode(functionKind.parameters.map(kindToKindNode), kindToKindNode(functionKind.returnKind));
   }
@@ -8615,7 +8624,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const defaultParameterNode = defaultParameter && typeToTypeNodeHelper(defaultParameter, context);
       restoreFlags();
       const kind = getKindOfType(type);
-      return factory.createTypeParameterDeclaration(modifiers, name, constraintNode, defaultParameterNode, isOrdinaryTypeKind(kind) ? undefined : kindToKindNode(kind));
+      const showKind = hasTsppFeature(compilerOptions, "typeUniverses") || !isOrdinaryTypeKind(kind);
+      return factory.createTypeParameterDeclaration(modifiers, name, constraintNode, defaultParameterNode, showKind ? kindToKindNode(kind) : undefined);
     }
 
     function typeToTypeNodeHelperWithPossibleReusableTypeNode(type: Type, typeNode: TypeNode | undefined, context: NodeBuilderContext) {
@@ -13352,12 +13362,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         case SyntaxKind.TypeAliasDeclaration:
         case SyntaxKind.NewtypeDeclaration:
         case SyntaxKind.DataDeclaration:
+        case SyntaxKind.TypeLambda:
         case SyntaxKind.JSDocTemplateTag:
         case SyntaxKind.JSDocTypedefTag:
         case SyntaxKind.JSDocEnumTag:
         case SyntaxKind.JSDocCallbackTag:
         case SyntaxKind.MappedType:
-        case SyntaxKind.ConditionalType: {
+        case SyntaxKind.ConditionalType:
+        case SyntaxKind.MatchTypeArm: {
           const outerTypeParameters = getOuterTypeParameters(node, includeThisTypes);
           if ((kind === SyntaxKind.FunctionExpression || kind === SyntaxKind.ArrowFunction || isObjectLiteralMethod(node)) && isContextSensitive(node as Expression | MethodDeclaration)) {
             const signature = firstOrUndefined(getSignaturesOfType(getTypeOfSymbol(getSymbolOfDeclaration(node as FunctionLikeDeclaration)), SignatureKind.Call));
@@ -13370,6 +13382,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           }
           else if (kind === SyntaxKind.ConditionalType) {
             return concatenate(outerTypeParameters, getInferTypeParameters(node as ConditionalTypeNode));
+          }
+          else if (kind === SyntaxKind.MatchTypeArm) {
+            let armInferTypeParameters: TypeParameter[] | undefined;
+            const armLocals = (node as MatchTypeArm).locals;
+            if (armLocals) {
+              armLocals.forEach(symbol => {
+                if (symbol.flags & SymbolFlags.TypeParameter) {
+                  armInferTypeParameters = append(armInferTypeParameters, getDeclaredTypeOfSymbol(symbol));
+                }
+              });
+            }
+            return concatenate(outerTypeParameters, armInferTypeParameters);
           }
           const outerAndOwnTypeParameters = appendTypeParameters(outerTypeParameters, getEffectiveTypeParameterDeclarations(node as DeclarationWithTypeParameters));
           const thisType = includeThisTypes &&
@@ -20575,6 +20599,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         setParent(extendsTuple, conditional);
         // Conditional inference inspects the pattern's parent chain, so attach the original pattern to the synthetic extends tuple.
         setParent(patternNode, extendsTuple);
+        setParent(arm.result, conditional);
         setParent(next, conditional);
         next = conditional;
         nextParent = conditional;
@@ -28051,6 +28076,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function isNonGenericTopLevelType(type: Type) {
     if (type.aliasSymbol && !type.aliasTypeArguments) {
       const declaration = getDeclarationOfKind(type.aliasSymbol, SyntaxKind.TypeAliasDeclaration);
+      if (declaration && isTypeAliasDeclaration(declaration) && (declaration.type.kind === SyntaxKind.TypeLambda || declaration.type.kind === SyntaxKind.LetType || declaration.type.kind === SyntaxKind.MatchType)) {
+        return false;
+      }
       return !!(declaration && findAncestor(declaration.parent, n => n.kind === SyntaxKind.SourceFile ? true : n.kind === SyntaxKind.ModuleDeclaration ? false : "quit"));
     }
     return false;
