@@ -47,6 +47,8 @@
     "internal/**",
     "**/*.generated.*",
     "scripts/*.d.*",
+    "scripts/*.json",
+    "assets/**",
     "**/_namespaces/**"
   ],
   // Note: if adding new languages, make sure settings.template.json is updated too.

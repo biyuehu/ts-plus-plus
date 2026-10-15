@@ -2,7 +2,8 @@ pre-commit:
   parallel: false
   commands:
     dprint:
-      run: npx dprint fmt
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,yml,yaml}'
+      run: npx dprint fmt --allow-no-files {staged_files}
       stage_fixed: true
     lint:
       glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
