@@ -126,3 +126,116 @@ describe("unittests:: tspp:: type computation: match", () => {
     assert.match(messages[0], /not assignable/);
   });
 });
+
+describe("unittests:: tspp:: type computation: type lambdas", () => {
+  function lambdaMessages(content: string, tsppFeatures: string[] = ["typeComputation", "higherKindedTypes", "typeUniverses"]) {
+    const host = new fakes.CompilerHost(vfs.createFromFileSystem(
+      Harness.IO,
+      /*ignoreCase*/ true,
+      { documents: [new documents.TextDocument("/file.tspp", content)], cwd: "/" },
+    ));
+    const program = ts.createProgram({ host, rootNames: ["/file.tspp"], options: { noLib: true, strict: true, tsppFeatures } });
+    return program.getSemanticDiagnostics().map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+  }
+
+  it("evaluates basic identity and tuple type lambdas", () => {
+    const messages = lambdaMessages(`
+      type Id = <T> => T;
+      type Pair = <A, B> => [A, B];
+      const a: Id<number> = 1;
+      const b: Pair<string, number> = ["hello", 42];
+      const badA: Id<number> = "x";
+      const badB: Pair<string, number> = [42, "hello"];
+    `);
+    assert.lengthOf(messages, 3, messages.join("\n"));
+    assert.match(messages[0], /not assignable/);
+    assert.match(messages[1], /not assignable/);
+  });
+
+  it("passes type lambda as higher-kinded argument", () => {
+    const messages = lambdaMessages(`
+      type Apply<F: Type => Type, X> = F<X>;
+      type R = Apply<<T> => [T], number>;
+      const ok: R = [123];
+      const bad: R = 123;
+    `);
+    assert.lengthOf(messages, 1, messages.join("\n"));
+    assert.match(messages[0], /not assignable/);
+  });
+
+  it("supports combinators with higher-order type lambdas", () => {
+    const messages = lambdaMessages(`
+      type Swap<F: (Type, Type) => Type> = <A, B> => F<B, A>;
+      type SwappedTuple = Swap<<A, B> => [A, B]>;
+      const ok: SwappedTuple<string, number> = [42, "hello"];
+      const bad: SwappedTuple<string, number> = ["hello", 42];
+    `);
+    assert.lengthOf(messages, 2, messages.join("\n"));
+    assert.match(messages[0], /not assignable/);
+  });
+
+  it("captures outer type parameters in closure", () => {
+    const messages = lambdaMessages(`
+      type Const<X> = <T> => X;
+      type NumConst = Const<number>;
+      const ok: NumConst<string> = 42;
+      const bad: NumConst<string> = "hello";
+    `);
+    assert.lengthOf(messages, 1, messages.join("\n"));
+    assert.match(messages[0], /not assignable/);
+  });
+
+  it("enforces constraints on lambda type parameters", () => {
+    const messages = lambdaMessages(`
+      type OnlyString = <T extends string> => { str: T };
+      type Ok = OnlyString<"hello">;
+      type Bad = OnlyString<number>;
+    `);
+    assert.lengthOf(messages, 1, messages.join("\n"));
+    assert.match(messages[0], /constraint/);
+  });
+
+  it("works with scoped let bindings and type lambdas", () => {
+    const messages = lambdaMessages(`
+      type T = let F = <A> => [A, A] in F<string>;
+      const ok: T = ["a", "a"];
+      const bad: T = ["a", 1];
+    `);
+    assert.lengthOf(messages, 1, messages.join("\n"));
+    assert.match(messages[0], /not assignable/);
+  });
+
+  it("supports curried type lambdas", () => {
+    const messages = lambdaMessages(`
+      type Curried = <A> => <B> => [A, B];
+      type Step1 = Curried<number>;
+      const ok: Step1<string> = [1, "two"];
+      const bad: Step1<string> = ["two", 1];
+    `);
+    assert.lengthOf(messages, 2, messages.join("\n"));
+    assert.match(messages[0], /not assignable/);
+  });
+
+  it("is preserved in declaration emit", () => {
+    const host = new fakes.CompilerHost(vfs.createFromFileSystem(
+      Harness.IO,
+      /*ignoreCase*/ true,
+      { documents: [new documents.TextDocument("/file.tspp", "export type Box = <T> => { box: T };")], cwd: "/" },
+    ));
+    const program = ts.createProgram({ host, rootNames: ["/file.tspp"], options: { noLib: true, strict: true, declaration: true, emitDeclarationOnly: true, tsppFeatures: ["typeComputation"] } });
+    let output = "";
+    program.emit(/*targetSourceFile*/ undefined, (_name, text) => output += text);
+    assert.include(output, "<T> => {", output);
+    assert.include(output, "box: T", output);
+  });
+
+  it("requires typeComputation to be enabled", () => {
+    const messages = lambdaMessages(
+      `
+      type Id = <T> => T;
+      `,
+      [],
+    );
+    assert.match(messages.join("\n"), /typeComputation/);
+  });
+});

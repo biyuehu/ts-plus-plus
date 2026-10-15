@@ -67,6 +67,7 @@ Current features:
 | `formalContracts` | Z3-backed `requires`, `ensures`, and `while` invariants | — | Yes | Yes |
 | `standardLibraryPredicates` | Built-in numeric predicates `isEven`, `isOdd`, `isPositive`, `isNonNegative`, `isZero`, `divides`, and `between`; `number` requires `numberModel: "mathematical-real"` | `formalContracts` | Yes | Yes |
 | `refinementTypes` | Z3-verified predicates on structural type aliases | `formalContracts` | Yes | Yes |
+| `typeComputation` | Type-level `let X = T in U` bindings and anonymous type-level lambdas `<T> => Body` | — | Yes | Yes |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
@@ -110,6 +111,31 @@ function sumTo(n: bigint) with {
 The current subset covers `boolean`, `bigint`, and `string`, local variables, assignments, branches, `switch`, multiple returns, invariant-annotated loops, and `requires` checks at direct call sites that resolve to project function declarations. Records, record literals, closed discriminated unions with a unique string `_tag`, TS++ `data` constructors, and recursive algebraic data are lowered from the types and control-flow narrowing already computed by the TypeScript checker into Verification IR product/sum types and then into Z3 datatypes; the verifier does not implement a competing version of TypeScript narrowing. Optional properties, index signatures, and open unions currently produce an explicit `unknown`. Calls inside verified functions use the caller's assumptions and current symbolic path facts. `number` is available only after adding `numberModel: "mathematical-real";` to the function contract; this deliberately models numbers as mathematical reals rather than JavaScript IEEE-754 values.
 
 Every obligation is reported as `proved`, `failed`, `unknown`, or `error`, with task outcomes distinguishing cancellation and timeout. Unsupported syntax and unavailable solver environments are compilation errors with an `unknown` result, never a successful proof. `Program.getVerificationArtifacts()` exposes the exact solver input, replayable SMT-LIB, status, decoded source-level counterexample, raw model, and source location. The development extension's **TS++: Show Verification SMT-LIB** command opens that replayable input beside the source.
+
+## Type-level lambdas
+
+Enable `typeComputation`, then write anonymous type-level functions using `<T> => Body` syntax:
+
+```typescript
+// Anonymous identity functor: takes a type, returns it unchanged.
+type Id = <T> => T;
+type IdNumber = Id<number>; // number
+
+// Multi-parameter lambda: swap the two components of a pair.
+type Swap = <A, B> => [B, A];
+type Swapped = Swap<string, number>; // [number, string]
+```
+
+Type lambdas integrate with higher-kinded parameters. A lambda `<T> => Body` has kind `Type => Type` and can be passed anywhere a type constructor is expected:
+
+```typescript
+// Require typeComputation + higherKindedTypes.
+type Apply<F: Type => Type, X> = F<X>;
+
+type Doubled = Apply<<T> => [T, T], boolean>; // [boolean, boolean]
+```
+
+The lambda body may reference any type in scope. The parameters are erased like all other TS++ type syntax and produce no JavaScript output.
 
 ## License
 

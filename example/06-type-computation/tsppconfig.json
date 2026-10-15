@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "tsppFeatures": [
+      "typeComputation",
+      "higherKindedTypes",
+      "typeUniverses"
+    ]
+  }
+}

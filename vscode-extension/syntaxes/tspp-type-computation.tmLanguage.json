@@ -1,0 +1,12 @@
+{
+  "name": "TS++ Type Computation",
+  "scopeName": "tspp.type-computation",
+  "injectionSelector": "L:meta.type.declaration.ts -comment -string",
+  "patterns": [
+    {
+      "comment": "Type-level lambda: <T, U> => Body — highlight the => as an arrow operator",
+      "name": "storage.type.function.arrow.ts",
+      "match": "(?<=^|[,;({\\[\\s])=>(?=[^=])"
+    }
+  ]
+}

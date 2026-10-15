@@ -267,6 +267,7 @@ export const enum SyntaxKind {
   InferType,
   LetType,
   MatchType,
+  TypeLambda,
   ParenthesizedType,
   ThisType,
   TypeOperator,
@@ -740,6 +741,7 @@ export type TypeNodeSyntaxKind =
   | SyntaxKind.InferType
   | SyntaxKind.LetType
   | SyntaxKind.MatchType
+  | SyntaxKind.TypeLambda
   | SyntaxKind.ParenthesizedType
   | SyntaxKind.ThisType
   | SyntaxKind.TypeOperator
@@ -1122,6 +1124,7 @@ export type HasChildren =
   | LetTypeNode
   | MatchTypeNode
   | MatchTypeArm
+  | TypeLambdaNode
   | ImportTypeNode
   | ImportTypeAssertionContainer
   | NamedTupleMember
@@ -1576,6 +1579,7 @@ export type HasLocals =
   | ConditionalTypeNode
   | LetTypeNode
   | MatchTypeArm
+  | TypeLambdaNode
   | ConstructorDeclaration
   | ConstructorTypeNode
   | ConstructSignatureDeclaration
@@ -1880,7 +1884,7 @@ export interface Decorator extends Node {
 
 export interface TypeParameterDeclaration extends NamedDeclaration, JSDocContainer {
   readonly kind: SyntaxKind.TypeParameter;
-  readonly parent: DeclarationWithTypeParameterChildren | InferTypeNode;
+  readonly parent: DeclarationWithTypeParameterChildren | InferTypeNode | TypeLambdaNode;
   readonly modifiers?: NodeArray<Modifier>;
   readonly name: Identifier;
   /** The explicitly declared kind of this type parameter. Omitted parameters have kind `Type`. */
@@ -2421,6 +2425,13 @@ export interface MatchTypeNode extends TypeNode {
 export interface LetTypeNode extends TypeNode, LocalsContainer {
   readonly kind: SyntaxKind.LetType;
   readonly binding: TypeAliasDeclaration;
+  readonly body: TypeNode;
+}
+
+/** `<T, U> => Body`: an anonymous type constructor / type-level lambda. */
+export interface TypeLambdaNode extends TypeNode, LocalsContainer {
+  readonly kind: SyntaxKind.TypeLambda;
+  readonly typeParameters: NodeArray<TypeParameterDeclaration>;
   readonly body: TypeNode;
 }
 
@@ -6711,6 +6722,11 @@ export interface Type {
     /** @internal */ higherKindedSymbol?: Symbol;
     /** @internal */ higherKindedTarget?: Type;
     /** @internal */ higherKindedTypeArguments?: readonly Type[];
+    /** @internal */ typeLambda?: {
+      readonly typeParameters: readonly TypeParameter[];
+      readonly body: TypeNode;
+      readonly outerMapper?: TypeMapper;
+    };
 }
 
 export const enum KindFlags {
@@ -9251,6 +9267,8 @@ export interface NodeFactory {
   updateMatchTypeArm(node: MatchTypeArm, pattern: TypeNode, result: TypeNode): MatchTypeArm;
   createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[]): MatchTypeNode;
   updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[]): MatchTypeNode;
+  createTypeLambdaNode(typeParameters: readonly TypeParameterDeclaration[], body: TypeNode): TypeLambdaNode;
+  updateTypeLambdaNode(node: TypeLambdaNode, typeParameters: readonly TypeParameterDeclaration[], body: TypeNode): TypeLambdaNode;
   createImportTypeNode(argument: TypeNode, attributes?: ImportAttributes, qualifier?: EntityName, typeArguments?: readonly TypeNode[], isTypeOf?: boolean): ImportTypeNode;
   updateImportTypeNode(node: ImportTypeNode, argument: TypeNode, attributes: ImportAttributes | undefined, qualifier: EntityName | undefined, typeArguments: readonly TypeNode[] | undefined, isTypeOf?: boolean): ImportTypeNode;
   createParenthesizedType(type: TypeNode): ParenthesizedTypeNode;

@@ -1119,6 +1119,7 @@ import {
   TypeFlags,
   TypeFormatFlags,
   TypeId,
+  TypeLambdaNode,
   TypeLiteralNode,
   TypeMapKind,
   TypeMapper,
@@ -5792,7 +5793,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function isTypeConstructorType(type: Type): boolean {
-    return !!type.higherKindedSymbol;
+    return !!type.higherKindedSymbol || !!type.typeLambda;
   }
 
   function isHigherKindedApplicationType(type: Type): boolean {
@@ -7034,6 +7035,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         );
       }
       if (isTypeConstructorType(type)) {
+        if (type.typeLambda) {
+          const typeParameters = type.typeLambda.typeParameters.map(tp => typeParameterToDeclaration(tp, context));
+          const bodyType = type.typeLambda.outerMapper
+            ? instantiateType(getTypeFromTypeNode(context, type.typeLambda.body), type.typeLambda.outerMapper)
+            : getTypeFromTypeNode(context, type.typeLambda.body);
+          const bodyNode = typeToTypeNodeHelper(bodyType, context);
+          return factory.createTypeLambdaNode(typeParameters, bodyNode);
+        }
         return factory.createTypeReferenceNode(symbolToEntityNameNode(type.higherKindedSymbol!), /*typeArguments*/ undefined);
       }
       if (type.universeTypeLevel !== undefined) {
@@ -13791,7 +13800,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const typeNode = isJSDocTypeAlias(declaration) ? declaration.typeExpression : declaration.type;
       // If typeNode is missing, we will error in checkJSDocTypedefTag.
       let type = typeNode ? (isTypeAliasDeclaration(declaration) || isNewtypeDeclaration(declaration)) ?
-        getTypeArgumentFromNodeForKind(typeNode, getKindFromNode(declaration.kindType)) :
+        getTypeArgumentFromNodeForKind(typeNode, declaration.kindType ? getKindFromNode(declaration.kindType) : undefined) :
         getTypeFromTypeNode(typeNode) : errorType;
       if (popTypeResolution()) {
         const typeParameters = getLocalTypeParametersOfClassOrInterfaceOrTypeAlias(symbol);
@@ -17429,7 +17438,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       let symbol = resolveTypeReferenceName(node, SymbolFlags.Type);
       if (symbol.flags & SymbolFlags.Alias) symbol = resolveAlias(symbol);
       const declaredType = tryGetDeclaredTypeOfSymbol(symbol);
-      const candidate = declaredType && declaredType.flags & TypeFlags.TypeParameter && getKindOfType(declaredType).flags === KindFlags.Function ?
+      const candidate = declaredType && getKindOfType(declaredType).flags === KindFlags.Function ?
         declaredType :
         getTypeConstructorType(symbol);
       if (candidate) {
@@ -17468,6 +17477,24 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       if (!kindsAreIdentical(getKindOfType(typeArguments[i]), functionKind.parameters[i])) {
         return checkTypeKind(typeArguments[i], functionKind.parameters[i], node);
       }
+    }
+
+    if (target.typeLambda) {
+      const { typeParameters, body, outerMapper } = target.typeLambda;
+      const localMapper = createTypeMapper(typeParameters, typeArguments);
+      const mapper = combineTypeMappers(outerMapper, localMapper);
+      for (let i = 0; i < typeParameters.length; i++) {
+        const constraint = getConstraintOfTypeParameter(typeParameters[i]);
+        if (constraint) {
+          checkTypeAssignableTo(
+            typeArguments[i],
+            instantiateType(constraint, mapper),
+            isTypeReferenceNode(node) && node.typeArguments ? node.typeArguments[i] : node,
+            Diagnostics.Type_0_does_not_satisfy_the_constraint_1,
+          );
+        }
+      }
+      return instantiateType(getTypeFromTypeNode(body), mapper);
     }
 
     if (target.higherKindedSymbol) {
@@ -17570,22 +17597,24 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return errorType;
       }
       letLinks.isResolvingLetBinding = true;
+      let valType: Type;
       try {
-        return getTypeFromTypeNode((letDeclaration as TypeAliasDeclaration).type);
+        valType = getTypeFromTypeNode((letDeclaration as TypeAliasDeclaration).type);
       }
       finally {
         letLinks.isResolvingLetBinding = false;
       }
+      const kind = getKindOfType(valType);
+      if (kind.flags === KindFlags.Function) {
+        if (node.typeArguments) {
+          return applyHigherKindedType(valType, getTypeArgumentsFromNodesForKinds(node.typeArguments, kind.parameters), node);
+        }
+        error(node, Diagnostics.Type_constructor_0_must_be_applied_to_1_type_argument_s, symbolToString(symbol), kind.parameters.length);
+        return errorType;
+      }
+      return checkNoTypeArguments(node, symbol) ? valType : errorType;
     }
     const type = getDeclaredTypeOfSymbol(symbol);
-    const kind = getKindOfType(type);
-    if (kind.flags === KindFlags.Function) {
-      if (node.typeArguments) {
-        return applyHigherKindedType(type, getTypeArgumentsFromNodesForKinds(node.typeArguments, kind.parameters), node);
-      }
-      error(node, Diagnostics.Type_constructor_0_must_be_applied_to_1_type_argument_s, symbolToString(symbol), kind.parameters.length);
-      return errorType;
-    }
     const typeParameters = getSymbolLinks(symbol).typeParameters;
     if (typeParameters) {
       const numTypeArguments = length(node.typeArguments);
@@ -17625,6 +17654,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         }
       }
       return getTypeAliasInstantiation(symbol, getTypeArgumentsFromNodesWithKinds(node.typeArguments, typeParameters), newAliasSymbol, aliasTypeArguments);
+    }
+    const kind = getKindOfType(type);
+    if (kind.flags === KindFlags.Function) {
+      if (node.typeArguments) {
+        return applyHigherKindedType(type, getTypeArgumentsFromNodesForKinds(node.typeArguments, kind.parameters), node);
+      }
+      error(node, Diagnostics.Type_constructor_0_must_be_applied_to_1_type_argument_s, symbolToString(symbol), kind.parameters.length);
+      return errorType;
     }
     return checkNoTypeArguments(node, symbol) ? type : errorType;
   }
@@ -20547,6 +20584,26 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return links.resolvedType;
   }
 
+  function getTypeFromTypeLambda(node: TypeLambdaNode): Type {
+    const links = getNodeLinks(node);
+    if (!links.resolvedType) {
+      requireTsppFeature(node, "typeComputation");
+      checkTypeParameters(node.typeParameters);
+      const typeParameters = node.typeParameters.map(tp => getDeclaredTypeOfTypeParameter(getSymbolOfDeclaration(tp)));
+      const bodyType = getTypeFromTypeNode(node.body);
+      const returnKind = getKindOfType(bodyType);
+      const type = createType(TypeFlags.TypeParameter);
+      type.typeKind = createFunctionKind(typeParameters.map(getKindOfType), returnKind);
+      type.typeLambda = {
+        typeParameters,
+        body: node.body,
+        outerMapper: undefined,
+      };
+      links.resolvedType = type;
+    }
+    return links.resolvedType;
+  }
+
   function getTypeFromConditionalTypeNode(node: ConditionalTypeNode): Type {
     const links = getNodeLinks(node);
     if (!links.resolvedType) {
@@ -22060,6 +22117,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return getTypeFromTypeNode((node as LetTypeNode).body);
       case SyntaxKind.MatchType:
         return getTypeFromMatchTypeNode(node as MatchTypeNode);
+      case SyntaxKind.TypeLambda:
+        return getTypeFromTypeLambda(node as TypeLambdaNode);
       case SyntaxKind.TemplateLiteralType:
         return getTypeFromTemplateTypeNode(node as TemplateLiteralTypeNode);
       case SyntaxKind.ImportType:
@@ -22370,7 +22429,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (tp.symbol && tp.symbol.declarations && tp.symbol.declarations.length === 1) {
       const container = tp.symbol.declarations[0].parent;
       for (let n = node; n !== container; n = n.parent) {
-        if (!n || n.kind === SyntaxKind.Block || n.kind === SyntaxKind.LetType || n.kind === SyntaxKind.ConditionalType && forEachChild((n as ConditionalTypeNode).extendsType, containsReference)) {
+        if (!n || n.kind === SyntaxKind.Block || n.kind === SyntaxKind.LetType || n.kind === SyntaxKind.TypeLambda || n.kind === SyntaxKind.ConditionalType && forEachChild((n as ConditionalTypeNode).extendsType, containsReference)) {
           return true;
         }
       }
@@ -22611,6 +22670,17 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const typeArguments = instantiateTypes(type.higherKindedTypeArguments!, mapper);
       if (target === type.higherKindedTarget && typeArguments === type.higherKindedTypeArguments) return type;
       return applyHigherKindedType(target, typeArguments, Debug.checkDefined(currentNode || target.symbol?.declarations?.[0]));
+    }
+    if (type.typeLambda) {
+      const combinedMapper = combineTypeMappers(type.typeLambda.outerMapper, mapper);
+      const result = createType(type.flags);
+      result.typeKind = type.typeKind;
+      result.typeLambda = {
+        typeParameters: type.typeLambda.typeParameters,
+        body: type.typeLambda.body,
+        outerMapper: combinedMapper,
+      };
+      return result;
     }
     if (isTypeConstructorType(type)) {
       return type;
@@ -44669,6 +44739,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     forEachChild(node, checkSourceElement);
   }
 
+  function checkTypeLambda(node: TypeLambdaNode) {
+    requireTsppFeature(node, "typeComputation");
+    checkTypeParameters(node.typeParameters);
+    checkSourceElement(node.body);
+  }
+
   function checkInferType(node: InferTypeNode) {
     if (
       !findAncestor(node, n => n.parent && n.parent.kind === SyntaxKind.ConditionalType && (n.parent as ConditionalTypeNode).extendsType === n) &&
@@ -51170,6 +51246,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return checkMatchType(node as MatchTypeNode);
       case SyntaxKind.MatchTypeArm:
         return checkMatchTypeArm(node as MatchTypeArm);
+      case SyntaxKind.TypeLambda:
+        return checkTypeLambda(node as TypeLambdaNode);
       case SyntaxKind.TemplateLiteralType:
         return checkTemplateLiteralType(node as TemplateLiteralTypeNode);
       case SyntaxKind.ImportType:

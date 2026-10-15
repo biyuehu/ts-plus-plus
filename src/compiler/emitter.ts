@@ -408,6 +408,7 @@ import {
   TupleTypeNode,
   TypeAliasDeclaration,
   TypeAssertion,
+  TypeLambdaNode,
   TypeLiteralNode,
   TypeNode,
   TypeOfExpression,
@@ -1668,6 +1669,8 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitLetType(node as LetTypeNode);
         case SyntaxKind.MatchType:
           return emitMatchType(node as MatchTypeNode);
+        case SyntaxKind.TypeLambda:
+          return emitTypeLambda(node as TypeLambdaNode);
         case SyntaxKind.ParenthesizedType:
           return emitParenthesizedType(node as ParenthesizedTypeNode);
         case SyntaxKind.ExpressionWithTypeArguments:
@@ -2563,6 +2566,14 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     emit(node.binding.type);
     writeSpace();
     writeKeyword("in");
+    writeSpace();
+    emit(node.body);
+  }
+
+  function emitTypeLambda(node: TypeLambdaNode) {
+    emitTypeParameters(node, node.typeParameters);
+    writeSpace();
+    writePunctuation("=>");
     writeSpace();
     emit(node.body);
   }
@@ -4799,7 +4810,7 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     emitList(parentNode, typeArguments, ListFormat.TypeArguments, typeArgumentParenthesizerRuleSelector);
   }
 
-  function emitTypeParameters(parentNode: SignatureDeclaration | InterfaceDeclaration | TypeAliasDeclaration | ts.NewtypeDeclaration | ts.DataDeclaration | ClassDeclaration | ClassExpression, typeParameters: NodeArray<TypeParameterDeclaration> | undefined) {
+  function emitTypeParameters(parentNode: SignatureDeclaration | InterfaceDeclaration | TypeAliasDeclaration | ts.NewtypeDeclaration | ts.DataDeclaration | ClassDeclaration | ClassExpression | TypeLambdaNode, typeParameters: NodeArray<TypeParameterDeclaration> | undefined) {
     if (isFunctionLike(parentNode) && parentNode.typeArguments) { // Quick info uses type arguments in place of type parameters on instantiated signatures
       return emitTypeArguments(parentNode, parentNode.typeArguments);
     }

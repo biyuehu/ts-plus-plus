@@ -65,6 +65,7 @@ tspp --init
 | `formalContracts` | 由 Z3 验证的 `requires`、`ensures` 和 `while` 循环不变式 | 无 | 是 | 是 |
 | `standardLibraryPredicates` | 标准库数值谓词 `isEven`、`isOdd`、`isPositive`、`isNonNegative`、`isZero`、`divides`、`between`；`number` 需设置 `numberModel: "mathematical-real"` | `formalContracts` | 是 | 是 |
 | `refinementTypes` | 由 Z3 验证结构类型别名引入点的谓词 | `formalContracts` | 是 | 是 |
+| `typeComputation` | 类型层局部绑定 `let X = T in U` 与匿名类型层 lambda `<T> => Body` | 无 | 是 | 是 |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |
 | `dependentFunctionTypes` | Pi 类型，以及显式的 `Lam`/`Ann` MLTT 项 | `typeUniverses` | 是 | 是 |
 | `dependentFunctionInterop` | Pi 类型与 TypeScript 泛型函数之间的赋值和调用 | `dependentFunctionTypes` | 是 | 是 |
@@ -108,6 +109,31 @@ function sumTo(n: bigint) with {
 当前子集支持 `boolean`、`bigint`、`string`、局部变量、赋值、分支、`switch`、多返回路径、带不变式的循环，以及对能够静态解析到项目函数声明的直接调用检查 `requires`。记录与记录字面量、带唯一字符串 `_tag` 的封闭判别联合、TS++ `data` 构造器和递归代数数据会通过 TypeScript checker 已经计算出的类型与控制流窄化降低为 Verification IR 的积类型/和类型，再编码为 Z3 datatype；验证器不会并行实现另一套 TypeScript 类型窄化。可选字段、索引签名和开放联合目前会明确得到 `unknown`。验证函数内部调用时，调用者前提与当前符号路径事实也会参与证明。只有在函数契约中加入 `numberModel: "mathematical-real";` 后才支持 `number`；它明确表示把 `number` 抽象成数学实数，而不是 JavaScript 的 IEEE-754 数值。
 
 每个证明义务都会得到 `proved`、`failed`、`unknown` 或 `error` 状态，任务结果还会区分取消与超时。不支持的语法以及求解器不可用都会产生 `unknown` 编译错误，绝不会伪装成证明成功。`Program.getVerificationArtifacts()` 会公开实际求解器输入、可重放的 SMT-LIB、状态、解码后的源码级反例、原始模型和源码位置。开发扩展中的 **TS++: Show Verification SMT-LIB** 命令可以在源码旁直接打开这份输入。
+
+## 类型层 lambda
+
+开启 `typeComputation` 后，可以用 `<T> => Body` 语法编写匿名类型层函数：
+
+```typescript
+// 匿名恒等函子：接受一个类型并原样返回。
+type Id = <T> => T;
+type IdNumber = Id<number>; // number
+
+// 双参数 lambda：交换二元组的两个分量。
+type Swap = <A, B> => [B, A];
+type Swapped = Swap<string, number>; // [number, string]
+```
+
+类型 lambda 与高阶类型参数互通。`<T> => Body` 的 kind 为 `Type => Type`，可以传递给任何接受类型构造器的位置：
+
+```typescript
+// 需要同时开启 typeComputation + higherKindedTypes。
+type Apply<F: Type => Type, X> = F<X>;
+
+type Doubled = Apply<<T> => [T, T], boolean>; // [boolean, boolean]
+```
+
+lambda 体可以引用任何在作用域内的类型。类型参数和 lambda 语法本身会像其他所有 TS++ 类型语法一样被擦除，不产生任何 JavaScript 输出。
 
 ## 协议
 

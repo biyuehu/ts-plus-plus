@@ -32,6 +32,11 @@
         "scopeName": "tspp.formal-contracts",
         "path": "./syntaxes/tspp-formal-contracts.tmLanguage.json",
         "injectTo": ["source.ts"]
+      },
+      {
+        "scopeName": "tspp.type-computation",
+        "path": "./syntaxes/tspp-type-computation.tmLanguage.json",
+        "injectTo": ["source.ts"]
       }
     ],
     "commands": [
@@ -62,6 +67,10 @@
       {
         "command": "tspp.openFormalContractsExample",
         "title": "TS++: Open Formal Contracts Example"
+      },
+      {
+        "command": "tspp.openTypeComputationExample",
+        "title": "TS++: Open Type Computation Example"
       },
       {
         "command": "tspp.showExpandedSource",
