@@ -6,6 +6,14 @@
 
 ts-plus-plus is an experimental TypeScript-derived language. Language extensions are opt-in and are selected individually in `tsppconfig.json`.
 
+<!-- markdownlint-disable -->
+
+<div align="center">
+<img width="180px" src="./tspp.svg" />
+</div>
+
+<!-- markdownlint-enable -->
+
 Without `tsppconfig.json`, every TS++ feature is disabled and the compiler behaves like TypeScript; `.tspp` and `.d.tspp` files do not participate in project discovery or module resolution.
 
 ## Contributors
