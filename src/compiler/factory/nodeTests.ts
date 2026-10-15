@@ -223,6 +223,7 @@ import {
   TupleTypeNode,
   TypeAliasDeclaration,
   TypeAssertion,
+  TypeLambdaNode,
   TypeLiteralNode,
   TypeOfExpression,
   TypeOperatorNode,
@@ -547,6 +548,10 @@ export function isMatchTypeNode(node: Node): node is MatchTypeNode {
 
 export function isMatchTypeArm(node: Node): node is MatchTypeArm {
   return node.kind === SyntaxKind.MatchTypeArm;
+}
+
+export function isTypeLambdaNode(node: Node): node is TypeLambdaNode {
+  return node.kind === SyntaxKind.TypeLambda;
 }
 
 export function isParenthesizedTypeNode(node: Node): node is ParenthesizedTypeNode {

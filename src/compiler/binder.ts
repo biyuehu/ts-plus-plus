@@ -3805,6 +3805,11 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
         bindAnonymousDeclaration(node, SymbolFlags.TypeParameter, getDeclarationName(node)!); // TODO: GH#18217
       }
     }
+    else if (node.parent.kind === SyntaxKind.TypeLambda) {
+      const container = node.parent;
+      container.locals ??= createSymbolTable();
+      declareSymbol(container.locals, /*parent*/ undefined, node, SymbolFlags.TypeParameter, SymbolFlags.TypeParameterExcludes);
+    }
     else {
       declareSymbolAndAddToSymbolTable(node, SymbolFlags.TypeParameter, SymbolFlags.TypeParameterExcludes);
     }
@@ -3861,6 +3866,7 @@ export function getContainerFlags(node: Node): ContainerFlags {
     case SyntaxKind.IndexSignature:
     case SyntaxKind.LetType:
     case SyntaxKind.MatchTypeArm:
+    case SyntaxKind.TypeLambda:
       return ContainerFlags.IsContainer | ContainerFlags.HasLocals;
 
     case SyntaxKind.SourceFile:

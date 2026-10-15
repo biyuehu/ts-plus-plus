@@ -692,6 +692,7 @@ export function transformTypeScript(context: TransformationContext): Transformer
       case SyntaxKind.ConditionalType:
       case SyntaxKind.LetType:
       case SyntaxKind.MatchType:
+      case SyntaxKind.TypeLambda:
       case SyntaxKind.ParenthesizedType:
       case SyntaxKind.ThisType:
       case SyntaxKind.TypeOperator:

@@ -453,6 +453,7 @@ import {
   TypeAssertion,
   TypeElement,
   TypeKindNode,
+  TypeLambdaNode,
   TypeLiteralNode,
   TypeNode,
   TypeOfExpression,
@@ -635,6 +636,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateMatchTypeArm,
     createMatchTypeNode,
     updateMatchTypeNode,
+    createTypeLambdaNode,
+    updateTypeLambdaNode,
     createImportTypeNode,
     updateImportTypeNode,
     createParenthesizedType,
@@ -2743,6 +2746,25 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   function updateLetTypeNode(node: LetTypeNode, binding: TypeAliasDeclaration, body: TypeNode) {
     return node.binding !== binding || node.body !== body
       ? update(createLetTypeNode(binding, body), node)
+      : node;
+  }
+
+  // @api
+  function createTypeLambdaNode(typeParameters: readonly TypeParameterDeclaration[], body: TypeNode) {
+    const node = createBaseNode<TypeLambdaNode>(SyntaxKind.TypeLambda);
+    node.typeParameters = createNodeArray(typeParameters);
+    node.body = body;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+
+    node.locals = undefined; // initialized by binder (LocalsContainer)
+    node.nextContainer = undefined; // initialized by binder (LocalsContainer)
+    return node;
+  }
+
+  // @api
+  function updateTypeLambdaNode(node: TypeLambdaNode, typeParameters: readonly TypeParameterDeclaration[], body: TypeNode) {
+    return node.typeParameters !== typeParameters || node.body !== body
+      ? update(createTypeLambdaNode(typeParameters, body), node)
       : node;
   }
 

@@ -931,6 +931,14 @@ const visitEachChildTable: VisitEachChildTable = {
     );
   },
 
+  [SyntaxKind.TypeLambda]: function visitEachChildOfTypeLambdaNode(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateTypeLambdaNode(
+      node,
+      Debug.checkDefined(nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration)),
+      Debug.checkDefined(nodeVisitor(node.body, visitor, isTypeNode)),
+    );
+  },
+
   [SyntaxKind.InferType]: function visitEachChildOfInferTypeNode(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
     return context.factory.updateInferTypeNode(
       node,

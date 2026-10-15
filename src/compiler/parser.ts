@@ -390,6 +390,7 @@ import {
   TypeAliasDeclaration,
   TypeAssertion,
   TypeElement,
+  TypeLambdaNode,
   TypeLiteralNode,
   TypeNode,
   TypeOfExpression,
@@ -734,6 +735,10 @@ const forEachChildTable: ForEachChildTable = {
   },
   [SyntaxKind.LetType]: function forEachChildInLetType<T>(node: LetTypeNode, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNode(cbNode, node.binding) ||
+      visitNode(cbNode, node.body);
+  },
+  [SyntaxKind.TypeLambda]: function forEachChildInTypeLambda<T>(node: TypeLambdaNode, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNodes(cbNode, cbNodes, node.typeParameters) ||
       visitNode(cbNode, node.body);
   },
   [SyntaxKind.InferType]: function forEachChildInInferType<T>(node: InferTypeNode, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
@@ -4734,6 +4739,23 @@ namespace Parser {
     return finishNode(factory.createDependentFunctionTypeNode(parameterName, parameterType, returnType), pos);
   }
 
+  function isStartOfTypeLambda(): boolean {
+    if (token() !== SyntaxKind.LessThanToken) return false;
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    return lookAhead(() => {
+      const typeParameters = parseTypeParameters();
+      return !!typeParameters && token() === SyntaxKind.EqualsGreaterThanToken;
+    });
+  }
+
+  function parseTypeLambda(): TypeLambdaNode {
+    const pos = getNodePos();
+    const typeParameters = Debug.checkDefined(parseTypeParameters());
+    parseExpected(SyntaxKind.EqualsGreaterThanToken);
+    const body = parseType();
+    return finishNode(factory.createTypeLambdaNode(typeParameters, body), pos);
+  }
+
   function parseKeywordAndNoDot(): TypeNode | undefined {
     const node = parseTokenNode<TypeNode>();
     return token() === SyntaxKind.DotToken ? undefined : node;
@@ -5163,6 +5185,9 @@ namespace Parser {
     }
     if (isStartOfDependentFunctionType()) {
       return parseDependentFunctionType();
+    }
+    if (isStartOfTypeLambda()) {
+      return parseTypeLambda();
     }
     if (isStartOfFunctionTypeOrConstructorType()) {
       return parseFunctionOrConstructorType();
