@@ -32,17 +32,13 @@ function getForkContributorsFromGit(): Map<string, number> {
   const commitCounts = new Map<string, number>();
 
   let forkBase = "";
-  try {
-    // 优先尝试寻找与 upstream 的分叉基点
-    forkBase = execSync("git merge-base upstream/release-6.0 HEAD", { encoding: "utf8" }).trim();
-  }
-  catch {
+  for (const candidate of ["upstream/release-6.0", "050880ce"]) {
     try {
-      forkBase = execSync("git merge-base origin/main HEAD", { encoding: "utf8" }).trim();
+      forkBase = execSync(`git merge-base ${candidate} HEAD`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+      if (forkBase) break;
     }
     catch {
-      // 找不到则退化为取全部提交中在 KNOWN_MAP 里的用户
-      forkBase = "";
+      // 尝试下一个稳定的上游基准；不要使用 origin/main，因为在 main 上它通常等于 HEAD。
     }
   }
 
@@ -79,7 +75,7 @@ function getForkContributorsFromGit(): Map<string, number> {
 async function fetchUserContributor(
   login: string,
   commits?: number,
-): Promise<ContributorInfo | null> {
+): Promise<ContributorInfo | undefined> {
   try {
     console.log(`正在获取 GitHub 用户信息: ${login}...`);
     const userRes = await fetch(`https://api.github.com/users/${login}`, {
@@ -128,7 +124,7 @@ async function fetchUserContributor(
   }
   catch (err) {
     console.error(`处理贡献者 ${login} 失败:`, err);
-    return null;
+    return undefined;
   }
 }
 
@@ -222,7 +218,7 @@ ${content}
 async function main() {
   const args = process.argv.slice(2);
   let whitelist: string[] = [];
-  let blacklist = new Set(DEFAULT_BLACKLIST);
+  const blacklist = new Set(DEFAULT_BLACKLIST);
 
   for (const arg of args) {
     if (arg.startsWith("--whitelist=")) {
@@ -238,7 +234,7 @@ async function main() {
   const gitContributors = getForkContributorsFromGit();
 
   // 如果没有显式传 --whitelist，则基于 git 动态提取的贡献者（天然剔除上游贡献者）
-  let targetLogins: Array<{ login: string; commits?: number; }> = [];
+  let targetLogins: { login: string; commits?: number; }[] = [];
 
   if (whitelist.length > 0) {
     targetLogins = whitelist.map(login => ({

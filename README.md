@@ -12,7 +12,7 @@ Without `tsppconfig.json`, every TS++ feature is disabled and the compiler behav
 
 <!-- markdownlint-disable -->
 
-<a href="https://github.com/biyuehu/tsplus/graphs/contributors">
+<a href="https://github.com/biyuehu/ts-plus-plus/graphs/contributors">
   <img src="assets/contributors.svg" alt="Contributors" />
 </a>
 

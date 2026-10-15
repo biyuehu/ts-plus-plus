@@ -90,6 +90,70 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.include(message, "Counterexample: x = 0");
   });
 
+  it("supports standard predicates only in verification contexts", async () => {
+    const { program } = await createProgram(
+      `
+      const runtimeCall = isEven(2n);
+    `,
+      ["formalContracts", "standardLibraryPredicates"],
+    );
+    const messages = program.getSemanticDiagnostics().map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+    assert.include(messages.join("\n"), "Standard predicate 'isEven' can only be used in a formal verification predicate");
+  });
+
+  it("allows an ordinary same-named function outside verification contexts", async () => {
+    const { program } = await createProgram(
+      `
+      function isEven(_value: bigint): boolean { return true; }
+      const runtimeCall = isEven(2n);
+    `,
+      ["formalContracts", "standardLibraryPredicates"],
+    );
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
+  it("verifies intrinsic standard predicates", async () => {
+    const { program } = await createProgram(
+      `
+      type Even = bigint with { predicate: isEven(value); };
+      const good: Even = 2n;
+      const bad: Even = 3n;
+    `,
+      ["formalContracts", "refinementTypes", "standardLibraryPredicates"],
+    );
+    const artifacts = program.getVerificationArtifacts!();
+    assert.lengthOf(artifacts, 2);
+    assert.equal(artifacts[0].status, "proved");
+    assert.equal(artifacts[1].status, "failed");
+  });
+
+  it("checks intrinsic standard predicate arguments", async () => {
+    const { program } = await createProgram(
+      `
+      type BadType = bigint with { predicate: isEven("x"); };
+      type BadArity = bigint with { predicate: divides(value); };
+      type MixedNumericKinds = bigint with { predicate: divides(2n, 4); };
+    `,
+      ["formalContracts", "refinementTypes", "standardLibraryPredicates"],
+    );
+    const messages = program.getSemanticDiagnostics().map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")).join("\n");
+    assert.include(messages, "number | bigint");
+    assert.include(messages, "Expected 2 arguments, but got 1");
+    assert.include(messages, "not assignable to parameter of type 'bigint'");
+  });
+
+  it("does not treat a shadowing function as an intrinsic standard predicate", async () => {
+    const { program } = await createProgram(
+      `
+      function isEven(_value: bigint): boolean { return false; }
+      type Local = bigint with { predicate: isEven(value); };
+      const value: Local = 2n;
+    `,
+      ["formalContracts", "refinementTypes", "standardLibraryPredicates"],
+    );
+    assert.isFalse(program.getVerificationArtifacts!().every(artifact => artifact.status === "proved"));
+  });
+
   it("maps a loop counterexample back to source variable names", async () => {
     const { program } = await createProgram(`
       function countTo(limit: bigint) with { ensures: result === limit; }: bigint {

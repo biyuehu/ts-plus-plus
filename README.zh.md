@@ -12,7 +12,7 @@ ts-plus-plus 是一门派生自 TypeScript 的实验性语言。所有扩展都�
 
 <!-- markdownlint-disable -->
 
-<a href="https://github.com/biyuehu/tsplus/graphs/contributors">
+<a href="https://github.com/biyuehu/ts-plus-plus/graphs/contributors">
   <img src="assets/contributors.svg" alt="Contributors" />
 </a>
 

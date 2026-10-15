@@ -8651,5 +8651,9 @@
   "The 'timeout' property must match '{ type: \"fixed\"; value: number; unit: \"ms\" | \"s\"; } | { type: \"benchmark\"; multiplier: number; }'.": {
     "category": "Error",
     "code": 18085
+  },
+  "Standard predicate '{0}' can only be used in a formal verification predicate.": {
+    "category": "Error",
+    "code": 18086
   }
 }
