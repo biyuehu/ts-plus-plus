@@ -4720,12 +4720,14 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     name: string | Identifier,
     typeParameters: readonly TypeParameterDeclaration[] | undefined,
     type: TypeNode,
+    kindType?: KindNode,
     withClause?: WithClause,
   ) {
     const node = createBaseDeclaration<NewtypeDeclaration>(SyntaxKind.NewtypeDeclaration);
     node.modifiers = asNodeArray(modifiers);
     node.name = asName(name);
     node.typeParameters = asNodeArray(typeParameters);
+    node.kindType = kindType;
     node.type = type;
     node.withClause = withClause;
     node.transformFlags = TransformFlags.ContainsTypeScript;
@@ -4743,14 +4745,17 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     name: Identifier,
     typeParameters: readonly TypeParameterDeclaration[] | undefined,
     type: TypeNode,
+    kindType?: KindNode,
     withClause?: WithClause,
   ) {
+    if (arguments.length < 6) kindType = node.kindType;
     return node.modifiers !== modifiers
         || node.name !== name
         || node.typeParameters !== typeParameters
         || node.type !== type
+        || node.kindType !== kindType
         || node.withClause !== withClause
-      ? update(createNewtypeDeclaration(modifiers, name, typeParameters, type, withClause), node)
+      ? update(createNewtypeDeclaration(modifiers, name, typeParameters, type, kindType, withClause), node)
       : node;
   }
 
@@ -4789,11 +4794,13 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     name: string | Identifier,
     typeParameters: readonly TypeParameterDeclaration[] | undefined,
     variants: readonly DataVariant[],
+    kindType?: KindNode,
   ) {
     const node = createBaseDeclaration<DataDeclaration>(SyntaxKind.DataDeclaration);
     node.modifiers = asNodeArray(modifiers);
     node.name = asName(name);
     node.typeParameters = asNodeArray(typeParameters);
+    node.kindType = kindType;
     node.variants = createNodeArray(variants);
     node.transformFlags = TransformFlags.ContainsTypeScript;
 
@@ -4810,12 +4817,15 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     name: Identifier,
     typeParameters: readonly TypeParameterDeclaration[] | undefined,
     variants: readonly DataVariant[],
+    kindType?: KindNode,
   ) {
+    if (arguments.length < 5) kindType = node.kindType;
     return node.modifiers !== modifiers
         || node.name !== name
         || node.typeParameters !== typeParameters
         || node.variants !== variants
-      ? update(createDataDeclaration(modifiers, name, typeParameters, variants), node)
+        || node.kindType !== kindType
+      ? update(createDataDeclaration(modifiers, name, typeParameters, variants, kindType), node)
       : node;
   }
 
@@ -7404,8 +7414,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
       isClassDeclaration(node) ? updateClassDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
       isInterfaceDeclaration(node) ? updateInterfaceDeclaration(node, modifierArray, node.name, node.typeParameters, node.heritageClauses, node.members) :
       isTypeAliasDeclaration(node) ? updateTypeAliasDeclaration(node, modifierArray, node.name, node.typeParameters, node.type, node.kindType, node.withClause) :
-      isNewtypeDeclaration(node) ? updateNewtypeDeclaration(node, modifierArray, node.name, node.typeParameters, node.type, node.withClause) :
-      isDataDeclaration(node) ? updateDataDeclaration(node, modifierArray, node.name, node.typeParameters, node.variants) :
+      isNewtypeDeclaration(node) ? updateNewtypeDeclaration(node, modifierArray, node.name, node.typeParameters, node.type, node.kindType, node.withClause) :
+      isDataDeclaration(node) ? updateDataDeclaration(node, modifierArray, node.name, node.typeParameters, node.variants, node.kindType) :
       isEnumDeclaration(node) ? updateEnumDeclaration(node, modifierArray, node.name, node.members) :
       isModuleDeclaration(node) ? updateModuleDeclaration(node, modifierArray, node.name, node.body) :
       isImportEqualsDeclaration(node) ? updateImportEqualsDeclaration(node, modifierArray, node.isTypeOnly, node.name, node.moduleReference) :

@@ -3,7 +3,9 @@
   "compilerOptions": {
     "tsppFeatures": [
       "newtypeDeclarations",
-      "dataDeclarations"
+      "dataDeclarations",
+      "higherKindedTypes",
+      "typeUniverses"
     ]
   }
 }

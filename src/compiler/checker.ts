@@ -542,6 +542,7 @@ import {
   isConstructorTypeNode,
   isConstructSignatureDeclaration,
   isConstTypeReference,
+  isDataDeclaration,
   isDeclaration,
   isDeclarationFileName,
   isDeclarationName,
@@ -698,6 +699,7 @@ import {
   isNamespaceExportDeclaration,
   isNamespaceReexportDeclaration,
   isNewExpression,
+  isNewtypeDeclaration,
   isNodeDescendantOf,
   isNonNullAccess,
   isNonNullExpression,
@@ -5782,7 +5784,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     const type = createTypeWithSymbol(TypeFlags.TypeParameter, symbol);
     type.higherKindedSymbol = symbol;
-    const declaration = symbol.declarations?.find(isTypeAliasDeclaration);
+    const declaration = symbol.declarations?.find(d => isTypeAliasDeclaration(d) || isNewtypeDeclaration(d) || isDataDeclaration(d));
     const returnKind = declaration?.kindType ? getKindFromNode(declaration.kindType) : ordinaryTypeKind;
     type.typeKind = createFunctionKind(typeParameters.map(getKindOfType), returnKind);
     typeConstructorTypes.set(symbol, type);
@@ -13788,13 +13790,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const declaration = Debug.checkDefined(symbol.declarations?.find(isTypeAlias), "Type alias symbol with no valid declaration found");
       const typeNode = isJSDocTypeAlias(declaration) ? declaration.typeExpression : declaration.type;
       // If typeNode is missing, we will error in checkJSDocTypedefTag.
-      let type = typeNode ? isTypeAliasDeclaration(declaration) ?
+      let type = typeNode ? (isTypeAliasDeclaration(declaration) || isNewtypeDeclaration(declaration)) ?
         getTypeArgumentFromNodeForKind(typeNode, getKindFromNode(declaration.kindType)) :
         getTypeFromTypeNode(typeNode) : errorType;
       if (popTypeResolution()) {
         const typeParameters = getLocalTypeParametersOfClassOrInterfaceOrTypeAlias(symbol);
         if (declaration.kind === SyntaxKind.NewtypeDeclaration) {
-          type = getNominalNewtypeType(symbol, type, typeParameters);
+          if (getKindOfType(type).flags !== KindFlags.Function) {
+            type = getNominalNewtypeType(symbol, type, typeParameters);
+          }
+          else {
+            type.typeKind = getKindOfType(type);
+          }
         }
         if (typeParameters) {
           // Initialize the instantiation cache for generic type aliases. The declared type corresponds to
@@ -49819,8 +49826,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     // TODO(diagnostics): grammar checks for modifiers, the new node kinds are not part of HasModifiers yet.
     checkTypeNameIsReserved(node.name, Diagnostics.Type_alias_name_cannot_be_0);
     checkExportsOnMergedDeclarations(node);
+    if (node.kindType) checkKindFeatures(node.kindType);
     checkTypeParameters(node.typeParameters);
-    checkSourceElement(node.type);
+    if (node.kindType) {
+      getDeclaredTypeOfSymbol(getSymbolOfDeclaration(node));
+    }
+    else {
+      checkSourceElement(node.type);
+    }
     const underlyingType = getTypeFromTypeNode(node.type);
     if (underlyingType.flags & (TypeFlags.Any | TypeFlags.Unknown | TypeFlags.Never)) {
       error(node.type, Diagnostics.A_newtype_cannot_use_any_unknown_or_never_as_its_underlying_type);
@@ -49829,7 +49842,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     // Resolve the declared type and the constructor type so that circularity errors surface on the declaration.
     // Not registered for the unused identifier check: checkUnusedIdentifiers rejects node kinds it does not know.
     getTypeOfNominalConstructor(getSymbolOfDeclaration(node), node);
-    // TODO(HKT): kind checks as in checkTypeAliasDeclaration.
   }
 
   function checkRefinementClause(node: NewtypeDeclaration | TypeAliasDeclaration): void {
@@ -49870,6 +49882,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     requireTsppFeature(node, "dataDeclarations");
     checkTypeNameIsReserved(node.name, Diagnostics.Type_alias_name_cannot_be_0);
     checkExportsOnMergedDeclarations(node);
+    if (node.kindType) checkKindFeatures(node.kindType);
     checkTypeParameters(node.typeParameters);
     getDeclaredTypeOfSymbol(getSymbolOfDeclaration(node));
     for (const variant of node.variants) {

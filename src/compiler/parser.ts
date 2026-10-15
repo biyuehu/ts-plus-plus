@@ -964,6 +964,7 @@ const forEachChildTable: ForEachChildTable = {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
       visitNode(cbNode, node.name) ||
       visitNodes(cbNode, cbNodes, node.typeParameters) ||
+      visitNode(cbNode, node.kindType) ||
       visitNode(cbNode, node.type) ||
       visitNode(cbNode, node.withClause);
   },
@@ -971,6 +972,7 @@ const forEachChildTable: ForEachChildTable = {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
       visitNode(cbNode, node.name) ||
       visitNodes(cbNode, cbNodes, node.typeParameters) ||
+      visitNode(cbNode, node.kindType) ||
       visitNodes(cbNode, cbNodes, node.variants);
   },
   [SyntaxKind.DataVariant]: function forEachChildInDataVariant<T>(node: DataVariant, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
@@ -8551,11 +8553,13 @@ namespace Parser {
     }
     const name = parseIdentifier();
     const typeParameters = parseTypeParameters();
+    const isTspp = fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp);
+    const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseKind() : undefined;
     parseExpected(SyntaxKind.EqualsToken);
     const type = parseType();
     const withClause = parseWithClause();
     parseSemicolon();
-    const node = factory.createNewtypeDeclaration(modifiers, name, typeParameters, type, withClause);
+    const node = factory.createNewtypeDeclaration(modifiers, name, typeParameters, type, kindType, withClause);
     return withJSDoc(finishNode(node, pos), hasJSDoc);
   }
 
@@ -8574,6 +8578,8 @@ namespace Parser {
     }
     const name = parseIdentifier();
     const typeParameters = parseTypeParameters();
+    const isTspp = fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp);
+    const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseKind() : undefined;
     parseExpected(SyntaxKind.EqualsToken);
     parseOptional(SyntaxKind.BarToken); // a leading `|` is allowed
     const variantsPos = getNodePos();
@@ -8588,7 +8594,7 @@ namespace Parser {
       (variant as Mutable<DataVariant>).modifiers = modifiers;
     }
     parseSemicolon();
-    const node = factory.createDataDeclaration(modifiers, name, typeParameters, variants);
+    const node = factory.createDataDeclaration(modifiers, name, typeParameters, variants, kindType);
     return withJSDoc(finishNode(node, pos), hasJSDoc);
   }
 
