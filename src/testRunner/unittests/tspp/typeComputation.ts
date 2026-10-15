@@ -43,6 +43,17 @@ describe("unittests:: tspp:: type computation: let bindings", () => {
     assert.match(messages[0], /not assignable/);
   });
 
+  it("resolves the value of a shadowing binding in the outer scope", () => {
+    const messages = letMessages(`
+      type X = number;
+      type Y = let X = X in X;
+      const ok: Y = 1;
+      const bad: Y = "x";
+    `);
+    assert.lengthOf(messages, 1, messages.join("\n"));
+    assert.match(messages[0], /not assignable/);
+  });
+
   it("rejects a binding that refers to itself", () => {
     const messages = letMessages(`
       type Y = let X = X in X;
@@ -105,13 +116,13 @@ describe("unittests:: tspp:: type computation: match", () => {
     assert.match(messages[0], /not assignable/);
   });
 
-  it("captures with infer and does not distribute", () => {
+  it("captures structural members with infer and does not distribute", () => {
     const messages = matchMessages(`
-      interface Array<T> {}
-      type Elem<T> = match T { Array<infer U> => U, _ => never };
-      const ok: Elem<number[]> = 1;
-      const bad: Elem<number[]> = "x";
+      type Value<T> = match T { { value: infer U } => U, _ => never };
+      const ok: Value<{ value: 1 }> = 1;
+      const bad: Value<{ value: 1 }> = 2;
     `);
     assert.lengthOf(messages, 1, messages.join("\\n"));
+    assert.match(messages[0], /not assignable/);
   });
 });

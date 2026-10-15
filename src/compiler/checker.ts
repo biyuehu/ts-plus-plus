@@ -1208,6 +1208,7 @@ import {
 } from "./mlttCore.js";
 import {
   getStandardPredicateDefinition,
+  isStandardPredicateSymbol,
   type StandardPredicateName,
 } from "./standardPredicates.js";
 import { hasTsppFeature } from "./tsppFeatures.js";
@@ -4616,7 +4617,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (name.kind === SyntaxKind.Identifier) {
       const message = meaning === namespaceMeaning || nodeIsSynthesized(name) ? Diagnostics.Cannot_find_namespace_0 : getCannotFindNameDiagnosticForName(getFirstIdentifier(name));
       const symbolFromJSPrototype = isInJSFile(name) && !nodeIsSynthesized(name) ? resolveEntityNameFromAssignmentDeclaration(name, meaning) : undefined;
-      symbol = getMergedSymbol(resolveName(location || name, name, meaning, ignoreErrors || symbolFromJSPrototype ? undefined : message, /*isUse*/ true, /*excludeGlobals*/ false));
+      const letBinding = findAncestor(name, n => isTypeAliasDeclaration(n) && n.parent.kind === SyntaxKind.LetType) as TypeAliasDeclaration | undefined;
+      const initialMessage = letBinding ? undefined : ignoreErrors || symbolFromJSPrototype ? undefined : message;
+      symbol = getMergedSymbol(resolveName(location || name, name, meaning, initialMessage, /*isUse*/ true, /*excludeGlobals*/ false));
+      if (letBinding && symbol === getSymbolOfDeclaration(letBinding)) {
+        symbol = getMergedSymbol(resolveName(letBinding.parent.parent, name, meaning, ignoreErrors ? undefined : message, /*isUse*/ true, /*excludeGlobals*/ false));
+      }
       if (!symbol) {
         return getMergedSymbol(symbolFromJSPrototype);
       }
@@ -20523,7 +20529,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         setParent(conditional, node);
         setParent(checkTuple, conditional);
         setParent(extendsTuple, conditional);
-        if (isWildcard) setParent(patternNode, extendsTuple);
+        // Conditional inference inspects the pattern's parent chain, so attach the original pattern to the synthetic extends tuple.
+        setParent(patternNode, extendsTuple);
         setParent(next, conditional);
         next = conditional;
         nextParent = conditional;
@@ -29333,20 +29340,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getResolvedSymbol(node: Identifier): Symbol {
-    {
-      if (hasTsppFeature(compilerOptions, "standardLibraryPredicates")) {
-        const name = idText(node);
-        if (getStandardPredicateDefinition(name) && !globals.get(node.escapedText)) {
-          const predicateLinks = getNodeLinks(node);
-          if (!predicateLinks.resolvedSymbol) {
-            const symbol = createSymbol(SymbolFlags.FunctionScopedVariable, node.escapedText);
-            symbol.links.type = anyType;
-            predicateLinks.resolvedSymbol = symbol;
-          }
-          return predicateLinks.resolvedSymbol;
-        }
-      }
-    }
     const links = getNodeLinks(node);
     if (!links.resolvedSymbol) {
       const parameter = getContractParameter(node);
@@ -29357,15 +29350,33 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         symbol.links.type = implicitType;
         return links.resolvedSymbol = symbol;
       }
-      links.resolvedSymbol = !nodeIsMissing(node) &&
-          resolveName(
-            node,
-            node,
-            SymbolFlags.Value | SymbolFlags.ExportValue,
-            getCannotFindNameDiagnosticForName(node),
-            !isWriteOnlyAccess(node),
-            /*excludeGlobals*/ false,
-          ) || unknownSymbol;
+      const resolved = !nodeIsMissing(node) && resolveName(
+        node,
+        node,
+        SymbolFlags.Value | SymbolFlags.ExportValue,
+        /*nameNotFoundMessage*/ undefined,
+        !isWriteOnlyAccess(node),
+        /*excludeGlobals*/ false,
+      );
+      if (resolved) {
+        links.resolvedSymbol = resolved;
+      }
+      else if (isVerificationPredicateContext(node) && getStandardPredicateDefinition(idText(node))) {
+        const symbol = createSymbol(SymbolFlags.FunctionScopedVariable, node.escapedText);
+        symbol.links.type = anyType;
+        links.resolvedSymbol = symbol;
+      }
+      else {
+        links.resolvedSymbol = !nodeIsMissing(node) &&
+            resolveName(
+              node,
+              node,
+              SymbolFlags.Value | SymbolFlags.ExportValue,
+              getCannotFindNameDiagnosticForName(node),
+              !isWriteOnlyAccess(node),
+              /*excludeGlobals*/ false,
+            ) || unknownSymbol;
+      }
     }
     return links.resolvedSymbol;
   }
@@ -39428,6 +39439,16 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function checkCallExpression(node: CallExpression | NewExpression, checkMode?: CheckMode): Type {
     checkGrammarTypeArguments(node, node.typeArguments);
 
+    if (
+      isCallExpression(node) &&
+      isIdentifier(node.expression) &&
+      getStandardPredicateDefinition(idText(node.expression)) &&
+      isStandardPredicateSymbol(getResolvedSymbol(node.expression)) &&
+      !isVerificationPredicateContext(node)
+    ) {
+      error(node.expression, Diagnostics.Standard_predicate_0_can_only_be_used_in_a_formal_verification_predicate, idText(node.expression));
+    }
+
     const signature = getResolvedSignature(node, /*candidatesOutArray*/ undefined, checkMode);
     if (signature === resolvingSignature) {
       // CheckMode.SkipGenericFunctions is enabled and this is a call to a generic function that
@@ -47361,13 +47382,33 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function getVerificationPredicateName(node: Expression): StandardPredicateName | undefined {
     if (!isCallExpression(node)) return undefined;
     const callee = node.expression;
-    if (!isIdentifier(callee) || globals.get(callee.escapedText)) return undefined;
+    if (!isIdentifier(callee)) return undefined;
+    const symbol = getResolvedSymbol(callee);
+    if (symbol === unknownSymbol || !isStandardPredicateSymbol(symbol)) return undefined;
     return getStandardPredicateDefinition(idText(callee))?.name;
   }
 
   function checkVerificationPredicateCall(node: CallExpression, checkMode?: CheckMode): Type {
     requireTsppFeature(node, "standardLibraryPredicates");
-    for (const argument of node.arguments) checkExpression(argument, checkMode);
+    const definition = getStandardPredicateDefinition(idText(node.expression as Identifier))!;
+    if (node.arguments.length !== definition.arity) {
+      error(node, Diagnostics.Expected_0_arguments_but_got_1, definition.arity, node.arguments.length);
+    }
+    const argumentTypes = node.arguments.map(argument => checkExpression(argument, checkMode));
+    let numericKind: TypeFlags | undefined;
+    for (let i = 0; i < argumentTypes.length; i++) {
+      const type = getBaseConstraintOrType(argumentTypes[i]);
+      const kind = type.flags & TypeFlags.BigIntLike ? TypeFlags.BigIntLike : type.flags & TypeFlags.NumberLike ? TypeFlags.NumberLike : undefined;
+      if (!kind) {
+        error(node.arguments[i], Diagnostics.Argument_of_type_0_is_not_assignable_to_parameter_of_type_1, typeToString(argumentTypes[i]), "number | bigint");
+      }
+      else if (numericKind && kind !== numericKind) {
+        error(node.arguments[i], Diagnostics.Argument_of_type_0_is_not_assignable_to_parameter_of_type_1, typeToString(argumentTypes[i]), numericKind === TypeFlags.BigIntLike ? "bigint" : "number");
+      }
+      else {
+        numericKind = kind;
+      }
+    }
     return booleanType;
   }
 

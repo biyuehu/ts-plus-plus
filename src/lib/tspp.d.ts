@@ -1,11 +1,13 @@
+/// <reference no-default-lib="true"/>
+
 /**
  * Compile-time-only numeric predicates provided by the
  * `standardLibraryPredicates` TS++ feature.
  *
- * These declarations let the checker type-check predicate calls in
- * `requires`, `ensures`, `predicate`, and `invariant` contexts. The
- * verification backend lowers the calls to SMT numeric operations and does
- * not emit JavaScript runtime functions.
+ * These declarations provide completions, signature help, and type
+ * information. They may only be called in `requires`, `ensures`,
+ * `predicate`, and `invariant` clauses, where the verification backend
+ * lowers them to SMT operations. No JavaScript runtime functions are emitted.
  */
 declare function isEven(value: bigint): boolean;
 declare function isEven(value: number): boolean;

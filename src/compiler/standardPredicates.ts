@@ -1,3 +1,9 @@
+import type {
+  Node,
+  SourceFile,
+  Symbol,
+} from "./types.js";
+
 /** @internal */
 export type StandardPredicateName =
   | "isEven"
@@ -44,4 +50,18 @@ const standardPredicateMap = new Map<string, StandardPredicateDefinition>(
 /** @internal */
 export function getStandardPredicateDefinition(name: string): StandardPredicateDefinition | undefined {
   return standardPredicateMap.get(name);
+}
+
+/** @internal */
+export function isStandardPredicateSymbol(symbol: Symbol | undefined): boolean {
+  if (!symbol) return false;
+  // A declarationless symbol is synthesized by the checker for noLib hosts.
+  if (!symbol.declarations?.length) return true;
+  return symbol.declarations.some(declaration => {
+    let root: Node = declaration;
+    while (root.parent) root = root.parent;
+    const sourceFile = root as SourceFile;
+    const fileName = sourceFile.fileName.replace(/\\/g, "/");
+    return fileName === "lib.tspp.d.ts" || fileName.endsWith("/lib.tspp.d.ts");
+  });
 }

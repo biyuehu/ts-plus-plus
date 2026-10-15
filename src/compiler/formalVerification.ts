@@ -29,6 +29,7 @@ import {
 import { forEachChild } from "./parser.js";
 import {
   getStandardPredicateDefinition,
+  isStandardPredicateSymbol,
   type StandardPredicateDefinition,
   standardPredicateDefinitions,
   type StandardPredicateName,
@@ -736,7 +737,7 @@ function getNarrowedVariantName(checker: TypeChecker, type: Type): string | unde
 }
 
 function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean): Term | string {
-  const standardPredicate = getStandardPredicateName(expression);
+  const standardPredicate = getStandardPredicateName(context.checker, expression);
   if (standardPredicate) return translateStandardPredicate(context, state, expression, standardPredicate);
   const refinement = getRefinementTarget(context.checker, expression);
   if (refinement) return verifyRefinementIntroduction(context, state, expression, refinement);
@@ -747,8 +748,10 @@ function translateCallExpression(context: VerificationContext, state: SymbolicSt
   return verifyCallPreconditions(context, state, expression, target, resultUsed);
 }
 
-function getStandardPredicateName(expression: CallExpression): StandardPredicateName | undefined {
+function getStandardPredicateName(checker: TypeChecker, expression: CallExpression): StandardPredicateName | undefined {
   if (!isIdentifier(expression.expression)) return undefined;
+  const symbol = checker.getSymbolAtLocation(expression.expression);
+  if (symbol && !isStandardPredicateSymbol(symbol)) return undefined;
   const name = idText(expression.expression);
   return standardPredicateNames.has(name) ? getStandardPredicateDefinition(name)?.name : undefined;
 }
