@@ -65,7 +65,7 @@ tspp --init
 | `formalContracts` | 由 Z3 验证的 `requires`、`ensures` 和 `while` 循环不变式 | 无 | 是 | 是 |
 | `standardLibraryPredicates` | 标准库数值谓词 `isEven`、`isOdd`、`isPositive`、`isNonNegative`、`isZero`、`divides`、`between`；`number` 需设置 `numberModel: "mathematical-real"` | `formalContracts` | 是 | 是 |
 | `refinementTypes` | 由 Z3 验证结构类型别名引入点的谓词 | `formalContracts` | 是 | 是 |
-| `typeComputation` | 类型层局部绑定 `let X = T in U` 与匿名类型层 lambda `<T> => Body` | 无 | 是 | 是 |
+| `typeComputation` | 类型层局部绑定 `let X = T in U`、模式匹配 `match T { ... }` 与类型 lambda `<T> =>> Body` | 无 | 是 | 是 |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |
 | `dependentFunctionTypes` | Pi 类型，以及显式的 `Lam`/`Ann` MLTT 项 | `typeUniverses` | 是 | 是 |
 | `dependentFunctionInterop` | Pi 类型与 TypeScript 泛型函数之间的赋值和调用 | `dependentFunctionTypes` | 是 | 是 |
@@ -110,30 +110,43 @@ function sumTo(n: bigint) with {
 
 每个证明义务都会得到 `proved`、`failed`、`unknown` 或 `error` 状态，任务结果还会区分取消与超时。不支持的语法以及求解器不可用都会产生 `unknown` 编译错误，绝不会伪装成证明成功。`Program.getVerificationArtifacts()` 会公开实际求解器输入、可重放的 SMT-LIB、状态、解码后的源码级反例、原始模型和源码位置。开发扩展中的 **TS++: Show Verification SMT-LIB** 命令可以在源码旁直接打开这份输入。
 
-## 类型层 lambda
+## 类型层计算：let-in、match 与类型 lambda
 
-开启 `typeComputation` 后，可以用 `<T> => Body` 语法编写匿名类型层函数：
+开启 `typeComputation` 后，可以使用局部类型绑定、模式匹配与匿名类型层函数：
 
 ```typescript
-// 匿名恒等函子：接受一个类型并原样返回。
-type Id = <T> => T;
-type IdNumber = Id<number>; // number
+// 1. 局部 let-in 作用域绑定
+type UserResponse<T> = let Payload = { data: T; timestamp: number } in {
+  response: Payload;
+  backup: Payload;
+};
 
-// 双参数 lambda：交换二元组的两个分量。
-type Swap = <A, B> => [B, A];
+// 2. 类型层 match 模式匹配（支持结构解构 infer、ADT 构造器、基元与字面量）
+type Classify<T> = match T {
+  [infer Head, ...infer Tail]: { head: Head; tail: Tail },
+  Array<infer U>: [U, "array"],
+  1: "one",
+  string: "is-string",
+  _: "other"
+};
+
+// 3. 匿名类型 lambda（<T> =>> Body）
+type Id = <T> =>> T;
+type Swap = <A, B> =>> [B, A];
+
 type Swapped = Swap<string, number>; // [number, string]
 ```
 
-类型 lambda 与高阶类型参数互通。`<T> => Body` 的 kind 为 `Type => Type`，可以传递给任何接受类型构造器的位置：
+类型 lambda 与高阶类型参数互通。`<T> =>> Body` 的 kind 为 `Type => Type`，可以传递给任何接受类型构造器的位置：
 
 ```typescript
 // 需要同时开启 typeComputation + higherKindedTypes。
 type Apply<F: Type => Type, X> = F<X>;
 
-type Doubled = Apply<<T> => [T, T], boolean>; // [boolean, boolean]
+type Doubled = Apply<<T> =>> [T, T], boolean>; // [boolean, boolean]
 ```
 
-lambda 体可以引用任何在作用域内的类型。类型参数和 lambda 语法本身会像其他所有 TS++ 类型语法一样被擦除，不产生任何 JavaScript 输出。
+lambda 体可以引用任何在作用域内的类型。所有类型计算语法本身会像其他所有 TS++ 类型语法一样被擦除，不产生任何 JavaScript 输出。
 
 ## 协议
 

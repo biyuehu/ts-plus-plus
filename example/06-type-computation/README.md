@@ -1,66 +1,80 @@
-# 06 — 类型层计算与类型 Lambda
+# 06 — 类型层计算（Type Computation: let-in / match / lambda）
 
-这个项目演示 TS++ 的 `typeComputation` 特性，聚焦于 **类型层 lambda**（`<T> => Body` 语法）。
+这个项目系统演示 TS++ 的 `typeComputation` 特性三部曲：
+1. **`let ... in` 局部类型绑定**：在类型表达式中引入中间计算，避免重复与深层嵌套；
+2. **`match` 类型级模式匹配**：结构化 `infer` 解构、代数数据类型（ADT）类型构造器匹配、原生基元与字面量直接匹配；
+3. **`=>>` 类型 Lambda**：一等公民匿名类型函数，支持柯里化、高阶类型组合子；
+4. **综合计算**：三大支柱结合的类型层算法管线。
 
 ## 开启的特性
 
-- `typeComputation` — 核心：`let X = T in U` 绑定与类型层 lambda；
-- `higherKindedTypes` — 高阶类型参数；
-- `typeUniverses` — `Type0`、`Type1` 等宇宙，`higherKindedTypes` 的依赖项。
+- `typeComputation` — 核心：`let X = T in U` 局部绑定、`match` 模式匹配与 `=>>` 类型 lambda；
+- `higherKindedTypes` — 高阶类型参数支持；
+- `typeUniverses` — `Type0`、`Type1` 等类型宇宙；
+- `dataDeclarations` — 代数数据类型（ADT）支持。
 
 ## 源码概览
 
-### `src/01-type-lambdas.tspp`
+### 1. `src/01-let-bindings.tspp`
+- **局部缓存**：避免昂贵或复杂的复合类型重复书写；
+- **连续与嵌套绑定**：步进式管线化类型推导；
+- **词法作用域与遮蔽（Shadowing）**：内层绑定安全遮蔽外层绑定；
+- **作用域隔离**：绑定的类型名称严格限制在 `in` 之后，外部无法访问；
+- **泛型约束验证**：正确检测未定义类型与类型错误。
 
-按顺序展示六个主题：
+### 2. `src/02-type-match.tspp`
+- **语法**：`match Scrutinee { Pattern: Result, ... }`，使用冒号 `:` 分隔模式与结果，逗号 `,` 或分号 `;` 分隔分支；
+- **结构化解构**：元组 `[infer Head, ...infer Tail]`、嵌套对象 `{ data: infer D, status: 200 }`、数组 `Array<infer U>` 等任意复杂结构的 `infer` 解构；
+- **ADT 类型构造器匹配**：支持代数数据类型的类型构造器，如 `Maybe<infer U>`、`Either<infer L, infer R>`、`Tree<infer V>`；
+- **原生基元匹配**：无类型参数的 `string`、`number`、`boolean` 直接匹配；
+- **TypeScript 字面量匹配**：`1`、`false`、`"ping"` 等字面量类型的精确匹配；
+- **通配符保底**：`_` 匹配任意剩余类型。
 
-1. **基础** — 恒等、投影与交换 lambda；
-2. **柯里化** — 嵌套 lambda 逐步捕获参数；
-3. **高阶集成** — `Apply<F, X>` 把任意 `Type => Type` 的 lambda 当构造器传递；
-4. **组合子** — `Compose<F, G>` 在类型层组合两个函子；
-5. **具名别名** — 把 lambda 绑定到 `type` 别名后复用；
-6. **反例** — `@ts-expect-error` 保护的错误用法，确保编译器正确拒绝。
+### 3. `src/03-type-lambdas.tspp`
+- **语法**：`<T, ...> =>> Body`，使用 `=>>` 避免与普通函数签名 `=>` 混淆；
+- **一等公民构造器**：直接使用尖括号应用 `Id<number>`、`Swap<string, number>`；
+- **柯里化（Currying）**：嵌套类型 lambda `<A> =>> <B> =>> [A, B]` 分步传参；
+- **高阶类型参数**：与 `higherKindedTypes` 配合，将 lambda 作为类型构造器传给 `Apply<F: Type => Type, X>`；
+- **组合子**：`Compose<F: Type => Type, G: Type => Type> = <X> =>> F<G<X>>`；
+- **类型参数约束**：`<T extends string> =>> { tag: T }` 约束检查。
 
-## 核心语法
+### 4. `src/04-combined-computation.tspp`
+- **综合管线**：定义通用递归变换器 `Transform<Container, F: Type => Type>`；
+- **三大特性协同**：`match` 负责解构模式，`let ... in` 负责保存变换后的中间状态，`=>>` lambda 负责提供策略函数。
 
-### 匿名类型 lambda
+## 核心语法速览
 
+### `let ... in`
 ```typescript
-type Id   = <T> => T;           // kind: Type => Type
-type Swap = <A, B> => [B, A];   // kind: (Type, Type) => Type
+type UserResponse<T> = let Payload = { data: T; timestamp: number } in {
+    response: Payload;
+    backup: Payload;
+};
 ```
 
-类型 lambda 可以直接用尖括号应用：
-
+### `match`
 ```typescript
-type IdNum  = Id<number>;          // number
-type Swapped = Swap<string, number>; // [number, string]
+type Unwrap<T> = match T {
+    Maybe<infer U>: U,
+    [infer A, infer B]: [B, A],
+    1: "one",
+    string: "is-string",
+    _: "other"
+};
 ```
 
-### 与高阶类型参数结合
-
+### `=>>` 类型 Lambda
 ```typescript
+type Id   = <T> =>> T;
+type Swap = <A, B> =>> [B, A];
+
 type Apply<F: Type => Type, X> = F<X>;
-
-type R = Apply<<T> => T[], boolean>; // boolean[]
+type Boxed = Apply<<T> =>> T[], number>; // number[]
 ```
-
-### 嵌套（柯里化）
-
-```typescript
-type CurriedPair = <A> => (<B> => [A, B]);
-
-type Step1 = CurriedPair<string>; // <B> => [string, B]
-type Step2 = Step1<number>;       // [string, number]
-```
-
-## 擦除行为
-
-类型 lambda 完全位于类型层。编译产物（`.js` 或 `.d.ts`）中不会出现任何与 lambda 相关的运行时代码；擦除后与等价的普通 TypeScript 泛型别名完全相同。
 
 ## 在插件开发窗口中运行
 
-在仓库根目录按 `F5`，选择 **TS++: Open Type Computation Example**。
+在仓库根目录按 `F5`，打开命令面板选择 **TS++: Open Type Computation Example**。
 
 ## 命令行验证
 
@@ -70,6 +84,3 @@ type Step2 = Step1<number>;       // [string, number]
 npm run check
 npm run emit-declarations
 ```
-
-声明输出位于 `dist/`。
-

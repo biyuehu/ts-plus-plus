@@ -1,0 +1,57 @@
+// ─────────────────────────────────────────────────────────────────
+// TS++ Type Computation: let ... in 局部类型绑定
+// ─────────────────────────────────────────────────────────────────
+export {};
+
+// 语法：let X = Expression in Body
+// 允许在类型层引入局部名称，避免深层嵌套或重复计算昂贵的复杂类型表达式。
+// 绑定的作用域被严格限制在 in 之后，绝不污染外层作用域。
+
+// 1. 基础用法：避免复杂类型重复书写
+type UserResponse<T> = let Payload = {
+    data: T;
+    timestamp: number;
+    status: "ok";
+} in {
+    response: Payload;
+    backup: Payload;
+};
+
+type Resp = UserResponse<string>;
+const okResp: Resp = {
+    response: { data: "hello", timestamp: 123456, status: "ok" },
+    backup: { data: "hello", timestamp: 123456, status: "ok" },
+};
+
+// 2. 连续与嵌套绑定：管线化类型推导
+type Normalized<T> =
+    let Step1 = { raw: T } in
+    let Step2 = { wrapped: Step1 } in
+    [Step1, Step2];
+
+type Norm = Normalized<number>;
+const normVal: Norm = [
+    { raw: 42 },
+    { wrapped: { raw: 42 } }
+];
+
+// 3. 词法作用域与遮蔽（Shadowing）
+// 内层绑定可以合法遮蔽外层同名类型，且在解析绑定右侧时解析自外层环境。
+type Outer = number;
+type ShadowDemo =
+    let Outer = string in
+    let Outer = boolean in
+    Outer; // 解析为最内层的 boolean
+
+const boolVal: ShadowDemo = true;
+
+// 4. 局部绑定不会泄漏到外部
+// 尝试在作用域外访问绑定名称会触发编译器错误
+type Scoped = let Internal = number in [Internal, Internal];
+// @ts-expect-error Internal 是 let 内部名称，外部无法访问
+type Leaked = Internal;
+
+// 5. 与泛型参数协同：未绑定的变量会正确报错
+// 正确绑定泛型参数：
+type SafeIdentity<T> = let Cached = T in Cached;
+const safeNum: SafeIdentity<number> = 123;

@@ -1,6 +1,7 @@
 import type {
   DataDeclaration,
   NewtypeDeclaration,
+  TypeLambdaNode,
 } from "./_namespaces/ts.js";
 import {
   AccessorDeclaration,
@@ -17,6 +18,7 @@ import {
   emptyArray,
   EnumMember,
   ExportAssignment,
+  factory,
   find,
   first,
   firstDefined,
@@ -108,6 +110,7 @@ import {
   TransientSymbol,
   Type,
   TypeChecker,
+  TypeFlags,
   TypeFormatFlags,
   TypeParameter,
   typeToDisplayParts,
@@ -631,6 +634,27 @@ function getSymbolDisplayPartsDocumentationAndSymbolKindWorker(
           displayParts.push(spacePart());
           addFullSymbolName(declaration.symbol);
           writeTypeParametersOfSymbol(declaration.symbol, sourceFile);
+        }
+        else if (declaration.kind === SyntaxKind.TypeLambda) {
+          const typeLambda = declaration as TypeLambdaNode;
+          addInPrefix();
+          const typeParameterParts = mapToDisplayParts(writer => {
+            const params = factory.createNodeArray(typeLambda.typeParameters.map(tp => {
+              const tpSymbol = typeChecker.getSymbolAtLocation(tp.name);
+              if (tpSymbol) {
+                const tpType = typeChecker.getDeclaredTypeOfSymbol(tpSymbol);
+                if (tpType && tpType.flags & TypeFlags.TypeParameter) {
+                  return typeChecker.typeParameterToDeclaration(tpType as TypeParameter, enclosingDeclaration, symbolDisplayNodeBuilderFlags) || tp;
+                }
+              }
+              return tp;
+            }));
+            getPrinter().writeList(ListFormat.TypeParameters, params, getSourceFileOfNode(getParseTreeNode(sourceFile)), writer);
+          });
+          addRange(displayParts, typeParameterParts);
+          displayParts.push(spacePart());
+          displayParts.push(punctuationPart(SyntaxKind.EqualsGreaterThanToken));
+          displayParts.push(punctuationPart(SyntaxKind.GreaterThanToken));
         }
       }
     }

@@ -1,12 +1,32 @@
 {
   "name": "TS++ Type Computation",
   "scopeName": "tspp.type-computation",
-  "injectionSelector": "L:meta.type.declaration.ts -comment -string",
+  "injectionSelector": "L:meta.type -comment -string, L:meta.type.declaration.ts -comment -string, L:meta.type.annotation.ts -comment -string",
   "patterns": [
     {
-      "comment": "Type-level lambda: <T, U> => Body — highlight the => as an arrow operator",
+      "comment": "Type-level lambda arrow: =>>",
       "name": "storage.type.function.arrow.ts",
-      "match": "(?<=^|[,;({\\[\\s])=>(?=[^=])"
+      "match": "=>>"
+    },
+    {
+      "comment": "Type-level pattern matching: match",
+      "name": "keyword.control.flow.ts",
+      "match": "\\bmatch\\b"
+    },
+    {
+      "comment": "Type-level let binding: let",
+      "name": "keyword.control.flow.ts",
+      "match": "\\blet\\b"
+    },
+    {
+      "comment": "Type-level let binding: in",
+      "name": "keyword.control.flow.ts",
+      "match": "\\bin\\b"
+    },
+    {
+      "comment": "Wildcard pattern: _",
+      "name": "constant.language.wildcard.ts",
+      "match": "(?<=^|[,;{(\\[\\s])_(?=[,;:)}\\]\\s]|$)"
     }
   ]
 }
