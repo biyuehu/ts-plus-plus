@@ -1,0 +1,11 @@
+pre-commit:
+  parallel: false
+  commands:
+    dprint:
+      run: npx dprint fmt
+      stage_fixed: true
+    lint:
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
+      run: npx eslint --cache --cache-location ./.eslintcache --report-unused-disable-directives --max-warnings 0 {staged_files}
+    knip:
+      run: npm run knip
