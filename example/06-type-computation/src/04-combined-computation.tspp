@@ -42,12 +42,11 @@ type Transform<Container, F: Type => Type> = match Container {
 // 2. 定义可复用的类型 Lambda
 type WrapInArray = <T> =>> T[];
 type PairWithSelf = <T> =>> [T, T];
-type ToResponse = <T> =>> { success: true; data: T };
 
 // 3. 应用综合计算
 type T1 = Transform<Maybe<number>, WrapInArray>;       // Maybe<number[]>
 type T2 = Transform<[string, boolean], PairWithSelf>;   // [[string, string], [boolean, boolean]]
-type T3 = Transform<Result<string, Error>, ToResponse>; // Result<{ success: true; data: string }, Error>
+type T3 = Transform<Result<string, Error>, <T> =>> { success: false; data: T }>; // Result<{ success: true; data: string }, Error>
 type T4 = Transform<string, WrapInArray>;               // string[]
 
 // 4. 验证类型计算结果
