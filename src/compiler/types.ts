@@ -227,7 +227,8 @@ export const enum SyntaxKind {
   NewtypeKeyword,
   DataKeyword,
   DeferKeyword,
-  MacroKeyword, // LastKeyword and LastToken and LastContextualKeyword
+  MacroKeyword,
+  MatchKeyword, // LastKeyword and LastToken and LastContextualKeyword
 
   // Parse tree nodes
 
@@ -484,7 +485,7 @@ export const enum SyntaxKind {
   FirstReservedWord = BreakKeyword,
   LastReservedWord = WithKeyword,
   FirstKeyword = BreakKeyword,
-  LastKeyword = MacroKeyword,
+  LastKeyword = MatchKeyword,
   FirstFutureReservedWord = ImplementsKeyword,
   LastFutureReservedWord = YieldKeyword,
   FirstTypeNode = TypePredicate,
@@ -648,6 +649,7 @@ export type KeywordSyntaxKind =
   | SyntaxKind.LetKeyword
   | SyntaxKind.ModuleKeyword
   | SyntaxKind.MacroKeyword
+  | SyntaxKind.MatchKeyword
   | SyntaxKind.NamespaceKeyword
   | SyntaxKind.NeverKeyword
   | SyntaxKind.NewKeyword

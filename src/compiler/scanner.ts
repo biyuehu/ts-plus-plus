@@ -220,6 +220,7 @@ export const textToKeywordObj: MapLike<KeywordSyntaxKind> = {
   newtype: SyntaxKind.NewtypeKeyword,
   data: SyntaxKind.DataKeyword,
   macro: SyntaxKind.MacroKeyword,
+  match: SyntaxKind.MatchKeyword,
 };
 
 const textToKeyword = new Map(Object.entries(textToKeywordObj));
