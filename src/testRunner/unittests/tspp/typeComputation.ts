@@ -175,6 +175,51 @@ describe("unittests:: tspp:: type computation: match", () => {
     assert.lengthOf(messages, 1, messages.join("\n"));
     assert.match(messages[0], /not assignable/);
   });
+
+  it("provides hover for scrutinee and match arm pattern types without crashing language service", () => {
+    const source = `
+      interface Array<T> {}
+      type UnpackStructural<T> = match T {
+        [infer Head, ...infer Tail]: { head: Head; tail: Tail },
+        Array<infer U>: [U, "array"],
+        _: never
+      };
+    `;
+    const host = new fakes.CompilerHost(vfs.createFromFileSystem(
+      Harness.IO,
+      /*ignoreCase*/ true,
+      { documents: [new documents.TextDocument("/file.tspp", source)], cwd: "/" },
+    ));
+    const lsHost: ts.LanguageServiceHost = {
+      ...host,
+      getCompilationSettings: () => ({ noLib: true, strict: true, tsppFeatures: ["typeComputation"] }),
+      getScriptFileNames: () => ["/file.tspp"],
+      getScriptVersion: () => "1",
+      getScriptSnapshot: fileName => fileName === "/file.tspp" ? ts.ScriptSnapshot.fromString(source) : undefined,
+      getCurrentDirectory: () => "/",
+      getDefaultLibFileName: () => "/lib.d.ts",
+      readFile: fileName => host.readFile(fileName),
+      fileExists: fileName => host.fileExists(fileName),
+    };
+    const ls = ts.createLanguageService(lsHost);
+
+    const getHover = (search: string) => {
+      const pos = source.indexOf(search);
+      assert.isAbove(pos, -1, `Could not find substring: ${search}`);
+      const info = ls.getQuickInfoAtPosition("/file.tspp", pos);
+      return info ? ts.displayPartsToString(info.displayParts) : undefined;
+    };
+
+    assert.equal(getHover("T {"), "(type parameter) T in type UnpackStructural<T>");
+    assert.equal(getHover("Head,"), "(type parameter) Head");
+    assert.equal(getHover("Tail]:"), "(type parameter) Tail");
+    assert.equal(getHover("Head;"), "(type parameter) Head");
+    assert.equal(getHover("Tail }"), "(type parameter) Tail");
+    assert.equal(getHover("Array<"), "interface Array<T>");
+    assert.equal(getHover("U>:"), "(type parameter) U");
+    assert.equal(getHover("U,"), "(type parameter) U");
+    assert.equal(getHover("never"), "never");
+  });
 });
 
 describe("unittests:: tspp:: type computation: type lambdas", () => {

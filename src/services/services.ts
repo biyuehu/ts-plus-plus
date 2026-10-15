@@ -2446,8 +2446,8 @@ export function createLanguageService(
       case SyntaxKind.MetaProperty:
         return isImportMeta(node);
       default:
-        // Keyword types on the right of a `newtype` (`number`, `string`, ...) have no symbol, so show their type directly.
-        return isPartOfTypeNode(node) && !!findAncestor(node, n => n.kind === SyntaxKind.NewtypeDeclaration);
+        // Keyword types on the right of a `newtype` (`number`, `string`, ...) or in `match` have no symbol, so show their type directly.
+        return isPartOfTypeNode(node) && !!findAncestor(node, n => n.kind === SyntaxKind.NewtypeDeclaration || n.kind === SyntaxKind.MatchType || n.kind === SyntaxKind.MatchTypeArm);
     }
   }
 

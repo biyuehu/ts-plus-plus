@@ -4647,7 +4647,7 @@ namespace Parser {
   }
 
   function isStartOfMatchType(): boolean {
-    if (token() !== SyntaxKind.Identifier || scanner.getTokenValue() !== "match") return false;
+    if (token() !== SyntaxKind.MatchKeyword) return false;
     if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     return lookAhead(() => {
       nextToken();
@@ -4659,7 +4659,7 @@ namespace Parser {
 
   function parseMatchType(): MatchTypeNode {
     const pos = getNodePos();
-    nextToken(); // `match`
+    parseExpected(SyntaxKind.MatchKeyword);
     const scrutinee = parseUnionTypeOrHigher();
     parseExpected(SyntaxKind.OpenBraceToken);
     const armsPos = getNodePos();
