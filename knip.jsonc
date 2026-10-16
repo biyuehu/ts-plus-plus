@@ -17,11 +17,13 @@
 
     // The rest of the entry files, mostly to track used dependencies:
     "scripts/eslint/{rules,tests}/*.cjs",
-    "scripts/*.{cjs,mjs}"
+    "scripts/*.{cjs,mjs}",
+    "vscode-extension/extension.js"
   ],
   "project": [
     "src/**",
     "scripts/**",
+    "vscode-extension/**",
     "!src/lib/**/*.d.ts"
   ],
   "ignore": [

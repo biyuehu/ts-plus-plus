@@ -33,6 +33,7 @@ export default tseslint.config(
       "internal/**",
       "coverage/**",
       "example/**/dist/**",
+      "packages/tspp-language-server/**",
     ],
   },
   eslint.configs.recommended,
