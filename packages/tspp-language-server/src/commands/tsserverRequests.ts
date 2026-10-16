@@ -17,7 +17,7 @@ interface RequestArgs {
 }
 
 export class TSServerRequestCommand implements Command {
-    public static readonly ID = 'typescript.tsserverRequest';
+    public static readonly ID = 'tspp.tsserverRequest';
     public readonly id = TSServerRequestCommand.ID;
 
     public constructor(

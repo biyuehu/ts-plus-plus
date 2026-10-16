@@ -1214,7 +1214,10 @@ import {
   isStandardPredicateSymbol,
   type StandardPredicateName,
 } from "./standardPredicates.js";
-import { hasTsppFeature } from "./tsppFeatures.js";
+import {
+  hasTsppFeature,
+  isTsppProject,
+} from "./tsppFeatures.js";
 
 const ambientModuleSymbolRegex = /^".+"$/;
 const anon = "(anonymous)" as __String & string;
@@ -5766,8 +5769,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function getUniverseLevelFromTypeNode(node: TypeNode): string | undefined {
     if (!isTypeReferenceNode(node) || node.typeArguments || !isIdentifier(node.typeName)) return undefined;
-    const sourceFileName = getSourceFileOfNode(node).fileName;
-    if (!fileExtensionIs(sourceFileName, Extension.Tspp) && !fileExtensionIs(sourceFileName, Extension.Dtspp)) return undefined;
+    const sourceFile = getSourceFileOfNode(node);
+    if (sourceFile) {
+      const sourceFileName = sourceFile.fileName;
+      if (!fileExtensionIs(sourceFileName, Extension.Tspp) && !fileExtensionIs(sourceFileName, Extension.Dtspp)) return undefined;
+    }
+    else if (!hasTsppFeature(compilerOptions, "typeUniverses")) {
+      return undefined;
+    }
     const level = /^Type(0|[1-9]\d*)$/.exec(idText(node.typeName))?.[1];
     return level !== undefined && requireTsppFeature(node, "typeUniverses") ? level : undefined;
   }
@@ -44522,8 +44531,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
     }
     const typeParameters = node.typeArguments && getTypeParametersForTypeReferenceOrImport(node);
-    const sourceFileName = getSourceFileOfNode(node).fileName;
-    const checkOrdinaryKinds = fileExtensionIs(sourceFileName, Extension.Tspp) || fileExtensionIs(sourceFileName, Extension.Dtspp);
+    const sourceFile = getSourceFileOfNode(node);
+    const checkOrdinaryKinds = sourceFile ? fileExtensionIs(sourceFile.fileName, Extension.Tspp) || fileExtensionIs(sourceFile.fileName, Extension.Dtspp) : isTsppProject(compilerOptions);
     forEach(node.typeArguments, (typeArgument, index) => {
       if (typeParameters?.[index] && (checkOrdinaryKinds || !isOrdinaryTypeKind(getKindOfType(typeParameters[index])))) {
         getTypeArgumentFromNode(typeArgument, typeParameters[index]);
@@ -44807,7 +44816,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function isInferTypeInMlttTypeMatchPattern(node: InferTypeNode): boolean {
-    const inferSourceFileName = getSourceFileOfNode(node).fileName;
+    const sourceFile = getSourceFileOfNode(node);
+    if (!sourceFile) return false;
+    const inferSourceFileName = sourceFile.fileName;
     if (
       !hasTsppFeature(compilerOptions, "typeMatching") ||
       !fileExtensionIs(inferSourceFileName, Extension.Tspp) && !fileExtensionIs(inferSourceFileName, Extension.Dtspp)
@@ -48848,8 +48859,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     // TS 1.0 spec (April 2014): 3.6.1
     // The predefined type keywords are reserved and cannot be used as names of user defined types.
     const typeName = name.escapedText as string;
-    const sourceFileName = getSourceFileOfNode(name).fileName;
-    const isTspp = fileExtensionIs(sourceFileName, Extension.Tspp) || fileExtensionIs(sourceFileName, Extension.Dtspp);
+    const sourceFile = getSourceFileOfNode(name);
+    const isTspp = sourceFile ? fileExtensionIs(sourceFile.fileName, Extension.Tspp) || fileExtensionIs(sourceFile.fileName, Extension.Dtspp) : isTsppProject(compilerOptions);
     if (
       isTspp &&
       (typeName === "Type" && hasTsppFeature(compilerOptions, "higherKindedTypes") ||
