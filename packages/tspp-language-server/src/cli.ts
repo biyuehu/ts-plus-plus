@@ -16,6 +16,7 @@ const { version } = JSON.parse(readFileSync(new URL('../package.json', import.me
 const program = new Command('tspp-language-server')
     .version(version)
     .requiredOption('--stdio', 'use stdio')
+    .option('--clientProcessId <clientProcessId>', 'process id of the language client')
     .option<number>('--log-level <logLevel>', 'A number indicating the log level (4 = log, 3 = info, 2 = warn, 1 = error). Defaults to `2`.', value => parseInt(value, 10), 2)
     .parse(process.argv);
 
