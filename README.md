@@ -4,17 +4,17 @@
 
 > The design proposal in [#](https://github.com/biyuehu/ts-plus-plus/issues/2) is for demonstration only. It is not a plan, not a TODO, and not a commitment. Treat it as a preview of a possible direction rather than a roadmap.
 
-ts-plus-plus is an experimental TypeScript-derived language. Language extensions are opt-in and are selected individually in `tsppconfig.json`.
+ts-plus-plus is an experimental TypeScript-derived language. It supports many powerful type features, extending the capabilities of TypeScript's type system, while also designing modern language features at the value level.
 
 <!-- markdownlint-disable -->
 
 <div align="center">
-<img width="180px" src="./tspp.svg" />
+<img width="180px" src="./vscode-extension/tspp.svg" />
 </div>
 
 <!-- markdownlint-enable -->
 
-Without `tsppconfig.json`, every TS++ feature is disabled and the compiler behaves like TypeScript; `.tspp` and `.d.tspp` files do not participate in project discovery or module resolution.
+Language extensions are opt-in and are selected individually in `tsppconfig.json`. Without `tsppconfig.json`, every TS++ feature is disabled and the compiler behaves like TypeScript; `.tspp` and `.d.tspp` files do not participate in project discovery or module resolution.
 
 ## Contributors
 

@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────
 // TS++ Type Computation: 类型层 Lambda（Type Lambdas）
 // ─────────────────────────────────────────────────────────────────
-export {};
+export { };
 
 // 语法：<T, ...> =>> Body
 // 提供了第一等（first-class）匿名类型构造器语法，使用 `=>>` 避免与普通函数签名 `=>` 混淆。
@@ -38,10 +38,10 @@ const curriedVal: StringAndNumber = ["left", 123];
 type Apply<F: Type => Type, X> = F<X>;
 
 // 传入匿名类型 lambda：构造单元素元组
-type AppliedTuple = Apply<<T> =>> [T], boolean>; // [boolean]
+type AppliedTuple = Apply< <T> =>> [T], boolean>; // [boolean]
 
 // 传入类型 lambda：构造数组
-type AppliedArray = Apply<<T> =>> T[], number>;   // number[]
+type AppliedArray = Apply< <T> =>> T[], number>;   // number[]
 
 const appTuple: AppliedTuple = [true];
 const appArr: AppliedArray = [1, 2, 3];

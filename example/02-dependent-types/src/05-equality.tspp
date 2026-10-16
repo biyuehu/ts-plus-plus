@@ -91,13 +91,13 @@ export type ClosedNatElimComputation: Type0 = Eq<
 
 export type PathInduction: Type1 =
   (Motive:
-    (left: Nat) ->
-    (right: Nat) ->
-    (proof: Eq<Nat, left, right>) ->
-    Type0
+  (left: Nat) ->
+  (right: Nat) ->
+  (proof: Eq<Nat, left, right>) ->
+  Type0
   ) ->
   (reflexivityCase:
-    (value: Nat) -> Motive<value, value, Refl<Nat, value>>
+  (value: Nat) -> Motive<value, value, Refl<Nat, value>>
   ) ->
   (left: Nat) ->
   (right: Nat) ->
@@ -107,13 +107,13 @@ export type PathInduction: Type1 =
 // proof 是 Refl 时，J 按定义计算回 reflexivityCase。
 export type PathInductionComputation: Type1 =
   (Motive:
-    (left: Nat) ->
-    (right: Nat) ->
-    (proof: Eq<Nat, left, right>) ->
-    Type0
+  (left: Nat) ->
+  (right: Nat) ->
+  (proof: Eq<Nat, left, right>) ->
+  Type0
   ) ->
   (reflexivityCase:
-    (value: Nat) -> Motive<value, value, Refl<Nat, value>>
+  (value: Nat) -> Motive<value, value, Refl<Nat, value>>
   ) ->
   (value: Nat) ->
   Eq<
