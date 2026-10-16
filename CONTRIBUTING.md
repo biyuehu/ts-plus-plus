@@ -22,7 +22,11 @@ cd ts-plus-plus
 npm ci
 ```
 
-Git hooks will be automatically configured via `lefthook` during `prepare`.
+Git hooks will be automatically configured via `lefthook` during `prepare`. **And you need setup scripts**:
+
+```sh
+npm run setup-hooks
+```
 
 ## Development Workflow
 
@@ -87,4 +91,3 @@ You can also preview or regenerate the contributor wall locally:
 ```sh
 npm run contributors
 ```
-
