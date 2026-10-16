@@ -59,6 +59,7 @@ import {
   isInJSDoc,
   isJsxOpeningLikeElement,
   isLet,
+  isMatchTypeNode,
   isModuleWithStringLiteralName,
   isNameOfFunctionDeclaration,
   isNewExpressionTarget,
@@ -557,18 +558,27 @@ function getSymbolDisplayPartsDocumentationAndSymbolKindWorker(
       });
     }
     else {
-      addRange(
-        displayParts,
-        typeToDisplayParts(
-          typeChecker,
-          location.parent && isConstTypeReference(location.parent) ? typeChecker.getTypeAtLocation(location.parent) : getDisplayedAliasedType(typeChecker, symbol),
-          enclosingDeclaration,
-          TypeFormatFlags.InTypeAlias,
-          maximumLength,
-          verbosityLevel,
-          typeWriterOut,
-        ),
-      );
+      const matchTypeDecl = !nominalDeclaration && symbol.declarations?.find(isTypeAliasDeclaration);
+      if (matchTypeDecl && isMatchTypeNode(matchTypeDecl.type)) {
+        const matchParts = mapToDisplayParts(writer => {
+          getPrinter().writeNode(EmitHint.Unspecified, matchTypeDecl.type, getSourceFileOfNode(getParseTreeNode(matchTypeDecl.type)) || sourceFile, writer);
+        });
+        addRange(displayParts, matchParts);
+      }
+      else {
+        addRange(
+          displayParts,
+          typeToDisplayParts(
+            typeChecker,
+            location.parent && isConstTypeReference(location.parent) ? typeChecker.getTypeAtLocation(location.parent) : getDisplayedAliasedType(typeChecker, symbol),
+            enclosingDeclaration,
+            TypeFormatFlags.InTypeAlias,
+            maximumLength,
+            verbosityLevel,
+            typeWriterOut,
+          ),
+        );
+      }
     }
   }
   if (symbolFlags & SymbolFlags.Enum) {
