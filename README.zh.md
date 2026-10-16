@@ -4,17 +4,17 @@
 
 > [#](https://github.com/biyuehu/ts-plus-plus/issues/2) 中的设计提案仅用于演示，并非计划，也不是 TODO，更不构成承诺。可以把它看作一种可能方向的预览，而非路线图。
 
-ts-plus-plus 是一门派生自 TypeScript 的实验性语言。所有扩展都需要在 `tsppconfig.json` 中逐项手工开启。
+ts-plus-plus 是一门派生自 TypeScript 的实验性语言。它支持了许多强大的类型特性，扩展了 TypeScript 的类型系统能力边界，同时也在值层设计了现代语言特性。
 
 <!-- markdownlint-disable -->
 
 <div align="center">
-<img width="180px" src="./tspp.svg" />
+<img width="180px" src="./vscode-extension/tspp.svg" />
 </div>
 
 <!-- markdownlint-enable -->
 
-没有 `tsppconfig.json` 时，全部 TS++ 特性关闭，编译器行为与 TypeScript 一致；`.tspp` 和 `.d.tspp` 文件也不会参与项目发现或模块解析。
+所有扩展都需要在 `tsppconfig.json` 中逐项手工开启。没有 `tsppconfig.json` 时，全部 TS++ 特性关闭，编译器行为与 TypeScript 一致；`.tspp` 和 `.d.tspp` 文件也不会参与项目发现或模块解析。
 
 ## 贡献者
 

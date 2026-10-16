@@ -6,7 +6,7 @@
 // 2. match 模式匹配解构输入
 // 3. =>> 类型 Lambda 作为一等公民变换函数
 
-export {};
+export { };
 
 data Maybe<T> = Nothing | Just(value: T);
 data Result<T, E> = Ok(value: T) | Err(error: E);
@@ -16,24 +16,24 @@ data Result<T, E> = Ok(value: T) | Err(error: E);
 type Transform<Container, F: Type => Type> = match Container {
     // 匹配 Maybe ADT 构造器并解构
     Maybe<infer U>:
-        let Transformed = F<U> in
-        Maybe<Transformed>,
+    let Transformed = F<U> in
+    Maybe<Transformed>,
 
     // 匹配 Result ADT 构造器并解构成功值
     Result<infer T, infer E>:
-        let NextT = F<T> in
-        Result<NextT, E>,
+    let NextT = F<T> in
+    Result<NextT, E>,
 
     // 匹配数组结构
     Array<infer U>:
-        let Elem = F<U> in
-        Array<Elem>,
+    let Elem = F<U> in
+    Array<Elem>,
 
     // 匹配二元元组
     [infer A, infer B]:
-        let NextA = F<A> in
-        let NextB = F<B> in
-        [NextA, NextB],
+    let NextA = F<A> in
+    let NextB = F<B> in
+    [NextA, NextB],
 
     // 匹配字面量与基元（直接应用变换）
     infer Other: F<Other>
@@ -41,12 +41,12 @@ type Transform<Container, F: Type => Type> = match Container {
 
 // 2. 定义可复用的类型 Lambda
 type WrapInArray = <T> =>> T[];
-type PairWithSelf = <T> =>> [T, T];
+type PairWithSelf = <T> =>>[T, T];
 
 // 3. 应用综合计算
 type T1 = Transform<Maybe<number>, WrapInArray>;       // Maybe<number[]>
 type T2 = Transform<[string, boolean], PairWithSelf>;   // [[string, string], [boolean, boolean]]
-type T3 = Transform<Result<string, Error>, <T> =>> { success: false; data: T }>; // Result<{ success: true; data: string }, Error>
+type T3 = Transform<Result<string, Error>, <T> => > { success: false; data: T }>; // Result<{ success: true; data: string }, Error>
 type T4 = Transform<string, WrapInArray>;               // string[]
 
 // 4. 验证类型计算结果

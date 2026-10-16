@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────
 // TS++ Type Computation: let ... in 局部类型绑定
 // ─────────────────────────────────────────────────────────────────
-export {};
+export { };
 
 // 语法：let X = Expression in Body
 // 允许在类型层引入局部名称，避免深层嵌套或重复计算昂贵的复杂类型表达式。
@@ -16,6 +16,12 @@ type UserResponse<T> = let Payload = {
     response: Payload;
     backup: Payload;
 };
+/*
+} in let x = [Payload,Payload] in {
+  response: Payload;
+  backup: x;
+};
+*/
 
 type Resp = UserResponse<string>;
 const okResp: Resp = {
@@ -47,7 +53,7 @@ const boolVal: ShadowDemo = true;
 
 // 4. 局部绑定不会泄漏到外部
 // 尝试在作用域外访问绑定名称会触发编译器错误
-type Scoped = let Internal = number in [Internal, Internal];
+type Scoped = let Internal = number in[Internal, Internal];
 // @ts-expect-error Internal 是 let 内部名称，外部无法访问
 type Leaked = Internal;
 
