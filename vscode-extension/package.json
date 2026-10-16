@@ -9,34 +9,47 @@
     "vscode": "^1.85.0"
   },
   "categories": ["Programming Languages"],
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": ["onLanguage:tspp", "onStartupFinished"],
   "main": "./extension.js",
   "contributes": {
+    "languages": [
+      {
+        "id": "tspp",
+        "aliases": ["TS++", "TypeScript++"],
+        "extensions": [".tspp"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
     "grammars": [
+      {
+        "language": "tspp",
+        "scopeName": "source.tspp",
+        "path": "./syntaxes/tspp.tmLanguage.json"
+      },
       {
         "scopeName": "tspp.kind-operators",
         "path": "./syntaxes/tspp-kind-operators.tmLanguage.json",
-        "injectTo": ["source.ts"]
+        "injectTo": ["source.tspp"]
       },
       {
         "scopeName": "tspp.nominal-declarations",
         "path": "./syntaxes/tspp-nominal-declarations.tmLanguage.json",
-        "injectTo": ["source.ts"]
+        "injectTo": ["source.tspp"]
       },
       {
         "scopeName": "tspp.macros",
         "path": "./syntaxes/tspp-macros.tmLanguage.json",
-        "injectTo": ["source.ts"]
+        "injectTo": ["source.tspp"]
       },
       {
         "scopeName": "tspp.formal-contracts",
         "path": "./syntaxes/tspp-formal-contracts.tmLanguage.json",
-        "injectTo": ["source.ts"]
+        "injectTo": ["source.tspp"]
       },
       {
         "scopeName": "tspp.type-computation",
         "path": "./syntaxes/tspp-type-computation.tmLanguage.json",
-        "injectTo": ["source.ts"]
+        "injectTo": ["source.tspp"]
       }
     ],
     "commands": [
@@ -81,18 +94,37 @@
         "command": "tspp.showVerificationSmt",
         "title": "TS++: Show Verification SMT-LIB",
         "icon": "$(symbol-operator)"
+      },
+      {
+        "command": "tspp.restartLanguageServer",
+        "title": "TS++: Restart Language Server"
+      },
+      {
+        "command": "tspp.openLanguageServerLog",
+        "title": "TS++: Open Language Server Log"
       }
     ],
+    "configuration": {
+      "title": "TS++",
+      "properties": {
+        "tspp.tsdk": {
+          "type": "string",
+          "default": "",
+          "scope": "window",
+          "description": "Path to a TS++ SDK root containing lib/tsserver.js, its lib directory, or directly to tsserver.js. Relative paths are resolved from the first workspace folder."
+        }
+      }
+    },
     "menus": {
       "editor/title": [
         {
           "command": "tspp.showExpandedSource",
-          "when": "editorLangId == typescript && resourceExtname == .tspp",
+          "when": "editorLangId == tspp && resourceExtname == .tspp",
           "group": "navigation@10"
         },
         {
           "command": "tspp.showVerificationSmt",
-          "when": "editorLangId == typescript && resourceExtname == .tspp",
+          "when": "editorLangId == tspp && resourceExtname == .tspp",
           "group": "navigation@11"
         }
       ]

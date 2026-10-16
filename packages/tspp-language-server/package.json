@@ -1,12 +1,13 @@
 {
-  "name": "typescript-language-server",
-  "version": "6.0.1",
-  "description": "Language Server Protocol (LSP) implementation for TypeScript using tsserver",
-  "author": "TypeFox and others",
+  "name": "tspp-language-server",
+  "version": "0.0.1",
+  "description": "Language Server Protocol implementation for TS++ using tsppserver",
+  "author": "TS++ contributors, TypeFox and others",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/typescript-language-server/typescript-language-server.git"
+    "url": "git+https://github.com/biyuehu/ts-plus-plus.git",
+    "directory": "packages/tspp-language-server"
   },
   "type": "module",
   "engines": {
@@ -17,7 +18,7 @@
     "lib"
   ],
   "bin": {
-    "typescript-language-server": "lib/cli.mjs"
+    "tspp-language-server": "lib/cli.mjs"
   },
   "scripts": {
     "dev": "rimraf lib && rollup --config rollup.config.ts --configPlugin \"typescript={sourceMap: false}\" --watch",

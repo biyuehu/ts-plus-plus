@@ -2,7 +2,19 @@
 [![npm version][npm-version-src]][npm-version-href]
 [![npm downloads][npm-downloads-src]][npm-downloads-href]
 
-# TypeScript Language Server
+# TS++ Language Server
+
+This package adapts the TS++ `tsppserver` protocol to the Language Server Protocol. It is derived
+from `typescript-language-server` 6.0.1; see [UPSTREAM.md](./UPSTREAM.md) for the pinned source.
+
+The server accepts the `tspp` language id and treats `.tspp` and `.d.tspp` documents as TypeScript
+script kinds backed by the TS++ parser and language service. Clients should pass the TS++ SDK in
+`initializationOptions.tsserver.path`.
+
+The remainder of this document is the upstream documentation and still uses the upstream command
+and TypeScript terminology where behavior has not changed.
+
+## Upstream documentation
 
 <!-- MarkdownTOC -->
 

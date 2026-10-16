@@ -1,7 +1,7 @@
 {
   "name": "TS++ Newtype and Data Declarations",
   "scopeName": "tspp.nominal-declarations",
-  "injectionSelector": "L:source.ts -comment -string -meta.type",
+  "injectionSelector": "L:source.tspp -comment -string -meta.type",
   "patterns": [
     {
       "match": "^\\s*(?:(export)\\s+)?(?:(declare)\\s+)?(newtype|data)\\s+([A-Za-z_$][\\w$]*)",

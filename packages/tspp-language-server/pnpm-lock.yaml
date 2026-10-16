@@ -168,13 +168,6 @@ overrides:
 importers:
 
   .:
-    dependencies:
-      vscode-jsonrpc:
-        specifier: ^9.0.2
-        version: 9.0.2
-      vscode-languageserver-protocol:
-        specifier: ^3.15.0
-        version: 3.18.3
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -272,9 +265,15 @@ importers:
       vitest:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@22.20.4)(@vitest/coverage-v8@4.1.11)(vite@8.3.0(@types/node@22.20.4)(terser@5.51.2))
+      vscode-jsonrpc:
+        specifier: ^9.0.2
+        version: 9.0.2
       vscode-languageserver:
         specifier: ^10.1.1
         version: 10.1.1
+      vscode-languageserver-protocol:
+        specifier: ^3.18.3
+        version: 3.18.3
       vscode-languageserver-textdocument:
         specifier: 1.0.14
         version: 1.0.14

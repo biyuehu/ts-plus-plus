@@ -1,7 +1,7 @@
 {
   "name": "TS++ Compile-time Macros",
   "scopeName": "tspp.macros",
-  "injectionSelector": "L:source.ts -comment -string",
+  "injectionSelector": "L:source.tspp -comment -string",
   "patterns": [
     {
       "match": "^(\\s*)(?:(export)(\\s+))?(?:(default)(\\s+))?(?:(declare)(\\s+))?(?:(async)(\\s+))?(macro)(\\s+)(?=function\\b)",

@@ -1,0 +1,9 @@
+{
+  "name": "TS++",
+  "scopeName": "source.tspp",
+  "patterns": [
+    {
+      "include": "source.ts"
+    }
+  ]
+}

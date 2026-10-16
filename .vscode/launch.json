@@ -11,7 +11,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
         "${workspaceFolder}/example"
       ],
-      "preLaunchTask": "npm: build:compiler"
+      "preLaunchTask": "npm: build:editor"
     },
     {
       "name": "TS++: Run Example 01 — Higher-Kinded Types",
@@ -23,7 +23,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
         "${workspaceFolder}/example/01-higher-kinded-types"
       ],
-      "preLaunchTask": "npm: build:compiler"
+      "preLaunchTask": "npm: build:editor"
     },
     {
       "name": "TS++: Run Example 02 — Dependent Types",
@@ -35,7 +35,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
         "${workspaceFolder}/example/02-dependent-types"
       ],
-      "preLaunchTask": "npm: build:compiler"
+      "preLaunchTask": "npm: build:editor"
     },
     {
       "name": "TS++: Run Example 03 — Newtype and Data",
@@ -48,7 +48,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
         "${workspaceFolder}/example/03-newtype-and-data"
       ],
-      "preLaunchTask": "npm: build:compiler"
+      "preLaunchTask": "npm: build:editor"
     },
     {
       "type": "node",
