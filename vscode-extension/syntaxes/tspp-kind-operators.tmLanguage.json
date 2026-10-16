@@ -1,7 +1,7 @@
 {
   "name": "TS++ Kind Operators",
   "scopeName": "tspp.kind-operators",
-  "injectionSelector": "L:meta.type.declaration.ts -comment -string",
+  "injectionSelector": "L:meta.type.declaration.ts -comment -string, L:meta.type.annotation.ts -comment -string, L:meta.type -comment -string",
   "patterns": [
     {
       "name": "storage.type.function.arrow.ts",
