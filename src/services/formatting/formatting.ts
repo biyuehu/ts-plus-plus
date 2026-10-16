@@ -1446,6 +1446,7 @@ function getOpenTokenForList(node: Node, list: readonly Node[]) {
     case SyntaxKind.ClassExpression:
     case SyntaxKind.InterfaceDeclaration:
     case SyntaxKind.TypeAliasDeclaration:
+    case SyntaxKind.TypeLambda:
       if ((node as ClassDeclaration).typeParameters === list) {
         return SyntaxKind.LessThanToken;
       }

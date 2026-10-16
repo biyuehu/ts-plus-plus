@@ -54,6 +54,7 @@ import {
   defaultHoverMaximumTruncationLength,
   DefinitionInfo,
   DefinitionInfoAndBoundSpan,
+  DependentFunctionTypeNode,
   Diagnostic,
   DiagnosticWithLocation,
   directoryProbablyExists,
@@ -314,6 +315,7 @@ import {
   Symbol,
   SymbolDisplay,
   SymbolDisplayPart,
+  SymbolDisplayPartKind,
   SymbolFlags,
   SymbolLinks,
   symbolName,
@@ -540,7 +542,9 @@ function addSyntheticNodes(nodes: Node[], pos: number, end: number, parent: Node
     const textPos = scanner.getTokenEnd();
     if (textPos <= end) {
       if (token === SyntaxKind.Identifier) {
-        if (hasTabstop(parent)) {
+        if (hasTabstop(parent) || parent.kind === SyntaxKind.TypeKind) {
+          nodes.push(createNode(token, pos, textPos, parent));
+          pos = textPos;
           continue;
         }
         Debug.fail(`Did not expect ${Debug.formatSyntaxKind(parent.kind)} to have an Identifier in its trivia`);
@@ -2323,6 +2327,154 @@ export function createLanguageService(
     return Completions.getCompletionEntrySymbol(program, log, getValidSourceFile(fileName), position, { name, source }, host, preferences);
   }
 
+  const mlttBuiltinQuickInfo: Record<string, { display: string; doc?: string; }> = {
+    Nat: { display: "type Nat: Type0\nNatural numbers", doc: "The MLTT natural number type." },
+    Zero: { display: "type Zero: Nat = 0", doc: "The base constructor for Nat (0)." },
+    Succ: { display: "type Succ<N: Nat>: Nat", doc: "The successor constructor for Nat (N + 1)." },
+    NatAdd: { display: "type NatAdd<A: Nat, B: Nat>: Nat", doc: "Compile-time addition of natural numbers." },
+    NatElim: { display: "type NatElim<P: (n: Nat) -> Type0, z: P<Zero>, s: (n: Nat) -> (prev: P<n>) -> P<Succ<n>>, n: Nat>: P<n>", doc: "Mathematical induction / primitive recursion for natural numbers." },
+    Bool: { display: "type Bool: Type0 = boolean", doc: "The MLTT boolean type." },
+    True: { display: "type True: Bool = true", doc: "Boolean true." },
+    False: { display: "type False: Bool = false", doc: "Boolean false." },
+    BoolElim: { display: "type BoolElim<P: (b: Bool) -> Type0, t: P<True>, f: P<False>, b: Bool>: P<b>", doc: "Boolean elimination principle." },
+    If: { display: "type If<Cond: Bool, Then, Else>", doc: "Conditional type selection." },
+    Eq: { display: "type Eq<A: Type0, x: A, y: A>: Type0", doc: "MLTT propositional identity (equality) type." },
+    Refl: { display: "type Refl<A: Type0, x: A>: Eq<A, x, x>", doc: "Proof of reflexivity (x = x)." },
+    J: { display: "type J<A, C, d, x, y, p>", doc: "Path induction principle for propositional equality." },
+    Sigma: { display: "type Sigma<A: Type0, B: (x: A) -> Type0>: Type0", doc: "Dependent pair (Σ) type." },
+    Pair: { display: "type Pair<A, B, fst, snd>", doc: "Dependent pair constructor." },
+    First: { display: "type First<P>", doc: "First projection of a dependent pair." },
+    Second: { display: "type Second<P>", doc: "Second projection of a dependent pair." },
+  };
+
+  function getNodeTextSafe(n: Node, sf: SourceFile): string {
+    return isIdentifier(n) && n.escapedText !== undefined
+      ? idText(n)
+      : n.getText(sf);
+  }
+
+  function getMlttQuickInfo(sf: SourceFile, targetNode: Node): QuickInfo | undefined {
+    const ext = extensionFromPath(sf.fileName);
+    if (ext !== Extension.Tspp && ext !== Extension.Dtspp) {
+      return undefined;
+    }
+
+    if (targetNode.parent && targetNode.parent.kind === SyntaxKind.DependentFunctionType && (targetNode.kind === SyntaxKind.MinusToken || targetNode.kind === SyntaxKind.GreaterThanToken)) {
+      const dep = targetNode.parent as DependentFunctionTypeNode;
+      return {
+        kind: ScriptElementKind.typeElement,
+        kindModifiers: ScriptElementKindModifier.none,
+        textSpan: createTextSpanFromNode(targetNode.parent, sf),
+        displayParts: [
+          { text: "(type)", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.text] },
+          { text: " ", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.space] },
+          { text: dep.getText(sf), kind: SymbolDisplayPartKind[SymbolDisplayPartKind.aliasName] },
+        ],
+        documentation: undefined,
+        tags: undefined,
+      };
+    }
+
+    if (targetNode.parent && targetNode.parent.kind === SyntaxKind.DependentFunctionType) {
+      const dep = targetNode.parent as DependentFunctionTypeNode;
+      if (dep.parameterName === targetNode) {
+        const paramName = getNodeTextSafe(dep.parameterName, sf);
+        const typeText = dep.parameterType.getText(sf);
+        return {
+          kind: ScriptElementKind.parameterElement,
+          kindModifiers: ScriptElementKindModifier.none,
+          textSpan: createTextSpanFromNode(targetNode, sf),
+          displayParts: [
+            { text: "(parameter)", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.text] },
+            { text: " ", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.space] },
+            { text: paramName, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.parameterName] },
+            { text: ":", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.punctuation] },
+            { text: " ", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.space] },
+            { text: typeText, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.aliasName] },
+          ],
+          documentation: undefined,
+          tags: undefined,
+        };
+      }
+    }
+
+    let idNode: Identifier | undefined;
+    if (isIdentifier(targetNode)) {
+      idNode = targetNode;
+    }
+    else if (targetNode.kind === SyntaxKind.TypeReference && isIdentifier((targetNode as any).typeName)) {
+      idNode = (targetNode as any).typeName;
+    }
+    if (idNode) {
+      const targetName = getNodeTextSafe(idNode, sf);
+      let curr: Node | undefined = idNode;
+      while (curr) {
+        const p: Node | undefined = curr.parent;
+        if (p && p.kind === SyntaxKind.DependentFunctionType) {
+          const dep = p as DependentFunctionTypeNode;
+          if (getNodeTextSafe(dep.parameterName, sf) === targetName && (curr === dep.returnType || findAncestor(curr, a => a === dep.returnType))) {
+            return {
+              kind: ScriptElementKind.parameterElement,
+              kindModifiers: ScriptElementKindModifier.none,
+              textSpan: createTextSpanFromNode(targetNode, sf),
+              displayParts: [
+                { text: "(parameter)", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.text] },
+                { text: " ", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.space] },
+                { text: targetName, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.parameterName] },
+                { text: ":", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.punctuation] },
+                { text: " ", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.space] },
+                { text: dep.parameterType.getText(sf), kind: SymbolDisplayPartKind[SymbolDisplayPartKind.aliasName] },
+              ],
+              documentation: undefined,
+              tags: undefined,
+            };
+          }
+        }
+        curr = p;
+      }
+
+      const universeMatch = targetName.match(/^Type(0|[1-9]\d*)?$/);
+      if (universeMatch) {
+        const level = universeMatch[1];
+        const name = level !== undefined ? `Type${level}` : "Type";
+        const nextLevel = level !== undefined ? String(Number(level) + 1) : "1";
+        return {
+          kind: ScriptElementKind.typeElement,
+          kindModifiers: ScriptElementKindModifier.none,
+          textSpan: createTextSpanFromNode(targetNode, sf),
+          displayParts: [
+            { text: "type", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.keyword] },
+            { text: " ", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.space] },
+            { text: name, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.aliasName] },
+            { text: ":", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.punctuation] },
+            { text: " ", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.space] },
+            { text: `Type${nextLevel}`, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.aliasName] },
+          ],
+          documentation: level !== undefined
+            ? [{ text: `Universe level ${level}.`, kind: "text" }]
+            : [{ text: "The base universe Type (equivalent to Type0).", kind: "text" }],
+          tags: undefined,
+        };
+      }
+
+      const builtin = mlttBuiltinQuickInfo[targetName];
+      if (builtin) {
+        return {
+          kind: ScriptElementKind.typeElement,
+          kindModifiers: ScriptElementKindModifier.none,
+          textSpan: createTextSpanFromNode(targetNode, sf),
+          displayParts: [
+            { text: builtin.display, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.text] },
+          ],
+          documentation: builtin.doc ? [{ text: builtin.doc, kind: "text" }] : undefined,
+          tags: undefined,
+        };
+      }
+    }
+
+    return undefined;
+  }
+
   function getQuickInfoAtPosition(fileName: string, position: number, maximumLength?: number, verbosityLevel?: number): QuickInfo | undefined {
     synchronizeHostData();
 
@@ -2335,6 +2487,12 @@ export function createLanguageService(
 
     const typeChecker = program.getTypeChecker();
     const nodeForQuickInfo = getNodeForQuickInfo(node);
+
+    const mlttQuickInfo = getMlttQuickInfo(sourceFile, nodeForQuickInfo);
+    if (mlttQuickInfo) {
+      return mlttQuickInfo;
+    }
+
     const symbol = getSymbolAtLocationForQuickInfo(nodeForQuickInfo, typeChecker);
     if (!symbol || typeChecker.isUnknownSymbol(symbol)) {
       const type = shouldGetType(sourceFile, nodeForQuickInfo, position) ? typeChecker.getTypeAtLocation(nodeForQuickInfo) : undefined;

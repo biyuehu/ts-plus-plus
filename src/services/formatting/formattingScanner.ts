@@ -49,6 +49,7 @@ const enum ScanAction {
   RescanJsxIdentifier,
   RescanJsxText,
   RescanJsxAttributeValue,
+  RescanLessThanToken,
 }
 
 /** @internal */
@@ -124,6 +125,14 @@ export function getFormattingScanner<T>(text: string, languageVariant: LanguageV
     savedPos = scanner.getTokenFullStart();
   }
 
+  function shouldRescanLessThanToken(node: Node): boolean {
+    return node.kind === SyntaxKind.LessThanToken ||
+      node.kind === SyntaxKind.TypeLambda ||
+      node.kind === SyntaxKind.TypeReference ||
+      node.kind === SyntaxKind.FunctionType ||
+      node.kind === SyntaxKind.ConstructorType;
+  }
+
   function shouldRescanGreaterThanToken(node: Node): boolean {
     switch (node.kind) {
       case SyntaxKind.GreaterThanEqualsToken:
@@ -178,7 +187,8 @@ export function getFormattingScanner<T>(text: string, languageVariant: LanguageV
 
     // normally scanner returns the smallest available token
     // check the kind of context node to determine if scanner should have more greedy behavior and consume more text.
-    const expectedScanAction = shouldRescanGreaterThanToken(n) ? ScanAction.RescanGreaterThanToken :
+    const expectedScanAction = shouldRescanLessThanToken(n) && scanner.getToken() === SyntaxKind.LessThanLessThanToken ? ScanAction.RescanLessThanToken :
+      shouldRescanGreaterThanToken(n) ? ScanAction.RescanGreaterThanToken :
       shouldRescanSlashToken(n) ? ScanAction.RescanSlashToken :
       shouldRescanTemplateToken(n) ? ScanAction.RescanTemplateToken :
       shouldRescanJsxIdentifier(n) ? ScanAction.RescanJsxIdentifier :
@@ -248,6 +258,12 @@ export function getFormattingScanner<T>(text: string, languageVariant: LanguageV
     const token = scanner.getToken();
     lastScanAction = ScanAction.Scan;
     switch (expectedScanAction) {
+      case ScanAction.RescanLessThanToken:
+        if (token === SyntaxKind.LessThanLessThanToken) {
+          lastScanAction = ScanAction.RescanLessThanToken;
+          return scanner.reScanLessThanToken();
+        }
+        break;
       case ScanAction.RescanGreaterThanToken:
         if (token === SyntaxKind.GreaterThanToken) {
           lastScanAction = ScanAction.RescanGreaterThanToken;
