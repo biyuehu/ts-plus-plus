@@ -526,52 +526,60 @@ export class LspServer {
         type: CommandTypes.Definition | CommandTypes.DefinitionAndBoundSpan;
         params: lsp.TextDocumentPositionParams;
     }, token?: lsp.CancellationToken): Promise<lsp.Definition | lsp.DefinitionLink[] | undefined> {
-        const document = this.tsClient.toOpenDocument(params.textDocument.uri);
-        if (!document) {
-            return;
-        }
-
-        if (type === CommandTypes.DefinitionAndBoundSpan) {
-            const args = Position.toFileLocationRequestArgs(document.filepath, params.position);
-            const response = await this.tsClient.execute(type, args, token);
-            if (response.type !== 'response' || !response.body) {
-                return undefined;
+        try {
+            const document = this.tsClient.toOpenDocument(params.textDocument.uri);
+            if (!document) {
+                return;
             }
-            // `textSpan` can be undefined in older TypeScript versions, despite type saying otherwise.
-            const span = response.body.textSpan ? Range.fromTextSpan(response.body.textSpan) : undefined;
-            return response.body.definitions
-                .map((location): lsp.DefinitionLink => {
-                    const target = toLocation(location, this.tsClient);
-                    const targetRange = location.contextStart && location.contextEnd
-                        ? Range.fromLocations(location.contextStart, location.contextEnd)
-                        : target.range;
-                    return {
-                        originSelectionRange: span,
-                        targetRange,
-                        targetUri: target.uri,
-                        targetSelectionRange: target.range,
-                    };
-                });
-        }
 
-        return this.getSymbolLocations({ type: CommandTypes.Definition, params });
+            if (type === CommandTypes.DefinitionAndBoundSpan) {
+                const args = Position.toFileLocationRequestArgs(document.filepath, params.position);
+                const response = await this.tsClient.execute(type, args, token);
+                if (response.type !== 'response' || !response.body) {
+                    return undefined;
+                }
+                // `textSpan` can be undefined in older TypeScript versions, despite type saying otherwise.
+                const span = response.body.textSpan ? Range.fromTextSpan(response.body.textSpan) : undefined;
+                return response.body.definitions
+                    .map((location): lsp.DefinitionLink => {
+                        const target = toLocation(location, this.tsClient);
+                        const targetRange = location.contextStart && location.contextEnd
+                            ? Range.fromLocations(location.contextStart, location.contextEnd)
+                            : target.range;
+                        return {
+                            originSelectionRange: span,
+                            targetRange,
+                            targetUri: target.uri,
+                            targetSelectionRange: target.range,
+                        };
+                    });
+            }
+
+            return this.getSymbolLocations({ type: CommandTypes.Definition, params }, token);
+        } catch {
+            return undefined;
+        }
     }
 
     private async getSymbolLocations({ type, params }: {
         type: CommandTypes.Definition | CommandTypes.Implementation | CommandTypes.TypeDefinition;
         params: lsp.TextDocumentPositionParams;
     }, token?: lsp.CancellationToken): Promise<lsp.Definition | undefined> {
-        const document = this.tsClient.toOpenDocument(params.textDocument.uri);
-        if (!document) {
-            return [];
-        }
+        try {
+            const document = this.tsClient.toOpenDocument(params.textDocument.uri);
+            if (!document) {
+                return [];
+            }
 
-        const args = Position.toFileLocationRequestArgs(document.filepath, params.position);
-        const response = await this.tsClient.execute(type, args, token);
-        if (response.type !== 'response' || !response.body) {
+            const args = Position.toFileLocationRequestArgs(document.filepath, params.position);
+            const response = await this.tsClient.execute(type, args, token);
+            if (response.type !== 'response' || !response.body) {
+                return undefined;
+            }
+            return response.body.map(fileSpan => toLocation(fileSpan, this.tsClient));
+        } catch {
             return undefined;
         }
-        return response.body.map(fileSpan => toLocation(fileSpan, this.tsClient));
     }
 
     async documentSymbol(params: lsp.DocumentSymbolParams, token?: lsp.CancellationToken): Promise<lsp.DocumentSymbol[] | lsp.SymbolInformation[]> {
@@ -696,42 +704,46 @@ export class LspServer {
     }
 
     async hover(params: lsp.HoverParams & { verbosityLevel?: number; }, token?: lsp.CancellationToken): Promise<lsp.Hover & { canIncreaseVerbosityLevel?: boolean; } | null> {
-        const document = this.tsClient.toOpenDocument(params.textDocument.uri);
-        if (!document) {
-            return { contents: [] };
-        }
-
-        const supportsVerbosity = this.features.hoverVerbositySupport;
-        const verbosityLevel = supportsVerbosity ? Math.max(0, params.verbosityLevel ?? 0) : undefined;
-
-        const result = await this.tsClient.interruptGetErr(async () => {
-            await this.fileConfigurationManager.ensureConfigurationForDocument(document, token);
-
-            const response = await this.tsClient.execute(
-                CommandTypes.Quickinfo,
-                { ...Position.toFileLocationRequestArgs(document.filepath, params.position), verbosityLevel },
-                token,
-            );
-
-            if (response.type === 'response' && response.body) {
-                return response.body;
+        try {
+            const document = this.tsClient.toOpenDocument(params.textDocument.uri);
+            if (!document) {
+                return null;
             }
-        });
 
-        if (!result) {
+            const supportsVerbosity = this.features.hoverVerbositySupport;
+            const verbosityLevel = supportsVerbosity ? Math.max(0, params.verbosityLevel ?? 0) : undefined;
+
+            const result = await this.tsClient.interruptGetErr(async () => {
+                await this.fileConfigurationManager.ensureConfigurationForDocument(document, token);
+
+                const response = await this.tsClient.execute(
+                    CommandTypes.Quickinfo,
+                    { ...Position.toFileLocationRequestArgs(document.filepath, params.position), verbosityLevel },
+                    token,
+                );
+
+                if (response.type === 'response' && response.body) {
+                    return response.body;
+                }
+            });
+
+            if (!result) {
+                return null;
+            }
+            const contents = new MarkdownString();
+            const { displayString, documentation, tags } = result;
+            if (displayString) {
+                contents.appendCodeblock('typescript', displayString);
+            }
+            Previewer.addMarkdownDocumentation(contents, documentation, tags, this.tsClient);
+            return {
+                contents: contents.toMarkupContent(),
+                range: Range.fromTextSpan(result),
+                ...supportsVerbosity && { canIncreaseVerbosityLevel: result.canIncreaseVerbosityLevel },
+            };
+        } catch {
             return null;
         }
-        const contents = new MarkdownString();
-        const { displayString, documentation, tags } = result;
-        if (displayString) {
-            contents.appendCodeblock('typescript', displayString);
-        }
-        Previewer.addMarkdownDocumentation(contents, documentation, tags, this.tsClient);
-        return {
-            contents: contents.toMarkupContent(),
-            range: Range.fromTextSpan(result),
-            ...supportsVerbosity && { canIncreaseVerbosityLevel: result.canIncreaseVerbosityLevel },
-        };
     }
 
     async prepareRename(params: lsp.PrepareRenameParams, token?: lsp.CancellationToken): Promise<lsp.Range | { range: lsp.Range; placeholder: string; } | undefined | null> {
@@ -1150,24 +1162,28 @@ export class LspServer {
     }
 
     async documentHighlight(params: lsp.TextDocumentPositionParams, token?: lsp.CancellationToken): Promise<lsp.DocumentHighlight[]> {
-        const doc = this.tsClient.toOpenDocument(params.textDocument.uri);
-        if (!doc) {
-            throw new Error(`The document should be opened first: ${params.textDocument.uri}`);
-        }
-        const response = await this.tsClient.execute(
-            CommandTypes.DocumentHighlights,
-            {
-                file: doc.filepath,
-                line: params.position.line + 1,
-                offset: params.position.character + 1,
-                filesToSearch: [doc.filepath],
-            },
-            token,
-        );
-        if (response.type !== 'response' || !response.body) {
+        try {
+            const doc = this.tsClient.toOpenDocument(params.textDocument.uri);
+            if (!doc) {
+                return [];
+            }
+            const response = await this.tsClient.execute(
+                CommandTypes.DocumentHighlights,
+                {
+                    file: doc.filepath,
+                    line: params.position.line + 1,
+                    offset: params.position.character + 1,
+                    filesToSearch: [doc.filepath],
+                },
+                token,
+            );
+            if (response.type !== 'response' || !response.body) {
+                return [];
+            }
+            return response.body.flatMap(item => toDocumentHighlight(item));
+        } catch {
             return [];
         }
-        return response.body.flatMap(item => toDocumentHighlight(item));
     }
 
     async workspaceSymbol(params: lsp.WorkspaceSymbolParams, token?: lsp.CancellationToken): Promise<lsp.SymbolInformation[]> {
@@ -1320,69 +1336,85 @@ export class LspServer {
     }
 
     async linkedEditingRange(params: lsp.LinkedEditingRangeParams, token?: lsp.CancellationToken): Promise<lsp.LinkedEditingRanges | null> {
-        const doc = this.tsClient.toOpenDocument(params.textDocument.uri);
-        if (!doc) {
+        try {
+            const doc = this.tsClient.toOpenDocument(params.textDocument.uri);
+            if (!doc) {
+                return null;
+            }
+            const args = Position.toFileLocationRequestArgs(doc.filepath, params.position);
+            const response = await this.tsClient.execute(CommandTypes.LinkedEditingRange, args, token);
+            if (response.type !== 'response' || !response.body) {
+                return null;
+            }
+            return {
+                ranges: response.body.ranges.map(Range.fromTextSpan),
+                wordPattern: response.body.wordPattern,
+            };
+        } catch {
             return null;
         }
-        const args = Position.toFileLocationRequestArgs(doc.filepath, params.position);
-        const response = await this.tsClient.execute(CommandTypes.LinkedEditingRange, args, token);
-        if (response.type !== 'response' || !response.body) {
-            return null;
-        }
-        return {
-            ranges: response.body.ranges.map(Range.fromTextSpan),
-            wordPattern: response.body.wordPattern,
-        };
     }
 
     async semanticTokensFull(params: lsp.SemanticTokensParams, token?: lsp.CancellationToken): Promise<lsp.SemanticTokens> {
-        const doc = this.tsClient.toOpenDocument(params.textDocument.uri);
-        if (!doc) {
+        try {
+            const doc = this.tsClient.toOpenDocument(params.textDocument.uri);
+            if (!doc) {
+                return { data: [] };
+            }
+
+            const start = doc.offsetAt({
+                line: 0,
+                character: 0,
+            });
+            const end = doc.offsetAt({
+                line: doc.lineCount,
+                character: 0,
+            });
+
+            return await this.getSemanticTokens(doc, doc.filepath, start, end, token);
+        } catch {
             return { data: [] };
         }
-
-        const start = doc.offsetAt({
-            line: 0,
-            character: 0,
-        });
-        const end = doc.offsetAt({
-            line: doc.lineCount,
-            character: 0,
-        });
-
-        return this.getSemanticTokens(doc, doc.filepath, start, end, token);
     }
 
     async semanticTokensRange(params: lsp.SemanticTokensRangeParams, token?: lsp.CancellationToken): Promise<lsp.SemanticTokens> {
-        const doc = this.tsClient.toOpenDocument(params.textDocument.uri);
-        if (!doc) {
+        try {
+            const doc = this.tsClient.toOpenDocument(params.textDocument.uri);
+            if (!doc) {
+                return { data: [] };
+            }
+
+            const start = doc.offsetAt(params.range.start);
+            const end = doc.offsetAt(params.range.end);
+
+            return await this.getSemanticTokens(doc, doc.filepath, start, end, token);
+        } catch {
             return { data: [] };
         }
-
-        const start = doc.offsetAt(params.range.start);
-        const end = doc.offsetAt(params.range.end);
-
-        return this.getSemanticTokens(doc, doc.filepath, start, end, token);
     }
 
     async getSemanticTokens(doc: LspDocument, file: string, startOffset: number, endOffset: number, token?: lsp.CancellationToken): Promise<lsp.SemanticTokens> {
-        const response = await this.tsClient.execute(
-            CommandTypes.EncodedSemanticClassificationsFull,
-            {
-                file,
-                start: startOffset,
-                length: endOffset - startOffset,
-                format: '2020',
-            },
-            token,
-            {
-                cancelOnResourceChange: doc.uri.toString(),
-            },
-        );
+        try {
+            const response = await this.tsClient.execute(
+                CommandTypes.EncodedSemanticClassificationsFull,
+                {
+                    file,
+                    start: startOffset,
+                    length: endOffset - startOffset,
+                    format: '2020',
+                },
+                token,
+                {
+                    cancelOnResourceChange: doc.uri.toString(),
+                },
+            );
 
-        if (response.type !== 'response' || !response.body?.spans) {
+            if (response.type !== 'response' || !response.body?.spans) {
+                return { data: [] };
+            }
+            return { data: SemanticTokens.transformSpans(doc, response.body.spans) };
+        } catch {
             return { data: [] };
         }
-        return { data: SemanticTokens.transformSpans(doc, response.body.spans) };
     }
 }

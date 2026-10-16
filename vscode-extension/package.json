@@ -11,13 +11,18 @@
   "categories": ["Programming Languages"],
   "activationEvents": ["onLanguage:tspp", "onStartupFinished"],
   "main": "./extension.js",
+  "icon": "tspp.svg",
   "contributes": {
     "languages": [
       {
         "id": "tspp",
         "aliases": ["TS++", "TypeScript++"],
         "extensions": [".tspp"],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./tspp.svg",
+          "dark": "./tspp.svg"
+        }
       }
     ],
     "grammars": [
@@ -29,27 +34,27 @@
       {
         "scopeName": "tspp.kind-operators",
         "path": "./syntaxes/tspp-kind-operators.tmLanguage.json",
-        "injectTo": ["source.tspp"]
+        "injectTo": ["source.tspp", "source.ts"]
       },
       {
         "scopeName": "tspp.nominal-declarations",
         "path": "./syntaxes/tspp-nominal-declarations.tmLanguage.json",
-        "injectTo": ["source.tspp"]
+        "injectTo": ["source.tspp", "source.ts"]
       },
       {
         "scopeName": "tspp.macros",
         "path": "./syntaxes/tspp-macros.tmLanguage.json",
-        "injectTo": ["source.tspp"]
+        "injectTo": ["source.tspp", "source.ts"]
       },
       {
         "scopeName": "tspp.formal-contracts",
         "path": "./syntaxes/tspp-formal-contracts.tmLanguage.json",
-        "injectTo": ["source.tspp"]
+        "injectTo": ["source.tspp", "source.ts"]
       },
       {
         "scopeName": "tspp.type-computation",
         "path": "./syntaxes/tspp-type-computation.tmLanguage.json",
-        "injectTo": ["source.tspp"]
+        "injectTo": ["source.tspp", "source.ts"]
       }
     ],
     "commands": [
