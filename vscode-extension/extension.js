@@ -74,8 +74,8 @@ async function activate(context) {
     ? path.resolve(workspaceRoot || repositoryRoot, configuredSdkPath)
     : defaultSdkPath;
   const serverOptions = {
-    run: { module: languageServerModule, transport: TransportKind.stdio, args: ["--stdio"] },
-    debug: { module: languageServerModule, transport: TransportKind.stdio, args: ["--stdio"] },
+    run: { module: languageServerModule, transport: TransportKind.stdio },
+    debug: { module: languageServerModule, transport: TransportKind.stdio },
   };
   const clientOptions = {
     documentSelector: [
