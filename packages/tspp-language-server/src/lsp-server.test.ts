@@ -1382,7 +1382,7 @@ describe('code actions', () => {
         expect(quickFixDiagnostic).toMatchObject({
             title: "Prefix 'bar' with an underscore",
             command: {
-                command: '_typescript.applyCodeActionCommand',
+                command: '_tspp.applyCodeActionCommand',
                 title: '',
                 arguments: [
                     {
@@ -1435,7 +1435,7 @@ describe('code actions', () => {
             title: 'Convert parameters to destructured object',
             command: {
                 title: 'Convert parameters to destructured object',
-                command: '_typescript.applyRefactoring',
+                command: '_tspp.applyRefactoring',
                 arguments: [
                     {
                         file: filePath('bar.ts'),
@@ -1456,7 +1456,7 @@ describe('code actions', () => {
             title: 'Move to a new file',
             command: {
                 title: 'Move to a new file',
-                command: '_typescript.applyRefactoring',
+                command: '_tspp.applyRefactoring',
                 arguments: [
                     {
                         file: filePath('bar.ts'),
@@ -1539,7 +1539,7 @@ describe('code actions', () => {
                             documentUri: uri('bar.ts'),
                         },
                     ],
-                    command: '_typescript.applyCodeActionCommand',
+                    command: '_tspp.applyCodeActionCommand',
                     title: '',
                 },
                 isPreferred: true,
@@ -1559,7 +1559,7 @@ describe('code actions', () => {
                             startOffset: 26,
                         },
                     ],
-                    command: '_typescript.applyRefactoring',
+                    command: '_tspp.applyRefactoring',
                     title: 'Convert parameters to destructured object',
                 },
                 kind: 'refactor.rewrite.parameters.toDestructured',
@@ -1936,7 +1936,7 @@ describe('code actions (interactive)', () => {
             kind: 'refactor.move.file',
             command: {
                 title: 'Move to file',
-                command: '_typescript.applyRefactoring',
+                command: '_tspp.applyRefactoring',
                 arguments: [
                     {
                         file: filePath('bar.ts'),

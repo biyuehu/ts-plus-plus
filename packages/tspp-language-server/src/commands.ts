@@ -10,13 +10,13 @@ import { SourceDefinitionCommand } from './features/source-definition.js';
 import type { TypeScriptVersionSource } from './tsServer/versionProvider.js';
 
 export const Commands = {
-    APPLY_REFACTORING: '_typescript.applyRefactoring',
-    CONFIGURE_PLUGIN: '_typescript.configurePlugin',
-    ORGANIZE_IMPORTS: '_typescript.organizeImports',
-    APPLY_RENAME_FILE: '_typescript.applyRenameFile',
-    APPLY_COMPLETION_CODE_ACTION: '_typescript.applyCompletionCodeAction',
+    APPLY_REFACTORING: '_tspp.applyRefactoring',
+    CONFIGURE_PLUGIN: '_tspp.configurePlugin',
+    ORGANIZE_IMPORTS: '_tspp.organizeImports',
+    APPLY_RENAME_FILE: '_tspp.applyRenameFile',
+    APPLY_COMPLETION_CODE_ACTION: '_tspp.applyCompletionCodeAction',
     /** Commands below should be implemented by the client */
-    SELECT_REFACTORING: '_typescript.selectRefactoring',
+    SELECT_REFACTORING: '_tspp.selectRefactoring',
     SOURCE_DEFINITION: SourceDefinitionCommand.id,
 };
 
@@ -25,5 +25,5 @@ type TypescriptVersionNotificationParams = {
     source: TypeScriptVersionSource;
 };
 
-export const TypescriptVersionNotification = new lsp.NotificationType<TypescriptVersionNotificationParams>('$/typescriptVersion');
+export const TypescriptVersionNotification = new lsp.NotificationType<TypescriptVersionNotificationParams>('$/tsppVersion');
 
