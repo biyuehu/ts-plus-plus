@@ -239,6 +239,8 @@ export class LspDocuments {
     private readonly diagnosticDelayer: Delayer<any>;
     private pendingGetErr: GetErrRequest | undefined;
 
+    private readonly onCaseInsensitiveFileSystem: boolean;
+
     constructor(
         client: ITypeScriptServiceClient,
         lspClient: LspClient,
@@ -246,10 +248,15 @@ export class LspDocuments {
     ) {
         this.client = client;
         this.lspClient = lspClient;
+        this.onCaseInsensitiveFileSystem = onCaseInsensitiveFileSystem;
 
         const pathNormalizer = (path: URI) => this.client.toTsFilePath(path.toString());
         this.pendingDiagnostics = new PendingDiagnostics(pathNormalizer, { onCaseInsensitiveFileSystem });
         this.diagnosticDelayer = new Delayer<any>(300);
+    }
+
+    private normalizeFilePath(filePath: string): string {
+        return this.onCaseInsensitiveFileSystem ? filePath.toLowerCase() : filePath;
     }
 
     public initialize(allModeIds: readonly string[]): void {
@@ -268,13 +275,17 @@ export class LspDocuments {
     }
 
     public get(file: string): LspDocument | undefined {
-        const document = this.documents.get(file);
+        const normalizedFile = this.normalizeFilePath(file);
+        const document = this.documents.get(normalizedFile);
         if (!document) {
             return undefined;
         }
-        if (this.files[0] !== file) {
-            this._files.splice(this._files.indexOf(file), 1);
-            this._files.unshift(file);
+        if (this.files[0] !== document.filepath) {
+            const index = this._files.indexOf(document.filepath);
+            if (index !== -1) {
+                this._files.splice(index, 1);
+            }
+            this._files.unshift(document.filepath);
         }
         return document;
     }
@@ -298,12 +309,13 @@ export class LspDocuments {
             return false;
         }
 
-        if (this.documents.has(filepath)) {
+        const normalizedFile = this.normalizeFilePath(filepath);
+        if (this.documents.has(normalizedFile)) {
             return true;
         }
 
         const document = new LspDocument(textDocument, filepath);
-        this.documents.set(filepath, document);
+        this.documents.set(normalizedFile, document);
         this._files.unshift(filepath);
         this.client.executeWithoutWaitingForResponse(CommandTypes.Open, {
             file: filepath,
@@ -321,10 +333,13 @@ export class LspDocuments {
             return;
         }
 
-        this._files.splice(this._files.indexOf(document.filepath), 1);
+        const index = this._files.indexOf(document.filepath);
+        if (index !== -1) {
+            this._files.splice(index, 1);
+        }
         this.pendingDiagnostics.delete(document.uri);
         this.pendingGetErr?.files.delete(document.uri);
-        this.documents.delete(document.filepath);
+        this.documents.delete(this.normalizeFilePath(document.filepath));
         this.client.cancelInflightRequestsForResource(document.uri);
         this.client.executeWithoutWaitingForResponse(CommandTypes.Close, { file: document.filepath });
         this.requestAllDiagnostics();
@@ -344,7 +359,7 @@ export class LspDocuments {
         if (!filepath) {
             return;
         }
-        const document = this.documents.get(filepath);
+        const document = this.documents.get(this.normalizeFilePath(filepath));
         if (!document) {
             return;
         }
@@ -417,7 +432,7 @@ export class LspDocuments {
 
     public handles(resource: URI): boolean {
         const filepath = this.client.toTsFilePath(resource.toString());
-        return filepath !== undefined && this.documents.has(filepath);
+        return filepath !== undefined && this.documents.has(this.normalizeFilePath(filepath));
     }
 
     public requestAllDiagnostics(): void {

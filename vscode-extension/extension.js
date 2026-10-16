@@ -90,6 +90,14 @@ async function activate(context) {
         useSyntaxServer: "never",
       },
     },
+    errorHandler: {
+      error: (_error, _message, _count) => {
+        return { action: 1 /* Close */ }; // Don't show toast popups for transient errors
+      },
+      closed: () => {
+        return { action: 1 /* DoNotRestart */ };
+      },
+    },
   };
   languageClient = new LanguageClient("tspp", "TS++ Language Server", serverOptions, clientOptions);
   context.subscriptions.push(

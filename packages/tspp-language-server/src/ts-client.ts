@@ -524,6 +524,9 @@ export class TsClient implements ITypeScriptServiceClient {
         }
 
         return executions[0]!.catch(error => {
+            if (token?.isCancellationRequested || (error as Error)?.message?.toLowerCase().includes('cancelled') || (error as Error)?.message?.toLowerCase().includes('canceled')) {
+                return new ServerResponse.Cancelled((error as Error).message);
+            }
             throw new ResponseError(1, (error as Error).message);
         });
     }
@@ -572,6 +575,9 @@ export class TsClient implements ITypeScriptServiceClient {
         }
 
         return execution.catch(error => {
+            if (executeInfo?.token?.isCancellationRequested || (error as Error)?.message?.toLowerCase().includes('cancelled') || (error as Error)?.message?.toLowerCase().includes('canceled')) {
+                return new ServerResponse.Cancelled((error as Error).message);
+            }
             throw new ResponseError(1, (error as Error).message);
         });
     }
