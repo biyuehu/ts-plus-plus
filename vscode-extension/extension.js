@@ -1,11 +1,16 @@
 const fs = require("fs");
 const path = require("path");
 const vscode = require("vscode");
+const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
 
-function activate(context) {
+let languageClient;
+
+async function activate(context) {
   const repositoryRoot = path.resolve(context.extensionPath, "..");
   const compilerPath = path.join(repositoryRoot, "built", "local", "tsserver.js");
   const typescriptPath = path.join(repositoryRoot, "built", "local", "typescript.js");
+  const defaultSdkPath = path.join(repositoryRoot, "built", "local", "lib");
+  const languageServerModule = path.join(repositoryRoot, "packages", "tspp-language-server", "lib", "cli.mjs");
   const examplesRoot = path.join(repositoryRoot, "example");
   const examples = [
     {
@@ -56,9 +61,58 @@ function activate(context) {
     return;
   }
 
+  if (!fs.existsSync(languageServerModule)) {
+    status.text = "$(error) TS++ language server not built";
+    status.tooltip = "Run npm run build:language-server in the repository, then restart this development host.";
+    status.show();
+    return;
+  }
+
+  const configuredSdkPath = vscode.workspace.getConfiguration("tspp").get("tsdk", "").trim();
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const sdkPath = configuredSdkPath
+    ? path.resolve(workspaceRoot || repositoryRoot, configuredSdkPath)
+    : defaultSdkPath;
+  const serverOptions = {
+    run: { module: languageServerModule, transport: TransportKind.stdio, args: ["--stdio"] },
+    debug: { module: languageServerModule, transport: TransportKind.stdio, args: ["--stdio"] },
+  };
+  const clientOptions = {
+    documentSelector: [
+      { scheme: "file", language: "tspp" },
+      { scheme: "untitled", language: "tspp" },
+    ],
+    initializationOptions: {
+      disableAutomaticTypingAcquisition: true,
+      hostInfo: "vscode-tspp",
+      tsserver: {
+        path: sdkPath,
+        useSyntaxServer: "never",
+      },
+    },
+  };
+  languageClient = new LanguageClient("tspp", "TS++ Language Server", serverOptions, clientOptions);
+  context.subscriptions.push(
+    languageClient,
+    vscode.commands.registerCommand("tspp.restartLanguageServer", async () => {
+      await languageClient?.restart();
+    }),
+    vscode.commands.registerCommand("tspp.openLanguageServerLog", () => {
+      languageClient?.outputChannel.show();
+    }),
+  );
   status.text = "$(beaker) TS++ Examples";
   status.tooltip = `Using ${compilerPath}. Click to choose an example.`;
   status.show();
+
+  try {
+    await languageClient.start();
+  }
+  catch (error) {
+    status.text = "$(error) TS++ language server failed";
+    status.tooltip = error instanceof Error ? error.message : String(error);
+    status.show();
+  }
 
   const macroExpansionCache = new Map();
   let macroExpansionQueue = Promise.resolve();
@@ -120,7 +174,7 @@ function activate(context) {
     return (await getMacroExpansions(document)).find(expansion => expansion.start <= offset && offset <= expansion.start + expansion.length);
   }
 
-  const macroSelector = { language: "typescript", scheme: "file", pattern: "**/*.tspp" };
+  const macroSelector = { language: "tspp", scheme: "file", pattern: "**/*.tspp" };
   const expandedDocuments = new Map();
   const expandedDocumentChanges = new vscode.EventEmitter();
   const expandedDocumentProvider = {
@@ -190,8 +244,8 @@ function activate(context) {
       expandedDocuments.set(expandedUri.toString(), result.text);
       expandedDocumentChanges.fire(expandedUri);
       let expandedDocument = await vscode.workspace.openTextDocument(expandedUri);
-      if (expandedDocument.languageId !== "typescript") {
-        expandedDocument = await vscode.languages.setTextDocumentLanguage(expandedDocument, "typescript");
+      if (expandedDocument.languageId !== "tspp") {
+        expandedDocument = await vscode.languages.setTextDocumentLanguage(expandedDocument, "tspp");
       }
       await vscode.window.showTextDocument(expandedDocument, {
         viewColumn: vscode.ViewColumn.Beside,
@@ -292,6 +346,11 @@ function samePath(left, right) {
   return normalize(left) === normalize(right);
 }
 
-function deactivate() {}
+async function deactivate() {
+  if (languageClient) {
+    await languageClient.stop();
+    languageClient = undefined;
+  }
+}
 
 module.exports = { activate, deactivate };

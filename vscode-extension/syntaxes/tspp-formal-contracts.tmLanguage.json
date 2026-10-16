@@ -1,7 +1,7 @@
 {
   "name": "TS++ Formal Contracts",
   "scopeName": "tspp.formal-contracts",
-  "injectionSelector": "L:source.ts -comment -string",
+  "injectionSelector": "L:source.tspp -comment -string",
   "patterns": [
     {
       "match": "\\b(requires|ensures|invariant|numberModel|timeout)\\b(?=\\s*:)",

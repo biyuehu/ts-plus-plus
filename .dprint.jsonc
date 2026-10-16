@@ -49,6 +49,7 @@
     "scripts/*.d.*",
     "scripts/*.json",
     "assets/**",
+    "packages/tspp-language-server/**",
     "**/_namespaces/**"
   ],
   // Note: if adding new languages, make sure settings.template.json is updated too.
