@@ -35,7 +35,7 @@ type ApplyCodeActionCommand_args = {
 };
 
 class ApplyCodeActionCommand implements Command {
-    public static readonly ID = '_typescript.applyCodeActionCommand';
+    public static readonly ID = '_tspp.applyCodeActionCommand';
     public readonly id = ApplyCodeActionCommand.ID;
 
     constructor(
@@ -56,7 +56,7 @@ type ApplyFixAllCodeAction_args = {
 };
 
 class ApplyFixAllCodeAction implements Command {
-    public static readonly ID = '_typescript.applyFixAllCodeAction';
+    public static readonly ID = '_tspp.applyFixAllCodeAction';
     public readonly id = ApplyFixAllCodeAction.ID;
 
     constructor(

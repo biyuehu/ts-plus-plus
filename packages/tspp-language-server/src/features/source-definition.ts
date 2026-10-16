@@ -18,7 +18,7 @@ import { CommandTypes } from '../ts-protocol.js';
 import type { ITypeScriptServiceClient } from '../typescriptService.js';
 
 export class SourceDefinitionCommand {
-    public static readonly id = '_typescript.goToSourceDefinition';
+    public static readonly id = '_tspp.goToSourceDefinition';
     public static readonly minVersion = API.v470;
 
     public static async execute(

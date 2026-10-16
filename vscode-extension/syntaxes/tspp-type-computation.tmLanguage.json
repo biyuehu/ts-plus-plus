@@ -1,7 +1,7 @@
 {
   "name": "TS++ Type Computation",
   "scopeName": "tspp.type-computation",
-  "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string, L:meta.type -comment -string, L:meta.type.declaration.ts -comment -string, L:meta.type.annotation.ts -comment -string",
+  "injectionSelector": "L:source.tspp -comment -string, L:meta.type -comment -string",
   "patterns": [
     {
       "comment": "Type-level lambda arrow: =>>",

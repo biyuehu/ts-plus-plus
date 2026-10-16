@@ -16,7 +16,7 @@ import type { TraceValue } from './tsServer/tracer.js';
 export type { ts };
 
 export namespace TypeScriptRenameRequest {
-    export const type = new RequestType<lsp.TextDocumentPositionParams, void, void>('_typescript.rename');
+    export const type = new RequestType<lsp.TextDocumentPositionParams, void, void>('_tspp.rename');
 }
 
 // START: Duplicated from typescript/lib/tsserverlibrary.js since we don't want to depend on typescript at runtime
