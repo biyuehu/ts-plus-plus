@@ -30,6 +30,7 @@ import {
   SemicolonPreference,
   SyntaxKind,
   typeKeywords,
+  TypeLambdaNode,
   YieldExpression,
 } from "../_namespaces/ts.js";
 
@@ -239,8 +240,10 @@ export function getAllRules(): RuleSpec[] {
     rule("SpaceAfterModuleName", SyntaxKind.StringLiteral, SyntaxKind.OpenBraceToken, [isModuleDeclContext], RuleAction.InsertSpace),
 
     // Lambda expressions
+    rule("NoSpaceInTypeLambdaDoubleArrow", SyntaxKind.EqualsGreaterThanToken, SyntaxKind.GreaterThanToken, [isNonJsxSameLineTokenContext, isTypeLambdaArrowContext], RuleAction.DeleteSpace),
+    rule("SpaceAfterTypeLambdaDoubleArrow", SyntaxKind.GreaterThanToken, anyToken, [isNonJsxSameLineTokenContext, isTypeLambdaDoubleArrowContext], RuleAction.InsertSpace),
     rule("SpaceBeforeArrow", anyToken, SyntaxKind.EqualsGreaterThanToken, [isNonJsxSameLineTokenContext], RuleAction.InsertSpace),
-    rule("SpaceAfterArrow", SyntaxKind.EqualsGreaterThanToken, anyToken, [isNonJsxSameLineTokenContext], RuleAction.InsertSpace),
+    rule("SpaceAfterArrow", SyntaxKind.EqualsGreaterThanToken, anyToken, [isNonJsxSameLineTokenContext, isNotTypeLambdaArrowContext], RuleAction.InsertSpace),
 
     // Optional parameters and let args
     rule("NoSpaceAfterEllipsis", SyntaxKind.DotDotDotToken, SyntaxKind.Identifier, [isNonJsxSameLineTokenContext], RuleAction.DeleteSpace),
@@ -259,6 +262,7 @@ export function getAllRules(): RuleSpec[] {
       isTypeArgumentOrParameterOrAssertionContext,
       isNotFunctionDeclContext, /*To prevent an interference with the SpaceBeforeOpenParenInFuncDecl rule*/
       isNonTypeAssertionContext,
+      isNotTypeLambdaArrowContext,
     ], RuleAction.DeleteSpace),
 
     // decorators
@@ -858,6 +862,7 @@ function isTypeArgumentOrParameterOrAssertion(token: TextRangeWithKind, parent: 
     case SyntaxKind.CallExpression:
     case SyntaxKind.NewExpression:
     case SyntaxKind.ExpressionWithTypeArguments:
+    case SyntaxKind.TypeLambda:
       return true;
     default:
       return false;
@@ -990,4 +995,20 @@ function isNotPropertyAccessOnIntegerLiteral(context: FormattingContext): boolea
   return !isPropertyAccessExpression(context.contextNode)
     || !isNumericLiteral(context.contextNode.expression)
     || context.contextNode.expression.getText().includes(".");
+}
+
+function isTypeLambdaArrowContext(context: FormattingContext): boolean {
+  return context.contextNode.kind === SyntaxKind.TypeLambda;
+}
+
+function isNotTypeLambdaArrowContext(context: FormattingContext): boolean {
+  return !isTypeLambdaArrowContext(context);
+}
+
+function isTypeLambdaDoubleArrowContext(context: FormattingContext): boolean {
+  if (context.contextNode.kind === SyntaxKind.TypeLambda && context.currentTokenSpan.kind === SyntaxKind.GreaterThanToken) {
+    const typeLambda = context.contextNode as TypeLambdaNode;
+    return context.nextTokenSpan.pos >= typeLambda.body.pos;
+  }
+  return false;
 }

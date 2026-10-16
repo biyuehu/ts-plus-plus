@@ -17486,20 +17486,20 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return nodes.map((node, index) => getTypeArgumentFromNodeForKind(node, kinds[index]));
   }
 
-  function applyHigherKindedType(target: Type, typeArguments: readonly Type[], node: Node): Type {
+  function applyHigherKindedType(target: Type, typeArguments: readonly Type[], node: Node | undefined): Type {
     const kind = getKindOfType(target);
     if (kind.flags !== KindFlags.Function) {
-      return checkTypeKind(target, createFunctionKind(typeArguments.map(() => ordinaryTypeKind), ordinaryTypeKind), node);
+      return node ? checkTypeKind(target, createFunctionKind(typeArguments.map(() => ordinaryTypeKind), ordinaryTypeKind), node) : errorType;
     }
 
     const functionKind = kind;
     if (typeArguments.length !== functionKind.parameters.length) {
-      error(node, Diagnostics.Type_constructor_0_must_be_applied_to_1_type_argument_s, typeToString(target), functionKind.parameters.length);
+      if (node) error(node, Diagnostics.Type_constructor_0_must_be_applied_to_1_type_argument_s, typeToString(target), functionKind.parameters.length);
       return errorType;
     }
     for (let i = 0; i < typeArguments.length; i++) {
       if (!kindsAreIdentical(getKindOfType(typeArguments[i]), functionKind.parameters[i])) {
-        return checkTypeKind(typeArguments[i], functionKind.parameters[i], node);
+        return node ? checkTypeKind(typeArguments[i], functionKind.parameters[i], node) : errorType;
       }
     }
 
@@ -17513,7 +17513,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           checkTypeAssignableTo(
             typeArguments[i],
             instantiateType(constraint, mapper),
-            isTypeReferenceNode(node) && node.typeArguments ? node.typeArguments[i] : node,
+            node && isTypeReferenceNode(node) && node.typeArguments ? node.typeArguments[i] : node,
             Diagnostics.Type_0_does_not_satisfy_the_constraint_1,
           );
         }
@@ -17990,6 +17990,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       return getTypeFromMlttTypeNode(node);
     }
     const links = getNodeLinks(node);
+    const universeLevel = getUniverseLevelFromTypeNode(node as TypeNode);
+    if (universeLevel !== undefined) {
+      return links.resolvedType = getUniverseType(universeLevel);
+    }
     if (!links.resolvedType) {
       // handle LS queries on the `const` in `x as const` by resolving to the type of `x`
       if (isConstTypeReference(node) && isAssertionExpression(node.parent)) {
@@ -22694,7 +22698,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const target = instantiateType(type.higherKindedTarget!, mapper);
       const typeArguments = instantiateTypes(type.higherKindedTypeArguments!, mapper);
       if (target === type.higherKindedTarget && typeArguments === type.higherKindedTypeArguments) return type;
-      return applyHigherKindedType(target, typeArguments, Debug.checkDefined(currentNode || target.symbol?.declarations?.[0]));
+      const errorNode = currentNode || aliasSymbol?.declarations?.[0] || target.symbol?.declarations?.[0] || target.typeLambda?.body?.parent || target.typeLambda?.body || type.symbol?.declarations?.[0];
+      return applyHigherKindedType(target, typeArguments, errorNode);
     }
     if (type.typeLambda) {
       const combinedMapper = combineTypeMappers(type.typeLambda.outerMapper, mapper);
