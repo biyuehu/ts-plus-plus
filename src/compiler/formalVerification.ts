@@ -49,6 +49,7 @@ import {
   SourceFile,
   Statement,
   SwitchStatement,
+  Symbol,
   SymbolFlags,
   SyntaxKind,
   Type,
@@ -746,9 +747,10 @@ function getNarrowedVariantName(checker: TypeChecker, type: Type): string | unde
 function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean): Term | string {
   const standardPredicate = getStandardPredicateName(context.checker, expression);
   if (standardPredicate) return translateStandardPredicate(context, state, expression, standardPredicate);
-  const refinement = getRefinementTarget(context.checker, expression);
+  const callee = isIdentifier(expression.expression) ? getAliasedSymbolOf(context.checker, expression.expression) : undefined;
+  const refinement = getRefinementNewtype(callee);
   if (refinement) return verifyRefinementIntroduction(context, state, expression, refinement);
-  const variant = isIdentifier(expression.expression) && getDataVariantTarget(context.checker, expression.expression);
+  const variant = callee?.declarations?.find(isDataVariant);
   if (variant) return translateDataVariant(context, state, variant, expression.arguments, /*result*/ undefined);
   const target = getCallTarget(context.checker, expression);
   if (!target) return `Call '${sourceText(context, expression)}' does not resolve to a supported project function declaration.`;
@@ -757,10 +759,16 @@ function translateCallExpression(context: VerificationContext, state: SymbolicSt
 
 function getStandardPredicateName(checker: TypeChecker, expression: CallExpression): StandardPredicateName | undefined {
   if (!isIdentifier(expression.expression)) return undefined;
+  const name = idText(expression.expression);
+  if (!standardPredicateNames.has(name)) return undefined;
   const symbol = checker.getSymbolAtLocation(expression.expression);
   if (symbol && !isStandardPredicateSymbol(symbol)) return undefined;
-  const name = idText(expression.expression);
-  return standardPredicateNames.has(name) ? getStandardPredicateDefinition(name)?.name : undefined;
+  return getStandardPredicateDefinition(name)?.name;
+}
+
+function getAliasedSymbolOf(checker: TypeChecker, node: Node): Symbol | undefined {
+  const symbol = checker.getSymbolAtLocation(node);
+  return symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
 }
 
 function zeroForSort(sort: VerificationSort): VerificationExpression {
@@ -844,9 +852,7 @@ function translateStandardPredicate(
 }
 
 function getDataVariantTarget(checker: TypeChecker, expression: Identifier): DataVariant | undefined {
-  const symbol = checker.getSymbolAtLocation(expression);
-  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
-  return target?.declarations?.find(isDataVariant);
+  return getAliasedSymbolOf(checker, expression)?.declarations?.find(isDataVariant);
 }
 
 function translateDataVariant(
@@ -866,20 +872,18 @@ function translateDataVariant(
   return constructFromFields(context, state, lowered.sort, variant.fields, values, result, variant.name);
 }
 
+function getRefinementNewtype(symbol: Symbol | undefined): NewtypeDeclaration | undefined {
+  const declaration = symbol?.declarations?.find(isNewtypeDeclaration);
+  return declaration?.withClause?.properties.some(property => idText(property.name) === "predicate") ? declaration : undefined;
+}
+
 function getRefinementTarget(checker: TypeChecker, expression: CallExpression): NewtypeDeclaration | undefined {
-  if (!isIdentifier(expression.expression)) return undefined;
-  const symbol = checker.getSymbolAtLocation(expression.expression);
-  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
-  return target?.declarations?.find(isNewtypeDeclaration)?.withClause?.properties.some(property => idText(property.name) === "predicate")
-    ? target.declarations.find(isNewtypeDeclaration)
-    : undefined;
+  return isIdentifier(expression.expression) ? getRefinementNewtype(getAliasedSymbolOf(checker, expression.expression)) : undefined;
 }
 
 function getRefinementTypeTarget(checker: TypeChecker, type: TypeNode | undefined): TypeAliasDeclaration | undefined {
   if (!type || !isTypeReferenceNode(type) || !isIdentifier(type.typeName)) return undefined;
-  const symbol = checker.getSymbolAtLocation(type.typeName);
-  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
-  const declaration = target?.declarations?.find(isTypeAliasDeclaration);
+  const declaration = getAliasedSymbolOf(checker, type.typeName)?.declarations?.find(isTypeAliasDeclaration);
   return declaration?.withClause?.properties.some(property => idText(property.name) === "predicate") ? declaration : undefined;
 }
 
