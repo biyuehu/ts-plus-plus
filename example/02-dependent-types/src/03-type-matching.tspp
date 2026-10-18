@@ -65,7 +65,7 @@ export type MatchedString: Type0 =
 // 它猜测后面的分支。
 
 export type MatchRuntimeValue: Type1 =
-  (A: Type0) ->
+  {A: Type0} ->
   (value: A) ->
   TypeMatch<
     A,
@@ -112,7 +112,7 @@ export type NestedElementOrSelf: Type1 =
 // 捕获仍遵守 equal / apart / stuck：开放的 A 不会提前走 Default，
 // 而是在调用点获得实际类型后再决定并代入 T。
 export type FirstArrayElement: Type1 =
-  (A: Type0) ->
+  {A: Type0} ->
   (value: A) ->
   TypeMatch<
     A,

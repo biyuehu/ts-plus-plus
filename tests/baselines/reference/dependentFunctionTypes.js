@@ -3,7 +3,7 @@
 //// [dependentFunctionTypes.tspp]
 type Box<T> = { value: T };
 
-export type PolymorphicIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+export type PolymorphicIdentity: Type1 = {A: Type0} -> (value: A) -> A;
 export type ConstantType: Type1 = (A: Type0) -> (B: Type0) -> A;
 export type Shadowing: Type1 = (A: Type0) -> (A: Type0) -> A;
 export type IdentityAlias: Type1 = PolymorphicIdentity;
@@ -33,7 +33,7 @@ export {};
 type Box<T> = {
     value: T;
 };
-export type PolymorphicIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+export type PolymorphicIdentity: Type1 = {A: Type0} -> (value: A) -> A;
 export type ConstantType: Type1 = (A: Type0) -> (B: Type0) -> A;
 export type Shadowing: Type1 = (A: Type0) -> (A: Type0) -> A;
 export type IdentityAlias: Type1 = PolymorphicIdentity;
@@ -51,6 +51,25 @@ export type ConditionalType: Type1 = (A: Type0) -> A extends string ? number : b
 export type MappedType: Type1 = (A: Type0) -> {
     [K in keyof A]: A[K];
 };
+export {};
+//// [dependentFunctionTypes.d.ts]
+type Box<T> = {
+    value: T;
+};
+export type PolymorphicIdentity = (A: unknown) => unknown;
+export type ConstantType = (A: unknown) => unknown;
+export type Shadowing = (A: unknown) => unknown;
+export type IdentityAlias = PolymorphicIdentity;
+export type WrongExpectedKind = (A: unknown) => unknown;
+export type UnboundName = (A: unknown) => unknown;
+export type BuiltinType = (A: unknown) => unknown;
+export type UnionType = (A: unknown) => unknown;
+export type IntersectionType = (A: unknown) => unknown;
+export type GenericReferenceType = (A: unknown) => unknown;
+export type KeyofType = (A: unknown) => unknown;
+export type IndexedType = (A: unknown) => unknown;
+export type ConditionalType = (A: unknown) => unknown;
+export type MappedType = (A: unknown) => unknown;
 export {};
 //// [ordinary.d.ts]
 export type OrdinaryFunction = (value: string) => string;

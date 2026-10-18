@@ -21816,10 +21816,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     let node: TypeNode = type.node;
     let term: MlttTerm = type.mlttTerm;
 
-    // A leading `(A: Type0) -> ...` binder is represented as an erased TS type
+    // A leading `{A: Type0} -> ...` binder is represented as an erased TS type
     // parameter. Once a runtime parameter is encountered, later binders remain
     // runtime parameters so call arity is stable and unsurprising.
-    while (isMlttDependentFunctionTypeNode(node) && isMlttTypeZeroNode(node.parameterType) && parameters.length === 0) {
+    while (isMlttDependentFunctionTypeNode(node) && node.isImplicit && isMlttTypeZeroNode(node.parameterType) && parameters.length === 0) {
       const name = idText(node.parameterName);
       const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
       const typeParameter = createTypeParameter(symbol);

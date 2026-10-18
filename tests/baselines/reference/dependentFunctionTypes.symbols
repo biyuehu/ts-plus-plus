@@ -7,7 +7,7 @@ type Box<T> = { value: T };
 >value : Symbol(value, Decl(dependentFunctionTypes.tspp, 0, 15))
 >T : Symbol(T, Decl(dependentFunctionTypes.tspp, 0, 9))
 
-export type PolymorphicIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+export type PolymorphicIdentity: Type1 = {A: Type0} -> (value: A) -> A;
 >PolymorphicIdentity : Symbol(PolymorphicIdentity, Decl(dependentFunctionTypes.tspp, 0, 27))
 >Type0 : Symbol(Type0)
 >A : Symbol(A)

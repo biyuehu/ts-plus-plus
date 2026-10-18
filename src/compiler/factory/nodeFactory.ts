@@ -1713,19 +1713,20 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function createDependentFunctionTypeNode(parameterName: string | Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode {
+  function createDependentFunctionTypeNode(parameterName: string | Identifier, parameterType: TypeNode, returnType: TypeNode, isImplicit = false): DependentFunctionTypeNode {
     const node = createBaseNode<DependentFunctionTypeNode>(SyntaxKind.DependentFunctionType);
     node.parameterName = asName(parameterName);
     node.parameterType = parameterType;
     node.returnType = returnType;
+    node.isImplicit = isImplicit;
     node.transformFlags = TransformFlags.ContainsTypeScript;
     return node;
   }
 
   // @api
-  function updateDependentFunctionTypeNode(node: DependentFunctionTypeNode, parameterName: Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode {
-    return node.parameterName !== parameterName || node.parameterType !== parameterType || node.returnType !== returnType
-      ? update(createDependentFunctionTypeNode(parameterName, parameterType, returnType), node)
+  function updateDependentFunctionTypeNode(node: DependentFunctionTypeNode, parameterName: Identifier, parameterType: TypeNode, returnType: TypeNode, isImplicit = node.isImplicit): DependentFunctionTypeNode {
+    return node.parameterName !== parameterName || node.parameterType !== parameterType || node.returnType !== returnType || node.isImplicit !== isImplicit
+      ? update(createDependentFunctionTypeNode(parameterName, parameterType, returnType, isImplicit), node)
       : node;
   }
 

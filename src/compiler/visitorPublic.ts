@@ -827,6 +827,7 @@ const visitEachChildTable: VisitEachChildTable = {
       Debug.checkDefined(nodeVisitor(node.parameterName, visitor, isIdentifier)),
       Debug.checkDefined(nodeVisitor(node.parameterType, visitor, isTypeNode)),
       Debug.checkDefined(nodeVisitor(node.returnType, visitor, isTypeNode)),
+      node.isImplicit,
     );
   },
 

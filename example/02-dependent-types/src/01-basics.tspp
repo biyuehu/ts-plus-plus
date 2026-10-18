@@ -39,19 +39,20 @@ export type OrdinaryStringFunction = (value: string) => string;
 
 // TS++ 依赖函数类型（Pi 类型）使用 `->`。
 export type PolymorphicIdentity: Type1 =
-  (A: Type0) -> (value: A) -> A;
+  {A: Type0} -> (value: A) -> A;
 
 // 从左到右读：
 //
-//   1. 先选择一个普通类型，将它命名为 A；
+//   1. 编译器推断一个普通类型，将它命名为 A；
 //   2. 再接收一个 A 类型的值；
 //   3. 结果仍然是 A。
 //
 // 右侧能引用左侧刚刚引入的 A，这就是“依赖”。
-// binder 是被引入的名字，例如这里的 A 和 value。
+// binder 是被引入的名字，例如这里的 A 和 value。`{A: Type0}` 是隐式
+// binder，`(value: A)` 是显式 binder；隐式参数使用 `{}`，显式参数使用 `()`。
 // `->` 从右向左结合，因此上面等价于：
 //
-//   (A: Type0) -> ((value: A) -> A)
+//   {A: Type0} -> ((value: A) -> A)
 
 // 右侧不引用 binder 时，它退化成非依赖形式。
 export type ConstantTypeFunction: Type1 =

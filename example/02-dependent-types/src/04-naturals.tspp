@@ -31,7 +31,7 @@ export type TwoVector: Type1 =
 // -----------------------------------------------------------------------------
 
 export type VectorBuilder: Type1 =
-  (A: Type0) ->
+  {A: Type0} ->
   (value: A) ->
   (length: Nat) ->
   Vector<length, A>;

@@ -75,7 +75,7 @@ TS++ 是在 TypeScript 中嵌入一小块 MLTT，而不是替换 TypeScript 类�
 - universe、Pi、Bool/Nat 消去、`Eq`/`J`、Sigma、归约和定义相等由 MLTT 内核处理；
 - external bridge 把可表示的 Pi 类型投影为普通 TypeScript 泛型调用签名。涉及 `infer` 时，声明中的 conditional type 受 TypeScript 结构类型语义限制，是核心构造器匹配的近似投影；TS++ checker 内部仍使用精确的构造器身份。
 
-例如 `(A: Type0) -> (value: A) -> A` 可以连接到 `<A>(value: A) => A`。Bool binder 会投影成布尔泛型参数；Nat binder 只接受非负安全整数字面量。具体限制集中在 [`07-boundaries.tspp`](./src/07-boundaries.tspp)。
+例如 `{A: Type0} -> (value: A) -> A` 可以连接到 `<A>(value: A) => A`。`{A: Type0}` 是隐式 binder，`(value: A)` 是显式 binder；Bool binder 会投影成布尔泛型参数，Nat binder 只接受非负安全整数字面量。具体限制集中在 [`07-boundaries.tspp`](./src/07-boundaries.tspp)。
 
 ## 实验特性
 

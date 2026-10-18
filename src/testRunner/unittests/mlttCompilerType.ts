@@ -42,17 +42,21 @@ describe("unittests:: MLTT compiler type", () => {
     type Box<T> = { value: T };
     type WithGenericAlias: Type1 = (A: Type0) -> Box<A>;
     type WithStructuralBody: Type1 = (T: Type0) -> { value: T };
+    type ImplicitIdentity: Type1 = {A: Type0} -> (value: A) -> A;
   `;
   const program = createProgram("/file.tspp", content, { tsppFeatures: allFeatures, noLib: true, strict: true });
   const checker = program.getTypeChecker();
   const file = program.getSourceFile("/file.tspp")!;
   const declarations = file.statements.filter(ts.isTypeAliasDeclaration);
-  const [identity, alphaEquivalent, constant, withUnion, unionAlphaEquivalent, , , withStructuralLeft, withStructuralRight, , withGenericAlias, withStructuralBody] = declarations.map(declaration => checker.getTypeAtLocation(declaration.type));
+  const [identity, alphaEquivalent, constant, withUnion, unionAlphaEquivalent, , , withStructuralLeft, withStructuralRight, , withGenericAlias, withStructuralBody, implicitIdentity] = declarations.map(declaration => checker.getTypeAtLocation(declaration.type));
 
   it("uses a dedicated compiler type and preserves native printing", () => {
     assert.strictEqual(identity.flags, ts.TypeFlags.DependentFunction);
     assert.strictEqual(checker.typeToString(identity), "(A: Type0) -> (value: A) -> A");
     assert.strictEqual(checker.typeToTypeNode(identity, file, /*flags*/ undefined)?.kind, ts.SyntaxKind.DependentFunctionType);
+    assert.strictEqual(checker.typeToString(implicitIdentity), "{A: Type0} -> (value: A) -> A");
+    assert.lengthOf(checker.getSignaturesOfType(identity, ts.SignatureKind.Call), 0);
+    assert.lengthOf(checker.getSignaturesOfType(implicitIdentity, ts.SignatureKind.Call), 1);
   });
 
   it("uses MLTT definitional equality in type relations", () => {
@@ -67,7 +71,7 @@ describe("unittests:: MLTT compiler type", () => {
     const bridged = createProgram(
       "/bridged.tspp",
       `
-      type DependentIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+      type DependentIdentity: Type1 = {A: Type0} -> (value: A) -> A;
       type GenericIdentity = <A>(value: A) => A;
       type WrongResult = <A>(value: A) => string;
     `,
@@ -88,7 +92,7 @@ describe("unittests:: MLTT compiler type", () => {
     const callable = createProgram(
       "/callable.tspp",
       `
-      type DependentIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+      type DependentIdentity: Type1 = {A: Type0} -> (value: A) -> A;
       declare const identity: DependentIdentity;
       const explicit = identity<string>("explicit");
       const inferred = identity("inferred");
@@ -110,7 +114,7 @@ describe("unittests:: MLTT compiler type", () => {
       "/naturals.tspp",
       `
       type Vector<N extends number, A> = { length: N; value: A };
-      type VectorBuilder: Type1 = (A: Type0) -> (value: A) -> (N: Nat) -> Vector<N, A>;
+      type VectorBuilder: Type1 = {A: Type0} -> (value: A) -> (N: Nat) -> Vector<N, A>;
       type EmptyVector: Type1 = (A: Type0) -> Vector<Zero, A>;
       type TwoVector: Type1 = (A: Type0) -> Vector<Succ<Succ<Zero>>, A>;
       type ComputedTwoVector: Type1 = (A: Type0) -> Vector<NatAdd<Succ<Zero>, Succ<Zero>>, A>;
@@ -327,7 +331,7 @@ describe("unittests:: MLTT compiler type", () => {
       "/type-matching-calls.tspp",
       `
       type MatchValue: Type1 =
-        (A: Type0) ->
+        {A: Type0} ->
         (value: A) ->
         TypeMatch<
           A,
@@ -370,7 +374,7 @@ describe("unittests:: MLTT compiler type", () => {
       type BoxAlias<T> = Box<T>;
       interface Duo<L, R> { left: L; right: R }
       type Unwrap: Type1 =
-        (A: Type0) ->
+        {A: Type0} ->
         (value: A) ->
         TypeMatch<
           A,
@@ -379,7 +383,7 @@ describe("unittests:: MLTT compiler type", () => {
           Default<A>
         >;
       type Unpair: Type1 =
-        (A: Type0) ->
+        {A: Type0} ->
         (value: A) ->
         TypeMatch<A, Case<Duo<infer L, infer R>, [L, R]>, Default<A>>;
       declare const unwrap: Unwrap;

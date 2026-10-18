@@ -4707,9 +4707,11 @@ namespace Parser {
   }
 
   function isStartOfDependentFunctionType(): boolean {
-    if (token() !== SyntaxKind.OpenParenToken) return false;
+    if (token() !== SyntaxKind.OpenParenToken && token() !== SyntaxKind.OpenBraceToken) return false;
     if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     return lookAhead(() => {
+      const openToken = token();
+      const closeToken = openToken === SyntaxKind.OpenBraceToken ? SyntaxKind.CloseBraceToken : SyntaxKind.CloseParenToken;
       nextToken();
       if (!isIdentifier()) return false;
       nextToken();
@@ -4718,8 +4720,8 @@ namespace Parser {
 
       let depth = 1;
       while (token() !== SyntaxKind.EndOfFileToken) {
-        if (token() === SyntaxKind.OpenParenToken) depth++;
-        else if (token() === SyntaxKind.CloseParenToken && --depth === 0) {
+        if (token() === openToken) depth++;
+        else if (token() === closeToken && --depth === 0) {
           nextToken();
           if (token() !== SyntaxKind.MinusToken) return false;
           nextToken();
@@ -4733,15 +4735,16 @@ namespace Parser {
 
   function parseDependentFunctionType(): DependentFunctionTypeNode {
     const pos = getNodePos();
-    parseExpected(SyntaxKind.OpenParenToken);
+    const isImplicit = token() === SyntaxKind.OpenBraceToken;
+    parseExpected(isImplicit ? SyntaxKind.OpenBraceToken : SyntaxKind.OpenParenToken);
     const parameterName = parseIdentifier();
     parseExpected(SyntaxKind.ColonToken);
     const parameterType = parseType();
-    parseExpected(SyntaxKind.CloseParenToken);
+    parseExpected(isImplicit ? SyntaxKind.CloseBraceToken : SyntaxKind.CloseParenToken);
     parseExpected(SyntaxKind.MinusToken);
     parseExpected(SyntaxKind.GreaterThanToken);
     const returnType = parseType();
-    return finishNode(factory.createDependentFunctionTypeNode(parameterName, parameterType, returnType), pos);
+    return finishNode(factory.createDependentFunctionTypeNode(parameterName, parameterType, returnType, isImplicit), pos);
   }
 
   function isStartOfTypeLambda(): boolean {

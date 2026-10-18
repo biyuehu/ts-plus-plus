@@ -56,6 +56,15 @@ declare let dynamicNumber: number;
 // @ts-expect-error -- 宽泛 number 无法证明自己是 Nat
 buildAt(dynamicNumber);
 
+// Type0 binder 只有写成 `{A: Type0}` 才会在调用边界投影为 TS 泛型参数。
+// `(A: Type0)` 是显式 binder；当前值层没有一等类型值可传给它，因此不生成
+// 可调用签名。
+export type ExplicitTypeBinder: Type1 =
+  (A: Type0) -> (value: A) -> A;
+export declare const explicitTypeBinder: ExplicitTypeBinder;
+// @ts-expect-error -- 显式 Type0 binder 当前不能投影为值层调用
+explicitTypeBinder("value");
+
 // -----------------------------------------------------------------------------
 // 4. 依赖构造必须满足由前项决定的类型
 // -----------------------------------------------------------------------------
@@ -84,7 +93,8 @@ export type HiddenHigherUniverse: Type1 =
 //
 //   - 用户可声明的通用 inductive family；
 //   - 分解任意 MLTT 构造器的 dependent pattern matching；
-//   - 隐式参数、holes 和通用 unification；
+//   - 除 TypeScript 调用边界上的类型参数推断外，更通用的隐式参数求解、
+//     holes 和通用 unification；
 //   - 可选/剩余运行时 binder、默认/约束类型参数；
 //   - 让任意 JavaScript 表达式参与类型级计算。
 //

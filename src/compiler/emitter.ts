@@ -2511,12 +2511,12 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
       writeKeyword("unknown");
       return;
     }
-    writePunctuation("(");
+    writePunctuation(node.isImplicit ? "{" : "(");
     emit(node.parameterName);
     writePunctuation(":");
     writeSpace();
     emit(node.parameterType);
-    writePunctuation(")");
+    writePunctuation(node.isImplicit ? "}" : ")");
     writeSpace();
     writeOperator("->");
     writeSpace();

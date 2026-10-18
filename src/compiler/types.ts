@@ -2270,12 +2270,13 @@ export interface TypeNode extends Node {
   readonly kind: TypeNodeSyntaxKind;
 }
 
-/** A dependent function type `(name: domain) -> codomain`. Available in TS++ source files. */
+/** A dependent function type `(name: domain) -> codomain` or an implicit dependent function type `{name: domain} -> codomain`. Available in TS++ source files. */
 export interface DependentFunctionTypeNode extends TypeNode {
   readonly kind: SyntaxKind.DependentFunctionType;
   readonly parameterName: Identifier;
   readonly parameterType: TypeNode;
   readonly returnType: TypeNode;
+  readonly isImplicit: boolean;
 }
 
 export interface KeywordTypeNode<TKind extends KeywordTypeSyntaxKind = KeywordTypeSyntaxKind> extends KeywordToken<TKind>, TypeNode {
@@ -9191,8 +9192,8 @@ export interface NodeFactory {
   createTypeKindNode(level?: string): TypeKindNode;
   createFunctionKindNode(parameters: readonly KindNode[], returnKind: KindNode): FunctionKindNode;
   updateFunctionKindNode(node: FunctionKindNode, parameters: NodeArray<KindNode>, returnKind: KindNode): FunctionKindNode;
-  createDependentFunctionTypeNode(parameterName: string | Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode;
-  updateDependentFunctionTypeNode(node: DependentFunctionTypeNode, parameterName: Identifier, parameterType: TypeNode, returnType: TypeNode): DependentFunctionTypeNode;
+  createDependentFunctionTypeNode(parameterName: string | Identifier, parameterType: TypeNode, returnType: TypeNode, isImplicit?: boolean): DependentFunctionTypeNode;
+  updateDependentFunctionTypeNode(node: DependentFunctionTypeNode, parameterName: Identifier, parameterType: TypeNode, returnType: TypeNode, isImplicit?: boolean): DependentFunctionTypeNode;
   createParameterDeclaration(modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken?: QuestionToken, type?: TypeNode, initializer?: Expression): ParameterDeclaration;
   updateParameterDeclaration(node: ParameterDeclaration, modifiers: readonly ModifierLike[] | undefined, dotDotDotToken: DotDotDotToken | undefined, name: string | BindingName, questionToken: QuestionToken | undefined, type: TypeNode | undefined, initializer: Expression | undefined): ParameterDeclaration;
   createDecorator(expression: Expression): Decorator;
