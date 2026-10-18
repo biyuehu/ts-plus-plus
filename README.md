@@ -192,4 +192,4 @@ The lambda body may reference any type in scope. All type computation syntax is 
 
 ## License
 
-Apache License 2.0. tsplusplus is derived from Microsoft's TypeScript; the original license, copyright notices and `NOTICE` remain in place, and modified files will be marked as modified. "TypeScript" is a trademark of Microsoft Corporation.
+Apache License 2.0. ts-plus-plus is derived from Microsoft's TypeScript; the original license, copyright notices and `NOTICE` remain in place, and modified files will be marked as modified. "TypeScript" is a trademark of Microsoft Corporation.

@@ -192,4 +192,4 @@ lambda 体可以引用任何在作用域内的类型。所有类型计算语法�
 
 ## 协议
 
-Apache 许可证 2.0。tsplusplus 派生自 Microsoft 的 TypeScript；原始许可证、版权声明和 NOTICE 保持不变，修改过的文件将被标记为已修改。“TypeScript”是 Microsoft Corporation 的商标。
+Apache 许可证 2.0。ts-plus-plus 派生自 Microsoft 的 TypeScript；原始许可证、版权声明和 NOTICE 保持不变，修改过的文件将被标记为已修改。“TypeScript”是 Microsoft Corporation 的商标。
