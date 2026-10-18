@@ -46042,7 +46042,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const seen = new Set<string>();
     for (const property of node.withClause.properties) {
       const name = idText(property.name);
-      if (seen.has(name) && name !== "requires" && name !== "ensures") {
+      if (seen.has(name)) {
         error(property.name, Diagnostics.The_with_property_0_may_only_be_specified_once, name);
         continue;
       }
@@ -46068,10 +46068,24 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         }
       }
       else {
-        if (!checkVerificationPredicateExpression(property.value)) {
-          checkTruthinessExpression(property.value);
+        checkWithPredicateValue(property.value, name, "a formal contract");
+      }
+    }
+  }
+
+  function checkWithPredicateValue(value: Expression, name: string, owner: string): void {
+    if (isArrayLiteralExpression(value)) {
+      if (!value.elements.length) {
+        error(value, Diagnostics.The_with_property_0_is_not_supported_on_1, `${name}: empty array`, owner);
+      }
+      for (const element of value.elements) {
+        if (!checkVerificationPredicateExpression(element)) {
+          checkTruthinessExpression(element);
         }
       }
+    }
+    else if (!checkVerificationPredicateExpression(value)) {
+      checkTruthinessExpression(value);
     }
   }
 
@@ -47410,7 +47424,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const seen = new Set<string>();
       for (const property of node.withClause.properties) {
         const name = idText(property.name);
-        if (seen.has(name) && name !== "invariant") {
+        if (seen.has(name)) {
           error(property.name, Diagnostics.The_with_property_0_may_only_be_specified_once, name);
           continue;
         }
@@ -47426,9 +47440,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           }
         }
         else {
-          if (!checkVerificationPredicateExpression(property.value)) {
-            checkTruthinessExpression(property.value);
-          }
+          checkWithPredicateValue(property.value, name, "a loop invariant");
         }
       }
     }

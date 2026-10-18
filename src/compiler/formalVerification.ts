@@ -1,4 +1,5 @@
 import {
+  isArrayLiteralExpression,
   isBinaryExpression,
   isBlock,
   isBreakStatement,
@@ -247,7 +248,7 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
       };
       const predicateState = cloneState(initial);
       predicateState.values.set("value", value);
-      const assumption = predicate && translateExpression(refinementContext, predicateState, predicate.value);
+      const assumption = predicate && translateExpression(refinementContext, predicateState, predicate);
       if (!assumption) initial.reason = `Refinement type '${idText(refinement.name)}' requires a predicate.`;
       else if (typeof assumption === "string") initial.reason = assumption;
       else if (assumption.sort !== "Bool") initial.reason = "A refinement predicate must have Boolean verification semantics.";
@@ -255,7 +256,7 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
     }
   }
   for (const property of getProperties(declaration.withClause, "requires")) {
-    const term = translateExpression(context, initial, property.value);
+    const term = translateExpression(context, initial, property);
     if (typeof term === "string") initial.reason = term;
     else if (term.sort !== "Bool") initial.reason = "A requires expression must have Boolean SMT semantics.";
     else initial.facts.push(term.expression);
@@ -289,7 +290,7 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
           addUnknown(context, property, "function-contract", "postcondition", name, path.state.reason);
           continue;
         }
-        const goal = translateExpression(context, path.state, property.value, path.value);
+        const goal = translateExpression(context, path.state, property, path.value);
         if (typeof goal === "string") addUnknown(context, property, "function-contract", "postcondition", name, goal);
         else if (goal.sort !== "Bool") addUnknown(context, property, "function-contract", "postcondition", name, "An ensures expression must have Boolean SMT semantics.");
         else addQuery(context, property, "function-contract", "postcondition", name, path.state.facts, goal.expression);
@@ -475,7 +476,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
     const name = `${contractName(context.declaration)} loop invariant ${i + 1}`;
     if (incoming.reason) addUnknown(context, property, "loop-invariant", "invariant-initialization", `${name} initialization`, incoming.reason);
     else {
-      const goal = translateExpression(context, incoming, property.value);
+      const goal = translateExpression(context, incoming, property);
       if (typeof goal === "string") addUnknown(context, property, "loop-invariant", "invariant-initialization", `${name} initialization`, goal);
       else if (goal.sort !== "Bool") addUnknown(context, property, "loop-invariant", "invariant-initialization", `${name} initialization`, "An invariant must have Boolean SMT semantics.");
       else addQuery(context, property, "loop-invariant", "invariant-initialization", `${name} initialization`, incoming.facts, goal.expression);
@@ -490,7 +491,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
   }
   const invariantTerms: VerificationExpression[] = [];
   for (const property of invariants) {
-    const term = translateExpression(context, head, property.value);
+    const term = translateExpression(context, head, property);
     if (typeof term === "string") writeReason ??= term;
     else if (term.sort !== "Bool") writeReason ??= "An invariant must have Boolean SMT semantics.";
     else invariantTerms.push(term.expression);
@@ -517,7 +518,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
     for (const state of bodyFlow.live) {
       if (state.reason) addUnknown(context, property, "loop-invariant", "invariant-preservation", name, state.reason);
       else {
-        const goal = translateExpression(context, state, property.value);
+        const goal = translateExpression(context, state, property);
         if (typeof goal === "string") addUnknown(context, property, "loop-invariant", "invariant-preservation", name, goal);
         else addQuery(context, property, "loop-invariant", "invariant-preservation", name, state.facts, goal.expression);
       }
@@ -529,7 +530,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
     const current = after.values.get(name)!;
     after.values.set(name, freshConstant(context, name, current.sort));
   }
-  const afterInvariantTerms = invariants.map(property => translateExpression(context, after, property.value));
+  const afterInvariantTerms = invariants.map(property => translateExpression(context, after, property));
   const afterCondition = translateExpression(context, after, statement.expression);
   for (const term of afterInvariantTerms) {
     if (typeof term === "string") return unsupportedFlow(after, term);
@@ -961,7 +962,7 @@ function verifyRefinementTerm(
   }
   const predicateState = cloneState(callerState);
   predicateState.values.set("value", argument);
-  const goal = translateExpression(refinementContext, predicateState, predicate.value);
+  const goal = translateExpression(refinementContext, predicateState, predicate);
   if (typeof goal === "string") {
     addUnknown(refinementContext, node, "refinement", "refinement-introduction", `${name} refinement`, goal);
   }
@@ -1029,7 +1030,7 @@ function verifyCallPreconditions(
   }
 
   for (let i = 0; i < requires.length; i++) {
-    const requirement = translateExpression(callContext, calleeState, requires[i].value);
+    const requirement = translateExpression(callContext, calleeState, requires[i]);
     const name = `${targetName} precondition ${i + 1}`;
     if (typeof requirement === "string") addUnknown(callContext, expression, "call-precondition", "precondition", name, requirement);
     else if (requirement.sort !== "Bool") addUnknown(callContext, expression, "call-precondition", "precondition", name, "A requires expression must have Boolean SMT semantics.");
@@ -1156,7 +1157,9 @@ function addUnknownForEach(
 }
 
 function getProperties(clause: WithClause | undefined, name: string) {
-  return clause?.properties.filter(property => idText(property.name) === name) ?? [];
+  const property = clause?.properties.find(property => idText(property.name) === name);
+  if (!property) return [];
+  return name !== "predicate" && isArrayLiteralExpression(property.value) ? [...property.value.elements] : [property.value];
 }
 
 function getNumberModel(clause: WithClause | undefined): boolean {

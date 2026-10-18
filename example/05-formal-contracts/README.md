@@ -46,8 +46,7 @@ function successor(value: bigint) with {
 
 ```ts
 while (current < limit) with {
-  invariant: current >= 0n;
-  invariant: current <= limit;
+  invariant: [current >= 0n, current <= limit];
 } {
   current += 1n;
 }

@@ -139,14 +139,15 @@ function sumTo(n: bigint) with {
 }: bigint {
   let current = 0n;
   while (current < n) with {
-    invariant: current >= 0n;
-    invariant: current <= n;
+    invariant: [current >= 0n, current <= n];
   } {
     current += 1n;
   }
   return current;
 }
 ```
+
+每个 `with` 属性名只能出现一次；`requires`、`ensures` 或 `invariant` 包含多个条件时使用数组。
 
 当前子集支持 `boolean`、`bigint`、`string`、局部变量、赋值、分支、`switch`、多返回路径、带不变式的循环，以及对能够静态解析到项目函数声明的直接调用检查 `requires`。记录与记录字面量、带唯一字符串 `_tag` 的封闭判别联合、TS++ `data` 构造器和递归代数数据会通过 TypeScript checker 已经计算出的类型与控制流窄化降低为 Verification IR 的积类型/和类型，再编码为 Z3 datatype；验证器不会并行实现另一套 TypeScript 类型窄化。可选字段、索引签名和开放联合目前会明确得到 `unknown`。验证函数内部调用时，调用者前提与当前符号路径事实也会参与证明。只有在函数契约中加入 `numberModel: "mathematical-real";` 后才支持 `number`；它明确表示把 `number` 抽象成数学实数，而不是 JavaScript 的 IEEE-754 数值。
 

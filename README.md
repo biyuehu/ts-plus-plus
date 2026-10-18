@@ -139,14 +139,15 @@ function sumTo(n: bigint) with {
 }: bigint {
   let current = 0n;
   while (current < n) with {
-    invariant: current >= 0n;
-    invariant: current <= n;
+    invariant: [current >= 0n, current <= n];
   } {
     current += 1n;
   }
   return current;
 }
 ```
+
+Each `with` property name may appear only once. Use an array when `requires`, `ensures`, or `invariant` contains multiple conditions.
 
 The current subset covers `boolean`, `bigint`, and `string`, local variables, assignments, branches, `switch`, multiple returns, invariant-annotated loops, and `requires` checks at direct call sites that resolve to project function declarations. Records, record literals, closed discriminated unions with a unique string `_tag`, TS++ `data` constructors, and recursive algebraic data are lowered from the types and control-flow narrowing already computed by the TypeScript checker into Verification IR product/sum types and then into Z3 datatypes; the verifier does not implement a competing version of TypeScript narrowing. Optional properties, index signatures, and open unions currently produce an explicit `unknown`. Calls inside verified functions use the caller's assumptions and current symbolic path facts. `number` is available only after adding `numberModel: "mathematical-real";` to the function contract; this deliberately models numbers as mathematical reals rather than JavaScript IEEE-754 values.
 

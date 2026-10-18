@@ -5957,7 +5957,10 @@ function createPlaceholderFormalArtifacts(
         }
         const declaration = checker.getResolvedSignature(call)?.declaration;
         if (declaration?.kind !== SyntaxKind.FunctionDeclaration) return undefined;
-        const requirements = declaration.withClause?.properties.filter(property => String(property.name.escapedText) === "requires") ?? emptyArray;
+        const requiresProperty = declaration.withClause?.properties.find(property => String(property.name.escapedText) === "requires");
+        const requirements = requiresProperty
+          ? isArrayLiteralExpression(requiresProperty.value) ? requiresProperty.value.elements : [requiresProperty.value]
+          : emptyArray;
         const targetName = declaration.name ? String(declaration.name.escapedText) : "anonymous function";
         for (let i = 0; i < requirements.length; i++) {
           const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
@@ -5983,18 +5986,21 @@ function createPlaceholderFormalArtifacts(
       const kind = name === "ensures" ? "function-contract" : "loop-invariant";
       const obligation = name === "ensures" ? "postcondition" : "invariant-preservation";
       const smt = `; No SMT query was executed.\n; ${message.replace(/\r?\n/g, " ")}\n`;
-      artifacts.push(createVerificationArtifact(
-        sourceFile,
-        property,
-        kind,
-        obligation,
-        `${name} verification`,
-        status,
-        smt,
-        smt,
-        message,
-        reason,
-      ));
+      const values = isArrayLiteralExpression(property.value) ? property.value.elements : [property.value];
+      for (let i = 0; i < values.length; i++) {
+        artifacts.push(createVerificationArtifact(
+          sourceFile,
+          values[i],
+          kind,
+          obligation,
+          `${name} verification ${i + 1}`,
+          status,
+          smt,
+          smt,
+          message,
+          reason,
+        ));
+      }
       return undefined;
     });
   }

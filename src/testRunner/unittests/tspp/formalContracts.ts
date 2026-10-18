@@ -26,15 +26,16 @@ describe("unittests:: tspp:: formal contracts", () => {
   it("parses and prints while invariant clauses", () => {
     const file = ts.createSourceFile(
       "/file.tspp",
-      "while (x < n) with { invariant: x >= 0n; invariant: x <= n; } { x += 1n; }",
+      "while (x < n) with { invariant: [x >= 0n, x <= n]; } { x += 1n; }",
       ts.ScriptTarget.Latest,
       /*setParentNodes*/ true,
     );
     assert.isEmpty(file.parseDiagnostics);
     const statement = file.statements[0] as ts.WhileStatement;
     assert.isTrue(ts.isWhileStatement(statement));
-    assert.equal(statement.withClause?.properties.length, 2);
-    assert.include(ts.createPrinter().printFile(file), "with { invariant: x >= 0n; invariant: x <= n; }");
+    assert.equal(statement.withClause?.properties.length, 1);
+    assert.isTrue(ts.isArrayLiteralExpression(statement.withClause!.properties[0].value));
+    assert.include(ts.createPrinter().printFile(file), "with { invariant: [x >= 0n, x <= n]; }");
   });
 
   it("proves contracts and both loop invariant obligations", async () => {
@@ -45,8 +46,7 @@ describe("unittests:: tspp:: formal contracts", () => {
       }: bigint {
         let x = 0n;
         while (x < n) with {
-          invariant: x >= 0n;
-          invariant: x <= n;
+          invariant: [x >= 0n, x <= n];
         } {
           x += 1n;
         }
@@ -71,6 +71,21 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.include(js, "while (x < n)");
     assert.notInclude(js, "invariant");
     assert.notInclude(js, "ensures");
+  });
+
+  it("rejects duplicate keys in with clauses", async () => {
+    const { program } = await createProgram(`
+      function duplicateEnsures(value: bigint) with {
+        ensures: result >= value;
+        ensures: result === value;
+      }: bigint { return value; }
+      while (true) with {
+        invariant: true;
+        invariant: true;
+      } {}
+    `);
+    const messages = program.getSemanticDiagnostics().map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+    assert.equal(messages.filter(message => message.includes("may only be specified once")).length, 2);
   });
 
   it("reports a counterexample instead of accepting a false postcondition", async () => {
@@ -174,8 +189,7 @@ describe("unittests:: tspp:: formal contracts", () => {
       function countTo(limit: bigint) with { ensures: result === limit; }: bigint {
         let current = 0n;
         while (current < limit) with {
-          invariant: current >= 0n;
-          invariant: current <= limit;
+          invariant: [current >= 0n, current <= limit];
         } {
           current += 1n;
         }
@@ -201,6 +215,18 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.equal(artifact.counterexample, "value = -5");
     assert.equal(program.getSourceFile(fileName)!.text.slice(artifact.start, artifact.start + artifact.length), "successor(-5n)");
     assert.include(ts.flattenDiagnosticMessageText(program.getSemanticDiagnostics()[0].messageText, "\n"), "Counterexample: value = -5");
+  });
+
+  it("verifies every requires expression in an array", async () => {
+    const { program } = await createProgram(`
+      function bounded(value: bigint) with { requires: [value >= 0n, value <= 10n]; }: bigint {
+        return value;
+      }
+      bounded(5n);
+    `);
+    const artifacts = program.getVerificationArtifacts!();
+    assert.lengthOf(artifacts, 2);
+    assert.isTrue(artifacts.every(artifact => artifact.kind === "call-precondition" && artifact.status === "proved"));
   });
 
   it("proves requires clauses at direct call sites", async () => {
@@ -618,8 +644,7 @@ describe("unittests:: tspp:: formal contracts", () => {
     const { program } = await createProgram(`
       type Point = { x: bigint; y: bigint };
       function origin() with {
-        ensures: result.x === 0n;
-        ensures: result.y === 0n;
+        ensures: [result.x === 0n, result.y === 0n];
       }: Point {
         return { x: 0n, y: 0n };
       }
@@ -632,8 +657,7 @@ describe("unittests:: tspp:: formal contracts", () => {
     const { program } = await createProgram(`
       type Point = { x: bigint; y: bigint };
       function copy(point: Point) with {
-        ensures: result.x === point.x;
-        ensures: result.y === point.y;
+        ensures: [result.x === point.x, result.y === point.y];
       }: Point {
         return point;
       }
