@@ -792,6 +792,8 @@ function translateStandardPredicateForReal(
     }
     case "positive":
       return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
+    case "negative":
+      return { sort: "Bool", expression: verificationApplication("<", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
     case "nonNegative":
       return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
     case "zero":
@@ -863,6 +865,8 @@ function translateStandardPredicate(
       };
     case "positive":
       return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, verificationInteger("0")) };
+    case "negative":
+      return { sort: "Bool", expression: verificationApplication("<", argumentTerms[0].expression, verificationInteger("0")) };
     case "nonNegative":
       return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, verificationInteger("0")) };
     case "zero":

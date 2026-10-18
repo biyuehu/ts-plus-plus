@@ -10,6 +10,10 @@ type PositiveInteger = bigint with {
   predicate: isPositive(value);
 };
 
+type NegativeInteger = bigint with {
+  predicate: isNegative(value);
+};
+
 type NonNegativeInteger = bigint with {
   predicate: isNonNegative(value);
 };
@@ -41,6 +45,11 @@ type PositiveReal = number with {
   predicate: isPositive(value);
 };
 
+type NegativeReal = number with {
+  numberModel: "mathematical-real";
+  predicate: isNegative(value);
+};
+
 type NonNegativeReal = number with {
   numberModel: "mathematical-real";
   predicate: isNonNegative(value);
@@ -64,6 +73,7 @@ type TeenReal = number with {
 const even: Even = 42n;
 const odd: Odd = 43n;
 const positive: PositiveInteger = 42n;
+const negative: NegativeInteger = -42n;
 const nonNegative: NonNegativeInteger = 0n;
 const zero: Zero = 0n;
 const divisibleByThree: DivisibleByThree = 42n;
@@ -72,6 +82,7 @@ const teen: Teen = 17n;
 const evenReal: EvenReal = 42;
 const oddReal: OddReal = 43;
 const positiveReal: PositiveReal = 42;
+const negativeReal: NegativeReal = -42;
 const nonNegativeReal: NonNegativeReal = 0;
 const zeroReal: ZeroReal = 0;
 const divisibleByThreeReal: DivisibleByThreeReal = 42;
@@ -80,6 +91,7 @@ const teenReal: TeenReal = 2;
 console.log(`even = ${even}`);
 console.log(`odd = ${odd}`);
 console.log(`positive = ${positive}`);
+console.log(`negative = ${negative}`);
 console.log(`non-negative = ${nonNegative}`);
 console.log(`zero = ${zero}`);
 console.log(`divisible by three = ${divisibleByThree}`);
@@ -87,6 +99,7 @@ console.log(`teen = ${teen}`);
 console.log(`even real = ${evenReal}`);
 console.log(`odd real = ${oddReal}`);
 console.log(`positive real = ${positiveReal}`);
+console.log(`negative real = ${negativeReal}`);
 console.log(`non-negative real = ${nonNegativeReal}`);
 console.log(`zero real = ${zeroReal}`);
 console.log(`divisible by three real = ${divisibleByThreeReal}`);
