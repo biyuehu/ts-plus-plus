@@ -24,16 +24,17 @@ type Transform<Container, F: Type => Type> = match Container {
     let NextT = F<T> in
     Result<NextT, E>,
 
-    // 匹配数组结构
-    Array<infer U>:
-    let Elem = F<U> in
-    Array<Elem>,
-
-    // 匹配二元元组
+    // 匹配二元元组（必须先于 Array：元组也是数组，
+    // 顺序 match 会先命中更宽的 Array 模式）
     [infer A, infer B]:
     let NextA = F<A> in
     let NextB = F<B> in
     [NextA, NextB],
+
+    // 匹配数组结构
+    Array<infer U>:
+    let Elem = F<U> in
+    Array<Elem>,
 
     // 匹配字面量与基元（直接应用变换）
     infer Other: F<Other>
@@ -46,16 +47,19 @@ type PairWithSelf = <T> =>>[T, T];
 // 3. 应用综合计算
 type T1 = Transform<Maybe<number>, WrapInArray>;       // Maybe<number[]>
 type T2 = Transform<[string, boolean], PairWithSelf>;   // [[string, string], [boolean, boolean]]
-type T3 = Transform<Result<string, Error>, <T> => > { success: false; data: T }>; // Result<{ success: true; data: string }, Error>
+type T3 = Transform<Result<string, Error>, <T> => > { success: false; data: T }>; // Result<{ success: false; data: string }, Error>
 type T4 = Transform<string, WrapInArray>;               // string[]
 
 // 4. 验证类型计算结果
+// 自赋值断言（const test: T = value as T）恒真，无法暴露分支顺序错误；
+// 这里把手写期望类型与计算结果对照：若 Transform 的结果与注释不符，
+// 赋值行会直接报 TS2322。
 declare const opt: T1;
 declare const tuple: T2;
 declare const res: T3;
 declare const arr: T4;
 
-const test1: T1 = opt;
-const test2: T2 = tuple;
-const test3: T3 = res;
-const test4: T4 = arr;
+const test1: Maybe<Array<number>> = opt;
+const test2: [[string, string], [boolean, boolean]] = tuple;
+const test3: Result<{ success: false; data: string }, Error> = res;
+const test4: Array<string> = arr;
