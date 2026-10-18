@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "tsppFeatures": [
+      "newtypeDeclarations",
+      "dataDeclarations"
+    ]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tspp"]
+}

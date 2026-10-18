@@ -403,13 +403,24 @@ export namespace Compiler {
           throw new Error("Only declaration files should be generated when emitDeclarationOnly:true");
         }
       }
-      else if (result.dts.size !== result.getNumberOfJsFiles(/*includeJson*/ false)) {
+      else if (result.dts.size !== result.getNumberOfJsFiles(/*includeJson*/ false) + getTsppCompatibilityDeclarationCount()) {
         throw new Error("There were no errors and declFiles generated did not match number of js files generated");
       }
     }
 
     const declInputFiles: TestFile[] = [];
     const declOtherFiles: TestFile[] = [];
+
+    function getTsppCompatibilityDeclarationCount() {
+      let count = 0;
+      result.dts.forEach((_document, fileName) => {
+        if (ts.fileExtensionIs(fileName, ts.Extension.Dts)) {
+          const extensionless = fileName.slice(0, -ts.Extension.Dts.length);
+          if (result.dts.has(extensionless + ts.Extension.Dtspp)) count++;
+        }
+      });
+      return count;
+    }
 
     // if the .d.ts is non-empty, confirm it compiles correctly as well
     if (options.declaration && result.diagnostics.length === 0 && result.dts.size > 0) {

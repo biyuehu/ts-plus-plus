@@ -54,6 +54,36 @@ tspp --init
 
 依赖项也必须显式列出。未知特性、重复特性或缺少依赖都会成为配置错误：编译器拒绝启动编译，不修改配置，也不会容错降级运行。
 
+## TypeScript 互操作
+
+TS++ 把 TypeScript 作为稳定的兼容层与 FFI 边界：
+
+- TS++ 编译器可以编译 `.ts`、`.js` 和 `.tspp`。`.tspp` 源文件可以引用 TypeScript/JavaScript 源码，也可以在明确增强边界值类型时使用普通 TypeScript 类型断言。
+- `.ts` 或 `.js` 源文件不能引用 `.tspp` 或 `.d.tspp` 源文件，但仍可通过编译后的 JavaScript 和 `.d.ts` 兼容面使用 TS++ 包。
+- `.ts` 的声明输出仍为 `.d.ts`；`.tspp` 会同时输出完整的 `.d.tspp` 和供 TypeScript 使用的 `.d.ts` 兼容投影。
+- TS++ 包消费者优先读取 `package.json#tsppTypes` 和 `exports` 中的 `tspp-types` 条件；TypeScript 消费者继续读取标准的 `types` 字段和 `types` 条件。
+
+条件导出键的顺序会影响匹配结果，因此应当像下面这样把 `tspp-types` 放在 `types` 之前。
+
+```json
+{
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "tsppTypes": "./dist/index.d.tspp",
+  "exports": {
+    ".": {
+      "tspp-types": "./dist/index.d.tspp",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  }
+}
+```
+
+兼容声明是保守投影，而不是简单改扩展名：`newtype` 会变成底层 TypeScript 类型与构造函数签名，`data` 会变成可辨识联合及变体声明，契约和仅供宏系统使用的声明会被省略；依赖函数保留可调用参数域但将结果降级为 `unknown`，TypeScript 无法表达的类型计算和高阶类型操作也会降级为 `unknown`。生成的 `.d.ts` 必须形成封闭依赖图，绝不能引用 `.d.tspp`。
+
+混合源码库和原生 TypeScript 消费者示例见 [`example/07-typescript-interop`](./example/07-typescript-interop)。
+
 ## 特性可能带来的影响
 
 每项特性只按两个彼此独立的维度评估：

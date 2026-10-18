@@ -6645,6 +6645,8 @@ export interface EmitFileNames {
   jsFilePath?: string | undefined;
   sourceMapFilePath?: string | undefined;
   declarationFilePath?: string | undefined;
+  /** TypeScript-compatible declaration emitted alongside a TS++ declaration. */
+  compatibilityDeclarationFilePath?: string | undefined;
   declarationMapPath?: string | undefined;
   buildInfoPath?: string | undefined;
 }

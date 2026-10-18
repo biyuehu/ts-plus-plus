@@ -1,0 +1,11 @@
+import { loadLegacyUser } from "./legacy.js";
+
+export newtype UserId = number;
+export data Lookup<T> = Missing | Found(value: T);
+
+export function loadUser(): Lookup<{ id: UserId; name: string }> {
+  const legacy = loadLegacyUser();
+  // TS++ may explicitly assert or construct a stronger type at the TS boundary.
+  const id = legacy.id as UserId;
+  return Found({ id, name: legacy.name });
+}

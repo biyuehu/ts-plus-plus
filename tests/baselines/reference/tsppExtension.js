@@ -26,5 +26,9 @@ exports.doubled = dep_1.answer + dep_tspp_1.answer;
 
 //// [dep.d.tspp]
 export declare const answer: number;
+//// [dep.d.ts]
+export declare const answer: number;
 //// [main.d.tspp]
+export declare const doubled: number;
+//// [main.d.ts]
 export declare const doubled: number;

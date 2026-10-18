@@ -154,6 +154,7 @@ export * from "./unittests/tscWatch/watchApi.js";
 export * from "./unittests/tscWatch/watchEnvironment.js";
 export * from "./unittests/tspp/editorGrammars.js";
 export * from "./unittests/tspp/formalContracts.js";
+export * from "./unittests/tspp/interop.js";
 export * from "./unittests/tspp/macros.js";
 export * from "./unittests/tspp/newtypeData.js";
 export * from "./unittests/tspp/typeComputation.js";

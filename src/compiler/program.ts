@@ -5369,6 +5369,7 @@ export function createProgram(_rootNamesOrOptions: readonly string[] | CreatePro
           verifyEmitFilePath(emitFileNames.jsFilePath, emitFilesSeen);
         }
         verifyEmitFilePath(emitFileNames.declarationFilePath, emitFilesSeen);
+        verifyEmitFilePath(emitFileNames.compatibilityDeclarationFilePath, emitFilesSeen);
       });
     }
 

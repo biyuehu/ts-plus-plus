@@ -55,6 +55,36 @@ Enable features manually:
 
 Dependencies must also be listed explicitly. An unknown feature, duplicate feature, or missing dependency is a configuration error: compilation is rejected, and the compiler neither edits the file nor starts in a fallback mode.
 
+## TypeScript interoperability
+
+TS++ uses TypeScript as its compatibility and FFI boundary:
+
+- The TS++ compiler accepts `.ts`, `.js`, and `.tspp` sources. A `.tspp` source may import TypeScript or JavaScript source and may use ordinary TypeScript assertions when explicitly strengthening a boundary value.
+- A `.ts` or `.js` source cannot import `.tspp` or `.d.tspp` source. It may still consume a compiled TS++ package through that package's JavaScript and `.d.ts` compatibility surface.
+- Declaration emit for `.ts` remains `.d.ts`. Declaration emit for `.tspp` writes both a full-fidelity `.d.tspp` and a TypeScript-compatible `.d.ts` projection.
+- TS++ package consumers prefer `package.json#tsppTypes` and the `tspp-types` exports condition. TypeScript consumers continue to use `types` and the standard `types` exports condition.
+
+Conditional export keys are order-sensitive, so place `tspp-types` before `types` as shown below.
+
+```json
+{
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "tsppTypes": "./dist/index.d.tspp",
+  "exports": {
+    ".": {
+      "tspp-types": "./dist/index.d.tspp",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  }
+}
+```
+
+The compatibility declaration is a conservative projection, not a textual rename. `newtype` becomes its underlying TypeScript type plus a constructor signature, `data` becomes a discriminated union plus variant declarations, contracts and macro-only declarations are omitted, dependent functions keep their callable domain but use an `unknown` result, and TS++ type computations or higher-kinded operations that TypeScript cannot express become `unknown`. The `.d.ts` output is required to form a closed graph that never references `.d.tspp`.
+
+See [`example/07-typescript-interop`](./example/07-typescript-interop) for a mixed-source library and an upstream TypeScript consumer.
+
 ## What a feature can change
 
 Each feature is evaluated on two independent properties:

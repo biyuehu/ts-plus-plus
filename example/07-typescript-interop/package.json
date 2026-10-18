@@ -1,0 +1,19 @@
+{
+  "name": "tspp-interop-example",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "tsppTypes": "./dist/index.d.tspp",
+  "exports": {
+    ".": {
+      "tspp-types": "./dist/index.d.tspp",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "node ../../built/local/tsc.js --project tsppconfig.json",
+    "check-ts-consumer": "npm run build && tsc --project consumer/tsconfig.json"
+  }
+}
