@@ -30,7 +30,6 @@ import { forEachChild } from "./parser.js";
 import {
   getStandardPredicateDefinition,
   isStandardPredicateSymbol,
-  type StandardPredicateDefinition,
   standardPredicateDefinitions,
   type StandardPredicateName,
 } from "./standardPredicates.js";
@@ -768,67 +767,6 @@ function constrainToInteger(term: Term, expression: VerificationExpression): Ver
   return term.sort === "Int" ? expression : verificationApplication("and", verificationApplication("is_int", term.expression), expression);
 }
 
-function translateStandardPredicateForReal(
-  name: StandardPredicateName,
-  definition: StandardPredicateDefinition,
-  argumentTerms: readonly Term[],
-): Term | string {
-  if (argumentTerms.some(argument => argument.sort !== "Real")) {
-    return `Standard predicate '${name}' requires arguments of the same numeric type.`;
-  }
-  switch (definition.kind) {
-    case "even":
-    case "odd": {
-      const value = argumentTerms[0];
-      const parity = verificationApplication(
-        "=",
-        verificationApplication("mod", integerExpression(value), verificationInteger("2")),
-        definition.kind === "even" ? verificationInteger("0") : verificationInteger("1"),
-      );
-      return {
-        sort: "Bool",
-        expression: constrainToInteger(value, parity),
-      };
-    }
-    case "positive":
-      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
-    case "negative":
-      return { sort: "Bool", expression: verificationApplication("<", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
-    case "nonNegative":
-      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
-    case "zero":
-      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
-    case "divides": {
-      const [divisor, value] = argumentTerms;
-      return {
-        sort: "Bool",
-        expression: verificationApplication(
-          "and",
-          verificationApplication("is_int", divisor.expression),
-          verificationApplication("is_int", value.expression),
-          verificationApplication("not", verificationApplication("=", divisor.expression, zeroForSort(divisor.sort))),
-          verificationApplication(
-            "=",
-            verificationApplication("mod", integerExpression(value), integerExpression(divisor)),
-            verificationInteger("0"),
-          ),
-        ),
-      };
-    }
-    case "between":
-      return {
-        sort: "Bool",
-        expression: verificationApplication(
-          "and",
-          verificationApplication(">=", argumentTerms[0].expression, argumentTerms[1].expression),
-          verificationApplication("<=", argumentTerms[0].expression, argumentTerms[2].expression),
-        ),
-      };
-    default:
-      return `Unsupported standard predicate '${name}'.`;
-  }
-}
-
 function translateStandardPredicate(
   context: VerificationContext,
   state: SymbolicState,
@@ -848,38 +786,41 @@ function translateStandardPredicate(
     if (!isVerificationNumericSort(term.sort)) return `Standard predicate '${name}' requires bigint or number arguments.`;
     argumentTerms.push(term);
   }
-  if (argumentTerms.some(term => term.sort === "Real")) {
-    return translateStandardPredicateForReal(name, definition, argumentTerms);
+  const sort = argumentTerms[0].sort;
+  if (argumentTerms.some(term => term.sort !== sort)) {
+    return `Standard predicate '${name}' requires arguments of the same numeric type.`;
   }
+  const zero = zeroForSort(sort);
 
   switch (definition.kind) {
     case "even":
-      return {
-        sort: "Bool",
-        expression: verificationApplication("=", verificationApplication("mod", argumentTerms[0].expression, verificationInteger("2")), verificationInteger("0")),
-      };
-    case "odd":
-      return {
-        sort: "Bool",
-        expression: verificationApplication("=", verificationApplication("mod", argumentTerms[0].expression, verificationInteger("2")), verificationInteger("1")),
-      };
+    case "odd": {
+      const value = argumentTerms[0];
+      const parity = verificationApplication(
+        "=",
+        verificationApplication("mod", integerExpression(value), verificationInteger("2")),
+        definition.kind === "even" ? verificationInteger("0") : verificationInteger("1"),
+      );
+      return { sort: "Bool", expression: constrainToInteger(value, parity) };
+    }
     case "positive":
-      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, verificationInteger("0")) };
+      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, zero) };
     case "negative":
-      return { sort: "Bool", expression: verificationApplication("<", argumentTerms[0].expression, verificationInteger("0")) };
+      return { sort: "Bool", expression: verificationApplication("<", argumentTerms[0].expression, zero) };
     case "nonNegative":
-      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, verificationInteger("0")) };
+      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, zero) };
     case "zero":
-      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, verificationInteger("0")) };
-    case "divides":
-      return {
-        sort: "Bool",
-        expression: verificationApplication(
-          "and",
-          verificationApplication("not", verificationApplication("=", argumentTerms[0].expression, verificationInteger("0"))),
-          verificationApplication("=", verificationApplication("mod", argumentTerms[1].expression, argumentTerms[0].expression), verificationInteger("0")),
-        ),
-      };
+      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, zero) };
+    case "divides": {
+      const [divisor, value] = argumentTerms;
+      const guards: VerificationExpression[] = [];
+      if (sort !== "Int") guards.push(verificationApplication("is_int", divisor.expression), verificationApplication("is_int", value.expression));
+      guards.push(
+        verificationApplication("not", verificationApplication("=", divisor.expression, zero)),
+        verificationApplication("=", verificationApplication("mod", integerExpression(value), integerExpression(divisor)), verificationInteger("0")),
+      );
+      return { sort: "Bool", expression: verificationApplication("and", ...guards) };
+    }
     case "between":
       return {
         sort: "Bool",
