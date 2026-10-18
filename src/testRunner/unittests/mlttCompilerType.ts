@@ -109,6 +109,55 @@ describe("unittests:: MLTT compiler type", () => {
     assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[2].name)), '"inferred"');
   });
 
+  it("projects interleaved implicit binders as generics and supports auto type arguments", () => {
+    const callable = createProgram(
+      "/partial-inference.tspp",
+      `
+      type Interleaved: Type1 =
+        {A: Type0} -> (left: A) -> {B: Type0} -> (right: B) -> B;
+      declare const interleaved: Interleaved;
+      const inferred = interleaved(1, true);
+      const partial = interleaved<auto, string>(1, "fixed");
+
+      declare function ordinary<A, B>(left: A, right: B): [A, B];
+      const ordinaryPartial = ordinary<auto, string>(1, "fixed");
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+    const callableChecker = callable.getTypeChecker();
+    const callableFile = callable.getSourceFile("/partial-inference.tspp")!;
+    const declarations = callableFile.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+
+    const diagnostics = callable.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+    assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[1].name)), "true");
+    assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[2].name)), "string");
+    assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[3].name)), "[number, string]");
+  });
+
+  it("treats implicit Nat binders as erased literal generics", () => {
+    const naturals = createProgram(
+      "/implicit-natural.tspp",
+      `
+      type Indexed<N extends number> = { index: N };
+      type At: Type0 = {N: Nat} -> Indexed<N>;
+      declare const at: At;
+      const three = at<3>();
+      at<-1>();
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+    const naturalsChecker = naturals.getTypeChecker();
+    const naturalsFile = naturals.getSourceFile("/implicit-natural.tspp")!;
+    const three = naturalsFile.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations])[1];
+    const diagnostics = naturals.getSemanticDiagnostics();
+
+    assert.deepEqual(diagnostics.map(diagnostic => diagnostic.code), [18077]);
+    assert.strictEqual(naturalsChecker.typeToString(naturalsChecker.getTypeAtLocation(three.name)), "Indexed<3>");
+  });
+
   it("supports built-in natural-number indices and infers numeric literals at calls", () => {
     const naturals = createProgram(
       "/naturals.tspp",

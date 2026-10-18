@@ -1589,6 +1589,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   var mlttPlaceholderTypes: TypeParameter[] | undefined;
   var dependentFunctionCallSignatures = new Map<number, Signature | false>();
   var mlttNaturalSignatureParameterIndices = new WeakMap<Signature, readonly number[]>();
+  var mlttNaturalSignatureTypeParameterIndices = new WeakMap<Signature, readonly number[]>();
   var varianceTypeParameter: TypeParameter | undefined;
   var isInferencePartiallyBlocked = false;
   var withinUnreachableCode = false;
@@ -21812,23 +21813,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const typeParameters: TypeParameter[] = [];
     const parameters: Symbol[] = [];
     const naturalParameterIndices: number[] = [];
+    const naturalTypeParameterIndices: number[] = [];
     let scope: MlttTypeBinding[] = [];
     let node: TypeNode = type.node;
     let term: MlttTerm = type.mlttTerm;
-
-    // A leading `{A: Type0} -> ...` binder is represented as an erased TS type
-    // parameter. Once a runtime parameter is encountered, later binders remain
-    // runtime parameters so call arity is stable and unsurprising.
-    while (isMlttDependentFunctionTypeNode(node) && node.isImplicit && isMlttTypeZeroNode(node.parameterType) && parameters.length === 0) {
-      const name = idText(node.parameterName);
-      const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
-      const typeParameter = createTypeParameter(symbol);
-      typeParameter.typeKind = ordinaryTypeKind;
-      typeParameters.push(typeParameter);
-      scope = [{ name, placeholderName: name, compilerType: typeParameter }, ...scope];
-      node = node.returnType;
-      term = term.kind === "pi" ? term.codomain : term;
-    }
 
     while (isMlttDependentFunctionTypeNode(node)) {
       const isNatIndex = isMlttNatTypeNode(node.parameterType);
@@ -21836,33 +21824,55 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const name = idText(node.parameterName);
       let parameterType: Type | undefined;
       let binding: MlttTypeBinding;
-      if (isNatIndex || isBoolIndex) {
+
+      // Braced binders are compile-time-only and are collected into the TS
+      // generic parameter list even when they are interleaved with runtime
+      // binders. Parenthesized binders remain runtime parameters.
+      if (node.isImplicit) {
         const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
         const typeParameter = createTypeParameter(symbol);
-        typeParameter.constraint = isNatIndex ? numberType : booleanType;
+        if (!isMlttTypeZeroNode(node.parameterType)) {
+          parameterType = isNatIndex ? numberType : isBoolIndex ? booleanType : getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
+          if (!parameterType || !isOrdinaryTypeKind(getKindOfType(parameterType))) {
+            dependentFunctionCallSignatures.set(type.id, false);
+            return undefined;
+          }
+          typeParameter.constraint = parameterType;
+        }
         typeParameter.typeKind = ordinaryTypeKind;
+        if (isNatIndex) naturalTypeParameterIndices.push(typeParameters.length);
         typeParameters.push(typeParameter);
-        parameterType = typeParameter;
         binding = { name, placeholderName: name, compilerType: typeParameter };
-        if (isNatIndex) naturalParameterIndices.push(parameters.length);
       }
       else {
-        parameterType = getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
-        binding = createMlttTypeBinding(name, scope.length);
+        if (isNatIndex || isBoolIndex) {
+          const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
+          const typeParameter = createTypeParameter(symbol);
+          typeParameter.constraint = isNatIndex ? numberType : booleanType;
+          typeParameter.typeKind = ordinaryTypeKind;
+          typeParameters.push(typeParameter);
+          parameterType = typeParameter;
+          binding = { name, placeholderName: name, compilerType: typeParameter };
+          if (isNatIndex) naturalParameterIndices.push(parameters.length);
+        }
+        else {
+          parameterType = getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
+          binding = createMlttTypeBinding(name, scope.length);
+        }
+        if (!parameterType || getKindOfType(parameterType).flags !== KindFlags.Type || !isOrdinaryTypeKind(getKindOfType(parameterType))) {
+          dependentFunctionCallSignatures.set(type.id, false);
+          return undefined;
+        }
+        const parameter = createSymbol(SymbolFlags.FunctionScopedVariable, escapeLeadingUnderscores(name));
+        getSymbolLinks(parameter).type = parameterType;
+        parameters.push(parameter);
       }
-      if (!parameterType || getKindOfType(parameterType).flags !== KindFlags.Type || !isOrdinaryTypeKind(getKindOfType(parameterType))) {
-        dependentFunctionCallSignatures.set(type.id, false);
-        return undefined;
-      }
-      const parameter = createSymbol(SymbolFlags.FunctionScopedVariable, escapeLeadingUnderscores(name));
-      getSymbolLinks(parameter).type = parameterType;
-      parameters.push(parameter);
       scope = [binding, ...scope];
       node = node.returnType;
       term = term.kind === "pi" ? term.codomain : term;
     }
 
-    if (!parameters.length) {
+    if (!parameters.length && !typeParameters.length) {
       dependentFunctionCallSignatures.set(type.id, false);
       return undefined;
     }
@@ -21883,6 +21893,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       SignatureFlags.None,
     );
     if (naturalParameterIndices.length) mlttNaturalSignatureParameterIndices.set(signature, naturalParameterIndices);
+    if (naturalTypeParameterIndices.length) mlttNaturalSignatureTypeParameterIndices.set(signature, naturalTypeParameterIndices);
     dependentFunctionCallSignatures.set(type.id, signature);
     return signature;
   }
@@ -22101,7 +22112,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       case SyntaxKind.LiteralType:
         return getTypeFromLiteralTypeNode(node as LiteralTypeNode);
       case SyntaxKind.TypeReference:
-        return getTypeFromTypeReference(node as TypeReferenceNode);
+        return isAutoTypeArgumentNode(node) ? unknownType : getTypeFromTypeReference(node as TypeReferenceNode);
       case SyntaxKind.DependentFunctionType:
         return getTypeFromMlttTypeNode(node as DependentFunctionTypeNode);
       case SyntaxKind.TypePredicate:
@@ -37709,9 +37720,27 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const isJavascript = isInJSFile(signature.declaration);
     const typeParameters = signature.typeParameters!;
     const typeArgumentTypes = fillMissingTypeArguments(typeArgumentNodes.map((node, index) => getTypeArgumentFromNode(node, typeParameters[index])), typeParameters, getMinTypeArgumentCount(typeParameters), isJavascript);
+    return checkTypeArgumentTypes(signature, typeArgumentNodes, typeArgumentTypes, reportErrors, headMessage);
+  }
+
+  function checkTypeArgumentTypes(
+    signature: Signature,
+    typeArgumentNodes: readonly TypeNode[],
+    typeArgumentTypes: Type[],
+    reportErrors: boolean,
+    headMessage?: DiagnosticMessage,
+  ): Type[] | undefined {
+    const typeParameters = signature.typeParameters!;
     let mapper: TypeMapper | undefined;
     for (let i = 0; i < typeArgumentNodes.length; i++) {
       Debug.assert(typeParameters[i] !== undefined, "Should not call checkTypeArguments with too many type arguments");
+      const naturalTypeParameterIndices = mlttNaturalSignatureTypeParameterIndices.get(signature.target ?? signature);
+      if (naturalTypeParameterIndices?.includes(i) && !isValidMlttNaturalArgumentType(typeArgumentTypes[i])) {
+        if (reportErrors) {
+          error(typeArgumentNodes[i], Diagnostics.An_MLTT_Nat_argument_must_have_a_non_negative_safe_integer_literal_type);
+        }
+        return undefined;
+      }
       const constraint = getConstraintOfTypeParameter(typeParameters[i]);
       if (constraint) {
         const errorInfo = reportErrors && headMessage ? (() => chainDiagnosticMessages(/*details*/ undefined, Diagnostics.Type_0_does_not_satisfy_the_constraint_1)) : undefined;
@@ -37734,6 +37763,52 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
     }
     return typeArgumentTypes;
+  }
+
+  function isAutoTypeArgumentNode(node: TypeNode): boolean {
+    if (!hasTsppFeature(compilerOptions, "dependentFunctionInterop") || !isTypeReferenceNode(node) || node.typeArguments || !isIdentifier(node.typeName) || idText(node.typeName) !== "auto") {
+      return false;
+    }
+    const parent = node.parent;
+    if (!parent || !(isCallExpression(parent) || isNewExpression(parent) || isTaggedTemplateExpression(parent)) || !parent.typeArguments?.includes(node)) {
+      return false;
+    }
+    const sourceFileName = getSourceFileOfNode(node).fileName;
+    return fileExtensionIs(sourceFileName, Extension.Tspp) || fileExtensionIs(sourceFileName, Extension.Dtspp);
+  }
+
+  function hasAutoTypeArguments(typeArgumentNodes: readonly TypeNode[] | undefined): typeArgumentNodes is readonly TypeNode[] {
+    return !!typeArgumentNodes?.some(isAutoTypeArgumentNode);
+  }
+
+  function isValidMlttNaturalArgumentType(type: Type): boolean {
+    if (!(type.flags & TypeFlags.NumberLiteral)) return false;
+    const value = (type as NumberLiteralType).value;
+    return Number.isSafeInteger(value) && value >= 0;
+  }
+
+  function inferTypeArgumentsWithPlaceholders(
+    node: CallLikeExpression,
+    signature: Signature,
+    args: readonly Expression[],
+    typeArgumentNodes: readonly TypeNode[],
+    checkMode: CheckMode,
+    reportErrors: boolean,
+    headMessage?: DiagnosticMessage,
+  ): { typeArgumentTypes: Type[]; inferenceContext: InferenceContext; } | undefined {
+    const typeParameters = signature.typeParameters!;
+    const inferenceContext = createInferenceContext(typeParameters, signature, isInJSFile(node) ? InferenceFlags.AnyDefault : InferenceFlags.None);
+    for (let i = 0; i < typeArgumentNodes.length; i++) {
+      if (!isAutoTypeArgumentNode(typeArgumentNodes[i])) {
+        const inference = inferenceContext.inferences[i];
+        inference.inferredType = getTypeArgumentFromNode(typeArgumentNodes[i], typeParameters[i]);
+        inference.isFixed = true;
+      }
+    }
+    const typeArgumentTypes = inferTypeArguments(node, signature, args, checkMode, inferenceContext);
+    return checkTypeArgumentTypes(signature, typeArgumentNodes, typeArgumentTypes, reportErrors, headMessage)
+      ? { typeArgumentTypes, inferenceContext }
+      : undefined;
   }
 
   function getJsxReferenceKind(node: JsxOpeningLikeElement): JsxReferenceKind {
@@ -37943,12 +38018,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
     }
     return undefined;
-
-    function isValidMlttNaturalArgumentType(type: Type): boolean {
-      if (!(type.flags & TypeFlags.NumberLiteral)) return false;
-      const value = (type as NumberLiteralType).value;
-      return Number.isSafeInteger(value) && value >= 0;
-    }
 
     function maybeAddMissingAwaitInfo(errorNode: Node | undefined, source: Type, target: Type) {
       if (errorNode && reportErrors && errorOutputContainer.errors && errorOutputContainer.errors.length) {
@@ -38500,7 +38569,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         diagnostics.add(getArgumentArityError(node, [candidateForArgumentArityError], args, headMessage));
       }
       else if (candidateForTypeArgumentError) {
-        checkTypeArguments(candidateForTypeArgumentError, (node as CallExpression | TaggedTemplateExpression | JsxOpeningLikeElement).typeArguments!, /*reportErrors*/ true, headMessage);
+        const errorTypeArguments = (node as CallExpression | TaggedTemplateExpression | JsxOpeningLikeElement).typeArguments!;
+        if (hasAutoTypeArguments(errorTypeArguments)) {
+          inferTypeArgumentsWithPlaceholders(node, candidateForTypeArgumentError, args, errorTypeArguments, argCheckMode, /*reportErrors*/ true, headMessage);
+        }
+        else {
+          checkTypeArguments(candidateForTypeArgumentError, errorTypeArguments, /*reportErrors*/ true, headMessage);
+        }
       }
       else if (!isJsxOpenFragment) {
         const signaturesWithCorrectTypeArgumentArity = filter(signatures, s => hasCorrectTypeArgumentArity(s, typeArguments));
@@ -38564,7 +38639,24 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
         if (candidate.typeParameters) {
           let typeArgumentTypes: Type[] | undefined;
-          if (some(typeArguments)) {
+          if (hasAutoTypeArguments(typeArguments)) {
+            const partialInference = inferTypeArgumentsWithPlaceholders(
+              node,
+              candidate,
+              args,
+              typeArguments,
+              argCheckMode | CheckMode.SkipGenericFunctions,
+              /*reportErrors*/ false,
+            );
+            if (!partialInference) {
+              candidateForTypeArgumentError = candidate;
+              continue;
+            }
+            inferenceContext = partialInference.inferenceContext;
+            typeArgumentTypes = partialInference.typeArgumentTypes;
+            argCheckMode |= inferenceContext.flags & InferenceFlags.SkippedGenericFunction ? CheckMode.SkipGenericFunctions : CheckMode.Normal;
+          }
+          else if (some(typeArguments)) {
             typeArgumentTypes = checkTypeArguments(candidate, typeArguments, /*reportErrors*/ false);
             if (!typeArgumentTypes) {
               candidateForTypeArgumentError = candidate;
@@ -38706,8 +38798,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
 
     const typeArgumentNodes: readonly TypeNode[] | undefined = callLikeExpressionMayHaveTypeArguments(node) ? node.typeArguments : undefined;
+    const partialInference = hasAutoTypeArguments(typeArgumentNodes)
+      ? inferTypeArgumentsWithPlaceholders(node, candidate, args, typeArgumentNodes, checkMode | CheckMode.SkipContextSensitive | CheckMode.SkipGenericFunctions, /*reportErrors*/ false)
+      : undefined;
     const instantiated = typeArgumentNodes
-      ? createSignatureInstantiation(candidate, getTypeArgumentsFromNodes(typeArgumentNodes, typeParameters, isInJSFile(node)))
+      ? createSignatureInstantiation(candidate, partialInference?.typeArgumentTypes ?? getTypeArgumentsFromNodes(typeArgumentNodes, typeParameters, isInJSFile(node)))
       : inferSignatureInstantiationForOverloadFailure(node, typeParameters, candidate, args, checkMode);
     candidates[bestIndex] = instantiated;
     return instantiated;

@@ -92,6 +92,16 @@ export const identity: PolymorphicIdentity = ordinaryIdentity;
 export const explicitResult = identity<string>("explicit");
 export const inferredResult = identity("inferred");
 
+// 隐式 binder 可以和显式 binder 交替书写；调用边界会把所有 `{}` binder
+// 收集为泛型，把所有 `()` binder 保持为实际参数。
+export type SelectRight: Type1 =
+  {A: Type0} -> (left: A) -> {B: Type0} -> (right: B) -> B;
+export declare const selectRight: SelectRight;
+
+// `auto` 只在调用的类型实参列表中表示“这一项继续推断”。这里固定 B=string，
+// A 仍从第一个实际参数推断。
+export const partiallyExplicitResult = selectRight<auto, string>(1, "right");
+
 // -----------------------------------------------------------------------------
 // 5. MLTT binder 可以包住普通 TypeScript 类型
 // -----------------------------------------------------------------------------

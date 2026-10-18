@@ -56,9 +56,9 @@ declare let dynamicNumber: number;
 // @ts-expect-error -- 宽泛 number 无法证明自己是 Nat
 buildAt(dynamicNumber);
 
-// Type0 binder 只有写成 `{A: Type0}` 才会在调用边界投影为 TS 泛型参数。
-// `(A: Type0)` 是显式 binder；当前值层没有一等类型值可传给它，因此不生成
-// 可调用签名。
+// `{A: Type0}` 在调用边界投影为擦除的 TS 泛型参数，即使它和实际参数交替
+// 出现也一样。`(A: Type0)` 是显式 binder；当前值层没有一等类型值可传给它，
+// 因此不生成可调用签名。
 export type ExplicitTypeBinder: Type1 =
   (A: Type0) -> (value: A) -> A;
 export declare const explicitTypeBinder: ExplicitTypeBinder;
