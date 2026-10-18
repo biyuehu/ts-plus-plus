@@ -104,6 +104,7 @@ import {
 import {
   lowerVerificationType,
   verificationTypeLoweringFailed,
+  VerificationTypeLoweringResult,
 } from "./verificationTypeLowering.js";
 import { runVerificationQueries } from "./verificationWorker.js";
 
@@ -225,13 +226,15 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
       continue;
     }
     const refinement = getRefinementTypeTarget(checker, parameter.type);
-    const sort = refinement
-      ? getSort({ ...context, numberModel: getNumberModel(refinement.withClause) }, refinement.type)
-      : getSort(context, parameter.name);
-    if (!sort) {
-      initial.reason = unsupportedTypeMessage(context, parameter.name);
+    const sortContext: VerificationContext = refinement
+      ? { ...context, numberModel: getNumberModel(refinement.withClause) }
+      : context;
+    const lowered = lowerNodeSort(sortContext, refinement ? refinement.type : parameter.name);
+    if (verificationTypeLoweringFailed(lowered)) {
+      initial.reason = lowered.reason;
       continue;
     }
+    const sort = lowered.sort;
     const value = freshConstant(context, idText(parameter.name), sort);
     initial.values.set(idText(parameter.name), value);
     if (refinement) {
@@ -324,10 +327,12 @@ function executeStatement(context: VerificationContext, statement: Statement, st
       const name = idText(declaration.name);
       if (state.values.has(name)) return unsupportedFlow(state, `Shadowed local '${name}' is outside the supported verification subset.`);
       const refinement = getRefinementTypeTarget(context.checker, declaration.type);
-      const sort = refinement
-        ? getSort({ ...context, numberModel: getNumberModel(refinement.withClause) }, refinement.type)
-        : getSort(context, declaration.name);
-      if (!sort) return unsupportedFlow(state, unsupportedTypeMessage(context, declaration.name));
+      const sortContext: VerificationContext = refinement
+        ? { ...context, numberModel: getNumberModel(refinement.withClause) }
+        : context;
+      const lowered = lowerNodeSort(sortContext, refinement ? refinement.type : declaration.name);
+      if (verificationTypeLoweringFailed(lowered)) return unsupportedFlow(state, lowered.reason);
+      const sort = lowered.sort;
       if (declaration.initializer) {
         const value = translateExpression(context, state, declaration.initializer);
         if (typeof value === "string") return unsupportedFlow(state, value);
@@ -1078,14 +1083,13 @@ function collectWrites(node: Node, writes: Set<string>, report: (reason: string)
   });
 }
 
-function getSort(context: VerificationContext, node: Node): Sort | undefined {
-  const lowered = lowerVerificationType(context, context.checker.getTypeAtLocation(node));
-  return verificationTypeLoweringFailed(lowered) ? undefined : lowered.sort;
+function lowerNodeSort(context: VerificationContext, node: Node): VerificationTypeLoweringResult {
+  return lowerVerificationType(context, context.checker.getTypeAtLocation(node));
 }
 
-function unsupportedTypeMessage(context: VerificationContext, node: Node): string {
-  const lowered = lowerVerificationType(context, context.checker.getTypeAtLocation(node));
-  return verificationTypeLoweringFailed(lowered) ? lowered.reason : `Type '${context.checker.typeToString(context.checker.getTypeAtLocation(node))}' could not be lowered for verification.`;
+function getSort(context: VerificationContext, node: Node): Sort | undefined {
+  const lowered = lowerNodeSort(context, node);
+  return verificationTypeLoweringFailed(lowered) ? undefined : lowered.sort;
 }
 
 function addQuery(
