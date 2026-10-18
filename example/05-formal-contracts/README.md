@@ -116,9 +116,9 @@ const http = Port(80n); // proved
 TS++: Show Verification SMT-LIB
 ```
 
-命令会列出当前文件的全部证明义务，并在侧栏打开所选义务的状态、说明和可独立重放的
-SMT-LIB。编译器 API 也可以通过 `program.getVerificationArtifacts()` 读取相同产物，包括
-Z3 反例模型。
+命令会在侧栏一次打开当前文件的全部证明义务，按源码位置排序，并为每段
+SMT-LIB 标注对应的源码行号、状态和说明。编译器 API 也可以通过
+`program.getVerificationArtifacts()` 读取相同产物，包括 Z3 反例模型。
 
 证明结果分为 `proved`、`failed`、`unknown` 和 `error`。不支持的表达式、控制流或运行环境
 会得到带原因的 `unknown` 编译错误。

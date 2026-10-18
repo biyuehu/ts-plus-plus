@@ -261,38 +261,40 @@ async function activate(context) {
       });
     }),
     vscode.commands.registerCommand("tspp.showVerificationSmt", async () => {
-      const editor = vscode.window.activeTextEditor;
-      const document = editor?.document;
+      const document = vscode.window.activeTextEditor?.document;
       if (!document || document.uri.scheme !== "file" || path.extname(document.fileName).toLowerCase() !== ".tspp") return;
       const artifacts = await getVerificationArtifacts(document);
       if (!artifacts.length) {
         await vscode.window.showInformationMessage("This file contains no formal-verification obligations.");
         return;
       }
-      const offset = editor ? document.offsetAt(editor.selection.active) : -1;
-      const atCursor = artifacts.filter(artifact => artifact.start <= offset && offset <= artifact.start + artifact.length);
-      let artifact = atCursor.length === 1 ? atCursor[0] : undefined;
-      if (!artifact) {
-        const picked = await vscode.window.showQuickPick(
-          artifacts.map((candidate, index) => ({
-            label: `$(${candidate.status === "proved" ? "pass" : candidate.status === "failed" ? "error" : "question"}) ${candidate.name}`,
-            description: `${candidate.status} · ${candidate.obligation}`,
-            index,
-          })),
-          { placeHolder: "Choose a proof obligation to inspect" },
-        );
-        if (!picked) return;
-        artifact = artifacts[picked.index];
-      }
       const smtUri = vscode.Uri.from({
         scheme: "tspp-smt",
-        path: `${document.uri.path}.${artifact.obligation}.smt2`,
-        query: `source=${encodeURIComponent(document.uri.toString())}&start=${artifact.start}`,
+        path: document.uri.path.replace(/\.tspp$/i, ".verification.smt2"),
+        query: `source=${encodeURIComponent(document.uri.toString())}`,
       });
-      const counterexample = artifact.counterexample ? `; counterexample: ${artifact.counterexample.replaceAll("\n", "\n; ")}\n` : "";
-      const model = artifact.model ? `; raw Z3 model:\n; ${artifact.model.replaceAll("\n", "\n; ")}\n` : "";
-      const header = `; ${artifact.name}\n; status: ${artifact.status}\n; ${artifact.message.replaceAll("\n", "\n; ")}\n${counterexample}${model}\n`;
-      smtDocuments.set(smtUri.toString(), header + artifact.replayableSmtLib);
+      const sortedArtifacts = [...artifacts].sort((left, right) => left.start - right.start);
+      const sections = sortedArtifacts.map((artifact, index) => {
+        const start = document.positionAt(artifact.start);
+        const end = document.positionAt(artifact.start + Math.max(artifact.length - 1, 0));
+        const lineRange = start.line === end.line ? `${start.line + 1}` : `${start.line + 1}-${end.line + 1}`;
+        const counterexample = artifact.counterexample ? `; counterexample: ${artifact.counterexample.replaceAll("\n", "\n; ")}\n` : "";
+        const model = artifact.model ? `; raw Z3 model:\n; ${artifact.model.replaceAll("\n", "\n; ")}\n` : "";
+        const header = [
+          "; ============================================================================",
+          `; obligation ${index + 1}/${sortedArtifacts.length}: ${artifact.name}`,
+          `; source lines: ${lineRange} (columns ${start.character + 1}-${end.character + 1})`,
+          `; kind: ${artifact.kind}`,
+          `; obligation: ${artifact.obligation}`,
+          `; status: ${artifact.status}`,
+          `; ${artifact.message.replaceAll("\n", "\n; ")}`,
+          "; ============================================================================",
+          "",
+        ].join("\n");
+        return header + counterexample + model + artifact.replayableSmtLib.trimEnd();
+      });
+      const header = `; All verification SMT-LIB for ${path.basename(document.fileName)}\n; ${sortedArtifacts.length} proof obligation${sortedArtifacts.length === 1 ? "" : "s"}, ordered by source line.\n\n`;
+      smtDocuments.set(smtUri.toString(), header + sections.join("\n\n") + "\n");
       smtDocumentChanges.fire(smtUri);
       let smtDocument = await vscode.workspace.openTextDocument(smtUri);
       const languageId = (await vscode.languages.getLanguages()).includes("smt") ? "smt" : "plaintext";
