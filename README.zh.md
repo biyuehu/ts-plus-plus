@@ -6,6 +6,8 @@
 
 ts-plus-plus 是一门派生自 TypeScript 的实验性语言。它支持了许多强大的类型特性，扩展了 TypeScript 的类型系统能力边界，同时也在值层设计了现代语言特性。
 
+TS++ 以 [TypeScript 6.0.3 的 `050880ce` 源码快照](https://github.com/microsoft/TypeScript/commit/050880ce59e30b356b686bd3144efe24f875ebc8)为起点。该上游快照在本仓库中保留为根提交 [`824eb723`](https://github.com/biyuehu/ts-plus-plus/commit/824eb7234d96fd5c538bdf693789399e6c758235)，并标记为 `v0.0.0`；其后的提交均属于 TS++ 自身的开发历史。
+
 <!-- markdownlint-disable -->
 
 <div align="center">

@@ -6,6 +6,8 @@
 
 ts-plus-plus is an experimental TypeScript-derived language. It supports many powerful type features, extending the capabilities of TypeScript's type system, while also designing modern language features at the value level.
 
+TS++ starts from the [TypeScript 6.0.3 source snapshot at `050880ce`](https://github.com/microsoft/TypeScript/commit/050880ce59e30b356b686bd3144efe24f875ebc8). That upstream snapshot is preserved here as the root commit [`824eb723`](https://github.com/biyuehu/ts-plus-plus/commit/824eb7234d96fd5c538bdf693789399e6c758235) and tagged as `v0.0.0`. Every later commit belongs to the development of TS++.
+
 <!-- markdownlint-disable -->
 
 <div align="center">
