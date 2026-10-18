@@ -15,6 +15,8 @@ declare function isOdd(value: bigint): boolean;
 declare function isOdd(value: number): boolean;
 declare function isPositive(value: bigint): boolean;
 declare function isPositive(value: number): boolean;
+declare function isNegative(value: bigint): boolean;
+declare function isNegative(value: number): boolean;
 declare function isNonNegative(value: bigint): boolean;
 declare function isNonNegative(value: number): boolean;
 declare function isZero(value: bigint): boolean;

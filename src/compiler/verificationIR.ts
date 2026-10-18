@@ -137,19 +137,55 @@ export function isVerificationNumericSort(sort: VerificationSort): sort is "Int"
   return sort === "Int" || sort === "Real";
 }
 
-export function verificationSortKey(sort: VerificationSort): string {
-  return verificationSortKeyWorker(sort, new Set());
+/**
+ * Sort keys are requested once per encoded expression node and per sort
+ * comparison, so every structured sort object caches its key after the first
+ * traversal. A key computed at the top of a traversal always starts from an
+ * empty active path, which makes it a pure function of the sort object and
+ * therefore cacheable even for recursive sorts. Keys computed for a nested
+ * field depend on the active path (they contain `ref:` markers), so a nested
+ * traversal only caches a key when its own subtree did not reference an
+ * enclosing sort.
+ */
+const structuredSortRootKeys = new WeakMap<VerificationProductSort | VerificationSumSort, string>();
+const structuredSortKeys = new WeakMap<VerificationProductSort | VerificationSumSort, string>();
+
+interface SortKeyResult {
+  readonly key: string;
+  readonly sawReference: boolean;
 }
 
-function verificationSortKeyWorker(sort: VerificationSort, active: Set<VerificationProductSort | VerificationSumSort>): string {
+export function verificationSortKey(sort: VerificationSort): string {
   if (typeof sort === "string") return sort;
-  if (active.has(sort)) return `ref:${sort.kind}:${sort.name}`;
+  let key = structuredSortRootKeys.get(sort);
+  if (key === undefined) structuredSortRootKeys.set(sort, key = sortKeyWorker(sort, new Set()).key);
+  return key;
+}
+
+function sortKeyWorker(sort: VerificationSort, active: Set<VerificationProductSort | VerificationSumSort>): SortKeyResult {
+  if (typeof sort === "string") return { key: sort, sawReference: false };
+  const cached = structuredSortKeys.get(sort);
+  if (cached !== undefined) return { key: cached, sawReference: false };
+  if (active.has(sort)) return { key: `ref:${sort.kind}:${sort.name}`, sawReference: true };
   active.add(sort);
+  const trace = { sawReference: false };
   const members = sort.kind === "product"
-    ? sort.fields.map(field => `${field.name}:${verificationSortKeyWorker(field.sort, active)}`).join(",")
-    : sort.variants.map(variant => `${variant.name}(${variant.fields.map(field => `${field.name}:${verificationSortKeyWorker(field.sort, active)}`).join(",")})`).join("|");
+    ? sort.fields.map(field => fieldKeyText(field, active, trace)).join(",")
+    : sort.variants.map(variant => `${variant.name}(${variant.fields.map(field => fieldKeyText(field, active, trace)).join(",")})`).join("|");
   active.delete(sort);
-  return `${sort.kind}:${sort.name}:${members}`;
+  const key = `${sort.kind}:${sort.name}:${members}`;
+  if (!trace.sawReference) structuredSortKeys.set(sort, key);
+  return { key, sawReference: trace.sawReference };
+}
+
+function fieldKeyText(
+  field: VerificationField,
+  active: Set<VerificationProductSort | VerificationSumSort>,
+  trace: { sawReference: boolean; },
+): string {
+  const fieldKey = sortKeyWorker(field.sort, active);
+  trace.sawReference ||= fieldKey.sawReference;
+  return `${field.name}:${fieldKey.key}`;
 }
 
 export function verificationSortsEqual(left: VerificationSort, right: VerificationSort): boolean {

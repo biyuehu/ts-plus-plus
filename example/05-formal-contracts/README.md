@@ -9,7 +9,7 @@
 - [`05-refined-newtype.tspp`](./src/05-refined-newtype.tspp)：在 `newtype` 构造入口应用 `with` 谓词约束。
 - [`06-sum-types.tspp`](./src/06-sum-types.tspp)：把 `data` 和封闭判别联合降低为 Z3 和类型，并复用 TypeScript 的控制流窄化。
 - [`07-recursive-data.tspp`](./src/07-recursive-data.tspp)：递归 `data`、variant 构造器和由 checker 窄化的 `switch`。
-- [`08-standard-predicates.tspp`](./src/08-standard-predicates.tspp)：标准库谓词 `isEven`、`isOdd`、`isPositive`、`isNonNegative`、`isZero`、`divides` 与 `between` 在 `bigint` 和 `number`（需 `numberModel: "mathematical-real"`）上的精化类型引入。
+- [`08-standard-predicates.tspp`](./src/08-standard-predicates.tspp)：标准库谓词 `isEven`、`isOdd`、`isPositive`、`isNegative`、`isNonNegative`、`isZero`、`divides` 与 `between` 在 `bigint` 和 `number`（需 `numberModel: "mathematical-real"`）上的精化类型引入。
 
 `divides(a, b)` 表示 `a` 整除 `b`；`between(value, lower, upper)` 是闭区间判断，即 `lower <= value <= upper`。
 

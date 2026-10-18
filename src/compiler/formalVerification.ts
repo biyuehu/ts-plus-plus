@@ -30,7 +30,6 @@ import { forEachChild } from "./parser.js";
 import {
   getStandardPredicateDefinition,
   isStandardPredicateSymbol,
-  type StandardPredicateDefinition,
   standardPredicateDefinitions,
   type StandardPredicateName,
 } from "./standardPredicates.js";
@@ -50,6 +49,7 @@ import {
   SourceFile,
   Statement,
   SwitchStatement,
+  Symbol,
   SymbolFlags,
   SyntaxKind,
   Type,
@@ -105,6 +105,7 @@ import {
 import {
   lowerVerificationType,
   verificationTypeLoweringFailed,
+  VerificationTypeLoweringResult,
 } from "./verificationTypeLowering.js";
 import { runVerificationQueries } from "./verificationWorker.js";
 
@@ -226,13 +227,15 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
       continue;
     }
     const refinement = getRefinementTypeTarget(checker, parameter.type);
-    const sort = refinement
-      ? getSort({ ...context, numberModel: getNumberModel(refinement.withClause) }, refinement.type)
-      : getSort(context, parameter.name);
-    if (!sort) {
-      initial.reason = unsupportedTypeMessage(context, parameter.name);
+    const sortContext: VerificationContext = refinement
+      ? { ...context, numberModel: getNumberModel(refinement.withClause) }
+      : context;
+    const lowered = lowerNodeSort(sortContext, refinement ? refinement.type : parameter.name);
+    if (verificationTypeLoweringFailed(lowered)) {
+      initial.reason = lowered.reason;
       continue;
     }
+    const sort = lowered.sort;
     const value = freshConstant(context, idText(parameter.name), sort);
     initial.values.set(idText(parameter.name), value);
     if (refinement) {
@@ -259,10 +262,9 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
   }
 
   const ensures = getProperties(declaration.withClause, "ensures");
+  const addPostconditionUnknowns = (message: string) => addUnknownForEach(context, ensures.length, index => ensures[index], "function-contract", "postcondition", index => `${contractName(declaration)} postcondition ${index + 1}`, message);
   if (initial.reason) {
-    for (let ensureIndex = 0; ensureIndex < ensures.length; ensureIndex++) {
-      addUnknown(context, ensures[ensureIndex], "function-contract", "postcondition", `${contractName(declaration)} postcondition ${ensureIndex + 1}`, initial.reason);
-    }
+    addPostconditionUnknowns(initial.reason);
     return;
   }
   const flow = executeBlock(context, declaration.body!, [initial]);
@@ -277,11 +279,7 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
     }
   }
   if (ensures.length) {
-    if (!flow.returns.length) {
-      for (let ensureIndex = 0; ensureIndex < ensures.length; ensureIndex++) {
-        addUnknown(context, ensures[ensureIndex], "function-contract", "postcondition", `${contractName(declaration)} postcondition ${ensureIndex + 1}`, "No explicit return path could be verified.");
-      }
-    }
+    if (!flow.returns.length) addPostconditionUnknowns("No explicit return path could be verified.");
     for (let pathIndex = 0; pathIndex < flow.returns.length; pathIndex++) {
       const path = flow.returns[pathIndex];
       for (let ensureIndex = 0; ensureIndex < ensures.length; ensureIndex++) {
@@ -330,10 +328,12 @@ function executeStatement(context: VerificationContext, statement: Statement, st
       const name = idText(declaration.name);
       if (state.values.has(name)) return unsupportedFlow(state, `Shadowed local '${name}' is outside the supported verification subset.`);
       const refinement = getRefinementTypeTarget(context.checker, declaration.type);
-      const sort = refinement
-        ? getSort({ ...context, numberModel: getNumberModel(refinement.withClause) }, refinement.type)
-        : getSort(context, declaration.name);
-      if (!sort) return unsupportedFlow(state, unsupportedTypeMessage(context, declaration.name));
+      const sortContext: VerificationContext = refinement
+        ? { ...context, numberModel: getNumberModel(refinement.withClause) }
+        : context;
+      const lowered = lowerNodeSort(sortContext, refinement ? refinement.type : declaration.name);
+      if (verificationTypeLoweringFailed(lowered)) return unsupportedFlow(state, lowered.reason);
+      const sort = lowered.sort;
       if (declaration.initializer) {
         const value = translateExpression(context, state, declaration.initializer);
         if (typeof value === "string") return unsupportedFlow(state, value);
@@ -409,7 +409,8 @@ function executeSwitch(context: VerificationContext, statement: SwitchStatement,
     conditions.set(clause, condition);
   }
   const allConditions = [...conditions.values()];
-  const precedingConditions: VerificationExpression[] = [];
+  const negatedConditions = allConditions.map(condition => verificationApplication("not", condition));
+  let caseIndex = 0;
   let fallthrough: SymbolicState[] = [];
   const exits: SymbolicState[] = [];
   const returns: ReturnPath[] = [];
@@ -418,12 +419,12 @@ function executeSwitch(context: VerificationContext, statement: SwitchStatement,
     if (isCaseClause(clause)) {
       const condition = conditions.get(clause)!;
       direct = cloneState(incoming);
-      direct.facts.push(...precedingConditions.map(previous => verificationApplication("not", previous)), condition);
-      precedingConditions.push(condition);
+      direct.facts.push(...negatedConditions.slice(0, caseIndex), condition);
+      caseIndex++;
     }
     else {
       direct = cloneState(incoming);
-      direct.facts.push(...allConditions.map(condition => verificationApplication("not", condition)));
+      direct.facts.push(...negatedConditions);
     }
     let live = [...fallthrough, direct];
     for (const clauseStatement of clause.statements) {
@@ -444,13 +445,23 @@ function executeSwitch(context: VerificationContext, statement: SwitchStatement,
     fallthrough = live;
   }
   const unmatched = clauses.some(clause => !isCaseClause(clause)) ? [] : [cloneState(incoming)];
-  if (unmatched.length) unmatched[0].facts.push(...allConditions.map(condition => verificationApplication("not", condition)));
+  if (unmatched.length) unmatched[0].facts.push(...negatedConditions);
   return { live: [...exits, ...fallthrough, ...unmatched], returns };
 }
 
 function executeWhile(context: VerificationContext, statement: WhileStatement, incoming: SymbolicState): FlowResult {
   const invariants = getProperties(statement.withClause, "invariant");
   if (!invariants.length) return unsupportedFlow(incoming, "A while loop must declare at least one invariant to be verified.");
+  const addInvariantUnknowns = (phase: "initialization" | "preservation", message: string) =>
+    addUnknownForEach(
+      context,
+      invariants.length,
+      index => invariants[index],
+      "loop-invariant",
+      phase === "initialization" ? "invariant-initialization" : "invariant-preservation",
+      index => `${contractName(context.declaration)} loop invariant ${index + 1} ${phase}`,
+      message,
+    );
   const loopNumberModel = context.numberModel || getNumberModel(statement.withClause);
   if (loopNumberModel !== context.numberModel) {
     return unsupportedFlow(incoming, "A loop-level numberModel cannot introduce number semantics that are absent from its enclosing function in this version.");
@@ -489,9 +500,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
   else if (condition.sort !== "Bool") writeReason ??= "A while condition must have Boolean SMT semantics.";
 
   if (writeReason) {
-    for (let i = 0; i < invariants.length; i++) {
-      addUnknown(context, invariants[i], "loop-invariant", "invariant-preservation", `${contractName(context.declaration)} loop invariant ${i + 1} preservation`, writeReason);
-    }
+    addInvariantUnknowns("preservation", writeReason);
     return unsupportedFlow(incoming, writeReason);
   }
 
@@ -499,7 +508,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
   const bodyFlow = executeStatement(context, statement.statement, head);
   if (bodyFlow.returns.length) {
     const reason = "return inside a verified loop is outside the supported verification subset.";
-    for (let i = 0; i < invariants.length; i++) addUnknown(context, invariants[i], "loop-invariant", "invariant-preservation", `${contractName(context.declaration)} loop invariant ${i + 1} preservation`, reason);
+    addInvariantUnknowns("preservation", reason);
     return unsupportedFlow(incoming, reason);
   }
   for (let i = 0; i < invariants.length; i++) {
@@ -739,9 +748,10 @@ function getNarrowedVariantName(checker: TypeChecker, type: Type): string | unde
 function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean): Term | string {
   const standardPredicate = getStandardPredicateName(context.checker, expression);
   if (standardPredicate) return translateStandardPredicate(context, state, expression, standardPredicate);
-  const refinement = getRefinementTarget(context.checker, expression);
+  const callee = isIdentifier(expression.expression) ? getAliasedSymbolOf(context.checker, expression.expression) : undefined;
+  const refinement = getRefinementNewtype(callee);
   if (refinement) return verifyRefinementIntroduction(context, state, expression, refinement);
-  const variant = isIdentifier(expression.expression) && getDataVariantTarget(context.checker, expression.expression);
+  const variant = callee?.declarations?.find(isDataVariant);
   if (variant) return translateDataVariant(context, state, variant, expression.arguments, /*result*/ undefined);
   const target = getCallTarget(context.checker, expression);
   if (!target) return `Call '${sourceText(context, expression)}' does not resolve to a supported project function declaration.`;
@@ -750,10 +760,16 @@ function translateCallExpression(context: VerificationContext, state: SymbolicSt
 
 function getStandardPredicateName(checker: TypeChecker, expression: CallExpression): StandardPredicateName | undefined {
   if (!isIdentifier(expression.expression)) return undefined;
+  const name = idText(expression.expression);
+  if (!standardPredicateNames.has(name)) return undefined;
   const symbol = checker.getSymbolAtLocation(expression.expression);
   if (symbol && !isStandardPredicateSymbol(symbol)) return undefined;
-  const name = idText(expression.expression);
-  return standardPredicateNames.has(name) ? getStandardPredicateDefinition(name)?.name : undefined;
+  return getStandardPredicateDefinition(name)?.name;
+}
+
+function getAliasedSymbolOf(checker: TypeChecker, node: Node): Symbol | undefined {
+  const symbol = checker.getSymbolAtLocation(node);
+  return symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
 }
 
 function zeroForSort(sort: VerificationSort): VerificationExpression {
@@ -766,65 +782,6 @@ function integerExpression(term: Term): VerificationExpression {
 
 function constrainToInteger(term: Term, expression: VerificationExpression): VerificationExpression {
   return term.sort === "Int" ? expression : verificationApplication("and", verificationApplication("is_int", term.expression), expression);
-}
-
-function translateStandardPredicateForReal(
-  name: StandardPredicateName,
-  definition: StandardPredicateDefinition,
-  argumentTerms: readonly Term[],
-): Term | string {
-  if (argumentTerms.some(argument => argument.sort !== "Real")) {
-    return `Standard predicate '${name}' requires arguments of the same numeric type.`;
-  }
-  switch (definition.kind) {
-    case "even":
-    case "odd": {
-      const value = argumentTerms[0];
-      const parity = verificationApplication(
-        "=",
-        verificationApplication("mod", integerExpression(value), verificationInteger("2")),
-        definition.kind === "even" ? verificationInteger("0") : verificationInteger("1"),
-      );
-      return {
-        sort: "Bool",
-        expression: constrainToInteger(value, parity),
-      };
-    }
-    case "positive":
-      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
-    case "nonNegative":
-      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
-    case "zero":
-      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, zeroForSort(argumentTerms[0].sort)) };
-    case "divides": {
-      const [divisor, value] = argumentTerms;
-      return {
-        sort: "Bool",
-        expression: verificationApplication(
-          "and",
-          verificationApplication("is_int", divisor.expression),
-          verificationApplication("is_int", value.expression),
-          verificationApplication("not", verificationApplication("=", divisor.expression, zeroForSort(divisor.sort))),
-          verificationApplication(
-            "=",
-            verificationApplication("mod", integerExpression(value), integerExpression(divisor)),
-            verificationInteger("0"),
-          ),
-        ),
-      };
-    }
-    case "between":
-      return {
-        sort: "Bool",
-        expression: verificationApplication(
-          "and",
-          verificationApplication(">=", argumentTerms[0].expression, argumentTerms[1].expression),
-          verificationApplication("<=", argumentTerms[0].expression, argumentTerms[2].expression),
-        ),
-      };
-    default:
-      return `Unsupported standard predicate '${name}'.`;
-  }
 }
 
 function translateStandardPredicate(
@@ -846,36 +803,41 @@ function translateStandardPredicate(
     if (!isVerificationNumericSort(term.sort)) return `Standard predicate '${name}' requires bigint or number arguments.`;
     argumentTerms.push(term);
   }
-  if (argumentTerms.some(term => term.sort === "Real")) {
-    return translateStandardPredicateForReal(name, definition, argumentTerms);
+  const sort = argumentTerms[0].sort;
+  if (argumentTerms.some(term => term.sort !== sort)) {
+    return `Standard predicate '${name}' requires arguments of the same numeric type.`;
   }
+  const zero = zeroForSort(sort);
 
   switch (definition.kind) {
     case "even":
-      return {
-        sort: "Bool",
-        expression: verificationApplication("=", verificationApplication("mod", argumentTerms[0].expression, verificationInteger("2")), verificationInteger("0")),
-      };
-    case "odd":
-      return {
-        sort: "Bool",
-        expression: verificationApplication("=", verificationApplication("mod", argumentTerms[0].expression, verificationInteger("2")), verificationInteger("1")),
-      };
+    case "odd": {
+      const value = argumentTerms[0];
+      const parity = verificationApplication(
+        "=",
+        verificationApplication("mod", integerExpression(value), verificationInteger("2")),
+        definition.kind === "even" ? verificationInteger("0") : verificationInteger("1"),
+      );
+      return { sort: "Bool", expression: constrainToInteger(value, parity) };
+    }
     case "positive":
-      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, verificationInteger("0")) };
+      return { sort: "Bool", expression: verificationApplication(">", argumentTerms[0].expression, zero) };
+    case "negative":
+      return { sort: "Bool", expression: verificationApplication("<", argumentTerms[0].expression, zero) };
     case "nonNegative":
-      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, verificationInteger("0")) };
+      return { sort: "Bool", expression: verificationApplication(">=", argumentTerms[0].expression, zero) };
     case "zero":
-      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, verificationInteger("0")) };
-    case "divides":
-      return {
-        sort: "Bool",
-        expression: verificationApplication(
-          "and",
-          verificationApplication("not", verificationApplication("=", argumentTerms[0].expression, verificationInteger("0"))),
-          verificationApplication("=", verificationApplication("mod", argumentTerms[1].expression, argumentTerms[0].expression), verificationInteger("0")),
-        ),
-      };
+      return { sort: "Bool", expression: verificationApplication("=", argumentTerms[0].expression, zero) };
+    case "divides": {
+      const [divisor, value] = argumentTerms;
+      const guards: VerificationExpression[] = [];
+      if (sort !== "Int") guards.push(verificationApplication("is_int", divisor.expression), verificationApplication("is_int", value.expression));
+      guards.push(
+        verificationApplication("not", verificationApplication("=", divisor.expression, zero)),
+        verificationApplication("=", verificationApplication("mod", integerExpression(value), integerExpression(divisor)), verificationInteger("0")),
+      );
+      return { sort: "Bool", expression: verificationApplication("and", ...guards) };
+    }
     case "between":
       return {
         sort: "Bool",
@@ -891,9 +853,7 @@ function translateStandardPredicate(
 }
 
 function getDataVariantTarget(checker: TypeChecker, expression: Identifier): DataVariant | undefined {
-  const symbol = checker.getSymbolAtLocation(expression);
-  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
-  return target?.declarations?.find(isDataVariant);
+  return getAliasedSymbolOf(checker, expression)?.declarations?.find(isDataVariant);
 }
 
 function translateDataVariant(
@@ -913,20 +873,18 @@ function translateDataVariant(
   return constructFromFields(context, state, lowered.sort, variant.fields, values, result, variant.name);
 }
 
+function getRefinementNewtype(symbol: Symbol | undefined): NewtypeDeclaration | undefined {
+  const declaration = symbol?.declarations?.find(isNewtypeDeclaration);
+  return declaration?.withClause?.properties.some(property => idText(property.name) === "predicate") ? declaration : undefined;
+}
+
 function getRefinementTarget(checker: TypeChecker, expression: CallExpression): NewtypeDeclaration | undefined {
-  if (!isIdentifier(expression.expression)) return undefined;
-  const symbol = checker.getSymbolAtLocation(expression.expression);
-  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
-  return target?.declarations?.find(isNewtypeDeclaration)?.withClause?.properties.some(property => idText(property.name) === "predicate")
-    ? target.declarations.find(isNewtypeDeclaration)
-    : undefined;
+  return isIdentifier(expression.expression) ? getRefinementNewtype(getAliasedSymbolOf(checker, expression.expression)) : undefined;
 }
 
 function getRefinementTypeTarget(checker: TypeChecker, type: TypeNode | undefined): TypeAliasDeclaration | undefined {
   if (!type || !isTypeReferenceNode(type) || !isIdentifier(type.typeName)) return undefined;
-  const symbol = checker.getSymbolAtLocation(type.typeName);
-  const target = symbol && symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
-  const declaration = target?.declarations?.find(isTypeAliasDeclaration);
+  const declaration = getAliasedSymbolOf(checker, type.typeName)?.declarations?.find(isTypeAliasDeclaration);
   return declaration?.withClause?.properties.some(property => idText(property.name) === "predicate") ? declaration : undefined;
 }
 
@@ -1033,11 +991,10 @@ function verifyCallPreconditions(
     ...context,
     numberModel: context.numberModel || getNumberModel(target.withClause),
   };
+  const addPreconditionUnknowns = (message: string) => addUnknownForEach(callContext, requires.length, () => expression, "call-precondition", "precondition", index => `${targetName} precondition ${index + 1}`, message);
   if (expression.arguments.length !== target.parameters.length || target.parameters.some(parameter => !isIdentifier(parameter.name))) {
     const reason = `Call to '${targetName}' uses parameters or arguments outside the supported direct-call subset.`;
-    for (let i = 0; i < requires.length; i++) {
-      addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${i + 1}`, reason);
-    }
+    addPreconditionUnknowns(reason);
     return reason;
   }
 
@@ -1045,17 +1002,13 @@ function verifyCallPreconditions(
   for (const argument of expression.arguments) {
     const term = translateExpression(callContext, callerState, argument);
     if (typeof term === "string") {
-      for (let i = 0; i < requires.length; i++) {
-        addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${i + 1}`, term);
-      }
+      addPreconditionUnknowns(term);
       return term;
     }
     argumentTerms.push(term);
   }
   if (callerState.reason) {
-    for (let i = 0; i < requires.length; i++) {
-      addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${i + 1}`, callerState.reason);
-    }
+    addPreconditionUnknowns(callerState.reason);
     return callerState.reason;
   }
 
@@ -1067,9 +1020,7 @@ function verifyCallPreconditions(
     const argument = argumentTerms[i];
     if (!parameterSort || !verificationSortsEqual(parameterSort, argument.sort)) {
       const reason = `Argument ${i + 1} of '${targetName}' has an unsupported or incompatible verification sort.`;
-      for (let requirementIndex = 0; requirementIndex < requires.length; requirementIndex++) {
-        addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${requirementIndex + 1}`, reason);
-      }
+      addPreconditionUnknowns(reason);
       return reason;
     }
     const parameterTerm = freshConstant(callContext, parameterName, parameterSort);
@@ -1137,14 +1088,13 @@ function collectWrites(node: Node, writes: Set<string>, report: (reason: string)
   });
 }
 
-function getSort(context: VerificationContext, node: Node): Sort | undefined {
-  const lowered = lowerVerificationType(context, context.checker.getTypeAtLocation(node));
-  return verificationTypeLoweringFailed(lowered) ? undefined : lowered.sort;
+function lowerNodeSort(context: VerificationContext, node: Node): VerificationTypeLoweringResult {
+  return lowerVerificationType(context, context.checker.getTypeAtLocation(node));
 }
 
-function unsupportedTypeMessage(context: VerificationContext, node: Node): string {
-  const lowered = lowerVerificationType(context, context.checker.getTypeAtLocation(node));
-  return verificationTypeLoweringFailed(lowered) ? lowered.reason : `Type '${context.checker.typeToString(context.checker.getTypeAtLocation(node))}' could not be lowered for verification.`;
+function getSort(context: VerificationContext, node: Node): Sort | undefined {
+  const lowered = lowerNodeSort(context, node);
+  return verificationTypeLoweringFailed(lowered) ? undefined : lowered.sort;
 }
 
 function addQuery(
@@ -1191,6 +1141,18 @@ function addUnknown(
       { code: "unsupported", message },
     ),
   });
+}
+
+function addUnknownForEach(
+  context: VerificationContext,
+  count: number,
+  nodeFor: (index: number) => Node,
+  kind: VerificationArtifact["kind"],
+  obligation: VerificationArtifact["obligation"],
+  nameFor: (index: number) => string,
+  message: string,
+): void {
+  for (let index = 0; index < count; index++) addUnknown(context, nodeFor(index), kind, obligation, nameFor(index), message);
 }
 
 function getProperties(clause: WithClause | undefined, name: string) {

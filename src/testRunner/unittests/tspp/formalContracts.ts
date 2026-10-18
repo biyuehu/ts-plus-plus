@@ -127,6 +127,21 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.equal(artifacts[1].status, "failed");
   });
 
+  it("verifies the isNegative standard predicate", async () => {
+    const { program } = await createProgram(
+      `
+      type Negative = bigint with { predicate: isNegative(value); };
+      const good: Negative = -2n;
+      const bad: Negative = 2n;
+    `,
+      ["formalContracts", "refinementTypes", "standardLibraryPredicates"],
+    );
+    const artifacts = program.getVerificationArtifacts!();
+    assert.lengthOf(artifacts, 2);
+    assert.equal(artifacts[0].status, "proved");
+    assert.equal(artifacts[1].status, "failed");
+  });
+
   it("checks intrinsic standard predicate arguments", async () => {
     const { program } = await createProgram(
       `

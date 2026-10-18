@@ -105,7 +105,7 @@ TS++ 把 TypeScript 作为稳定的兼容层与 FFI 边界：
 | `dataDeclarations` | `data` 可辨识联合声明与对应变体构造器 | 无 | 是 | 否（生成运行时变体值与构造器） |
 | `macros` | `macro function` 声明与编译期 `macro f(Target);` 语句展开 | 无 | 是 | 否（宏调用可以替换生成的语句） |
 | `formalContracts` | 由 Z3 验证的 `requires`、`ensures` 和 `while` 循环不变式 | 无 | 是 | 是 |
-| `standardLibraryPredicates` | 标准库数值谓词 `isEven`、`isOdd`、`isPositive`、`isNonNegative`、`isZero`、`divides`、`between`；`number` 需设置 `numberModel: "mathematical-real"` | `formalContracts` | 是 | 是 |
+| `standardLibraryPredicates` | 标准库数值谓词 `isEven`、`isOdd`、`isPositive`、`isNegative`、`isNonNegative`、`isZero`、`divides`、`between`；`number` 需设置 `numberModel: "mathematical-real"` | `formalContracts` | 是 | 是 |
 | `refinementTypes` | 由 Z3 验证结构类型别名引入点的谓词 | `formalContracts` | 是 | 是 |
 | `typeComputation` | 类型层局部绑定 `let X = T in U`、模式匹配 `match T { ... }` 与类型 lambda `<T> =>> Body` | 无 | 是 | 是 |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |

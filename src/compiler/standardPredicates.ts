@@ -9,6 +9,7 @@ export type StandardPredicateName =
   | "isEven"
   | "isOdd"
   | "isPositive"
+  | "isNegative"
   | "isNonNegative"
   | "isZero"
   | "divides"
@@ -19,6 +20,7 @@ export type StandardPredicateKind =
   | "even"
   | "odd"
   | "positive"
+  | "negative"
   | "nonNegative"
   | "zero"
   | "divides"
@@ -37,6 +39,7 @@ export const standardPredicateDefinitions: readonly StandardPredicateDefinition[
   { name: "isEven", kind: "even", arity: 1 },
   { name: "isOdd", kind: "odd", arity: 1 },
   { name: "isPositive", kind: "positive", arity: 1 },
+  { name: "isNegative", kind: "negative", arity: 1 },
   { name: "isNonNegative", kind: "nonNegative", arity: 1 },
   { name: "isZero", kind: "zero", arity: 1 },
   { name: "divides", kind: "divides", arity: 2 },
