@@ -258,10 +258,9 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
   }
 
   const ensures = getProperties(declaration.withClause, "ensures");
+  const addPostconditionUnknowns = (message: string) => addUnknownForEach(context, ensures.length, index => ensures[index], "function-contract", "postcondition", index => `${contractName(declaration)} postcondition ${index + 1}`, message);
   if (initial.reason) {
-    for (let ensureIndex = 0; ensureIndex < ensures.length; ensureIndex++) {
-      addUnknown(context, ensures[ensureIndex], "function-contract", "postcondition", `${contractName(declaration)} postcondition ${ensureIndex + 1}`, initial.reason);
-    }
+    addPostconditionUnknowns(initial.reason);
     return;
   }
   const flow = executeBlock(context, declaration.body!, [initial]);
@@ -276,11 +275,7 @@ function analyzeFunction(checker: TypeChecker, sourceFile: SourceFile, declarati
     }
   }
   if (ensures.length) {
-    if (!flow.returns.length) {
-      for (let ensureIndex = 0; ensureIndex < ensures.length; ensureIndex++) {
-        addUnknown(context, ensures[ensureIndex], "function-contract", "postcondition", `${contractName(declaration)} postcondition ${ensureIndex + 1}`, "No explicit return path could be verified.");
-      }
-    }
+    if (!flow.returns.length) addPostconditionUnknowns("No explicit return path could be verified.");
     for (let pathIndex = 0; pathIndex < flow.returns.length; pathIndex++) {
       const path = flow.returns[pathIndex];
       for (let ensureIndex = 0; ensureIndex < ensures.length; ensureIndex++) {
@@ -450,6 +445,16 @@ function executeSwitch(context: VerificationContext, statement: SwitchStatement,
 function executeWhile(context: VerificationContext, statement: WhileStatement, incoming: SymbolicState): FlowResult {
   const invariants = getProperties(statement.withClause, "invariant");
   if (!invariants.length) return unsupportedFlow(incoming, "A while loop must declare at least one invariant to be verified.");
+  const addInvariantUnknowns = (phase: "initialization" | "preservation", message: string) =>
+    addUnknownForEach(
+      context,
+      invariants.length,
+      index => invariants[index],
+      "loop-invariant",
+      phase === "initialization" ? "invariant-initialization" : "invariant-preservation",
+      index => `${contractName(context.declaration)} loop invariant ${index + 1} ${phase}`,
+      message,
+    );
   const loopNumberModel = context.numberModel || getNumberModel(statement.withClause);
   if (loopNumberModel !== context.numberModel) {
     return unsupportedFlow(incoming, "A loop-level numberModel cannot introduce number semantics that are absent from its enclosing function in this version.");
@@ -488,9 +493,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
   else if (condition.sort !== "Bool") writeReason ??= "A while condition must have Boolean SMT semantics.";
 
   if (writeReason) {
-    for (let i = 0; i < invariants.length; i++) {
-      addUnknown(context, invariants[i], "loop-invariant", "invariant-preservation", `${contractName(context.declaration)} loop invariant ${i + 1} preservation`, writeReason);
-    }
+    addInvariantUnknowns("preservation", writeReason);
     return unsupportedFlow(incoming, writeReason);
   }
 
@@ -498,7 +501,7 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
   const bodyFlow = executeStatement(context, statement.statement, head);
   if (bodyFlow.returns.length) {
     const reason = "return inside a verified loop is outside the supported verification subset.";
-    for (let i = 0; i < invariants.length; i++) addUnknown(context, invariants[i], "loop-invariant", "invariant-preservation", `${contractName(context.declaration)} loop invariant ${i + 1} preservation`, reason);
+    addInvariantUnknowns("preservation", reason);
     return unsupportedFlow(incoming, reason);
   }
   for (let i = 0; i < invariants.length; i++) {
@@ -978,11 +981,10 @@ function verifyCallPreconditions(
     ...context,
     numberModel: context.numberModel || getNumberModel(target.withClause),
   };
+  const addPreconditionUnknowns = (message: string) => addUnknownForEach(callContext, requires.length, () => expression, "call-precondition", "precondition", index => `${targetName} precondition ${index + 1}`, message);
   if (expression.arguments.length !== target.parameters.length || target.parameters.some(parameter => !isIdentifier(parameter.name))) {
     const reason = `Call to '${targetName}' uses parameters or arguments outside the supported direct-call subset.`;
-    for (let i = 0; i < requires.length; i++) {
-      addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${i + 1}`, reason);
-    }
+    addPreconditionUnknowns(reason);
     return reason;
   }
 
@@ -990,17 +992,13 @@ function verifyCallPreconditions(
   for (const argument of expression.arguments) {
     const term = translateExpression(callContext, callerState, argument);
     if (typeof term === "string") {
-      for (let i = 0; i < requires.length; i++) {
-        addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${i + 1}`, term);
-      }
+      addPreconditionUnknowns(term);
       return term;
     }
     argumentTerms.push(term);
   }
   if (callerState.reason) {
-    for (let i = 0; i < requires.length; i++) {
-      addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${i + 1}`, callerState.reason);
-    }
+    addPreconditionUnknowns(callerState.reason);
     return callerState.reason;
   }
 
@@ -1012,9 +1010,7 @@ function verifyCallPreconditions(
     const argument = argumentTerms[i];
     if (!parameterSort || !verificationSortsEqual(parameterSort, argument.sort)) {
       const reason = `Argument ${i + 1} of '${targetName}' has an unsupported or incompatible verification sort.`;
-      for (let requirementIndex = 0; requirementIndex < requires.length; requirementIndex++) {
-        addUnknown(callContext, expression, "call-precondition", "precondition", `${targetName} precondition ${requirementIndex + 1}`, reason);
-      }
+      addPreconditionUnknowns(reason);
       return reason;
     }
     const parameterTerm = freshConstant(callContext, parameterName, parameterSort);
@@ -1136,6 +1132,18 @@ function addUnknown(
       { code: "unsupported", message },
     ),
   });
+}
+
+function addUnknownForEach(
+  context: VerificationContext,
+  count: number,
+  nodeFor: (index: number) => Node,
+  kind: VerificationArtifact["kind"],
+  obligation: VerificationArtifact["obligation"],
+  nameFor: (index: number) => string,
+  message: string,
+): void {
+  for (let index = 0; index < count; index++) addUnknown(context, nodeFor(index), kind, obligation, nameFor(index), message);
 }
 
 function getProperties(clause: WithClause | undefined, name: string) {
