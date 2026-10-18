@@ -3,7 +3,9 @@ import * as Harness from "../../_namespaces/Harness.js";
 interface GrammarPattern {
   readonly include?: string;
   readonly name?: string;
+  readonly match?: string;
   readonly patterns?: readonly GrammarPattern[];
+  readonly captures?: Readonly<Record<string, GrammarPattern>>;
 }
 
 interface Grammar {
@@ -31,6 +33,7 @@ describe("unittests:: tspp:: editor grammars", () => {
     const visit = (pattern: GrammarPattern) => {
       result.push(pattern);
       pattern.patterns?.forEach(visit);
+      Object.values(pattern.captures ?? {}).forEach(visit);
     };
     grammar.patterns.forEach(visit);
     Object.values(grammar.repository ?? {}).forEach(visit);
@@ -51,5 +54,18 @@ describe("unittests:: tspp:: editor grammars", () => {
       macros.some(pattern => pattern.include === "source.ts#type-annotation"),
       "TS++ declarations should reuse TypeScript's shared type-context grammar",
     );
+  });
+
+  it("highlights every contract property supported by with clauses", () => {
+    const patterns = collectPatterns(readGrammar("tspp-formal-contracts.tmLanguage.json"));
+    const contractPattern = patterns.find(pattern => Object.values(pattern.captures ?? {}).some(capture => capture.name === "keyword.other.contract.tspp"));
+    assert.isDefined(contractPattern, "Expected the formal contracts grammar to scope contract property names");
+    assert.isDefined(contractPattern.match);
+    for (const property of ["requires", "ensures", "invariant", "predicate", "numberModel", "timeout"]) {
+      assert.isTrue(
+        contractPattern.match.includes(property),
+        `Expected the formal contracts grammar to highlight the '${property}' contract property`,
+      );
+    }
   });
 });
