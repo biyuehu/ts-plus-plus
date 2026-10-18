@@ -409,7 +409,8 @@ function executeSwitch(context: VerificationContext, statement: SwitchStatement,
     conditions.set(clause, condition);
   }
   const allConditions = [...conditions.values()];
-  const precedingConditions: VerificationExpression[] = [];
+  const negatedConditions = allConditions.map(condition => verificationApplication("not", condition));
+  let caseIndex = 0;
   let fallthrough: SymbolicState[] = [];
   const exits: SymbolicState[] = [];
   const returns: ReturnPath[] = [];
@@ -418,12 +419,12 @@ function executeSwitch(context: VerificationContext, statement: SwitchStatement,
     if (isCaseClause(clause)) {
       const condition = conditions.get(clause)!;
       direct = cloneState(incoming);
-      direct.facts.push(...precedingConditions.map(previous => verificationApplication("not", previous)), condition);
-      precedingConditions.push(condition);
+      direct.facts.push(...negatedConditions.slice(0, caseIndex), condition);
+      caseIndex++;
     }
     else {
       direct = cloneState(incoming);
-      direct.facts.push(...allConditions.map(condition => verificationApplication("not", condition)));
+      direct.facts.push(...negatedConditions);
     }
     let live = [...fallthrough, direct];
     for (const clauseStatement of clause.statements) {
@@ -444,7 +445,7 @@ function executeSwitch(context: VerificationContext, statement: SwitchStatement,
     fallthrough = live;
   }
   const unmatched = clauses.some(clause => !isCaseClause(clause)) ? [] : [cloneState(incoming)];
-  if (unmatched.length) unmatched[0].facts.push(...allConditions.map(condition => verificationApplication("not", condition)));
+  if (unmatched.length) unmatched[0].facts.push(...negatedConditions);
   return { live: [...exits, ...fallthrough, ...unmatched], returns };
 }
 
