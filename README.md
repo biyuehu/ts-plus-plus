@@ -23,7 +23,7 @@ Language extensions are opt-in and are selected individually in `tsppconfig.json
 <!-- markdownlint-disable -->
 
 <a href="https://github.com/biyuehu/ts-plus-plus/graphs/contributors">
-  <img src="assets/contributors.svg" alt="Contributors" />
+  <img src="https://contrib.rocks/image?repo=biyuehu/ts-plus-plus" alt="Contributors" />
 </a>
 
 <!-- markdownlint-enable -->
