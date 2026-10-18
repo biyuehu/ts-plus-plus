@@ -333,6 +333,7 @@ import {
   QuestionToken,
   ReadonlyKeyword,
   ReadonlyPragmaMap,
+  ReifyExpression,
   ResolutionMode,
   RestTypeNode,
   ReturnStatement,
@@ -538,6 +539,9 @@ const forEachChildTable: ForEachChildTable = {
     return visitNode(cbNode, node.parameterName) ||
       visitNode(cbNode, node.parameterType) ||
       visitNode(cbNode, node.returnType);
+  },
+  [SyntaxKind.ReifyExpression]: function forEachChildInReifyExpression<T>(node: ReifyExpression, cbNode: (node: Node) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.type);
   },
   [SyntaxKind.ShorthandPropertyAssignment]: function forEachChildInShorthandPropertyAssignment<T>(node: ShorthandPropertyAssignment, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
@@ -5995,6 +5999,9 @@ namespace Parser {
    *      2) UpdateExpression[?Yield] ** ExponentiationExpression[?Yield]
    */
   function parseUnaryExpressionOrHigher(): UnaryExpression | BinaryExpression {
+    if (isStartOfReifyExpression()) {
+      return parseReifyExpression();
+    }
     /**
      * ES7 UpdateExpression:
      *      1) LeftHandSideExpression[?Yield]
@@ -6036,6 +6043,17 @@ namespace Parser {
       }
     }
     return simpleUnaryExpression;
+  }
+
+  function isStartOfReifyExpression(): boolean {
+    return token() === SyntaxKind.Identifier && scanner.getTokenValue() === "reify" &&
+      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp));
+  }
+
+  function parseReifyExpression(): ReifyExpression {
+    const pos = getNodePos();
+    nextToken();
+    return finishNode(factory.createReifyExpression(parseType()), pos);
   }
 
   /**

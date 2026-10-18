@@ -297,6 +297,7 @@ export const enum SyntaxKind {
   ArrowFunction,
   DeleteExpression,
   TypeOfExpression,
+  ReifyExpression,
   VoidExpression,
   AwaitExpression,
   PrefixUnaryExpression,
@@ -1153,6 +1154,7 @@ export type HasChildren =
   | ArrowFunction
   | DeleteExpression
   | TypeOfExpression
+  | ReifyExpression
   | VoidExpression
   | AwaitExpression
   | PrefixUnaryExpression
@@ -2609,6 +2611,12 @@ export interface DeleteExpression extends UnaryExpression {
 export interface TypeOfExpression extends UnaryExpression {
   readonly kind: SyntaxKind.TypeOfExpression;
   readonly expression: UnaryExpression;
+}
+
+/** A TS++ expression that turns a type into a runtime type descriptor. */
+export interface ReifyExpression extends UnaryExpression {
+  readonly kind: SyntaxKind.ReifyExpression;
+  readonly type: TypeNode;
 }
 
 export interface VoidExpression extends UnaryExpression {
@@ -9335,6 +9343,8 @@ export interface NodeFactory {
   updateDeleteExpression(node: DeleteExpression, expression: Expression): DeleteExpression;
   createTypeOfExpression(expression: Expression): TypeOfExpression;
   updateTypeOfExpression(node: TypeOfExpression, expression: Expression): TypeOfExpression;
+  createReifyExpression(type: TypeNode): ReifyExpression;
+  updateReifyExpression(node: ReifyExpression, type: TypeNode): ReifyExpression;
   createVoidExpression(expression: Expression): VoidExpression;
   updateVoidExpression(node: VoidExpression, expression: Expression): VoidExpression;
   createAwaitExpression(expression: Expression): AwaitExpression;

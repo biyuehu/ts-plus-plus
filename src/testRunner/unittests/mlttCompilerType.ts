@@ -55,7 +55,7 @@ describe("unittests:: MLTT compiler type", () => {
     assert.strictEqual(checker.typeToString(identity), "(A: Type0) -> (value: A) -> A");
     assert.strictEqual(checker.typeToTypeNode(identity, file, /*flags*/ undefined)?.kind, ts.SyntaxKind.DependentFunctionType);
     assert.strictEqual(checker.typeToString(implicitIdentity), "{A: Type0} -> (value: A) -> A");
-    assert.lengthOf(checker.getSignaturesOfType(identity, ts.SignatureKind.Call), 0);
+    assert.lengthOf(checker.getSignaturesOfType(identity, ts.SignatureKind.Call), 1);
     assert.lengthOf(checker.getSignaturesOfType(implicitIdentity, ts.SignatureKind.Call), 1);
   });
 
@@ -134,6 +134,46 @@ describe("unittests:: MLTT compiler type", () => {
     assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[1].name)), "true");
     assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[2].name)), "string");
     assert.strictEqual(callableChecker.typeToString(callableChecker.getTypeAtLocation(declarations[3].name)), "[number, string]");
+  });
+
+  it("reifies types and type constructors for explicit Type0 runtime binders", () => {
+    const runtimeTypes = createProgram(
+      "/reify.tspp",
+      `
+      interface Array<T> { readonly length: number }
+      type RuntimeIdentity: Type1 = (A: Type0) -> (value: A) -> A;
+      declare const runtimeIdentity: RuntimeIdentity;
+      const stringType = reify string;
+      const arrayConstructor = reify Array;
+      const arrayOfString = reify Array<string>;
+      const result = runtimeIdentity(stringType, "runtime");
+      const descriptorKind = stringType.kind;
+      const descriptorText = stringType.text;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+    const runtimeChecker = runtimeTypes.getTypeChecker();
+    const runtimeFile = runtimeTypes.getSourceFile("/reify.tspp")!;
+    const declarations = runtimeFile.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+
+    assert.isEmpty(runtimeTypes.getSyntacticDiagnostics());
+    const semanticDiagnostics = runtimeTypes.getSemanticDiagnostics();
+    assert.isEmpty(semanticDiagnostics, semanticDiagnostics.map(diagnostic => `${diagnostic.code}: ${diagnostic.messageText}`).join("\n"));
+    assert.strictEqual(runtimeChecker.typeToString(runtimeChecker.getTypeAtLocation(declarations[4].name)), '"runtime"');
+    assert.strictEqual(runtimeChecker.typeToString(runtimeChecker.getTypeAtLocation(declarations[5].name)), '"type"');
+    assert.strictEqual(runtimeChecker.typeToString(runtimeChecker.getTypeAtLocation(declarations[6].name)), "string");
+
+    const emitted = ts.transpileModule(
+      "const primitive = reify string; const constructor = reify Array;",
+      {
+        fileName: "reify.tspp",
+        compilerOptions: { tsppFeatures: allFeatures, target: ts.ScriptTarget.ESNext },
+      },
+    ).outputText;
+    assert.include(emitted, '{ kind: "type", text: "string" }');
+    assert.include(emitted, '{ kind: "type", text: "Array" }');
+    assert.notInclude(emitted, "reify");
   });
 
   it("treats implicit Nat binders as erased literal generics", () => {

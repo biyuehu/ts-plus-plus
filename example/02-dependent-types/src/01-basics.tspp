@@ -102,6 +102,20 @@ export declare const selectRight: SelectRight;
 // A 仍从第一个实际参数推断。
 export const partiallyExplicitResult = selectRight<auto, string>(1, "right");
 
+// `()` 中的 Type0 binder 是运行时参数。`reify T` 把类型 T 变成可传递的
+// descriptor，同时保留 T 的静态信息，因此后续 value 仍会按 T 检查。
+export type RuntimeTypedIdentity: Type1 =
+  (A: Type0) -> (value: A) -> A;
+export declare const runtimeTypedIdentity: RuntimeTypedIdentity;
+
+export const stringRuntimeType = reify string;
+export const runtimeTypedResult = runtimeTypedIdentity(stringRuntimeType, "runtime");
+
+// reify 也接受尚未应用的类型构造器；这里得到的是 Array 本身的 descriptor，
+// 而不是 Array<unknown> 或某个具体数组类型。
+export const arrayRuntimeConstructor = reify Array;
+export const stringArrayRuntimeType = reify Array<string>;
+
 // -----------------------------------------------------------------------------
 // 5. MLTT binder 可以包住普通 TypeScript 类型
 // -----------------------------------------------------------------------------

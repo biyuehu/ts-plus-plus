@@ -1192,6 +1192,13 @@ const visitEachChildTable: VisitEachChildTable = {
     );
   },
 
+  [SyntaxKind.ReifyExpression]: function visitEachChildOfReifyExpression(node, visitor, context, _nodesVisitor, _nodeVisitor, _tokenVisitor) {
+    // Unlike ordinary type annotations, this type node is needed by the emitter
+    // to construct the runtime descriptor, so the TypeScript erasure transform
+    // must preserve it.
+    return context.factory.updateReifyExpression(node, node.type);
+  },
+
   [SyntaxKind.VoidExpression]: function visitEachChildOfVoidExpression(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
     return context.factory.updateVoidExpression(
       node,

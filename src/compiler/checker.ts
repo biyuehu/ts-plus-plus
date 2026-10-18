@@ -1001,6 +1001,7 @@ import {
   ReadonlyKeyword,
   reduceLeft,
   RegularExpressionLiteral,
+  ReifyExpression,
   RelationComparisonResult,
   relativeComplement,
   removeExtension,
@@ -21845,7 +21846,15 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         binding = { name, placeholderName: name, compilerType: typeParameter };
       }
       else {
-        if (isNatIndex || isBoolIndex) {
+        if (isMlttTypeZeroNode(node.parameterType)) {
+          const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
+          const typeParameter = createTypeParameter(symbol);
+          typeParameter.typeKind = ordinaryTypeKind;
+          typeParameters.push(typeParameter);
+          parameterType = createReifiedType(typeParameter);
+          binding = { name, placeholderName: name, compilerType: typeParameter };
+        }
+        else if (isNatIndex || isBoolIndex) {
           const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
           const typeParameter = createTypeParameter(symbol);
           typeParameter.constraint = isNatIndex ? numberType : booleanType;
@@ -41736,6 +41745,32 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return typeofType;
   }
 
+  function getReifiedOperandType(node: TypeNode): Type {
+    if (isTypeReferenceNode(node) && !node.typeArguments) {
+      let symbol = resolveTypeReferenceName(node, SymbolFlags.Type);
+      if (symbol.flags & SymbolFlags.Alias) symbol = resolveAlias(symbol);
+      const declaredType = tryGetDeclaredTypeOfSymbol(symbol);
+      const candidate = declaredType && getKindOfType(declaredType).flags === KindFlags.Function
+        ? declaredType
+        : getTypeConstructorType(symbol);
+      if (candidate) return candidate;
+    }
+    return getTypeFromTypeNode(node);
+  }
+
+  function createReifiedType(representedType: Type): Type {
+    const marker = createSymbol(SymbolFlags.Property, "__tspp_reified_type" as __String);
+    getSymbolLinks(marker).type = representedType;
+    const kind = createProperty("kind" as __String, getStringLiteralType("type"));
+    const text = createProperty("text" as __String, stringType);
+    return createAnonymousType(/*symbol*/ undefined, createSymbolTable([kind, text, marker]), emptyArray, emptyArray, emptyArray);
+  }
+
+  function checkReifyExpression(node: ReifyExpression): Type {
+    requireTsppFeature(node, "dependentFunctionInterop");
+    return createReifiedType(getReifiedOperandType(node.type));
+  }
+
   function checkVoidExpression(node: VoidExpression): Type {
     checkNodeDeferred(node);
     return undefinedWideningType;
@@ -43743,6 +43778,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return checkFunctionExpressionOrObjectLiteralMethod(node as FunctionExpression | ArrowFunction, checkMode);
       case SyntaxKind.TypeOfExpression:
         return checkTypeOfExpression(node as TypeOfExpression);
+      case SyntaxKind.ReifyExpression:
+        return checkReifyExpression(node as ReifyExpression);
       case SyntaxKind.TypeAssertionExpression:
       case SyntaxKind.AsExpression:
         return checkAssertion(node as AssertionExpression, checkMode);

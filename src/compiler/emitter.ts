@@ -357,6 +357,7 @@ import {
   rangeIsOnSingleLine,
   rangeStartPositionsAreOnSameLine,
   readJsonOrUndefined,
+  ReifyExpression,
   removeFileExtension,
   resolvePath,
   RestTypeNode,
@@ -2029,6 +2030,8 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitDeleteExpression(node as DeleteExpression);
         case SyntaxKind.TypeOfExpression:
           return emitTypeOfExpression(node as TypeOfExpression);
+        case SyntaxKind.ReifyExpression:
+          return emitReifyExpression(node as ReifyExpression);
         case SyntaxKind.VoidExpression:
           return emitVoidExpression(node as VoidExpression);
         case SyntaxKind.AwaitExpression:
@@ -3020,6 +3023,28 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     emitTokenWithComment(SyntaxKind.TypeOfKeyword, node.pos, writeKeyword, node);
     writeSpace();
     emitExpression(node.expression, parenthesizer.parenthesizeOperandOfPrefixUnary);
+  }
+
+  function emitReifyExpression(node: ReifyExpression) {
+    const text = currentSourceFile
+      ? getSourceTextOfNodeFromSourceFile(currentSourceFile, node.type, /*includeTrivia*/ false).trim()
+      : "unknown";
+    writePunctuation("(");
+    writePunctuation("{");
+    writeSpace();
+    write("kind");
+    writePunctuation(":");
+    writeSpace();
+    writeStringLiteral('"type"');
+    writePunctuation(",");
+    writeSpace();
+    write("text");
+    writePunctuation(":");
+    writeSpace();
+    writeStringLiteral(`"${escapeString(text)}"`);
+    writeSpace();
+    writePunctuation("}");
+    writePunctuation(")");
   }
 
   function emitVoidExpression(node: VoidExpression) {

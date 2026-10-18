@@ -392,6 +392,7 @@ import {
   RedirectInfo,
   reduceLeft,
   RegularExpressionLiteral,
+  ReifyExpression,
   RestTypeNode,
   ReturnStatement,
   returnTrue,
@@ -695,6 +696,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateDeleteExpression,
     createTypeOfExpression,
     updateTypeOfExpression,
+    createReifyExpression,
+    updateReifyExpression,
     createVoidExpression,
     updateVoidExpression,
     createAwaitExpression,
@@ -3490,6 +3493,21 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   function updateTypeOfExpression(node: TypeOfExpression, expression: Expression) {
     return node.expression !== expression
       ? update(createTypeOfExpression(expression), node)
+      : node;
+  }
+
+  // @api
+  function createReifyExpression(type: TypeNode) {
+    const node = createBaseNode<ReifyExpression>(SyntaxKind.ReifyExpression);
+    node.type = type;
+    node.transformFlags |= propagateChildFlags(type);
+    return node;
+  }
+
+  // @api
+  function updateReifyExpression(node: ReifyExpression, type: TypeNode) {
+    return node.type !== type
+      ? update(createReifyExpression(type), node)
       : node;
   }
 

@@ -2047,6 +2047,7 @@ function isUnaryExpressionKind(kind: SyntaxKind): boolean {
     case SyntaxKind.PostfixUnaryExpression:
     case SyntaxKind.DeleteExpression:
     case SyntaxKind.TypeOfExpression:
+    case SyntaxKind.ReifyExpression:
     case SyntaxKind.VoidExpression:
     case SyntaxKind.AwaitExpression:
     case SyntaxKind.TypeAssertionExpression:
