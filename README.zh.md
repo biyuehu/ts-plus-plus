@@ -100,7 +100,7 @@ TS++ 把 TypeScript 作为稳定的兼容层与 FFI 边界：
 
 | 特性 | 获得 | 必须显式开启的依赖 | TS 超集 | 透明擦除 |
 | --- | --- | --- | --- | --- |
-| `higherKindedTypes` | 高阶类型参数和一等类型构造器 | 无 | 是 | 是 |
+| `higherKindedTypes` | 高阶类型参数和一等类型构造器；种类注解（如 `F: Type => Type`）需要额外开启 `typeUniverses` | 无 | 是 | 是 |
 | `newtypeDeclarations` | `newtype` 名义类型声明与对应构造器 | 无 | 是 | 否（生成运行时构造器） |
 | `dataDeclarations` | `data` 可辨识联合、变体构造器与穷尽值层 `match` | 无 | 是 | 否（生成运行时变体值、构造器与匹配分派） |
 | `macros` | `macro function` 声明与编译期 `macro f(Target);` 语句展开 | 无 | 是 | 否（宏调用可以替换生成的语句） |

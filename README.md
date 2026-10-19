@@ -100,7 +100,7 @@ Current features:
 
 | Feature | Provides | Explicit dependencies | TS superset | Transparent erasure |
 | --- | --- | --- | --- | --- |
-| `higherKindedTypes` | Higher-kinded parameters and first-class type constructors | — | Yes | Yes |
+| `higherKindedTypes` | Higher-kinded parameters and first-class type constructors; kind annotations such as `F: Type => Type` additionally require `typeUniverses` | — | Yes | Yes |
 | `newtypeDeclarations` | `newtype` nominal type declarations and their constructors | — | Yes | No (emits runtime constructors) |
 | `dataDeclarations` | `data` discriminated unions, variant constructors, and exhaustive value-level `match` | — | Yes | No (emits runtime variant values, constructors, and match dispatch) |
 | `macros` | `macro function` declarations and compile-time `macro f(Target);` statement expansion | — | Yes | No (macro calls can replace emitted statements) |
