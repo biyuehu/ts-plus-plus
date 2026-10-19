@@ -408,6 +408,68 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.isEmpty(program.getSemanticDiagnostics());
   });
 
+  it("narrows variant fields through short-circuit operators in contract clauses", async () => {
+    const { program } = await createProgram(
+      `
+      data Shape = Circle(radius: bigint) | Square(side: bigint);
+
+      export function guarded(s: Shape) with {
+        requires: s._tag !== "Circle" || s.radius >= 0n;
+        ensures: true;
+      }: bigint {
+        switch (s._tag) {
+          case "Circle": return s.radius;
+          case "Square": return s.side;
+          default: return 0n;
+        }
+      }
+
+      export function ensured(s: Shape) with {
+        requires: s._tag !== "Circle" || s.radius >= 0n;
+        ensures: s._tag !== "Circle" || s.radius >= 0n;
+      }: bigint {
+        switch (s._tag) {
+          case "Circle": return s.radius;
+          case "Square": return s.side;
+          default: return 0n;
+        }
+      }
+    `,
+      ["dataDeclarations", "formalContracts"],
+    );
+    const artifacts = program.getVerificationArtifacts!();
+    assert.lengthOf(artifacts, 6);
+    assert.isTrue(
+      artifacts.every(artifact => artifact.status === "proved"),
+      artifacts.map(artifact => `${artifact.status}: ${artifact.message}`).join("\n"),
+    );
+    // The body's own switch narrowing must be unaffected by clause-level field access.
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
+  it("reports clause field access without a variant assumption as unknown", async () => {
+    const { program } = await createProgram(
+      `
+      data Shape = Circle(radius: bigint) | Square(side: bigint);
+
+      export function bare(s: Shape) with {
+        requires: s.radius >= 0n;
+        ensures: true;
+      }: bigint {
+        return 0n;
+      }
+    `,
+      ["dataDeclarations", "formalContracts"],
+    );
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.status, "unknown");
+    assert.include(artifact.message, "enclosing");
+    // The access is a verification concern, not a static type error.
+    const diagnostics = program.getSemanticDiagnostics();
+    assert.lengthOf(diagnostics.filter(diagnostic => diagnostic.code === 18090), 1);
+    assert.isEmpty(diagnostics.filter(diagnostic => diagnostic.code === 2339));
+  });
+
   it("proves contracts over non-recursive record fields", async () => {
     const { program } = await createProgram(`
       function sum(point: { x: bigint; y: bigint }) with {

@@ -629,17 +629,27 @@ function translateExpression(context: VerificationContext, state: SymbolicState,
     return `Unary expression '${sourceText(context, expression)}' is outside the supported verification subset.`;
   }
   if (isBinaryExpression(expression)) {
+    const kind = expression.operatorToken.kind;
+    const isLogical = kind === SyntaxKind.AmpersandAmpersandToken || kind === SyntaxKind.BarBarToken;
     const variantCheck = translateVariantCheck(context, state, expression, result);
     if (variantCheck) return variantCheck;
     const left = translateExpression(context, state, expression.left, result);
     if (typeof left === "string") return left;
+    if (isLogical) {
+      if (left.sort !== "Bool") return "Logical operators require Boolean SMT operands.";
+      // Mirror the host language's short-circuit semantics for verification: the
+      // right operand of '&&' may assume the left held, and the right operand of
+      // '||' may assume the left did not. Without this fork, a discriminant test
+      // like 's._tag !== "Circle" || s.radius >= 0n' cannot make variant-specific
+      // fields of the right operand well-formed, because variant field selection
+      // otherwise relies on narrowing established outside the clause.
+      const refinedRight = translateExpression(context, refineStateForBranch(state, left, /*leftHolds*/ kind === SyntaxKind.AmpersandAmpersandToken), expression.right, result);
+      if (typeof refinedRight === "string") return refinedRight;
+      if (refinedRight.sort !== "Bool") return "Logical operators require Boolean SMT operands.";
+      return { sort: "Bool", expression: verificationApplication(kind === SyntaxKind.AmpersandAmpersandToken ? "and" : "or", left.expression, refinedRight.expression) };
+    }
     const right = translateExpression(context, state, expression.right, result);
     if (typeof right === "string") return right;
-    const kind = expression.operatorToken.kind;
-    if (kind === SyntaxKind.AmpersandAmpersandToken || kind === SyntaxKind.BarBarToken) {
-      if (left.sort !== "Bool" || right.sort !== "Bool") return "Logical operators require Boolean SMT operands.";
-      return { sort: "Bool", expression: verificationApplication(kind === SyntaxKind.AmpersandAmpersandToken ? "and" : "or", left.expression, right.expression) };
-    }
     if (!verificationSortsEqual(left.sort, right.sort)) return `Operands of operator kind ${expression.operatorToken.kind} have incompatible SMT sorts.`;
     if (kind === SyntaxKind.EqualsEqualsEqualsToken || kind === SyntaxKind.ExclamationEqualsEqualsToken) {
       const equality = verificationApplication("=", left.expression, right.expression);
@@ -757,13 +767,87 @@ function translatePropertyAccess(
   }
   if (fieldName === "_tag") return "A discriminant value is only supported in a direct comparison with a string literal.";
   const narrowedType = context.checker.getTypeAtLocation(expression.expression);
-  const variantName = getNarrowedVariantName(context.checker, narrowedType);
-  if (!variantName) return `Property '${fieldName}' requires TypeScript control-flow narrowing to one '${target.sort.name}' variant.`;
+  const variantName = getNarrowedVariantName(context.checker, narrowedType) ?? getAssumedVariantName(state, target);
+  if (!variantName) {
+    return `Property '${fieldName}' requires TypeScript control-flow narrowing to one '${target.sort.name}' variant, or an enclosing '${sourceText(context, expression.expression)}._tag === "<variant>"' assumption.`;
+  }
   const variant = target.sort.variants.find(candidate => candidate.name === variantName);
   const field = variant?.fields.find(candidate => candidate.name === fieldName);
   return variant && field
     ? { sort: field.sort, expression: verificationSelect(target.expression, target.sort, fieldName, variant.name) }
     : `Property '${fieldName}' does not belong to variant '${variantName}'.`;
+}
+
+/**
+ * Resolves the variant a sum-sort term has been assumed to inhabit. The
+ * assumptions come from the enclosing clause itself (for example the left
+ * operand of a `||` guard, or an enclosing `&&` conjunct), not from the
+ * surrounding control-flow graph, so they must be re-derived per term.
+ *
+ * The resulting select is sound even when the assumption does not hold: sum
+ * sorts lower to SMT datatypes whose per-variant selectors are total, and the
+ * only positions where an assumed-variant select may still evaluate are ones
+ * where the assumption is a conjunct of (or required by) the enclosing goal,
+ * so a violating model must fail the goal through the assumption itself.
+ */
+function getAssumedVariantName(state: SymbolicState, target: Term): string | undefined {
+  for (let index = state.facts.length - 1; index >= 0; index--) {
+    const variant = getAssumedVariantNameFromExpression(state.facts[index], target.expression);
+    if (variant !== undefined) return variant;
+  }
+  return undefined;
+}
+
+function getAssumedVariantNameFromExpression(expression: VerificationExpression, target: VerificationExpression): string | undefined {
+  switch (expression.kind) {
+    case "is-variant":
+      return sameVerificationTarget(expression.target, target) ? expression.variant : undefined;
+    case "application":
+      // Assumptions accumulate only under conjunction; a disjunct cannot be
+      // relied upon as a fact about the target.
+      if (expression.operator === "and") {
+        for (const operand of expression.operands) {
+          const variant = getAssumedVariantNameFromExpression(operand, target);
+          if (variant !== undefined) return variant;
+        }
+        return undefined;
+      }
+      // An even number of nested negations still asserts the inner formula, so
+      // the right branch of 's._tag !== "Circle" || s.radius >= 0n' assumes
+      // 'is-variant(s, "Circle")' through 'not(not(is-variant))'. An odd number
+      // denies the inner formula and yields nothing.
+      if (expression.operator === "not") {
+        let inner = expression.operands[0];
+        let negations = 1;
+        while (inner && inner.kind === "application" && inner.operator === "not") {
+          inner = inner.operands[0];
+          negations++;
+        }
+        return negations % 2 === 0 && inner ? getAssumedVariantNameFromExpression(inner, target) : undefined;
+      }
+      return undefined;
+    default:
+      return undefined;
+  }
+}
+
+function sameVerificationTarget(left: VerificationExpression, right: VerificationExpression): boolean {
+  if (left === right) return true;
+  return left.kind === "constant" && right.kind === "constant" && left.name === right.name && verificationSortsEqual(left.sort, right.sort);
+}
+
+/**
+ * Produces the state under which the short-circuited branch of a logical
+ * operator is translated, turning the left operand's value into an assumed
+ * fact for the right operand: the right of '&&' may assume the left held, and
+ * the right of '||' may assume it did not. Terms are reused verbatim; only
+ * the assumption list grows, mirroring how statement-level flow narrows
+ * states on each branch of a conditional.
+ */
+function refineStateForBranch(state: SymbolicState, left: Term, leftHolds: boolean): SymbolicState {
+  const refined = cloneState(state);
+  refined.facts.push(leftHolds ? left.expression : verificationApplication("not", left.expression));
+  return refined;
 }
 
 function getNarrowedVariantName(checker: TypeChecker, type: Type): string | undefined {

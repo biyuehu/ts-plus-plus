@@ -36939,6 +36939,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     let propType: Type;
     if (!prop) {
+      // Verification contract clauses are checked outside the function body's
+      // control-flow graph, so a data-variant field on an unnarrowed parameter
+      // is not a static error here; the formal verification backend decides
+      // whether an enclosing variant assumption makes the access well-formed
+      // and reports TS18090 itself when it does not.
+      if (!isPrivateIdentifier(right) && isVerificationPredicateContext(node) && isPropertyAccessExpression(node) && isDataFieldOnUnnarrowedUnion(apparentType, right.escapedText)) {
+        return anyType;
+      }
       const indexInfo = !isPrivateIdentifier(right) && (assignmentKind === AssignmentKind.None || !isGenericObjectType(leftType) || isThisTypeParameter(leftType)) ?
         getApplicableIndexInfoForName(apparentType, right.escapedText) : undefined;
       if (!(indexInfo && indexInfo.type)) {
@@ -48090,6 +48098,21 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (!current || !isWithProperty(current)) return false;
     const name = idText(current.name);
     return name === "requires" || name === "ensures" || name === "predicate" || name === "invariant";
+  }
+
+  /**
+   * Determines whether a property is a field that exists on some constituent of
+   * a closed data union but not on the union itself. Such accesses are valid
+   * verification subjects inside contract clauses once the clause narrows the
+   * union, so the checker defers to the verification backend instead of
+   * reporting a static error from outside the body's control-flow graph.
+   */
+  function isDataFieldOnUnnarrowedUnion(type: Type, name: __String): boolean {
+    if (!(type.flags & TypeFlags.Union)) return false;
+    return (type as UnionType).types.some(constituent => {
+      const variant = constituent.aliasSymbol?.declarations?.find(isDataVariant);
+      return !!variant && !!getPropertyOfType(constituent, name);
+    });
   }
 
   function getVerificationPredicateName(node: Expression): StandardPredicateName | undefined {
