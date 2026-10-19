@@ -600,7 +600,7 @@ function isTsppProofDirective(node: Node): boolean {
 
 function translateExpression(context: VerificationContext, state: SymbolicState, expression: Expression, result?: Term): Term | string {
   if (isParenthesizedExpression(expression)) return translateExpression(context, state, expression.expression, result);
-  if (isCallExpression(expression)) return translateCallExpression(context, state, expression, /*resultUsed*/ true);
+  if (isCallExpression(expression)) return translateCallExpression(context, state, expression, /*resultUsed*/ true, result);
   if (isObjectLiteralExpression(expression)) return translateObjectLiteral(context, state, expression, result);
   if (isIdentifier(expression)) {
     const name = idText(expression);
@@ -771,9 +771,9 @@ function getNarrowedVariantName(checker: TypeChecker, type: Type): string | unde
   return tag && tag.flags & TypeFlags.StringLiteral ? (tag as Type & { readonly value: string; }).value : undefined;
 }
 
-function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean): Term | string {
+function translateCallExpression(context: VerificationContext, state: SymbolicState, expression: CallExpression, resultUsed: boolean, result?: Term): Term | string {
   const standardPredicate = getStandardPredicateName(context.checker, expression);
-  if (standardPredicate) return translateStandardPredicate(context, state, expression, standardPredicate);
+  if (standardPredicate) return translateStandardPredicate(context, state, expression, standardPredicate, result);
   const callee = isIdentifier(expression.expression) ? getAliasedSymbolOf(context.checker, expression.expression) : undefined;
   const refinement = getRefinementNewtype(callee);
   if (refinement) return verifyRefinementIntroduction(context, state, expression, refinement);
@@ -815,6 +815,7 @@ function translateStandardPredicate(
   state: SymbolicState,
   expression: CallExpression,
   name: StandardPredicateName,
+  result?: Term,
 ): Term | string {
   const definition = getStandardPredicateDefinition(name);
   if (!definition) return `Unknown standard predicate '${name}'.`;
@@ -824,7 +825,7 @@ function translateStandardPredicate(
 
   const argumentTerms: Term[] = [];
   for (const argument of expression.arguments) {
-    const term = translateExpression(context, state, argument);
+    const term = translateExpression(context, state, argument, result);
     if (typeof term === "string") return term;
     if (!isVerificationNumericSort(term.sort)) return `Standard predicate '${name}' requires bigint or number arguments.`;
     argumentTerms.push(term);

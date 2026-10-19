@@ -212,6 +212,24 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.equal(artifacts[1].status, "failed");
   });
 
+  it("proves standard predicates applied to the implicit result value", async () => {
+    const { program } = await createProgram(
+      `
+      function evenPlusTwo(n: bigint) with {
+        requires: isEven(n);
+        ensures: isEven(result);
+      }: bigint {
+        return n + 2n;
+      }
+    `,
+      ["formalContracts", "refinementTypes", "standardLibraryPredicates"],
+    );
+    const artifacts = program.getVerificationArtifacts!();
+    assert.lengthOf(artifacts, 1);
+    assert.equal(artifacts[0].status, "proved");
+    assert.isEmpty(program.getSemanticDiagnostics());
+  });
+
   it("checks intrinsic standard predicate arguments", async () => {
     const { program } = await createProgram(
       `
