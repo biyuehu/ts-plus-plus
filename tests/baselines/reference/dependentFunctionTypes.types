@@ -54,8 +54,8 @@ export type KeyofType: Type1 = (A: Type0) -> keyof A;
 export type IndexedType: Type1 = (A: Type0) -> { value: A }["value"];
 >IndexedType : (A: Type0) -> {    value: A;}["value"]
 >            :                                       
->value : __mltt_placeholder_0__
->      : ^^^^^^^^^^^^^^^^^^^^^^
+>value : A
+>      : ^
 
 export type ConditionalType: Type1 = (A: Type0) -> A extends string ? number : boolean;
 >ConditionalType : (A: Type0) -> A extends string ? number : boolean

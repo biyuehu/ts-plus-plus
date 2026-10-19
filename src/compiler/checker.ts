@@ -1592,7 +1592,6 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   var inlineLevel = 0;
   var currentNode: Node | undefined;
   var currentMlttTypeBindings: readonly MlttTypeBinding[] | undefined;
-  var mlttPlaceholderTypes: TypeParameter[] | undefined;
   var dependentFunctionCallSignatures = new Map<number, Signature | false>();
   var mlttNaturalSignatureParameterIndices = new WeakMap<Signature, readonly number[]>();
   var mlttNaturalSignatureTypeParameterIndices = new WeakMap<Signature, readonly number[]>();
@@ -18076,7 +18075,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const reference = node;
       if (!reference.typeArguments?.length) {
         const binding = currentMlttTypeBindings.find(binding => binding.name === name);
-        if (binding) return binding.compilerType;
+        if (binding) {
+          const links = getNodeLinks(reference);
+          links.resolvedSymbol = binding.compilerType.symbol;
+          links.resolvedType = binding.compilerType;
+          return binding.compilerType;
+        }
         if (name === "Nat") return numberType;
         if (name === "Zero") return getNumberLiteralType(0);
       }
@@ -20719,7 +20723,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const typeParameters = getOuterTypeParameters(node, /*includeThisTypes*/ true) ?? emptyArray;
       const scope: MlttTypeBinding[] = typeParameters.map(typeParameter => {
         const name = symbolToString(typeParameter.symbol);
-        return { name, placeholderName: name, compilerType: typeParameter };
+        return { name, compilerType: typeParameter };
       });
       const term = getMlttTermFromMatchTypeNode(node, scope);
       if (!term) return links.resolvedType = errorType;
@@ -20788,7 +20792,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (currentMlttTypeBindings) {
       const name = idText(node.typeParameter.name);
       const binding = currentMlttTypeBindings.find(binding => binding.name === name);
-      if (binding) return binding.compilerType;
+      if (binding) return getNodeLinks(node).resolvedType = binding.compilerType;
     }
     const links = getNodeLinks(node);
     if (!links.resolvedType) {
@@ -21332,25 +21336,23 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   interface MlttTypeBinding {
     readonly name: string;
-    readonly placeholderName: string;
     readonly compilerType: TypeParameter;
   }
 
   interface MlttExternalIdentity {
-    readonly type: Type;
-    readonly parameters: readonly TypeParameter[];
+    /** The checked TypeScript type, parameterized by the opaque slots below. */
+    readonly body: Type;
+    /** Stable semantic slots corresponding positionally to MlttExternal.arguments. */
+    readonly slots: readonly TypeParameter[];
   }
 
-  function createMlttTypeBinding(name: string, binderDepth: number): MlttTypeBinding {
-    const placeholderName = `__mltt_placeholder_${binderDepth}__`;
-    const placeholders = mlttPlaceholderTypes ||= [];
-    let compilerType = placeholders[binderDepth];
-    if (!compilerType) {
-      const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(placeholderName));
-      compilerType = placeholders[binderDepth] = createTypeParameter(symbol);
-      compilerType.typeKind = ordinaryTypeKind;
-    }
-    return { name, placeholderName, compilerType };
+  function createMlttTypeBinding(name: string): MlttTypeBinding {
+    // The TypeParameter object is the binder's identity. Its spelling is only a
+    // display aid; substitution never searches or rewrites the printed name.
+    const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
+    const compilerType = createTypeParameter(symbol);
+    compilerType.typeKind = ordinaryTypeKind;
+    return { name, compilerType };
   }
 
   function getMlttTermFromTypeNode(node: TypeNode, scope: readonly MlttTypeBinding[]): MlttTerm | undefined {
@@ -21361,7 +21363,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (node.kind === SyntaxKind.DependentFunctionType) {
       const dependent = node as DependentFunctionTypeNode;
       const domain = getMlttTermFromTypeNode(dependent.parameterType, scope);
-      const binding = createMlttTypeBinding(idText(dependent.parameterName), scope.length);
+      const binding = createMlttTypeBinding(idText(dependent.parameterName));
       const codomain = getMlttTermFromTypeNode(dependent.returnType, [binding, ...scope]);
       return domain && codomain ? mlttPi(idText(dependent.parameterName), domain, codomain) : undefined;
     }
@@ -21399,7 +21401,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         }
         const binder = reference.typeArguments[0] as DependentFunctionTypeNode;
         const parameterType = getMlttTermFromTypeNode(binder.parameterType, scope);
-        const binding = createMlttTypeBinding(idText(binder.parameterName), scope.length);
+        const binding = createMlttTypeBinding(idText(binder.parameterName));
         const body = getMlttTermFromTypeNode(binder.returnType, [binding, ...scope]);
         return parameterType && body && mlttLambda(idText(binder.parameterName), body, parameterType);
       }
@@ -21675,8 +21677,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const declaration = findMlttPatternCaptureDeclaration(branch.pattern, captureName);
         const compilerType = declaration
           ? getDeclaredTypeOfTypeParameter(getSymbolOfDeclaration(declaration))
-          : createMlttTypeBinding(captureName, caseScope.length).compilerType;
-        const binding: MlttTypeBinding = { name: captureName, placeholderName: captureName, compilerType };
+          : createMlttTypeBinding(captureName).compilerType;
+        const binding: MlttTypeBinding = { name: captureName, compilerType };
         caseScope = [binding, ...caseScope];
         captures = [{ name: captureName, type: mlttUniverse(0) }, ...captures];
       }
@@ -21706,6 +21708,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getExternalMlttTerm(node: TypeNode, scope: readonly MlttTypeBinding[]): MlttTerm | undefined {
+    const referencedBindings = new Set<MlttTypeBinding>();
+    collectMlttBindingsReferencedInTypeNode(node, scope, referencedBindings);
+    const termArguments: MlttTerm[] = [];
+    const slots: TypeParameter[] = [];
+    for (let index = 0; index < scope.length; index++) {
+      const binding = scope[index];
+      if (!referencedBindings.has(binding)) continue;
+      termArguments.push(mlttVariable(index));
+      slots.push(binding.compilerType);
+    }
+    registerMlttExternalTemplateSlots(node, slots);
+
     const savedBindings = currentMlttTypeBindings;
     currentMlttTypeBindings = scope;
     let type: Type;
@@ -21713,6 +21727,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     try {
       type = getTypeFromTypeNode(node);
       if (type === errorType) return undefined;
+      registerMlttExternalTemplateSlots(node, slots);
       key = typeToString(type, node, TypeFormatFlags.NoTruncation);
     }
     finally {
@@ -21721,26 +21736,41 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     if (!checkMlttExternalUnionOrIntersectionKinds(type, node)) return undefined;
 
-    const referencedBindings = new Set<MlttTypeBinding>();
-    collectMlttBindingsReferencedInTypeNode(node, scope, referencedBindings);
-    const termArguments: MlttTerm[] = [];
-    const parameters: TypeParameter[] = [];
-    for (let index = 0; index < scope.length; index++) {
-      const binding = scope[index];
-      if (!referencedBindings.has(binding)) continue;
-      const argumentIndex = termArguments.length;
-      key = key.split(binding.placeholderName).join(`$${argumentIndex}`);
-      termArguments.push(mlttVariable(index));
-      parameters.push(binding.compilerType);
-    }
     const mlttType = getMlttTypeFromKind(getKindOfType(type), node);
     return mlttType && mlttExternal(
       key,
       getTextOfNode(node),
       termArguments,
       mlttType,
-      { type, parameters } satisfies MlttExternalIdentity,
+      { body: type, slots } satisfies MlttExternalIdentity,
     );
+  }
+
+  function registerMlttExternalTemplateSlots(node: Node, slots: readonly TypeParameter[]): void {
+    if (!slots.length) return;
+    if (
+      node.kind === SyntaxKind.TypeLiteral ||
+      node.kind === SyntaxKind.FunctionType ||
+      node.kind === SyntaxKind.ConstructorType ||
+      node.kind === SyntaxKind.MappedType
+    ) {
+      const links = getNodeLinks(node);
+      links.outerTypeParameters = slots.slice();
+      const resolvedType = links.resolvedType;
+      if (resolvedType && resolvedType.flags & TypeFlags.ObjectFlagsType) {
+        (resolvedType as ObjectFlagsType).objectFlags &= ~(ObjectFlags.CouldContainTypeVariablesComputed | ObjectFlags.CouldContainTypeVariables);
+      }
+    }
+    if (node.kind === SyntaxKind.ConditionalType) {
+      const conditional = getNodeLinks(node).resolvedType;
+      if (conditional && conditional.flags & TypeFlags.Conditional) {
+        const root = (conditional as ConditionalType).root;
+        root.outerTypeParameters = slots.slice();
+        root.instantiations = new Map<string, Type>();
+        root.instantiations.set(getTypeListId(slots), conditional);
+      }
+    }
+    forEachChild(node, child => registerMlttExternalTemplateSlots(child, slots));
   }
 
   function collectMlttBindingsReferencedInTypeNode(
@@ -21824,12 +21854,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const leftIdentity = left.identity as MlttExternalIdentity | undefined;
     const rightIdentity = right.identity as MlttExternalIdentity | undefined;
     if (!leftIdentity || !rightIdentity) return left.key === right.key;
-    if (leftIdentity.parameters.length !== rightIdentity.parameters.length) return false;
+    if (leftIdentity.slots.length !== rightIdentity.slots.length) return false;
 
-    const rightType = rightIdentity.parameters.length
-      ? instantiateType(rightIdentity.type, createTypeMapper(rightIdentity.parameters, leftIdentity.parameters))
-      : rightIdentity.type;
-    return areMlttExternalTypesConstructorEqual(leftIdentity.type, rightType);
+    const rightType = instantiateMlttExternalIdentity(rightIdentity, leftIdentity.slots);
+    return !!rightType && areMlttExternalTypesConstructorEqual(leftIdentity.body, rightType);
   }
 
   /**
@@ -21877,10 +21905,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     const captureParameters: TypeParameter[] = Array(captures.length);
     const patternArguments: Type[] = [];
-    for (let index = 0; index < patternIdentity.parameters.length; index++) {
+    for (let index = 0; index < patternIdentity.slots.length; index++) {
       const argument = pattern.arguments[index];
       if (argument?.kind === "variable" && argument.index < captures.length) {
-        const parameter = patternIdentity.parameters[index];
+        const parameter = patternIdentity.slots[index];
         captureParameters[argument.index] = parameter;
         patternArguments.push(parameter);
         continue;
@@ -21891,7 +21919,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
     if (captures.some((_capture, index) => !captureParameters[index])) return { kind: "apart" };
 
-    const patternType = instantiateType(patternIdentity.type, createTypeMapper(patternIdentity.parameters, patternArguments));
+    const patternType = instantiateMlttExternalIdentity(patternIdentity, patternArguments);
+    if (!patternType) return { kind: "stuck" };
     const inferredTypes: (Type | undefined)[] = Array(captures.length);
     const result = matchCompilerTypePattern(scrutineeType, patternType);
     if (result !== "matched") return { kind: result };
@@ -21905,7 +21934,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           typeToString(type, /*enclosingDeclaration*/ undefined, TypeFormatFlags.NoTruncation),
           emptyArray,
           mlttUniverse(0),
-          { type, parameters: emptyArray } satisfies MlttExternalIdentity,
+          { body: type, slots: emptyArray } satisfies MlttExternalIdentity,
         )
       ),
     };
@@ -21952,7 +21981,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const instantiatedArguments = term.arguments.map(argument => getCompilerTypeFromMlttTerm(argument, emptyArray));
     return some(instantiatedArguments, argument => !argument)
       ? undefined
-      : instantiateType(identity.type, createTypeMapper(identity.parameters, instantiatedArguments as Type[]));
+      : instantiateMlttExternalIdentity(identity, instantiatedArguments as Type[]);
+  }
+
+  function instantiateMlttExternalIdentity(identity: MlttExternalIdentity, argumentsList: readonly Type[]): Type | undefined {
+    if (identity.slots.length !== argumentsList.length) return undefined;
+    if (!identity.slots.length) return identity.body;
+    return instantiateType(identity.body, createTypeMapper(identity.slots, argumentsList));
   }
 
   interface MlttSignatureBinder {
@@ -21984,7 +22019,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       if (!domain) return undefined;
       const compilerType = typeParameters[index];
       binders.push({ name, domain });
-      scope = [{ name, placeholderName: name, compilerType }, ...scope];
+      scope = [{ name, compilerType }, ...scope];
     }
 
     for (const parameter of parameters) {
@@ -21993,7 +22028,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       if (!domain) return undefined;
       const name = idText(parameter.name as Identifier);
       binders.push({ name, domain });
-      scope = [createMlttTypeBinding(name, scope.length), ...scope];
+      scope = [createMlttTypeBinding(name), ...scope];
     }
 
     let term = getMlttTermFromTypeNode(returnTypeNode, scope);
@@ -22056,7 +22091,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         typeParameter.typeKind = ordinaryTypeKind;
         if (isNatIndex) naturalTypeParameterIndices.push(typeParameters.length);
         typeParameters.push(typeParameter);
-        binding = { name, placeholderName: name, compilerType: typeParameter };
+        binding = { name, compilerType: typeParameter };
       }
       else {
         if (isMlttTypeZeroNode(node.parameterType)) {
@@ -22065,7 +22100,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           typeParameter.typeKind = ordinaryTypeKind;
           typeParameters.push(typeParameter);
           parameterType = createReifiedType(typeParameter);
-          binding = { name, placeholderName: name, compilerType: typeParameter };
+          binding = { name, compilerType: typeParameter };
         }
         else if (isNatIndex || isBoolIndex) {
           const symbol = createSymbol(SymbolFlags.TypeParameter, escapeLeadingUnderscores(name));
@@ -22074,12 +22109,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           typeParameter.typeKind = ordinaryTypeKind;
           typeParameters.push(typeParameter);
           parameterType = typeParameter;
-          binding = { name, placeholderName: name, compilerType: typeParameter };
+          binding = { name, compilerType: typeParameter };
           if (isNatIndex) naturalParameterIndices.push(parameters.length);
         }
         else {
           parameterType = getCompilerTypeFromMlttTypeNode(node.parameterType, scope);
-          binding = createMlttTypeBinding(name, scope.length);
+          binding = createMlttTypeBinding(name);
         }
         if (!parameterType || getKindOfType(parameterType).flags !== KindFlags.Type || !isOrdinaryTypeKind(getKindOfType(parameterType))) {
           dependentFunctionCallSignatures.set(type.id, false);
@@ -22179,17 +22214,16 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
           const patternIdentity = matchCase.pattern.kind === "external" && matchCase.pattern.identity as MlttExternalIdentity | undefined;
           if (!patternIdentity || matchCase.pattern.kind !== "external") return undefined;
           const captureParameters: TypeParameter[] = Array(captures.length);
-          for (let parameterIndex = 0; parameterIndex < patternIdentity.parameters.length; parameterIndex++) {
+          for (let parameterIndex = 0; parameterIndex < patternIdentity.slots.length; parameterIndex++) {
             const argument = matchCase.pattern.arguments[parameterIndex];
             if (argument?.kind === "variable" && argument.index < captures.length) {
-              captureParameters[argument.index] = patternIdentity.parameters[parameterIndex];
+              captureParameters[argument.index] = patternIdentity.slots[parameterIndex];
             }
           }
           if (captures.some((_capture, captureIndex) => !captureParameters[captureIndex])) return undefined;
           const captureScope: MlttTypeBinding[] = [
             ...captures.map((capture, captureIndex) => ({
               name: capture.name,
-              placeholderName: capture.name,
               compilerType: captureParameters[captureIndex],
             })),
             ...scope,
@@ -22248,7 +22282,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const termArguments = term.arguments.map(argument => getCompilerTypeFromMlttTerm(argument, scope));
     return some(termArguments, argument => !argument)
       ? undefined
-      : instantiateType(identity.type, createTypeMapper(identity.parameters, termArguments as Type[]));
+      : instantiateMlttExternalIdentity(identity, termArguments as Type[]);
   }
 
   function getMlttConditionalType(
@@ -42041,7 +42075,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       for (const captureName of captureNames) {
         const declaration = findMlttPatternCaptureDeclaration(arm.pattern!, captureName)!;
         const parameter = getDeclaredTypeOfTypeParameter(getSymbolOfDeclaration(declaration));
-        scope = [{ name: captureName, placeholderName: captureName, compilerType: parameter }, ...scope];
+        scope = [{ name: captureName, compilerType: parameter }, ...scope];
         captures = [{ name: captureName, type: mlttUniverse(0) }, ...captures];
         parameters = [parameter, ...parameters];
       }

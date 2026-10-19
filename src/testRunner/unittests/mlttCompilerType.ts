@@ -365,6 +365,31 @@ describe("unittests:: MLTT compiler type", () => {
     assert.isTrue(naturalsChecker.isTypeAssignableTo(twoVector, computedTwoVector));
   });
 
+  it("instantiates MLTT binder slots inside anonymous object types", () => {
+    const naturals = createProgram(
+      "/anonymous-natural-result.tspp",
+      `
+      declare const buildAt: (N: Nat) -> { index: N; nested: { value: N } };
+      const atThree = buildAt(3);
+      const index = atThree.index;
+      const nestedValue = atThree.nested.value;
+      const exactIndex: 3 = index;
+      const exactNestedValue: 3 = nestedValue;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+    const checker = naturals.getTypeChecker();
+    const file = naturals.getSourceFile("/anonymous-natural-result.tspp")!;
+    const declarations = file.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+    const diagnostics = naturals.getSemanticDiagnostics();
+
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => diagnostic.messageText.toString()).join("\n"));
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[2].name)), "3");
+    assert.strictEqual(checker.typeToString(checker.getTypeAtLocation(declarations[3].name)), "3");
+    assert.notInclude(checker.typeToString(checker.getTypeAtLocation(declarations[1].name)), "__mltt_placeholder_");
+  });
+
   it("rejects non-natural TypeScript values at Nat call boundaries", () => {
     const invalidNaturals = createProgram(
       "/invalid-natural-calls.tspp",
