@@ -267,6 +267,61 @@ describe("unittests:: tspp:: type computation: match", () => {
   });
 });
 
+describe("unittests:: tspp:: match as a contextual keyword", () => {
+  function parseDiagnosticsOf(content: string) {
+    const file = ts.createSourceFile(
+      "/file.tspp",
+      content,
+      ts.ScriptTarget.Latest,
+      /*setParentNodes*/ true,
+    );
+    return {
+      file,
+      messages: file.parseDiagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")),
+    };
+  }
+
+  it("allows match as an identifier in value positions", () => {
+    const { messages } = parseDiagnosticsOf(`
+      let match = 5;
+      match = 6;
+      const out = match + 1;
+      for (const match of [1, 2]) { void match; }
+    `);
+    assert.isEmpty(messages);
+  });
+
+  it("allows data, newtype, and macro as identifiers in value positions", () => {
+    const { messages } = parseDiagnosticsOf(`
+      const data = 1;
+      const newtype = 2;
+      const macro = 3;
+      const out = data + newtype + macro;
+      let reassign = data;
+      reassign = newtype + macro;
+    `);
+    assert.isEmpty(messages);
+  });
+
+  it("still parses expression-level match as a match expression", () => {
+    const { file, messages } = parseDiagnosticsOf(`
+      const selected = match result { Ok(value) => value, Err(error) => error };
+    `);
+    assert.isEmpty(messages);
+    const statement = file.statements[0] as ts.VariableStatement;
+    assert.isTrue(ts.isMlttMatchExpression(statement.declarationList.declarations[0].initializer!));
+  });
+
+  it("parses match used as a called identifier when the brace is on the next line", () => {
+    const { messages } = parseDiagnosticsOf(`
+      const match = (x: number) => x;
+      match(1)
+      { const ignored = 2; }
+    `);
+    assert.isEmpty(messages);
+  });
+});
+
 describe("unittests:: tspp:: type computation: type lambdas", () => {
   function lambdaMessages(content: string, tsppFeatures: string[] = ["typeComputation", "higherKindedTypes", "typeUniverses"]) {
     const host = new fakes.CompilerHost(vfs.createFromFileSystem(

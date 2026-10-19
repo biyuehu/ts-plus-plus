@@ -6118,8 +6118,20 @@ namespace Parser {
   }
 
   function isStartOfMlttMatchExpression(): boolean {
-    return token() === SyntaxKind.MatchKeyword &&
-      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp));
+    if (token() !== SyntaxKind.MatchKeyword) return false;
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    // 'match' is a contextual keyword in expression position: only claim it when it is followed by a
+    // scrutinee and an opening brace on the same line, so that 'match' can still be used as an
+    // identifier (e.g. `let match = 5; match = 6;`). This mirrors isStartOfMatchType in type
+    // positions; a `{` on the next line keeps the stock parse (an expression or call statement
+    // followed by a block statement via ASI).
+    return lookAhead(() => {
+      nextToken();
+      if (scanner.hasPrecedingLineBreak()) return false;
+      if (token() === SyntaxKind.Identifier && scanner.getTokenValue() === "mltt") nextToken();
+      parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
+      return token() === SyntaxKind.OpenBraceToken && !scanner.hasPrecedingLineBreak();
+    });
   }
 
   function parseMlttMatchExpression(): MlttMatchExpression {
