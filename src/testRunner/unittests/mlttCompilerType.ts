@@ -176,6 +176,60 @@ describe("unittests:: MLTT compiler type", () => {
     assert.notInclude(emitted, "reify");
   });
 
+  it("matches reified descriptors with expression-level match mltt", () => {
+    const matching = createProgram(
+      "/reified-match.tspp",
+      `
+      interface Array<T> { readonly length: number }
+      const ty = reify Array<string>;
+      const result = match mltt ty {
+        Array<infer E> => null as E,
+        _ => 0
+      };
+      const fallback = match mltt ty {
+        number => "wrong",
+        _ => true
+      };
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true, target: ts.ScriptTarget.ESNext },
+    );
+    const matchingChecker = matching.getTypeChecker();
+    const matchingFile = matching.getSourceFile("/reified-match.tspp")!;
+    const declarations = matchingFile.statements.filter(ts.isVariableStatement)
+      .flatMap(statement => [...statement.declarationList.declarations]);
+
+    assert.isEmpty(matching.getSyntacticDiagnostics());
+    const diagnostics = matching.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => `${diagnostic.code}: ${diagnostic.messageText}`).join("\n"));
+    assert.strictEqual(matchingChecker.typeToString(matchingChecker.getTypeAtLocation(declarations[1].name)), "string");
+    assert.strictEqual(matchingChecker.typeToString(matchingChecker.getTypeAtLocation(declarations[2].name)), "true");
+
+    let emitted = "";
+    matching.emit(/*targetSourceFile*/ undefined, (_fileName, text) => emitted += text);
+    assert.include(emitted, "null");
+    assert.include(emitted, "true");
+    assert.notInclude(emitted, '"wrong"');
+    assert.notInclude(emitted, "match mltt");
+  });
+
+  it("rejects non-reified and non-exhaustive expression-level MLTT matches", () => {
+    const invalid = createProgram(
+      "/invalid-reified-match.tspp",
+      `
+      const plain = 1;
+      const notReified = match mltt plain { _ => true };
+      const descriptor = reify string;
+      const missingDefault = match mltt descriptor { string => true };
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+    const messages = invalid.getSemanticDiagnostics()
+      .map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+    assert.lengthOf(messages, 2, messages.join("\n"));
+    assert.match(messages.join("\n"), /must be a value produced by 'reify'/);
+    assert.match(messages.join("\n"), /must end with a '_' default branch/);
+  });
+
   it("treats implicit Nat binders as erased literal generics", () => {
     const naturals = createProgram(
       "/implicit-natural.tspp",

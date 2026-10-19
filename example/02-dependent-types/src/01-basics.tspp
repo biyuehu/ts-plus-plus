@@ -116,6 +116,13 @@ export const runtimeTypedResult = runtimeTypedIdentity(stringRuntimeType, "runti
 export const arrayRuntimeConstructor = reify Array;
 export const stringArrayRuntimeType = reify Array<string>;
 
+// 具体 descriptor 可以直接参与表达式级 MLTT 匹配。infer E 既控制分支选择，
+// 也能在命中分支的类型位置使用；这里的结果类型是 string[]。
+export const matchedRuntimeArray = match mltt stringArrayRuntimeType {
+  Array<infer E> => [] as E[],
+  _ => [] as never[]
+};
+
 // -----------------------------------------------------------------------------
 // 5. MLTT binder 可以包住普通 TypeScript 类型
 // -----------------------------------------------------------------------------

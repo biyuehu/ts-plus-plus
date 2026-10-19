@@ -149,6 +149,8 @@ import {
   MappedTypeNode,
   MatchTypeArm,
   MatchTypeNode,
+  MlttMatchExpression,
+  MlttMatchExpressionArm,
   MetaProperty,
   MethodDeclaration,
   MethodSignature,
@@ -548,6 +550,14 @@ export function isMatchTypeNode(node: Node): node is MatchTypeNode {
 
 export function isMatchTypeArm(node: Node): node is MatchTypeArm {
   return node.kind === SyntaxKind.MatchTypeArm;
+}
+
+export function isMlttMatchExpression(node: Node): node is MlttMatchExpression {
+  return node.kind === SyntaxKind.MlttMatchExpression;
+}
+
+export function isMlttMatchExpressionArm(node: Node): node is MlttMatchExpressionArm {
+  return node.kind === SyntaxKind.MlttMatchExpressionArm;
 }
 
 export function isTypeLambdaNode(node: Node): node is TypeLambdaNode {

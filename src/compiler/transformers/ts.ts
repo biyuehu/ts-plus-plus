@@ -131,6 +131,7 @@ import {
   map,
   mapDefined,
   MethodDeclaration,
+  MlttMatchExpression,
   ModifierFlags,
   ModifierLike,
   modifierToFlag,
@@ -704,6 +705,13 @@ export function transformTypeScript(context: TransformationContext): Transformer
       case SyntaxKind.IndexSignature:
         // TypeScript index signatures are elided.
         return undefined;
+
+      case SyntaxKind.MlttMatchExpression: {
+        const result = resolver.getMlttMatchExpressionResult(node as MlttMatchExpression);
+        const scrutinee = Debug.checkDefined(visitNode((node as MlttMatchExpression).scrutinee, visitor, isExpression));
+        const selected = result ? Debug.checkDefined(visitNode(result, visitor, isExpression)) : factory.createVoidZero();
+        return factory.createParenthesizedExpression(factory.createComma(scrutinee, selected));
+      }
 
       case SyntaxKind.TypeAliasDeclaration:
         // TypeScript type-only declarations are elided.

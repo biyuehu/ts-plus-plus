@@ -103,7 +103,9 @@ describe("unittests:: tspp:: type computation: let bindings", () => {
 });
 
 describe("unittests:: tspp:: type computation: match", () => {
-  function matchMessages(content: string, tsppFeatures: string[] = ["typeComputation"]) {
+  const matchFeatures = ["typeComputation", "higherKindedTypes", "typeUniverses", "dependentFunctionTypes", "typeMatching"];
+
+  function matchMessages(content: string, tsppFeatures: string[] = matchFeatures) {
     const host = new fakes.CompilerHost(vfs.createFromFileSystem(
       Harness.IO,
       /*ignoreCase*/ true,
@@ -125,21 +127,23 @@ describe("unittests:: tspp:: type computation: match", () => {
     assert.match(messages[0], /not assignable/);
   });
 
-  it("captures structural members with infer and does not distribute", () => {
+  it("preserves structural assignability matching", () => {
     const messages = matchMessages(`
-      type Value<T> = match T { { value: infer U }: U, _: never };
-      const ok: Value<{ value: 1 }> = 1;
-      const bad: Value<{ value: 1 }> = 2;
+      type Classify<T> = match T { { value: 1 }: "matched", _: "fallback" };
+      const exact: Classify<{ value: 1 }> = "matched";
+      const wider: Classify<{ value: 1; extra: true }> = "matched";
+      const bad: Classify<{ value: 1; extra: true }> = "fallback";
     `);
     assert.lengthOf(messages, 1, messages.join("\n"));
     assert.match(messages[0], /not assignable/);
   });
 
-  it("supports colon separator and arbitrary infer patterns", () => {
+  it("supports colon separators and constructor captures", () => {
     const messages = matchMessages(`
       interface Array<T> {}
       type Id<t> = match t {
         Array<infer U>: 1,
+        _: 0,
       };
       const ok: Id<Array<number>> = 1;
       const bad: Id<Array<number>> = 2;
@@ -148,12 +152,11 @@ describe("unittests:: tspp:: type computation: match", () => {
     assert.match(messages[0], /not assignable/);
   });
 
-  it("matches ADT type constructors, primitives and literals", () => {
+  it("matches ADT type constructors, primitives and literals exactly", () => {
     const messages = matchMessages(
       `
       data Maybe<T> = Nothing | Just(value: T);
-      type Classify<T> = match T {
-        [infer A, infer B]: [B, A],
+      type Classify<T> = match mltt T {
         Maybe<infer U>: U,
         1: "one",
         false: "false",
@@ -161,16 +164,15 @@ describe("unittests:: tspp:: type computation: match", () => {
         number: "is-number",
         _: "other"
       };
-      const a: Classify<[number, string]> = ["hello", 1];
       const b: Classify<Maybe<boolean>> = true;
       const c: Classify<1> = "one";
       const d: Classify<false> = "false";
       const e: Classify<string> = "is-string";
       const f: Classify<number> = "is-number";
-      const g: Classify<symbol> = "other";
+      const g: Classify<42> = "other";
       const bad: Classify<1> = "false";
     `,
-      ["typeComputation", "dataDeclarations"],
+      [...matchFeatures, "dataDeclarations"],
     );
     assert.lengthOf(messages, 1, messages.join("\n"));
     assert.match(messages[0], /not assignable/);
@@ -179,8 +181,7 @@ describe("unittests:: tspp:: type computation: match", () => {
   it("provides hover for scrutinee and match arm pattern types without crashing language service", () => {
     const source = `
       interface Array<T> {}
-      type UnpackStructural<T> = match T {
-        [infer Head, ...infer Tail]: { head: Head; tail: Tail },
+      type UnpackStructural<T> = match mltt T {
         Array<infer U>: [U, "array"],
         _: never
       };
@@ -192,7 +193,7 @@ describe("unittests:: tspp:: type computation: match", () => {
     ));
     const lsHost: ts.LanguageServiceHost = {
       ...host,
-      getCompilationSettings: () => ({ noLib: true, strict: true, tsppFeatures: ["typeComputation"] }),
+      getCompilationSettings: () => ({ noLib: true, strict: true, tsppFeatures: matchFeatures }),
       getScriptFileNames: () => ["/file.tspp"],
       getScriptVersion: () => "1",
       getScriptSnapshot: fileName => fileName === "/file.tspp" ? ts.ScriptSnapshot.fromString(source) : undefined,
@@ -210,15 +211,59 @@ describe("unittests:: tspp:: type computation: match", () => {
       return info ? ts.displayPartsToString(info.displayParts) : undefined;
     };
 
-    assert.equal(getHover("T {"), "(type parameter) T in type UnpackStructural<T>");
-    assert.equal(getHover("Head,"), "(type parameter) Head");
-    assert.equal(getHover("Tail]:"), "(type parameter) Tail");
-    assert.equal(getHover("Head;"), "(type parameter) Head");
-    assert.equal(getHover("Tail }"), "(type parameter) Tail");
-    assert.equal(getHover("Array<"), "interface Array<T>");
+    assert.equal(getHover("T {"), "(type parameter) T in type UnpackStructural<T: Type0>");
+    assert.equal(getHover("Array<"), "interface Array<T: Type0>");
     assert.equal(getHover("U>:"), "(type parameter) U");
     assert.equal(getHover("U,"), "(type parameter) U");
     assert.equal(getHover("never"), "never");
+  });
+
+  it("shares exact matching semantics with the legacy TypeMatch form", () => {
+    const messages = matchMessages(`
+      interface Array<T> { readonly length: number }
+      type Modern = match mltt Array<string> {
+        Array<infer E> => E,
+        _ => never
+      };
+      type Legacy = TypeMatch<
+        Array<string>,
+        Case<Array<infer E>, E>,
+        Default<never>
+      >;
+      const modern: Modern = "ok";
+      const legacy: Legacy = "ok";
+      const badModern: Modern = 1;
+      const badLegacy: Legacy = 1;
+    `);
+    assert.lengthOf(messages, 2, messages.join("\n"));
+    assert.isTrue(messages.every(message => /not assignable/.test(message)));
+  });
+
+  it("requires a final default branch and rejects structural infer patterns", () => {
+    const messages = matchMessages(`
+      type MissingDefault<T> = match mltt T { string: number };
+      type StructuralCapture<T> = match mltt T {
+        { value: infer U }: U,
+        _: never
+      };
+    `);
+    assert.lengthOf(messages, 2, messages.join("\n"));
+    assert.match(messages.join("\n"), /must end with a '_' default branch/);
+    assert.match(messages.join("\n"), /capturing type pattern must be a generic type reference/);
+  });
+
+  it("gates structural and MLTT matching independently", () => {
+    const structuralMessages = matchMessages(
+      `type Result<T> = match T { string: number, _: boolean };`,
+      ["typeComputation"],
+    );
+    assert.isEmpty(structuralMessages, structuralMessages.join("\n"));
+
+    const mlttMessages = matchMessages(
+      `type Result<T> = match mltt T { string: number, _: boolean };`,
+      ["typeComputation"],
+    );
+    assert.match(mlttMessages.join("\n"), /typeMatching/);
   });
 });
 

@@ -264,6 +264,8 @@ import {
   MethodSignature,
   MinusToken,
   MissingDeclaration,
+  MlttMatchExpression,
+  MlttMatchExpressionArm,
   Modifier,
   ModifierFlags,
   ModifierLike,
@@ -543,6 +545,12 @@ const forEachChildTable: ForEachChildTable = {
   [SyntaxKind.ReifyExpression]: function forEachChildInReifyExpression<T>(node: ReifyExpression, cbNode: (node: Node) => T | undefined): T | undefined {
     return visitNode(cbNode, node.type);
   },
+  [SyntaxKind.MlttMatchExpression]: function forEachChildInMlttMatchExpression<T>(node: MlttMatchExpression, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.scrutinee) || visitNodes(cbNode, cbNodes, node.arms);
+  },
+  [SyntaxKind.MlttMatchExpressionArm]: function forEachChildInMlttMatchExpressionArm<T>(node: MlttMatchExpressionArm, cbNode: (node: Node) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.pattern) || visitNode(cbNode, node.result);
+  },
   [SyntaxKind.ShorthandPropertyAssignment]: function forEachChildInShorthandPropertyAssignment<T>(node: ShorthandPropertyAssignment, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
       visitNode(cbNode, node.name) ||
@@ -730,7 +738,8 @@ const forEachChildTable: ForEachChildTable = {
       visitNode(cbNode, node.falseType);
   },
   [SyntaxKind.MatchType]: function forEachChildInMatchType<T>(node: MatchTypeNode, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
-    return visitNode(cbNode, node.scrutinee) ||
+    return visitNode(cbNode, node.mlttToken) ||
+      visitNode(cbNode, node.scrutinee) ||
       visitNodes(cbNode, cbNodes, node.arms);
   },
   [SyntaxKind.MatchTypeArm]: function forEachChildInMatchTypeArm<T>(node: MatchTypeArm, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
@@ -4656,6 +4665,7 @@ namespace Parser {
     return lookAhead(() => {
       nextToken();
       if (scanner.hasPrecedingLineBreak()) return false;
+      if (token() === SyntaxKind.Identifier && scanner.getTokenValue() === "mltt") nextToken();
       parseUnionTypeOrHigher();
       return token() === SyntaxKind.OpenBraceToken;
     });
@@ -4664,6 +4674,7 @@ namespace Parser {
   function parseMatchType(): MatchTypeNode {
     const pos = getNodePos();
     parseExpected(SyntaxKind.MatchKeyword);
+    const mlttToken = token() === SyntaxKind.Identifier && scanner.getTokenValue() === "mltt" ? parseIdentifier() : undefined;
     const scrutinee = parseUnionTypeOrHigher();
     parseExpected(SyntaxKind.OpenBraceToken);
     const armsPos = getNodePos();
@@ -4683,7 +4694,7 @@ namespace Parser {
     }
     const armList = createNodeArray(arms, armsPos);
     parseExpected(SyntaxKind.CloseBraceToken);
-    return finishNode(factory.createMatchTypeNode(scrutinee, armList), pos);
+    return finishNode(factory.createMatchTypeNode(scrutinee, armList, mlttToken), pos);
   }
 
   function isStartOfLetType(): boolean {
@@ -5999,6 +6010,9 @@ namespace Parser {
    *      2) UpdateExpression[?Yield] ** ExponentiationExpression[?Yield]
    */
   function parseUnaryExpressionOrHigher(): UnaryExpression | BinaryExpression {
+    if (isStartOfMlttMatchExpression()) {
+      return parseMlttMatchExpression();
+    }
     if (isStartOfReifyExpression()) {
       return parseReifyExpression();
     }
@@ -6048,6 +6062,36 @@ namespace Parser {
   function isStartOfReifyExpression(): boolean {
     return token() === SyntaxKind.Identifier && scanner.getTokenValue() === "reify" &&
       (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp));
+  }
+
+  function isStartOfMlttMatchExpression(): boolean {
+    return token() === SyntaxKind.MatchKeyword &&
+      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp)) &&
+      lookAhead(() => {
+        nextToken();
+        return token() === SyntaxKind.Identifier && scanner.getTokenValue() === "mltt";
+      });
+  }
+
+  function parseMlttMatchExpression(): MlttMatchExpression {
+    const pos = getNodePos();
+    parseExpected(SyntaxKind.MatchKeyword);
+    parseIdentifier();
+    const scrutinee = parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
+    parseExpected(SyntaxKind.OpenBraceToken);
+    const armsPos = getNodePos();
+    const arms: MlttMatchExpressionArm[] = [];
+    while (token() !== SyntaxKind.CloseBraceToken && token() !== SyntaxKind.EndOfFileToken) {
+      const armPos = getNodePos();
+      const pattern = parseType();
+      parseExpected(SyntaxKind.EqualsGreaterThanToken);
+      const result = parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
+      arms.push(finishNode(factory.createMlttMatchExpressionArm(pattern, result), armPos));
+      if (!parseOptional(SyntaxKind.CommaToken) && !parseOptional(SyntaxKind.SemicolonToken)) break;
+    }
+    const armList = createNodeArray(arms, armsPos);
+    parseExpected(SyntaxKind.CloseBraceToken);
+    return finishNode(factory.createMlttMatchExpression(scrutinee, armList), pos);
   }
 
   function parseReifyExpression(): ReifyExpression {

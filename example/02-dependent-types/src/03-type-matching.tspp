@@ -6,32 +6,32 @@
 // 并不是普通 MLTT 参数多态自然拥有的行为。
 
 // -----------------------------------------------------------------------------
-// 1. IfType 做一次精确类型比较
+// 1. match mltt 做精确类型比较
 // -----------------------------------------------------------------------------
 //
-// IfType<subject, pattern, whenEqual, otherwise> 比较前两个类型是否定义相等。
+// match mltt 从上到下比较 subject 与 pattern 是否定义相等，_ 是默认分支。
 
 export type NumberResult: Type0 =
-  IfType<number, number, string, boolean>;
+  match mltt number { number: string, _: boolean };
 
 export type FallbackResult: Type0 =
-  IfType<string, number, string, boolean>;
+  match mltt string { number: string, _: boolean };
 
 // 这里的“相等”不是 TypeScript 的 A extends B。extends 问的是可赋值性；
-// IfType 问的是两边经过别名展开和内核计算后是否为同一个类型。
+// match mltt 问的是两边经过别名展开和内核计算后是否为同一个类型。
 
 type Animal = { name: string };
 type Dog = { name: string; bark(): void };
 
 // Dog 可赋给 Animal，但并不与 Animal 精确相等，所以结果是 false。
 export type AssignableIsNotEqual: Type0 =
-  IfType<Dog, Animal, true, false>;
+  match mltt Dog { Animal: true, _: false };
 
 // TypeScript 对对象采用结构语义；形状相同的别名可以精确匹配。
 type LeftShape = { value: string };
 type RightShape = { value: string };
 export type StructuralAliasMatch: Type0 =
-  IfType<LeftShape, RightShape, "equal", "different">;
+  match mltt LeftShape { RightShape: "equal", _: "different" };
 
 // -----------------------------------------------------------------------------
 // 2. 比较有三种状态：equal、apart、stuck
@@ -44,21 +44,20 @@ export type StructuralAliasMatch: Type0 =
 // stuck 不是错误，也不会偷偷选择 otherwise。A 被实际类型替换后，归约继续。
 
 export type NumberOrFallback: Type1 =
-  (A: Type0) -> IfType<A, number, Bool, string>;
+  (A: Type0) -> match mltt A { number: Bool, _: string };
 
 // -----------------------------------------------------------------------------
-// 3. TypeMatch 把多个精确比较按顺序排列
+// 3. 多分支 match mltt 把多个精确比较按顺序排列
 // -----------------------------------------------------------------------------
 //
-// Case<pattern, result> 表示一条规则，末尾必须是 Default<result>。
+// 每个 pattern: result 表示一条规则，末尾必须是 _: result。
 
 export type MatchedString: Type0 =
-  TypeMatch<
-    string,
-    Case<string, number>,
-    Case<number, string>,
-    Default<boolean>
-  >;
+  match mltt string {
+    string: number,
+    number: string,
+    _: boolean
+  };
 
 // 顺序很重要。遇到 equal 就返回该分支；遇到 apart 才继续下一条。
 // 如果较早的 Case 对开放 subject 得到 stuck，整个匹配也保持 stuck，不能越过
@@ -67,12 +66,11 @@ export type MatchedString: Type0 =
 export type MatchRuntimeValue: Type1 =
   {A: Type0} ->
   (value: A) ->
-  TypeMatch<
-    A,
-    Case<string, number>,
-    Case<number, string>,
-    Default<boolean>
-  >;
+  match mltt A {
+    string: number,
+    number: string,
+    _: boolean
+  };
 
 export declare const matchRuntimeValue: MatchRuntimeValue;
 
@@ -94,31 +92,28 @@ export const matchedDefault = matchRuntimeValue(runtimeBoolean); // boolean
 
 export type ElementOrSelf: Type1 =
   (A: Type0) ->
-  TypeMatch<
-    A,
-    Case<Array<infer T>, T>,
-    Default<A>
-  >;
+  match mltt A {
+    Array<infer T>: T,
+    _: A
+  };
 
 // pattern 可以嵌套；这里仅匹配恰好具有 Promise<Array<T>> 形状的类型。
 export type NestedElementOrSelf: Type1 =
   (A: Type0) ->
-  TypeMatch<
-    A,
-    Case<Promise<Array<infer T>>, T>,
-    Default<A>
-  >;
+  match mltt A {
+    Promise<Array<infer T>>: T,
+    _: A
+  };
 
 // 捕获仍遵守 equal / apart / stuck：开放的 A 不会提前走 Default，
 // 而是在调用点获得实际类型后再决定并代入 T。
 export type FirstArrayElement: Type1 =
   {A: Type0} ->
   (value: A) ->
-  TypeMatch<
-    A,
-    Case<Array<infer T>, T>,
-    Default<A>
-  >;
+  match mltt A {
+    Array<infer T>: T,
+    _: A
+  };
 
 export declare const firstArrayElement: FirstArrayElement;
 
@@ -156,9 +151,15 @@ export const intersectionFallback = firstArrayElement(intersectedTextArray);   /
 // string | number 既不等于 string，也不等于 number，因此走 Default。
 
 export type WholeUnionResult: Type0 =
-  TypeMatch<
-    string | number,
-    Case<string, "text">,
-    Case<number, "numeric">,
-    Default<"whole union">
-  >;
+  match mltt string | number {
+    string: "text",
+    number: "numeric",
+    _: "whole union"
+  };
+
+// 旧的 TypeMatch/Case/Default 和 IfType 仍然接受，但只是兼容入口；它们与
+// match mltt 共享同一套 MLTT 精确匹配核心。新代码应优先使用 match mltt。
+export type LegacyEquivalent: Type0 =
+  TypeMatch<Array<string>, Case<Array<infer T>, T>, Default<never>>;
+export type CanonicalEquivalent: Type0 =
+  match mltt Array<string> { Array<infer T>: T, _: never };

@@ -315,6 +315,8 @@ import {
   MethodSignature,
   MinusToken,
   MissingDeclaration,
+  MlttMatchExpression,
+  MlttMatchExpressionArm,
   Modifier,
   ModifierFlags,
   ModifierLike,
@@ -637,6 +639,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateMatchTypeArm,
     createMatchTypeNode,
     updateMatchTypeNode,
+    createMlttMatchExpressionArm,
+    updateMlttMatchExpressionArm,
+    createMlttMatchExpression,
+    updateMlttMatchExpression,
     createTypeLambdaNode,
     updateTypeLambdaNode,
     createImportTypeNode,
@@ -2719,8 +2725,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[]) {
+  function createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken?: Identifier) {
     const node = createBaseNode<MatchTypeNode>(SyntaxKind.MatchType);
+    node.mlttToken = mlttToken;
     node.scrutinee = scrutinee;
     node.arms = createNodeArray(arms);
     node.transformFlags = TransformFlags.ContainsTypeScript;
@@ -2728,9 +2735,43 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[]) {
+  function updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken = node.mlttToken) {
+    return node.scrutinee !== scrutinee || node.arms !== arms || node.mlttToken !== mlttToken
+      ? update(createMatchTypeNode(scrutinee, arms, mlttToken), node)
+      : node;
+  }
+
+  // @api
+  function createMlttMatchExpressionArm(pattern: TypeNode, result: Expression) {
+    const node = createBaseNode<MlttMatchExpressionArm>(SyntaxKind.MlttMatchExpressionArm);
+    node.pattern = pattern;
+    node.result = result;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+    node.locals = undefined;
+    node.nextContainer = undefined;
+    return node;
+  }
+
+  // @api
+  function updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode, result: Expression) {
+    return node.pattern !== pattern || node.result !== result
+      ? update(createMlttMatchExpressionArm(pattern, result), node)
+      : node;
+  }
+
+  // @api
+  function createMlttMatchExpression(scrutinee: Expression, arms: readonly MlttMatchExpressionArm[]) {
+    const node = createBaseNode<MlttMatchExpression>(SyntaxKind.MlttMatchExpression);
+    node.scrutinee = scrutinee;
+    node.arms = createNodeArray(arms);
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+    return node;
+  }
+
+  // @api
+  function updateMlttMatchExpression(node: MlttMatchExpression, scrutinee: Expression, arms: readonly MlttMatchExpressionArm[]) {
     return node.scrutinee !== scrutinee || node.arms !== arms
-      ? update(createMatchTypeNode(scrutinee, arms), node)
+      ? update(createMlttMatchExpression(scrutinee, arms), node)
       : node;
   }
 

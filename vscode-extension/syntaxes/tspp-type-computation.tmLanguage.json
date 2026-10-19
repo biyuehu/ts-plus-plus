@@ -4,14 +4,60 @@
   "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string, L:meta.type -comment -string, L:meta.type.declaration.ts -comment -string, L:meta.type.annotation.ts -comment -string",
   "patterns": [
     {
+      "comment": "MLTT match expression with type-pattern arms",
+      "name": "meta.match.mltt.tspp",
+      "begin": "\\b(match)(\\s+)(mltt)(\\s+)([^\\r\\n{]+?)(\\s*)(\\{)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.flow.ts" },
+        "3": { "name": "keyword.control.flow.ts" },
+        "5": {
+          "patterns": [
+            { "include": "source.ts#expression" }
+          ]
+        },
+        "7": { "name": "punctuation.section.block.begin.ts" }
+      },
+      "end": "^(\\s*)(\\})(?=\\s*[,;]?)",
+      "endCaptures": {
+        "2": { "name": "punctuation.section.block.end.ts" }
+      },
+      "patterns": [
+        {
+          "comment": "The left side of an MLTT match arm is a TypeScript type pattern",
+          "name": "meta.type.pattern.tspp",
+          "contentName": "meta.type.ts",
+          "begin": "^([\\t ]*)(?=\\S[^\\r\\n]*?=>(?!>))",
+          "end": "(?=\\s*=>(?!>))",
+          "patterns": [
+            {
+              "name": "constant.language.wildcard.ts",
+              "match": "_"
+            },
+            { "include": "source.ts#type" }
+          ]
+        },
+        {
+          "name": "meta.embedded.inline.tspp-arrow storage.type.function.arrow.ts",
+          "match": "=>(?!>)"
+        },
+        { "include": "source.ts#expression" },
+        { "include": "source.ts#type" }
+      ]
+    },
+    {
       "comment": "Type-level lambda arrow: =>>",
-      "name": "storage.type.function.arrow.ts",
+      "name": "meta.embedded.inline.tspp-arrow storage.type.function.arrow.ts",
       "match": "=>>"
     },
     {
-      "comment": "Type-level pattern matching: match",
+      "comment": "Match arm arrow outside an MLTT match expression",
+      "name": "meta.embedded.inline.tspp-arrow storage.type.function.arrow.ts",
+      "match": "=>(?!>)"
+    },
+    {
+      "comment": "MLTT pattern matching: match mltt",
       "name": "keyword.control.flow.ts",
-      "match": "\\bmatch\\b"
+      "match": "\\b(?:match|mltt)\\b"
     },
     {
       "comment": "Type-level let binding: let",

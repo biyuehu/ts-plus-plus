@@ -243,6 +243,7 @@ import {
   MatchTypeArm,
   MetaProperty,
   MethodDeclaration,
+  MlttMatchExpressionArm,
   ModifierFlags,
   ModuleBlock,
   ModuleDeclaration,
@@ -3774,12 +3775,14 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
       : declareSymbolAndAddToSymbolTable(node, symbolFlags, symbolExcludes);
   }
 
-  function getInferTypeContainer(node: Node): ConditionalTypeNode | MatchTypeArm | undefined {
+  function getInferTypeContainer(node: Node): ConditionalTypeNode | MatchTypeArm | MlttMatchExpressionArm | undefined {
     const extendsType = findAncestor(node, n => n.parent && isConditionalTypeNode(n.parent) && n.parent.extendsType === n);
     if (extendsType) return extendsType.parent as ConditionalTypeNode;
     // `infer` in the pattern of a type-level `match` arm is declared in that arm's scope.
     const pattern = findAncestor(node, n => n.parent && n.parent.kind === SyntaxKind.MatchTypeArm && (n.parent as MatchTypeArm).pattern === n);
-    return pattern && pattern.parent as MatchTypeArm;
+    if (pattern) return pattern.parent as MatchTypeArm;
+    const expressionPattern = findAncestor(node, n => n.parent && n.parent.kind === SyntaxKind.MlttMatchExpressionArm && (n.parent as MlttMatchExpressionArm).pattern === n);
+    return expressionPattern && expressionPattern.parent as MlttMatchExpressionArm;
   }
 
   function bindTypeParameter(node: TypeParameterDeclaration) {
@@ -3866,6 +3869,7 @@ export function getContainerFlags(node: Node): ContainerFlags {
     case SyntaxKind.IndexSignature:
     case SyntaxKind.LetType:
     case SyntaxKind.MatchTypeArm:
+    case SyntaxKind.MlttMatchExpressionArm:
     case SyntaxKind.TypeLambda:
       return ContainerFlags.IsContainer | ContainerFlags.HasLocals;
 

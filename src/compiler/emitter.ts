@@ -303,6 +303,7 @@ import {
   MetaProperty,
   MethodDeclaration,
   MethodSignature,
+  MlttMatchExpression,
   Modifier,
   ModifierLike,
   ModuleBlock,
@@ -1186,6 +1187,7 @@ export function getBuildInfo(buildInfoFile: string, buildInfoText: string) {
 /** @internal */
 export const notImplementedResolver: EmitResolver = {
   hasGlobalName: notImplemented,
+  getMlttMatchExpressionResult: notImplemented,
   getReferencedExportContainer: notImplemented,
   getReferencedImportDeclaration: notImplemented,
   getReferencedDeclarationWithCollidingName: notImplemented,
@@ -2030,6 +2032,8 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitDeleteExpression(node as DeleteExpression);
         case SyntaxKind.TypeOfExpression:
           return emitTypeOfExpression(node as TypeOfExpression);
+        case SyntaxKind.MlttMatchExpression:
+          return emitMlttMatchExpression(node as MlttMatchExpression);
         case SyntaxKind.ReifyExpression:
           return emitReifyExpression(node as ReifyExpression);
         case SyntaxKind.VoidExpression:
@@ -2649,6 +2653,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     }
     writeKeyword("match");
     writeSpace();
+    if (node.mlttToken) {
+      emit(node.mlttToken);
+      writeSpace();
+    }
     emit(node.scrutinee);
     writeSpace();
     writePunctuation("{");
@@ -3045,6 +3053,27 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     writeSpace();
     writePunctuation("}");
     writePunctuation(")");
+  }
+
+  function emitMlttMatchExpression(node: MlttMatchExpression) {
+    writeKeyword("match");
+    writeSpace();
+    write("mltt");
+    writeSpace();
+    emitExpression(node.scrutinee);
+    writeSpace();
+    writePunctuation("{");
+    node.arms.forEach((arm, index) => {
+      if (index) writePunctuation(",");
+      writeSpace();
+      emit(arm.pattern);
+      writeSpace();
+      writePunctuation("=>");
+      writeSpace();
+      emitExpression(arm.result);
+    });
+    writeSpace();
+    writePunctuation("}");
   }
 
   function emitVoidExpression(node: VoidExpression) {

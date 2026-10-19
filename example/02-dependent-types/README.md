@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | [`01-basics.tspp`](./src/01-basics.tspp) | 类型本身属于什么？返回类型如何引用参数？ | universe、Pi、binder、类型族 |
 | [`02-booleans.tspp`](./src/02-booleans.tspp) | 返回类型如何随布尔值变化？ | motive、`BoolElim`、`If` |
-| [`03-type-matching.tspp`](./src/03-type-matching.tspp) | 如何对类型本身做精确分支和解构？ | `IfType`、`TypeMatch`、`infer`、equal/apart/stuck |
+| [`03-type-matching.tspp`](./src/03-type-matching.tspp) | 如何对类型本身做精确分支和解构？ | `match`、`infer`、equal/apart/stuck |
 | [`04-naturals.tspp`](./src/04-naturals.tspp) | 如何用自然数表达长度并做递归？ | `Nat`、`NatAdd`、`NatElim` |
 | [`05-equality.tspp`](./src/05-equality.tspp) | “算出来相同”和“有相等证明”有何区别？ | 定义相等、`Eq`、`Refl`、`J` |
 | [`06-sigma.tspp`](./src/06-sigma.tspp) | 如何把数据与关于它的证明打包？ | `Sigma`、`Pair`、投影 |
@@ -57,13 +57,13 @@ alpha 改名、beta 归约以及 `If`、`NatElim`、`J`、Sigma 投影等内建�
 
 ## 类型匹配为什么单独成章
 
-`If` 根据 `Bool` 值分支；`IfType` 和 `TypeMatch` 根据类型的定义相等分支。这种类型反射不是普通参数多态，而是 TS++ 明确提供的受控能力。
+`If` 根据 `Bool` 值分支；`match mltt T { P: R, _: F }` 根据类型的定义相等分支。这种类型反射不是普通参数多态，而是 TS++ 明确提供的受控能力。
 
 - 比较是精确相等，不是单向的 TypeScript `extends`；
 - `Case<Array<infer T>, T>` 按构造器身份捕获泛型参数：透明别名可匹配，tuple、`ReadonlyArray`、派生接口和交叉类型不可匹配；
 - 开放 binder 信息不足时得到 `stuck`，不会提前选择后备分支；
 - union 作为整体比较，不做分布式匹配；
-- `TypeMatch` 按顺序检查 `Case`，并以 `Default` 结束。
+- `match` 按顺序检查分支，并且必须以 `_` 默认分支结束；旧的 `IfType`、`TypeMatch`、`Case`、`Default` 只是共享同一核心的兼容写法。
 
 这些规则和运行时桥接示例集中在 [`03-type-matching.tspp`](./src/03-type-matching.tspp)。
 
@@ -75,7 +75,7 @@ TS++ 是在 TypeScript 中嵌入一小块 MLTT，而不是替换 TypeScript 类�
 - universe、Pi、Bool/Nat 消去、`Eq`/`J`、Sigma、归约和定义相等由 MLTT 内核处理；
 - external bridge 把可表示的 Pi 类型投影为普通 TypeScript 泛型调用签名。涉及 `infer` 时，声明中的 conditional type 受 TypeScript 结构类型语义限制，是核心构造器匹配的近似投影；TS++ checker 内部仍使用精确的构造器身份。
 
-例如 `{A: Type0} -> (value: A) -> A` 可以连接到 `<A>(value: A) => A`。`{A: Type0}` 是擦除的编译期 binder，`(A: Type0)` 则接收 `reify A` 产生的运行时类型 descriptor；`reify Array` 也能表示尚未应用的类型构造器。隐式与显式 binder 交替出现时，所有 `{}` binder 都会收集到泛型列表，所有 `()` binder 保持为实际参数。调用中的 `f<auto, string>(...)` 表示推断第一个泛型并固定第二个。Bool binder 会投影成布尔泛型参数，Nat binder 只接受非负安全整数字面量。具体示例见 [`01-basics.tspp`](./src/01-basics.tspp)，限制集中在 [`07-boundaries.tspp`](./src/07-boundaries.tspp)。
+例如 `{A: Type0} -> (value: A) -> A` 可以连接到 `<A>(value: A) => A`。`{A: Type0}` 是擦除的编译期 binder，`(A: Type0)` 则接收 `reify A` 产生的运行时类型 descriptor；`reify Array` 也能表示尚未应用的类型构造器。编译期类型已确定的 descriptor 还能使用 `match mltt descriptor { Array<infer E> => expression, _ => fallback }` 在表达式位置匹配，编译器会实例化捕获类型并只输出选中的分支。隐式与显式 binder 交替出现时，所有 `{}` binder 都会收集到泛型列表，所有 `()` binder 保持为实际参数。调用中的 `f<auto, string>(...)` 表示推断第一个泛型并固定第二个。Bool binder 会投影成布尔泛型参数，Nat binder 只接受非负安全整数字面量。具体示例见 [`01-basics.tspp`](./src/01-basics.tspp)，限制集中在 [`07-boundaries.tspp`](./src/07-boundaries.tspp)。
 
 ## 实验特性
 

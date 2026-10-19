@@ -297,6 +297,7 @@ export const enum SyntaxKind {
   ArrowFunction,
   DeleteExpression,
   TypeOfExpression,
+  MlttMatchExpression,
   ReifyExpression,
   VoidExpression,
   AwaitExpression,
@@ -351,6 +352,7 @@ export const enum SyntaxKind {
   NewtypeDeclaration,
   DataDeclaration,
   MatchTypeArm,
+  MlttMatchExpressionArm,
   EnumDeclaration,
   ModuleDeclaration,
   ModuleBlock,
@@ -1127,6 +1129,8 @@ export type HasChildren =
   | LetTypeNode
   | MatchTypeNode
   | MatchTypeArm
+  | MlttMatchExpression
+  | MlttMatchExpressionArm
   | TypeLambdaNode
   | ImportTypeNode
   | ImportTypeAssertionContainer
@@ -1154,6 +1158,7 @@ export type HasChildren =
   | ArrowFunction
   | DeleteExpression
   | TypeOfExpression
+  | MlttMatchExpression
   | ReifyExpression
   | VoidExpression
   | AwaitExpression
@@ -1583,6 +1588,7 @@ export type HasLocals =
   | ConditionalTypeNode
   | LetTypeNode
   | MatchTypeArm
+  | MlttMatchExpressionArm
   | TypeLambdaNode
   | ConstructorDeclaration
   | ConstructorTypeNode
@@ -2419,9 +2425,10 @@ export interface MatchTypeArm extends Node, LocalsContainer {
   readonly result: TypeNode;
 }
 
-/** `match Scrutinee { Pattern => Result, ... }`: type-level pattern matching, the first matching arm wins. */
+/** `match [mltt] Scrutinee { Pattern => Result, ... }`: type-level pattern matching, the first matching arm wins. */
 export interface MatchTypeNode extends TypeNode {
   readonly kind: SyntaxKind.MatchType;
+  readonly mlttToken: Identifier | undefined;
   readonly scrutinee: TypeNode;
   readonly arms: NodeArray<MatchTypeArm>;
 }
@@ -2617,6 +2624,21 @@ export interface TypeOfExpression extends UnaryExpression {
 export interface ReifyExpression extends UnaryExpression {
   readonly kind: SyntaxKind.ReifyExpression;
   readonly type: TypeNode;
+}
+
+/** One arm of an expression-level `match mltt`, with type-pattern captures visible in `result`. */
+export interface MlttMatchExpressionArm extends Node, LocalsContainer {
+  readonly kind: SyntaxKind.MlttMatchExpressionArm;
+  readonly parent: MlttMatchExpression;
+  readonly pattern: TypeNode;
+  readonly result: Expression;
+}
+
+/** `match mltt descriptor { Pattern => expression, ... }`: statically matches a reified type descriptor. */
+export interface MlttMatchExpression extends PrimaryExpression {
+  readonly kind: SyntaxKind.MlttMatchExpression;
+  readonly scrutinee: Expression;
+  readonly arms: NodeArray<MlttMatchExpressionArm>;
 }
 
 export interface VoidExpression extends UnaryExpression {
@@ -6171,6 +6193,7 @@ export type LazyNodeCheckFlags =
 /** @internal */
 export interface EmitResolver {
   hasGlobalName(name: string): boolean;
+  getMlttMatchExpressionResult(node: MlttMatchExpression): Expression | undefined;
   getReferencedExportContainer(node: Identifier, prefixLocals?: boolean): SourceFile | ModuleDeclaration | EnumDeclaration | undefined;
   getReferencedImportDeclaration(node: Identifier): Declaration | undefined;
   getReferencedDeclarationWithCollidingName(node: Identifier): Declaration | undefined;
@@ -6547,6 +6570,7 @@ export interface EvaluatorResult<T extends string | number | undefined = string 
 /** @internal */
 export interface NodeLinks {
   isResolvingLetBinding?: boolean; // Set while the value of a type-level `let` binding is being resolved
+  resolvedMlttMatchExpression?: Expression | false;
     flags: NodeCheckFlags;              // Set of flags specific to Node
     calculatedFlags: NodeCheckFlags;    // Set of flags which have definitely been calculated already
     resolvedType?: Type;                // Cached type of type node
@@ -9276,8 +9300,12 @@ export interface NodeFactory {
   updateLetTypeNode(node: LetTypeNode, binding: TypeAliasDeclaration, body: TypeNode): LetTypeNode;
   createMatchTypeArm(pattern: TypeNode, result: TypeNode): MatchTypeArm;
   updateMatchTypeArm(node: MatchTypeArm, pattern: TypeNode, result: TypeNode): MatchTypeArm;
-  createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[]): MatchTypeNode;
-  updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[]): MatchTypeNode;
+  createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken?: Identifier): MatchTypeNode;
+  updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken?: Identifier): MatchTypeNode;
+  createMlttMatchExpressionArm(pattern: TypeNode, result: Expression): MlttMatchExpressionArm;
+  updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode, result: Expression): MlttMatchExpressionArm;
+  createMlttMatchExpression(scrutinee: Expression, arms: readonly MlttMatchExpressionArm[]): MlttMatchExpression;
+  updateMlttMatchExpression(node: MlttMatchExpression, scrutinee: Expression, arms: readonly MlttMatchExpressionArm[]): MlttMatchExpression;
   createTypeLambdaNode(typeParameters: readonly TypeParameterDeclaration[], body: TypeNode): TypeLambdaNode;
   updateTypeLambdaNode(node: TypeLambdaNode, typeParameters: readonly TypeParameterDeclaration[], body: TypeNode): TypeLambdaNode;
   createImportTypeNode(argument: TypeNode, attributes?: ImportAttributes, qualifier?: EntityName, typeArguments?: readonly TypeNode[], isTypeOf?: boolean): ImportTypeNode;

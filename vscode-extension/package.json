@@ -34,7 +34,10 @@
       {
         "scopeName": "tspp.kind-operators",
         "path": "./syntaxes/tspp-kind-operators.tmLanguage.json",
-        "injectTo": ["source.tspp", "source.ts"]
+        "injectTo": ["source.tspp", "source.ts"],
+        "embeddedLanguages": {
+          "meta.embedded.inline.tspp-arrow": "plaintext"
+        }
       },
       {
         "scopeName": "tspp.nominal-declarations",
@@ -54,7 +57,10 @@
       {
         "scopeName": "tspp.type-computation",
         "path": "./syntaxes/tspp-type-computation.tmLanguage.json",
-        "injectTo": ["source.tspp", "source.ts"]
+        "injectTo": ["source.tspp", "source.ts"],
+        "embeddedLanguages": {
+          "meta.embedded.inline.tspp-arrow": "plaintext"
+        }
       }
     ],
     "commands": [

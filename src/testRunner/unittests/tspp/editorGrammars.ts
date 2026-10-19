@@ -1,6 +1,11 @@
 import * as Harness from "../../_namespaces/Harness.js";
 
 interface GrammarPattern {
+  readonly begin?: string;
+  readonly beginCaptures?: Readonly<Record<string, GrammarPattern>>;
+  readonly contentName?: string;
+  readonly end?: string;
+  readonly endCaptures?: Readonly<Record<string, GrammarPattern>>;
   readonly include?: string;
   readonly name?: string;
   readonly match?: string;
@@ -13,12 +18,27 @@ interface Grammar {
   readonly repository?: Readonly<Record<string, GrammarPattern>>;
 }
 
+interface LanguageConfiguration {
+  readonly colorizedBracketPairs: readonly (readonly [string, string])[];
+  readonly surroundingPairs: readonly (readonly [string, string])[];
+}
+
+interface ExtensionManifest {
+  readonly contributes: {
+    readonly grammars: readonly {
+      readonly scopeName: string;
+      readonly embeddedLanguages?: Readonly<Record<string, string>>;
+    }[];
+  };
+}
+
 describe("unittests:: tspp:: editor grammars", () => {
   const grammarFileNames = [
     "tspp-formal-contracts.tmLanguage.json",
     "tspp-kind-operators.tmLanguage.json",
     "tspp-macros.tmLanguage.json",
     "tspp-nominal-declarations.tmLanguage.json",
+    "tspp-type-computation.tmLanguage.json",
   ];
 
   function readGrammar(fileName: string): Grammar {
@@ -28,12 +48,28 @@ describe("unittests:: tspp:: editor grammars", () => {
     return JSON.parse(text) as Grammar;
   }
 
+  function readLanguageConfiguration(): LanguageConfiguration {
+    const path = "vscode-extension/language-configuration.json";
+    const text = Harness.IO.readFile(path);
+    assert.isDefined(text, `Expected to find ${path}`);
+    return JSON.parse(text) as LanguageConfiguration;
+  }
+
+  function readExtensionManifest(): ExtensionManifest {
+    const path = "vscode-extension/package.json";
+    const text = Harness.IO.readFile(path);
+    assert.isDefined(text, `Expected to find ${path}`);
+    return JSON.parse(text) as ExtensionManifest;
+  }
+
   function collectPatterns(grammar: Grammar): readonly GrammarPattern[] {
     const result: GrammarPattern[] = [];
     const visit = (pattern: GrammarPattern) => {
       result.push(pattern);
       pattern.patterns?.forEach(visit);
+      Object.values(pattern.beginCaptures ?? {}).forEach(visit);
       Object.values(pattern.captures ?? {}).forEach(visit);
+      Object.values(pattern.endCaptures ?? {}).forEach(visit);
     };
     grammar.patterns.forEach(visit);
     Object.values(grammar.repository ?? {}).forEach(visit);
@@ -67,5 +103,44 @@ describe("unittests:: tspp:: editor grammars", () => {
         `Expected the formal contracts grammar to highlight the '${property}' contract property`,
       );
     }
+  });
+
+  it("highlights match mltt as a single keyword sequence", () => {
+    const patterns = collectPatterns(readGrammar("tspp-type-computation.tmLanguage.json"));
+    const mlttMatchPattern = patterns.find(pattern => pattern.name === "keyword.control.flow.ts" && pattern.match?.includes("mltt"));
+    assert.isDefined(mlttMatchPattern, "Expected the type-computation grammar to scope 'mltt' as a keyword");
+    assert.match("match", new RegExp(mlttMatchPattern.match!));
+    assert.match("mltt", new RegExp(mlttMatchPattern.match!));
+  });
+
+  it("parses the whole left side of each MLTT match arm as a TypeScript type", () => {
+    const patterns = collectPatterns(readGrammar("tspp-type-computation.tmLanguage.json"));
+    const matchRegion = patterns.find(pattern => pattern.name === "meta.match.mltt.tspp");
+    const typePatternRegion = patterns.find(pattern => pattern.name === "meta.type.pattern.tspp");
+    assert.isDefined(matchRegion, "Expected a grammar region for an entire 'match mltt' expression");
+    assert.isDefined(typePatternRegion, "Expected a grammar region for MLTT match-arm type patterns");
+    assert.strictEqual(typePatternRegion.contentName, "meta.type.ts");
+    assert.isTrue(patterns.some(pattern => pattern.name?.includes("storage.type.function.arrow.ts") && pattern.match === "=>(?!>)"));
+    assert.isTrue(patterns.some(pattern => pattern.include === "source.ts#type"));
+    assert.isTrue(patterns.some(pattern => pattern.include === "source.ts#expression"), "The selected branch must return to TypeScript expression highlighting");
+  });
+
+  it("uses TypeScript-style colorized angle-bracket pairs", () => {
+    const configuration = readLanguageConfiguration();
+    assert.deepInclude(configuration.colorizedBracketPairs, ["<", ">"]);
+    assert.deepInclude(configuration.surroundingPairs, ["<", ">"]);
+  });
+
+  it("excludes TS++ arrows from angle-bracket pair colorization", () => {
+    const arrowScope = "meta.embedded.inline.tspp-arrow";
+    for (const fileName of ["tspp-kind-operators.tmLanguage.json", "tspp-type-computation.tmLanguage.json"]) {
+      const arrowPatterns = collectPatterns(readGrammar(fileName)).filter(pattern => pattern.name?.includes("storage.type.function.arrow.ts"));
+      assert.isNotEmpty(arrowPatterns, `Expected arrow patterns in ${fileName}`);
+      assert.isTrue(arrowPatterns.every(pattern => pattern.name?.includes(arrowScope)), `Every arrow in ${fileName} must be excluded from bracket pairing`);
+    }
+
+    const arrowGrammars = readExtensionManifest().contributes.grammars.filter(grammar => grammar.scopeName === "tspp.kind-operators" || grammar.scopeName === "tspp.type-computation");
+    assert.lengthOf(arrowGrammars, 2);
+    assert.isTrue(arrowGrammars.every(grammar => grammar.embeddedLanguages?.[arrowScope] === "plaintext"));
   });
 });

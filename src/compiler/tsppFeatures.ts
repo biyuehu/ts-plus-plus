@@ -35,7 +35,7 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     name: "typeComputation",
     dependencies: [],
     initComments: [
-      "获得：增强类型计算的语法：类型层局部绑定 let X = T in U、模式匹配 match T { ... } 与类型 lambda <T> =>> Body。",
+      "获得：增强类型计算的语法：类型层局部绑定 let X = T in U、结构模式匹配 match T { ... } 与类型 lambda <T> =>> Body。",
       "影响：TS超集=是；透明擦除=是。",
     ],
   },
@@ -99,7 +99,7 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     name: "typeMatching",
     dependencies: ["dependentFunctionTypes"],
     initComments: [
-      "获得：IfType 精确类型分支、有序 TypeMatch，以及 Case 中的 infer 类型参数捕获。",
+      "获得：match mltt T { ... } 精确类型分支、reify descriptor 的表达式匹配与构造器 infer 捕获；IfType 和 TypeMatch 保留为兼容写法。",
       "影响：TS超集=是；透明擦除=是；开放类型保持为中性项。",
     ],
   },
