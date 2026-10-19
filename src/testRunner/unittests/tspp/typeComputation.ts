@@ -314,6 +314,23 @@ describe("unittests:: tspp:: type computation: type lambdas", () => {
     assert.match(messages[0], /not assignable/);
   });
 
+  it("instantiates named alias bodies through composed higher-kinded constructors", () => {
+    const messages = lambdaMessages(`
+      type Pair<A, B> = [A, B];
+      type Flip<F: (Type0, Type0) => Type0> = <A, B>(a: A, b: B) => F<B, A>;
+      type PairFlipped = Flip<Pair>;
+      const pf: PairFlipped = (a, b) => [b, a];
+      const flipped: [number, string] = pf("s", 1);
+
+      type FlipT<F: (Type0, Type0) => Type0> = <A, B> =>> F<B, A>;
+      type PairFlippedT = FlipT<Pair>;
+      type Direct = PairFlippedT<string, number>;
+      declare const direct: Direct;
+      const directOk: [number, string] = direct;
+    `);
+    assert.isEmpty(messages, messages.join("\n"));
+  });
+
   it("captures outer type parameters in closure", () => {
     const messages = lambdaMessages(`
       type Const<X> = <T> =>> X;

@@ -22657,9 +22657,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const links = getNodeLinks(declaration);
     const target = type.objectFlags & ObjectFlags.Reference ? links.resolvedType! as DeferredTypeReference :
       type.objectFlags & ObjectFlags.Instantiated ? type.target! : type;
-    let typeParameters: TypeParameter[] | undefined = !(type.objectFlags & ObjectFlags.Instantiated) && type.aliasTypeArguments ?
-      type.aliasTypeArguments as TypeParameter[] :
-      links.outerTypeParameters;
+    // `aliasTypeArguments` are instantiated values used for display and alias identity, not the
+    // declaration's binder identities. Reusing them as mapper keys breaks a second instantiation hop.
+    let typeParameters = links.outerTypeParameters;
     if (!typeParameters) {
       // The first time an anonymous type is instantiated we compute and store a list of the type
       // parameters that are in scope (and therefore potentially referenced). For type literals that
