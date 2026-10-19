@@ -1,0 +1,20 @@
+// `assume` trusts a condition without asking Z3 to prove it. The condition is
+// available to later assertions and postconditions on the same control-flow path.
+export function incrementFromTrustedInput(value: bigint): bigint {
+  assume(value >= 0n);
+
+  const next = value + 1n;
+  assert(next > 0n);
+  return next;
+}
+
+// Prefer `requires` at public API boundaries: callers then have to prove the
+// precondition. Use `assume` only when the fact comes from a trusted external
+// boundary that the verifier cannot model yet.
+export function incrementWithCheckedCaller(value: bigint) with {
+  requires: value >= 0n;
+}: bigint {
+  const next = value + 1n;
+  assert(next > 0n);
+  return next;
+}

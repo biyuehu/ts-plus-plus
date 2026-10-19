@@ -205,6 +205,7 @@ import {
   visitNodes,
   visitParameterList,
   VisitResult,
+  VoidExpression,
   WhileStatement,
 } from "../_namespaces/ts.js";
 
@@ -707,11 +708,17 @@ export function transformTypeScript(context: TransformationContext): Transformer
         return undefined;
 
       case SyntaxKind.MlttMatchExpression: {
-        const result = resolver.getMlttMatchExpressionResult(node as MlttMatchExpression);
-        const scrutinee = Debug.checkDefined(visitNode((node as MlttMatchExpression).scrutinee, visitor, isExpression));
+        const match = node as MlttMatchExpression;
+        if (!match.mlttToken) return visitValueMatchExpression(match);
+        const result = resolver.getMlttMatchExpressionResult(match);
+        const scrutinee = Debug.checkDefined(visitNode(match.scrutinee, visitor, isExpression));
         const selected = result ? Debug.checkDefined(visitNode(result, visitor, isExpression)) : factory.createVoidZero();
         return factory.createParenthesizedExpression(factory.createComma(scrutinee, selected));
       }
+
+      case SyntaxKind.VoidExpression:
+        if ((node as VoidExpression).tsppAssert || (node as VoidExpression).tsppAssume) return factory.createVoidZero();
+        return visitEachChild(node, visitor, context);
 
       case SyntaxKind.TypeAliasDeclaration:
         // TypeScript type-only declarations are elided.
@@ -887,6 +894,65 @@ export function transformTypeScript(context: TransformationContext): Transformer
     setOriginalNode(declaration, node);
     setTextRange(declaration, node);
     return visitFunctionDeclaration(declaration);
+  }
+
+  function visitValueMatchExpression(node: MlttMatchExpression): Expression {
+    const value = factory.createUniqueName("_match");
+    let expression: Expression = factory.createVoidZero();
+    for (let index = node.arms.length - 1; index >= 0; index--) {
+      const arm = node.arms[index];
+      let result = Debug.checkDefined(visitNode(arm.result, visitor, isExpression));
+      if (arm.parameters?.length) {
+        const parameters = arm.parameters.map(parameter =>
+          factory.createParameterDeclaration(
+            /*modifiers*/ undefined,
+            /*dotDotDotToken*/ undefined,
+            parameter.name,
+          )
+        );
+        const argumentsArray = arm.parameters.map(parameter =>
+          factory.createPropertyAccessExpression(
+            value,
+            parameter.tsppMatchFieldName || (isIdentifier(parameter.name) ? idText(parameter.name) : "value"),
+          )
+        );
+        result = factory.createCallExpression(
+          factory.createParenthesizedExpression(factory.createArrowFunction(
+            /*modifiers*/ undefined,
+            /*typeParameters*/ undefined,
+            parameters,
+            /*type*/ undefined,
+            factory.createToken(SyntaxKind.EqualsGreaterThanToken),
+            result,
+          )),
+          /*typeArguments*/ undefined,
+          argumentsArray,
+        );
+      }
+      if (arm.variant && idText(arm.variant) === "_") expression = result;
+      else if (arm.variant) {
+        expression = factory.createConditionalExpression(
+          factory.createStrictEquality(factory.createPropertyAccessExpression(value, "_tag"), factory.createStringLiteral(idText(arm.variant))),
+          factory.createToken(SyntaxKind.QuestionToken),
+          result,
+          factory.createToken(SyntaxKind.ColonToken),
+          expression,
+        );
+      }
+    }
+    const scrutinee = Debug.checkDefined(visitNode(node.scrutinee, visitor, isExpression));
+    return factory.createCallExpression(
+      factory.createParenthesizedExpression(factory.createArrowFunction(
+        /*modifiers*/ undefined,
+        /*typeParameters*/ undefined,
+        [factory.createParameterDeclaration(/*modifiers*/ undefined, /*dotDotDotToken*/ undefined, value)],
+        /*type*/ undefined,
+        factory.createToken(SyntaxKind.EqualsGreaterThanToken),
+        expression,
+      )),
+      /*typeArguments*/ undefined,
+      [scrutinee],
+    );
   }
 
   function visitDataDeclaration(node: DataDeclaration): VisitResult<Statement> {

@@ -102,7 +102,7 @@ Current features:
 | --- | --- | --- | --- | --- |
 | `higherKindedTypes` | Higher-kinded parameters and first-class type constructors | — | Yes | Yes |
 | `newtypeDeclarations` | `newtype` nominal type declarations and their constructors | — | Yes | No (emits runtime constructors) |
-| `dataDeclarations` | `data` discriminated unions and variant constructors | — | Yes | No (emits runtime variant values and constructors) |
+| `dataDeclarations` | `data` discriminated unions, variant constructors, and exhaustive value-level `match` | — | Yes | No (emits runtime variant values, constructors, and match dispatch) |
 | `macros` | `macro function` declarations and compile-time `macro f(Target);` statement expansion | — | Yes | No (macro calls can replace emitted statements) |
 | `formalContracts` | Z3-backed `requires`, `ensures`, and `while` invariants | — | Yes | Yes |
 | `standardLibraryPredicates` | Built-in numeric predicates `isEven`, `isOdd`, `isPositive`, `isNegative`, `isNonNegative`, `isZero`, `divides`, and `between`; `number` requires `numberModel: "mathematical-real"` | `formalContracts` | Yes | Yes |
@@ -153,6 +153,23 @@ The current subset covers `boolean`, `bigint`, and `string`, local variables, as
 
 Every obligation is reported as `proved`, `failed`, `unknown`, or `error`, with task outcomes distinguishing cancellation and timeout. Unsupported syntax and unavailable solver environments are compilation errors with an `unknown` result, never a successful proof. `Program.getVerificationArtifacts()` exposes the exact solver input, replayable SMT-LIB, status, decoded source-level counterexample, raw model, and source location. The development extension's **TS++: Show Verification SMT-LIB** command opens every replayable input for the current file beside the source, ordered and annotated with its source lines.
 
+Use `assert(condition);` inside a verified function to create a local proof obligation. `assume(condition);` skips proof and adds a trusted fact to the following path; it is intended for external boundaries the verifier cannot model, and a false assumption makes subsequent proofs unsound. Both are erased from JavaScript output. Hovering an obligation in the development extension shows its status and source-level counterexample directly.
+
+## Exhaustive value matching
+
+`dataDeclarations` also enables expression-level matching over `data` values and compatible closed `_tag` unions:
+
+```ts
+data Result<T> = Ok(value: T) | Err(error: string);
+
+const text = match result {
+  Ok(value) => `value: ${value}`,
+  Err(error) => error,
+};
+```
+
+Constructor fields are bound positionally. Duplicate, unknown, unreachable, and missing variants are diagnosed; `_` may be used as the final fallback branch. The scrutinee is evaluated exactly once.
+
 ## Type computation: let-in, match, and type lambdas
 
 Enable `typeComputation`, then use local type bindings, pattern matching, and anonymous type-level functions:
@@ -190,6 +207,8 @@ type Doubled = Apply<<T> =>> [T, T], boolean>; // [boolean, boolean]
 ```
 
 The lambda body may reference any type in scope. All type computation syntax is erased and produces no JavaScript output.
+
+Hovering a type alias or type expression in the development extension displays its normalized form and kind directly.
 
 ## License
 

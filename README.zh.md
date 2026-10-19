@@ -102,7 +102,7 @@ TS++ 把 TypeScript 作为稳定的兼容层与 FFI 边界：
 | --- | --- | --- | --- | --- |
 | `higherKindedTypes` | 高阶类型参数和一等类型构造器 | 无 | 是 | 是 |
 | `newtypeDeclarations` | `newtype` 名义类型声明与对应构造器 | 无 | 是 | 否（生成运行时构造器） |
-| `dataDeclarations` | `data` 可辨识联合声明与对应变体构造器 | 无 | 是 | 否（生成运行时变体值与构造器） |
+| `dataDeclarations` | `data` 可辨识联合、变体构造器与穷尽值层 `match` | 无 | 是 | 否（生成运行时变体值、构造器与匹配分派） |
 | `macros` | `macro function` 声明与编译期 `macro f(Target);` 语句展开 | 无 | 是 | 否（宏调用可以替换生成的语句） |
 | `formalContracts` | 由 Z3 验证的 `requires`、`ensures` 和 `while` 循环不变式 | 无 | 是 | 是 |
 | `standardLibraryPredicates` | 标准库数值谓词 `isEven`、`isOdd`、`isPositive`、`isNegative`、`isNonNegative`、`isZero`、`divides`、`between`；`number` 需设置 `numberModel: "mathematical-real"` | `formalContracts` | 是 | 是 |
@@ -153,6 +153,23 @@ function sumTo(n: bigint) with {
 
 每个证明义务都会得到 `proved`、`failed`、`unknown` 或 `error` 状态，任务结果还会区分取消与超时。不支持的语法以及求解器不可用都会产生 `unknown` 编译错误，绝不会伪装成证明成功。`Program.getVerificationArtifacts()` 会公开实际求解器输入、可重放的 SMT-LIB、状态、解码后的源码级反例、原始模型和源码位置。开发扩展中的 **TS++: Show Verification SMT-LIB** 命令会在源码旁一次打开当前文件的全部输入，按源码位置排序并标注对应行号。
 
+可以在被验证函数中使用 `assert(condition);` 创建局部证明义务。`assume(condition);` 则不进行证明，直接把可信条件加入后续路径事实；它适合验证器无法建模的外部边界，但错误假设会使证明失去意义。两者都会从 JavaScript 输出中擦除。在开发扩展中悬停于证明义务上，可以直接看到状态与源码级反例。
+
+## 穷尽值匹配
+
+`dataDeclarations` 同时启用针对 `data` 值及兼容的封闭 `_tag` 联合的表达式级匹配：
+
+```ts
+data Result<T> = Ok(value: T) | Err(error: string);
+
+const text = match result {
+  Ok(value) => `value: ${value}`,
+  Err(error) => error,
+};
+```
+
+构造器字段按位置绑定。重复、未知、不可达以及缺失的变体都会产生诊断；最终分支可以使用 `_` 兜底。被匹配表达式只会求值一次。
+
 ## 类型层计算：let-in、match 与类型 lambda
 
 开启 `typeComputation` 后，可以使用局部类型绑定、模式匹配与匿名类型层函数：
@@ -190,6 +207,8 @@ type Doubled = Apply<<T> =>> [T, T], boolean>; // [boolean, boolean]
 ```
 
 lambda 体可以引用任何在作用域内的类型。所有类型计算语法本身会像其他所有 TS++ 类型语法一样被擦除，不产生任何 JavaScript 输出。
+
+在类型别名或类型表达式上悬停，会直接显示归约后的正规形与 kind。
 
 ## 协议
 

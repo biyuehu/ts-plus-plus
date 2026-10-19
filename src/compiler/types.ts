@@ -1970,6 +1970,8 @@ export interface ParameterDeclaration extends NamedDeclaration, JSDocContainer {
     readonly questionToken?: QuestionToken;      // Present on optional parameter
     readonly type?: TypeNode;                    // Optional type annotation
     readonly initializer?: Expression;           // Optional initializer
+    /** @internal Runtime field selected by a value-level match binding. */
+    readonly tsppMatchFieldName?: __String;
 }
 
 // dprint-ignore
@@ -2623,20 +2625,29 @@ export interface TypeOfExpression extends UnaryExpression {
 /** A TS++ expression that turns a type into a runtime type descriptor. */
 export interface ReifyExpression extends UnaryExpression {
   readonly kind: SyntaxKind.ReifyExpression;
+  /** The contextual `reify` keyword, represented as an identifier token. */
+  readonly reifyToken?: Identifier;
   readonly type: TypeNode;
 }
 
-/** One arm of an expression-level `match mltt`, with type-pattern captures visible in `result`. */
+/** One arm of an expression-level `match mltt` or value-level `match`. */
 export interface MlttMatchExpressionArm extends Node, LocalsContainer {
   readonly kind: SyntaxKind.MlttMatchExpressionArm;
   readonly parent: MlttMatchExpression;
-  readonly pattern: TypeNode;
+  /** Type pattern for `match mltt`. */
+  readonly pattern?: TypeNode;
+  /** Data-constructor name (or `_`) for value-level `match`. */
+  readonly variant?: Identifier;
+  /** Field bindings for a value-level constructor pattern. */
+  readonly parameters?: NodeArray<ParameterDeclaration>;
   readonly result: Expression;
 }
 
-/** `match mltt descriptor { Pattern => expression, ... }`: statically matches a reified type descriptor. */
+/** A static `match mltt` or an exhaustive runtime match over a discriminated value. */
 export interface MlttMatchExpression extends PrimaryExpression {
   readonly kind: SyntaxKind.MlttMatchExpression;
+  /** Present only for the static `match mltt` form. */
+  readonly mlttToken?: Identifier;
   readonly scrutinee: Expression;
   readonly arms: NodeArray<MlttMatchExpressionArm>;
 }
@@ -2644,6 +2655,12 @@ export interface MlttMatchExpression extends PrimaryExpression {
 export interface VoidExpression extends UnaryExpression {
   readonly kind: SyntaxKind.VoidExpression;
   readonly expression: UnaryExpression;
+  /** @internal Contextual TS++ keyword represented as an identifier token. */
+  readonly tsppKeywordToken?: Identifier;
+  /** TS++ `assert(condition)` proof point. It is erased after formal verification. */
+  readonly tsppAssert?: true;
+  /** TS++ `assume(condition)` trusted path fact. It is erased after formal verification. */
+  readonly tsppAssume?: true;
 }
 
 export interface AwaitExpression extends UnaryExpression {
@@ -3765,8 +3782,8 @@ export interface TypeAliasDeclaration extends DeclarationStatement, JSDocContain
   readonly modifiers?: NodeArray<ModifierLike>;
   readonly name: Identifier;
   readonly typeParameters?: NodeArray<TypeParameterDeclaration>;
-  /** The explicitly declared result kind of this type alias. An omitted result kind defaults to `Type0`. */
-  readonly kindType?: KindNode;
+  /** The explicitly declared result kind or MLTT term type. */
+  readonly kindType?: KindNode | TypeNode;
   readonly type: TypeNode;
   readonly withClause?: WithClause;
 }
@@ -5352,8 +5369,8 @@ export type VerificationStatus = "proved" | "failed" | "unknown" | "error";
 
 /** A proof obligation and the exact SMT-LIB generated for it. */
 export interface VerificationArtifact extends AnalysisTaskArtifact {
-  readonly kind: "function-contract" | "loop-invariant" | "call-precondition" | "refinement";
-  readonly obligation: "precondition" | "postcondition" | "invariant-initialization" | "invariant-preservation" | "refinement-introduction";
+  readonly kind: "function-contract" | "loop-invariant" | "call-precondition" | "refinement" | "assertion" | "assumption";
+  readonly obligation: "precondition" | "postcondition" | "invariant-initialization" | "invariant-preservation" | "refinement-introduction" | "assertion" | "assumption";
   readonly name: string;
   readonly status: VerificationStatus;
   readonly solverInput: string;
@@ -5367,6 +5384,12 @@ export interface VerificationArtifact extends AnalysisTaskArtifact {
 
 export interface TypeChecker {
   getTypeOfSymbolAtLocation(symbol: Symbol, node: Node): Type;
+  /** Returns the normalized kind of the type at `node`, formatted for editor tooling. */
+  getKindAtLocation(node: Node): string;
+  /** Classifies an MLTT expression as a term with a type or as a type with a kind. */
+  getTypeClassificationAtLocation(node: Node): { readonly label: "Type" | "Kind"; readonly text: string; };
+  /** Returns a fully normalized MLTT type when computation changes its source form. */
+  getNormalizedTypeAtLocation(node: Node): string | undefined;
   getTypeOfSymbol(symbol: Symbol): Type;
   getDeclaredTypeOfSymbol(symbol: Symbol): Type;
   getPropertiesOfType(type: Type): Symbol[];
@@ -6799,6 +6822,7 @@ export interface IntrinsicType extends Type {
 export interface DependentFunctionType extends Type {
   flags: TypeFlags.DependentFunction;
   /** @internal */ mlttTerm: MlttTerm;
+  /** @internal */ mlttType: MlttTerm;
   /** @internal */ node: TypeNode;
 }
 
@@ -9302,10 +9326,10 @@ export interface NodeFactory {
   updateMatchTypeArm(node: MatchTypeArm, pattern: TypeNode, result: TypeNode): MatchTypeArm;
   createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken?: Identifier): MatchTypeNode;
   updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken?: Identifier): MatchTypeNode;
-  createMlttMatchExpressionArm(pattern: TypeNode, result: Expression): MlttMatchExpressionArm;
-  updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode, result: Expression): MlttMatchExpressionArm;
-  createMlttMatchExpression(scrutinee: Expression, arms: readonly MlttMatchExpressionArm[]): MlttMatchExpression;
-  updateMlttMatchExpression(node: MlttMatchExpression, scrutinee: Expression, arms: readonly MlttMatchExpressionArm[]): MlttMatchExpression;
+  createMlttMatchExpressionArm(pattern: TypeNode | undefined, result: Expression, variant?: Identifier, parameters?: readonly ParameterDeclaration[]): MlttMatchExpressionArm;
+  updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode | undefined, result: Expression, variant?: Identifier, parameters?: readonly ParameterDeclaration[]): MlttMatchExpressionArm;
+  createMlttMatchExpression(scrutinee: Expression, arms: readonly MlttMatchExpressionArm[], mlttToken?: Identifier): MlttMatchExpression;
+  updateMlttMatchExpression(node: MlttMatchExpression, scrutinee: Expression, arms: readonly MlttMatchExpressionArm[], mlttToken?: Identifier): MlttMatchExpression;
   createTypeLambdaNode(typeParameters: readonly TypeParameterDeclaration[], body: TypeNode): TypeLambdaNode;
   updateTypeLambdaNode(node: TypeLambdaNode, typeParameters: readonly TypeParameterDeclaration[], body: TypeNode): TypeLambdaNode;
   createImportTypeNode(argument: TypeNode, attributes?: ImportAttributes, qualifier?: EntityName, typeArguments?: readonly TypeNode[], isTypeOf?: boolean): ImportTypeNode;
@@ -9371,8 +9395,8 @@ export interface NodeFactory {
   updateDeleteExpression(node: DeleteExpression, expression: Expression): DeleteExpression;
   createTypeOfExpression(expression: Expression): TypeOfExpression;
   updateTypeOfExpression(node: TypeOfExpression, expression: Expression): TypeOfExpression;
-  createReifyExpression(type: TypeNode): ReifyExpression;
-  updateReifyExpression(node: ReifyExpression, type: TypeNode): ReifyExpression;
+  createReifyExpression(type: TypeNode, reifyToken?: Identifier): ReifyExpression;
+  updateReifyExpression(node: ReifyExpression, type: TypeNode, reifyToken?: Identifier): ReifyExpression;
   createVoidExpression(expression: Expression): VoidExpression;
   updateVoidExpression(node: VoidExpression, expression: Expression): VoidExpression;
   createAwaitExpression(expression: Expression): AwaitExpression;
@@ -9483,8 +9507,8 @@ export interface NodeFactory {
   updateClassDeclaration(node: ClassDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly ClassElement[]): ClassDeclaration;
   createInterfaceDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;
   updateInterfaceDeclaration(node: InterfaceDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, heritageClauses: readonly HeritageClause[] | undefined, members: readonly TypeElement[]): InterfaceDeclaration;
-  createTypeAliasDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): TypeAliasDeclaration;
-  updateTypeAliasDeclaration(node: TypeAliasDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): TypeAliasDeclaration;
+  createTypeAliasDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode | TypeNode, withClause?: WithClause): TypeAliasDeclaration;
+  updateTypeAliasDeclaration(node: TypeAliasDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode | TypeNode, withClause?: WithClause): TypeAliasDeclaration;
   createNewtypeDeclaration(modifiers: readonly ModifierLike[] | undefined, name: string | Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): NewtypeDeclaration;
   updateNewtypeDeclaration(node: NewtypeDeclaration, modifiers: readonly ModifierLike[] | undefined, name: Identifier, typeParameters: readonly TypeParameterDeclaration[] | undefined, type: TypeNode, kindType?: KindNode, withClause?: WithClause): NewtypeDeclaration;
   createDataVariant(name: string | Identifier, parameters: readonly ParameterDeclaration[] | undefined): DataVariant;

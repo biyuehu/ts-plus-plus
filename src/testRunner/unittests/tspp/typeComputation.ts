@@ -415,6 +415,10 @@ describe("unittests:: tspp:: type computation: type lambdas", () => {
     const infoB = ls.getQuickInfoAtPosition("/file.tspp", posB);
     assert.equal(ts.displayPartsToString(infoB?.displayParts), "(type parameter) B in type Id1<B: Type1>");
 
+    const universeInfo = ls.getQuickInfoAtPosition("/file.tspp", source.indexOf("Type1"));
+    assert.equal(ts.displayPartsToString(universeInfo?.displayParts), "type Type1: Type2");
+    assert.isUndefined(universeInfo?.documentation);
+
     const posF = source.indexOf("<F") + 1;
     const infoF = ls.getQuickInfoAtPosition("/file.tspp", posF);
     assert.equal(ts.displayPartsToString(infoF?.displayParts), "(type parameter) F in type Compose<F: Type0 => Type0, G: Type0 => Type0>");

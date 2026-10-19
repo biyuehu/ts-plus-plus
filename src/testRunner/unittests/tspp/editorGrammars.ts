@@ -38,6 +38,7 @@ describe("unittests:: tspp:: editor grammars", () => {
     "tspp-kind-operators.tmLanguage.json",
     "tspp-macros.tmLanguage.json",
     "tspp-nominal-declarations.tmLanguage.json",
+    "tspp-operators.tmLanguage.json",
     "tspp-type-computation.tmLanguage.json",
   ];
 
@@ -120,7 +121,8 @@ describe("unittests:: tspp:: editor grammars", () => {
     assert.isDefined(matchRegion, "Expected a grammar region for an entire 'match mltt' expression");
     assert.isDefined(typePatternRegion, "Expected a grammar region for MLTT match-arm type patterns");
     assert.strictEqual(typePatternRegion.contentName, "meta.type.ts");
-    assert.isTrue(patterns.some(pattern => pattern.name?.includes("storage.type.function.arrow.ts") && pattern.match === "=>(?!>)"));
+    const operators = collectPatterns(readGrammar("tspp-operators.tmLanguage.json"));
+    assert.isTrue(operators.some(pattern => pattern.name?.includes("storage.type.function.arrow.ts") && pattern.match?.includes("=>")));
     assert.isTrue(patterns.some(pattern => pattern.include === "source.ts#type"));
     assert.isTrue(patterns.some(pattern => pattern.include === "source.ts#expression"), "The selected branch must return to TypeScript expression highlighting");
   });
@@ -131,16 +133,26 @@ describe("unittests:: tspp:: editor grammars", () => {
     assert.deepInclude(configuration.surroundingPairs, ["<", ">"]);
   });
 
-  it("excludes TS++ arrows from angle-bracket pair colorization", () => {
-    const arrowScope = "meta.embedded.inline.tspp-arrow";
-    for (const fileName of ["tspp-kind-operators.tmLanguage.json", "tspp-type-computation.tmLanguage.json"]) {
-      const arrowPatterns = collectPatterns(readGrammar(fileName)).filter(pattern => pattern.name?.includes("storage.type.function.arrow.ts"));
-      assert.isNotEmpty(arrowPatterns, `Expected arrow patterns in ${fileName}`);
-      assert.isTrue(arrowPatterns.every(pattern => pattern.name?.includes(arrowScope)), `Every arrow in ${fileName} must be excluded from bracket pairing`);
+  it("isolates angle-bearing multi-character operators without capturing generic brackets", () => {
+    const operatorScope = "meta.embedded.inline.tspp-operator";
+    const patterns = collectPatterns(readGrammar("tspp-operators.tmLanguage.json"));
+    const arrowPattern = patterns.find(pattern => pattern.name?.includes("storage.type.function.arrow.ts"));
+    const comparisonPattern = patterns.find(pattern => pattern.name?.includes("keyword.operator.comparison.ts"));
+    assert.isDefined(arrowPattern);
+    assert.isDefined(comparisonPattern);
+    assert.include(arrowPattern.name!, operatorScope);
+    assert.include(comparisonPattern.name!, operatorScope);
+    const arrow = new RegExp(`^(?:${arrowPattern.match})$`);
+    const comparison = new RegExp(`^(?:${comparisonPattern.match})$`);
+    for (const text of ["->", "=>", "=>>"]) assert.match(text, arrow);
+    for (const text of [">=", "<=", "===", "!==", "==", "!="]) assert.match(text, comparison);
+    for (const text of [">", "<"]) {
+      assert.notMatch(text, arrow, "A bare angle bracket must remain in TypeScript's contextual grammar");
+      assert.notMatch(text, comparison, "A bare angle bracket must remain in TypeScript's contextual grammar");
     }
 
-    const arrowGrammars = readExtensionManifest().contributes.grammars.filter(grammar => grammar.scopeName === "tspp.kind-operators" || grammar.scopeName === "tspp.type-computation");
-    assert.lengthOf(arrowGrammars, 2);
-    assert.isTrue(arrowGrammars.every(grammar => grammar.embeddedLanguages?.[arrowScope] === "plaintext"));
+    const operatorGrammar = readExtensionManifest().contributes.grammars.find(grammar => grammar.scopeName === "tspp.operators");
+    assert.isDefined(operatorGrammar);
+    assert.strictEqual(operatorGrammar.embeddedLanguages?.[operatorScope], "plaintext");
   });
 });

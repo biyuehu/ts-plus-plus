@@ -543,13 +543,13 @@ const forEachChildTable: ForEachChildTable = {
       visitNode(cbNode, node.returnType);
   },
   [SyntaxKind.ReifyExpression]: function forEachChildInReifyExpression<T>(node: ReifyExpression, cbNode: (node: Node) => T | undefined): T | undefined {
-    return visitNode(cbNode, node.type);
+    return visitNode(cbNode, node.reifyToken) || visitNode(cbNode, node.type);
   },
   [SyntaxKind.MlttMatchExpression]: function forEachChildInMlttMatchExpression<T>(node: MlttMatchExpression, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
-    return visitNode(cbNode, node.scrutinee) || visitNodes(cbNode, cbNodes, node.arms);
+    return visitNode(cbNode, node.mlttToken) || visitNode(cbNode, node.scrutinee) || visitNodes(cbNode, cbNodes, node.arms);
   },
-  [SyntaxKind.MlttMatchExpressionArm]: function forEachChildInMlttMatchExpressionArm<T>(node: MlttMatchExpressionArm, cbNode: (node: Node) => T | undefined): T | undefined {
-    return visitNode(cbNode, node.pattern) || visitNode(cbNode, node.result);
+  [SyntaxKind.MlttMatchExpressionArm]: function forEachChildInMlttMatchExpressionArm<T>(node: MlttMatchExpressionArm, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.pattern) || visitNode(cbNode, node.variant) || visitNodes(cbNode, cbNodes, node.parameters) || visitNode(cbNode, node.result);
   },
   [SyntaxKind.ShorthandPropertyAssignment]: function forEachChildInShorthandPropertyAssignment<T>(node: ShorthandPropertyAssignment, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
@@ -829,7 +829,7 @@ const forEachChildTable: ForEachChildTable = {
     return visitNode(cbNode, node.expression);
   },
   [SyntaxKind.VoidExpression]: function forEachChildInVoidExpression<T>(node: VoidExpression, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
-    return visitNode(cbNode, node.expression);
+    return visitNode(cbNode, node.tsppKeywordToken) || visitNode(cbNode, node.expression);
   },
   [SyntaxKind.PrefixUnaryExpression]: function forEachChildInPrefixUnaryExpression<T>(node: PrefixUnaryExpression, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNode(cbNode, node.operand);
@@ -6010,6 +6010,12 @@ namespace Parser {
    *      2) UpdateExpression[?Yield] ** ExponentiationExpression[?Yield]
    */
   function parseUnaryExpressionOrHigher(): UnaryExpression | BinaryExpression {
+    if (isStartOfAssertExpression()) {
+      return parseAssertExpression();
+    }
+    if (isStartOfAssumeExpression()) {
+      return parseAssumeExpression();
+    }
     if (isStartOfMlttMatchExpression()) {
       return parseMlttMatchExpression();
     }
@@ -6059,6 +6065,53 @@ namespace Parser {
     return simpleUnaryExpression;
   }
 
+  function isStartOfAssertExpression(): boolean {
+    return (token() === SyntaxKind.AssertKeyword || token() === SyntaxKind.Identifier && scanner.getTokenValue() === "assert") &&
+      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp)) &&
+      lookAhead(() => {
+        nextToken();
+        return token() === SyntaxKind.OpenParenToken;
+      });
+  }
+
+  function parseAssertExpression(): VoidExpression {
+    const pos = getNodePos();
+    nextToken();
+    const operandPos = getNodePos();
+    parseExpected(SyntaxKind.OpenParenToken);
+    const expression = parseExpression();
+    parseExpected(SyntaxKind.CloseParenToken);
+    const operand = finishNode(factory.createParenthesizedExpression(expression), operandPos) as UnaryExpression;
+    const node = factory.createVoidExpression(operand) as Mutable<VoidExpression>;
+    node.tsppAssert = true;
+    node.transformFlags |= TransformFlags.ContainsTypeScript;
+    return finishNode(node, pos);
+  }
+
+  function isStartOfAssumeExpression(): boolean {
+    return token() === SyntaxKind.Identifier && scanner.getTokenValue() === "assume" &&
+      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp)) &&
+      lookAhead(() => {
+        nextToken();
+        return token() === SyntaxKind.OpenParenToken;
+      });
+  }
+
+  function parseAssumeExpression(): VoidExpression {
+    const pos = getNodePos();
+    const assumeToken = parseIdentifier();
+    const operandPos = getNodePos();
+    parseExpected(SyntaxKind.OpenParenToken);
+    const expression = parseExpression();
+    parseExpected(SyntaxKind.CloseParenToken);
+    const operand = finishNode(factory.createParenthesizedExpression(expression), operandPos) as UnaryExpression;
+    const node = factory.createVoidExpression(operand) as Mutable<VoidExpression>;
+    node.tsppKeywordToken = assumeToken;
+    node.tsppAssume = true;
+    node.transformFlags |= TransformFlags.ContainsTypeScript;
+    return finishNode(node, pos);
+  }
+
   function isStartOfReifyExpression(): boolean {
     return token() === SyntaxKind.Identifier && scanner.getTokenValue() === "reify" &&
       (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp));
@@ -6066,38 +6119,37 @@ namespace Parser {
 
   function isStartOfMlttMatchExpression(): boolean {
     return token() === SyntaxKind.MatchKeyword &&
-      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp)) &&
-      lookAhead(() => {
-        nextToken();
-        return token() === SyntaxKind.Identifier && scanner.getTokenValue() === "mltt";
-      });
+      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp));
   }
 
   function parseMlttMatchExpression(): MlttMatchExpression {
     const pos = getNodePos();
     parseExpected(SyntaxKind.MatchKeyword);
-    parseIdentifier();
+    const isMltt = token() === SyntaxKind.Identifier && scanner.getTokenValue() === "mltt";
+    const mlttToken = isMltt ? parseIdentifier() : undefined;
     const scrutinee = parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
     parseExpected(SyntaxKind.OpenBraceToken);
     const armsPos = getNodePos();
     const arms: MlttMatchExpressionArm[] = [];
     while (token() !== SyntaxKind.CloseBraceToken && token() !== SyntaxKind.EndOfFileToken) {
       const armPos = getNodePos();
-      const pattern = parseType();
+      const pattern = isMltt ? parseType() : undefined;
+      const variant = isMltt ? undefined : parseIdentifier();
+      const parameters = !isMltt && token() === SyntaxKind.OpenParenToken ? parseParameters(SignatureFlags.None) : undefined;
       parseExpected(SyntaxKind.EqualsGreaterThanToken);
       const result = parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
-      arms.push(finishNode(factory.createMlttMatchExpressionArm(pattern, result), armPos));
+      arms.push(finishNode(factory.createMlttMatchExpressionArm(pattern, result, variant, parameters), armPos));
       if (!parseOptional(SyntaxKind.CommaToken) && !parseOptional(SyntaxKind.SemicolonToken)) break;
     }
     const armList = createNodeArray(arms, armsPos);
     parseExpected(SyntaxKind.CloseBraceToken);
-    return finishNode(factory.createMlttMatchExpression(scrutinee, armList), pos);
+    return finishNode(factory.createMlttMatchExpression(scrutinee, armList, mlttToken), pos);
   }
 
   function parseReifyExpression(): ReifyExpression {
     const pos = getNodePos();
-    nextToken();
-    return finishNode(factory.createReifyExpression(parseType()), pos);
+    const reifyToken = parseIdentifier();
+    return finishNode(factory.createReifyExpression(parseType(), reifyToken), pos);
   }
 
   /**
@@ -8635,13 +8687,21 @@ namespace Parser {
     const name = parseIdentifier();
     const typeParameters = parseTypeParameters();
     const isTspp = fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp);
-    const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseKind() : undefined;
+    const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseTypeAliasAnnotation() : undefined;
     parseExpected(SyntaxKind.EqualsToken);
     const type = token() === SyntaxKind.IntrinsicKeyword && tryParse(parseKeywordAndNoDot) || parseType();
     const withClause = parseWithClause();
     parseSemicolon();
     const node = factory.createTypeAliasDeclaration(modifiers, name, typeParameters, type, kindType, withClause);
     return withJSDoc(finishNode(node, pos), hasJSDoc);
+  }
+
+  function parseTypeAliasAnnotation(): KindNode | TypeNode {
+    const functionKind = lookAhead(() => {
+      const candidate = parseKind();
+      return (candidate.kind === SyntaxKind.TypeKind || candidate.kind === SyntaxKind.FunctionKind) && token() === SyntaxKind.EqualsToken;
+    });
+    return functionKind ? parseKind() : parseType();
   }
 
   function parseNewtypeDeclaration(pos: number, hasJSDoc: boolean, modifiers: NodeArray<ModifierLike> | undefined): NewtypeDeclaration {

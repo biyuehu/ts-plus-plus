@@ -543,6 +543,7 @@ import {
   isConstructSignatureDeclaration,
   isConstTypeReference,
   isDataDeclaration,
+  isDataVariant,
   isDeclaration,
   isDeclarationFileName,
   isDeclarationName,
@@ -1178,6 +1179,7 @@ import * as moduleSpecifiers from "./_namespaces/ts.moduleSpecifiers.js";
 import * as performance from "./_namespaces/ts.performance.js";
 import {
   areMlttTermsDefinitionallyEqual,
+  checkMlttType,
   compareMlttTermsDefinitionally,
   inferMlttType,
   mlttAnnotation,
@@ -1209,6 +1211,7 @@ import {
   mlttUniverse,
   mlttVariable,
   mlttZero,
+  normalizeMlttTerm,
   printMlttTerm,
   weakHeadNormalizeMltt,
 } from "./mlttCore.js";
@@ -1717,6 +1720,44 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     getTypeOfSymbolAtLocation: (symbol, locationIn) => {
       const location = getParseTreeNode(locationIn);
       return location ? getTypeOfSymbolAtLocation(symbol, location) : errorType;
+    },
+    getKindAtLocation: locationIn => {
+      const location = getParseTreeNode(locationIn);
+      return location ? kindToString(getKindOfType(getTypeOfNode(location))) : kindToString(ordinaryTypeKind);
+    },
+    getTypeClassificationAtLocation: locationIn => {
+      const location = getParseTreeNode(locationIn, isTypeNode);
+      if (location) {
+        try {
+          const term = getMlttTermFromTypeNode(location as TypeNode, emptyArray);
+          if (term) {
+            const termType = normalizeMlttTerm(inferMlttType(term), compareMlttExternalTerms, matchMlttExternalPattern);
+            return termType.kind === "universe"
+              ? { label: "Kind", text: `Type${termType.level}` } as const
+              : { label: "Type", text: printMlttTerm(termType) } as const;
+          }
+        }
+        catch {
+          // Fall back to the compiler kind while the source is incomplete.
+        }
+      }
+      return { label: "Kind", text: location ? kindToString(getKindOfType(getTypeOfNode(location))) : kindToString(ordinaryTypeKind) };
+    },
+    getNormalizedTypeAtLocation: locationIn => {
+      const location = getParseTreeNode(locationIn, isTypeNode);
+      if (!location) return undefined;
+
+      try {
+        const term = getMlttTermFromTypeNode(location as TypeNode, emptyArray);
+        if (!term) return undefined;
+        const source = printMlttTerm(term);
+        const normalized = printMlttTerm(normalizeMlttTerm(term, compareMlttExternalTerms, matchMlttExternalPattern));
+        return source === normalized ? undefined : normalized;
+      }
+      catch {
+        // Editor queries must remain available while a type is incomplete.
+        return undefined;
+      }
     },
     getTypeOfSymbol,
     getSymbolsOfParameterPropertyDeclaration: (parameterIn, parameterName) => {
@@ -5685,6 +5726,21 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return createFunctionKind(node.parameters.map(getKindFromNode), getKindFromNode(node.returnKind));
   }
 
+  function getTypeAliasTermAnnotation(declaration: TypeAliasDeclaration): MlttTerm | undefined {
+    const annotation = declaration.kindType;
+    if (!annotation || annotation.kind === SyntaxKind.TypeKind || annotation.kind === SyntaxKind.FunctionKind) return undefined;
+    const annotationCompilerType = getTypeFromTypeNode(annotation as TypeNode);
+    if (annotationCompilerType.universeTypeLevel !== undefined) return undefined;
+    const term = getMlttTermFromTypeNode(annotation as TypeNode, emptyArray);
+    return term?.kind === "universe" ? undefined : term;
+  }
+
+  function getTypeAliasDeclaredKind(declaration: TypeAliasDeclaration): Kind | undefined {
+    return declaration.kindType && !getTypeAliasTermAnnotation(declaration)
+      ? getKindFromNode(declaration.kindType as KindNode)
+      : undefined;
+  }
+
   function checkKindFeatures(node: KindNode): void {
     requireTsppFeature(node, "higherKindedTypes");
     if (kindUsesTypeUniverses(node)) requireTsppFeature(node, "typeUniverses");
@@ -5808,7 +5864,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const type = createTypeWithSymbol(TypeFlags.TypeParameter, symbol);
     type.higherKindedSymbol = symbol;
     const declaration = symbol.declarations?.find(d => isTypeAliasDeclaration(d) || isNewtypeDeclaration(d) || isDataDeclaration(d));
-    const returnKind = declaration?.kindType ? getKindFromNode(declaration.kindType) : ordinaryTypeKind;
+    const returnKind = declaration?.kindType
+      ? isTypeAliasDeclaration(declaration) ? getTypeAliasDeclaredKind(declaration) ?? ordinaryTypeKind : getKindFromNode(declaration.kindType)
+      : ordinaryTypeKind;
     type.typeKind = createFunctionKind(typeParameters.map(getKindOfType), returnKind);
     typeConstructorTypes.set(symbol, type);
     return type;
@@ -12142,6 +12200,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     includeOptionality: boolean,
     checkMode: CheckMode,
   ): Type | undefined {
+    if (isParameter(declaration)) {
+      const valueMatchBindingType = getTypeForValueMatchBinding(declaration);
+      if (valueMatchBindingType) return valueMatchBindingType;
+    }
+
     // A variable declared in a for..in statement is of type string, or of type keyof T when the
     // right hand expression is of a type parameter type.
     if (isVariableDeclaration(declaration) && declaration.parent.parent.kind === SyntaxKind.ForInStatement) {
@@ -12272,6 +12335,31 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
 
     // No type specified and nothing can be inferred
+    return undefined;
+  }
+
+  function getTypeForValueMatchBinding(declaration: ParameterDeclaration): Type | undefined {
+    if ((declaration.parent as Node).kind !== SyntaxKind.MlttMatchExpressionArm) return undefined;
+    const arm = declaration.parent as unknown as MlttMatchExpressionArm;
+    if (!arm.variant || idText(arm.variant) === "_") return undefined;
+    const index = arm.parameters?.indexOf(declaration) ?? -1;
+    if (index < 0) return undefined;
+
+    const scrutineeType = checkExpression(arm.parent.scrutinee);
+    const constituents = scrutineeType.flags & TypeFlags.Union ? (scrutineeType as UnionType).types : [scrutineeType];
+    for (const constituent of constituents) {
+      const tag = getPropertyOfType(constituent, "_tag" as __String);
+      const tagType = tag && getTypeOfSymbol(tag);
+      if (!tagType || !isValueMatchTagType(tagType) || tagType.value !== idText(arm.variant)) continue;
+      const variant = constituent.aliasSymbol?.declarations?.find(isDataVariant);
+      const field = variant?.parameters?.[index];
+      if (!field || !isIdentifier(field.name)) return undefined;
+      const fieldType = getTypeOfPropertyOfType(constituent, field.name.escapedText);
+      if (fieldType) {
+        (declaration as Mutable<ParameterDeclaration>).tsppMatchFieldName = field.name.escapedText;
+      }
+      return fieldType;
+    }
     return undefined;
   }
 
@@ -13837,8 +13925,14 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const declaration = Debug.checkDefined(symbol.declarations?.find(isTypeAlias), "Type alias symbol with no valid declaration found");
       const typeNode = isJSDocTypeAlias(declaration) ? declaration.typeExpression : declaration.type;
       // If typeNode is missing, we will error in checkJSDocTypedefTag.
-      let type = typeNode ? (isTypeAliasDeclaration(declaration) || isNewtypeDeclaration(declaration)) ?
-        getTypeArgumentFromNodeForKind(typeNode, declaration.kindType ? getKindFromNode(declaration.kindType) : undefined) :
+      const termAnnotation = isTypeAliasDeclaration(declaration) ? getTypeAliasTermAnnotation(declaration) : undefined;
+      let type = typeNode ? isTypeAliasDeclaration(declaration) && termAnnotation ?
+        getTypeFromAnnotatedMlttTerm(typeNode, termAnnotation) :
+        (isTypeAliasDeclaration(declaration) || isNewtypeDeclaration(declaration)) ?
+        getTypeArgumentFromNodeForKind(
+          typeNode,
+          isTypeAliasDeclaration(declaration) ? getTypeAliasDeclaredKind(declaration) : declaration.kindType ? getKindFromNode(declaration.kindType) : undefined,
+        ) :
         getTypeFromTypeNode(typeNode) : errorType;
       if (popTypeResolution()) {
         const typeParameters = getLocalTypeParametersOfClassOrInterfaceOrTypeAlias(symbol);
@@ -21160,23 +21254,51 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     try {
       const termType = weakHeadNormalizeMltt(inferMlttType(term));
-      if (termType.kind !== "universe") {
-        error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `Expected a type, but found a term of type '${printMlttTerm(termType)}'.`);
-        return links.resolvedType = errorType;
-      }
-
-      const level = String(termType.level);
-      const type = createType(TypeFlags.DependentFunction) as DependentFunctionType;
-      type.mlttTerm = term;
-      type.node = node;
-      type.typeKind = level === "0" ? ordinaryTypeKind : { flags: KindFlags.Type, typeLevel: level, universeLevel: incrementUniverseLevel(level) };
-      return links.resolvedType = type;
+      return links.resolvedType = createMlttCompilerType(node, term, termType);
     }
     catch (mlttError) {
       if (!(mlttError instanceof MlttTypeError)) throw mlttError;
       error(node, Diagnostics.Invalid_MLTT_type_Colon_0, mlttError.message);
       return links.resolvedType = errorType;
     }
+  }
+
+  function getTypeFromAnnotatedMlttTerm(node: TypeNode, expectedType: MlttTerm): Type {
+    const term = getMlttTermFromTypeNode(node, emptyArray);
+    if (!term) return errorType;
+    try {
+      if (term.kind === "lambda") {
+        checkMlttType(term, expectedType);
+        return createMlttCompilerType(node, term, expectedType);
+      }
+      const actualType = weakHeadNormalizeMltt(inferMlttType(term));
+      if (!areMlttTermsDefinitionallyEqual(actualType, expectedType, compareMlttExternalTerms, matchMlttExternalPattern)) {
+        error(
+          node,
+          Diagnostics.Invalid_MLTT_type_Colon_0,
+          `Expected a term of type '${printMlttTerm(expectedType)}', but found one of type '${printMlttTerm(actualType)}'.`,
+        );
+        return errorType;
+      }
+      return createMlttCompilerType(node, term, actualType);
+    }
+    catch (mlttError) {
+      if (!(mlttError instanceof MlttTypeError)) throw mlttError;
+      error(node, Diagnostics.Invalid_MLTT_type_Colon_0, mlttError.message);
+      return errorType;
+    }
+  }
+
+  function createMlttCompilerType(node: TypeNode, term: MlttTerm, termType: MlttTerm): DependentFunctionType {
+    const type = createType(TypeFlags.DependentFunction) as DependentFunctionType;
+    type.mlttTerm = term;
+    type.mlttType = termType;
+    type.node = node;
+    if (termType.kind === "universe") {
+      const level = String(termType.level);
+      type.typeKind = level === "0" ? ordinaryTypeKind : { flags: KindFlags.Type, typeLevel: level, universeLevel: incrementUniverseLevel(level) };
+    }
+    return type;
   }
 
   function isStandaloneMlttTypeReference(node: TypeReferenceNode): boolean {
@@ -21186,7 +21308,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     // file, especially when a signature is instantiated for a tsserver
     // QuickInfo request.
     const sourceFile = getSourceFileOfNode(node);
-    if (!sourceFile) return false;
+    if (!sourceFile || !isSourceFile(sourceFile)) return false;
     const sourceFileName = sourceFile.fileName;
     if (!fileExtensionIs(sourceFileName, Extension.Tspp) && !fileExtensionIs(sourceFileName, Extension.Dtspp)) return false;
     const name = idText(node.typeName);
@@ -21200,7 +21322,12 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       : name === "Lam" || name === "Ann" ? "dependentFunctionTypes"
       : name === "Sigma" || name === "Pair" || name === "First" || name === "Second" ? "sigmaTypes"
       : undefined;
-    return !!feature && hasTsppFeature(compilerOptions, feature);
+    if (feature) return hasTsppFeature(compilerOptions, feature);
+
+    if (!node.typeArguments?.length) return false;
+    let symbol = resolveTypeReferenceName(node, SymbolFlags.Type, /*ignoreErrors*/ true);
+    if (symbol.flags & SymbolFlags.Alias) symbol = resolveAlias(symbol);
+    return !!((tryGetDeclaredTypeOfSymbol(symbol)?.flags ?? 0) & TypeFlags.DependentFunction);
   }
 
   interface MlttTypeBinding {
@@ -21251,6 +21378,19 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       }
 
       const name = idText(reference.typeName);
+      let aliasSymbol = resolveTypeReferenceName(reference, SymbolFlags.Type, /*ignoreErrors*/ true);
+      if (aliasSymbol.flags & SymbolFlags.Alias) aliasSymbol = resolveAlias(aliasSymbol);
+      const aliasType = tryGetDeclaredTypeOfSymbol(aliasSymbol);
+      if ((aliasType?.flags ?? 0) & TypeFlags.DependentFunction) {
+        const mlttAlias = aliasType as DependentFunctionType;
+        let aliasTerm: MlttTerm = mlttAnnotation(mlttAlias.mlttTerm, mlttAlias.mlttType);
+        for (const argument of reference.typeArguments ?? emptyArray) {
+          const argumentTerm = getMlttTermFromTypeNode(argument, scope);
+          if (!argumentTerm) return undefined;
+          aliasTerm = mlttApplication(aliasTerm, argumentTerm);
+        }
+        return aliasTerm;
+      }
       if (name === "Lam") {
         if (!requireTsppFeature(node, "dependentFunctionTypes")) return undefined;
         if (reference.typeArguments?.length !== 1 || reference.typeArguments[0].kind !== SyntaxKind.DependentFunctionType) {
@@ -41852,6 +41992,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function checkMlttMatchExpression(node: MlttMatchExpression, checkMode: CheckMode | undefined): Type {
+    if (!node.mlttToken) return checkValueMatchExpression(node, checkMode);
     if (!requireTsppFeature(node, "typeMatching")) return errorType;
     const links = getNodeLinks(node);
     const descriptorType = checkExpression(node.scrutinee, checkMode);
@@ -41861,7 +42002,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       links.resolvedMlttMatchExpression = false;
       return errorType;
     }
-    if (!node.arms.length || !isWildcardPattern(node.arms[node.arms.length - 1].pattern)) {
+    if (!node.arms.length || !isWildcardPattern(node.arms[node.arms.length - 1].pattern!)) {
       error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "A 'match mltt' expression must end with a '_' default branch.");
       links.resolvedMlttMatchExpression = false;
       return errorType;
@@ -41884,13 +42025,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     let selectedArguments: Type[] = [];
     for (let index = 0; index < node.arms.length - 1; index++) {
       const arm = node.arms[index];
-      if (isWildcardPattern(arm.pattern)) {
+      if (isWildcardPattern(arm.pattern!)) {
         error(arm.pattern, Diagnostics.Invalid_MLTT_type_Colon_0, "The '_' default branch must be the final branch of a 'match mltt' expression.");
         continue;
       }
       const captureNames: string[] = [];
-      if (!collectMlttTypePatternCaptures(arm.pattern, captureNames)) continue;
-      if (captureNames.length && !isTypeReferenceNode(arm.pattern)) {
+      if (!collectMlttTypePatternCaptures(arm.pattern!, captureNames)) continue;
+      if (captureNames.length && !isTypeReferenceNode(arm.pattern!)) {
         error(arm.pattern, Diagnostics.Invalid_MLTT_type_Colon_0, "A capturing type pattern must be a generic type reference such as Array<infer T>.");
         continue;
       }
@@ -41898,13 +42039,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       let captures: MlttTypeMatchCapture[] = [];
       let parameters: TypeParameter[] = [];
       for (const captureName of captureNames) {
-        const declaration = findMlttPatternCaptureDeclaration(arm.pattern, captureName)!;
+        const declaration = findMlttPatternCaptureDeclaration(arm.pattern!, captureName)!;
         const parameter = getDeclaredTypeOfTypeParameter(getSymbolOfDeclaration(declaration));
         scope = [{ name: captureName, placeholderName: captureName, compilerType: parameter }, ...scope];
         captures = [{ name: captureName, type: mlttUniverse(0) }, ...captures];
         parameters = [parameter, ...parameters];
       }
-      const pattern = getMlttTermFromTypeNode(arm.pattern, scope);
+      const pattern = getMlttTermFromTypeNode(arm.pattern!, scope);
       if (!pattern) continue;
       if (captures.length) {
         if (scrutineeTerm.kind !== "external" || pattern.kind !== "external") continue;
@@ -41938,7 +42079,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     links.resolvedMlttMatchExpression = selectedArm.result;
 
     for (const arm of node.arms) {
-      if (!isWildcardPattern(arm.pattern)) checkSourceElement(arm.pattern);
+      if (arm.pattern && !isWildcardPattern(arm.pattern)) checkSourceElement(arm.pattern);
       if (arm !== selectedArm) checkExpression(arm.result, checkMode);
     }
     const resultType = checkExpression(selectedArm.result, checkMode);
@@ -41947,7 +42088,90 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       : resultType;
   }
 
+  function checkValueMatchExpression(node: MlttMatchExpression, checkMode: CheckMode | undefined): Type {
+    if (!requireTsppFeature(node, "dataDeclarations")) return errorType;
+    const scrutineeType = checkExpression(node.scrutinee, checkMode);
+    const constituents = scrutineeType.flags & TypeFlags.Union ? (scrutineeType as UnionType).types : [scrutineeType];
+    const variants = new Map<string, { type: Type; declaration?: DataVariant; }>();
+    for (const constituent of constituents) {
+      const tag = getPropertyOfType(constituent, "_tag" as __String);
+      const tagType = tag && getTypeOfSymbol(tag);
+      if (!tagType || !isValueMatchTagType(tagType)) continue;
+      const declaration = constituent.aliasSymbol?.declarations?.find(isDataVariant);
+      variants.set(tagType.value, { type: constituent, declaration });
+    }
+    if (!variants.size) {
+      error(node.scrutinee, Diagnostics.Invalid_MLTT_type_Colon_0, "A value-level 'match' scrutinee must be a closed union discriminated by a string-literal '_tag' property.");
+      return errorType;
+    }
+
+    const covered = new Set<string>();
+    let hasWildcard = false;
+    const resultTypes: Type[] = [];
+    for (const arm of node.arms) {
+      const variantName = arm.variant;
+      if (!variantName) continue;
+      const name = idText(variantName);
+      if (hasWildcard) {
+        error(arm, Diagnostics.Invalid_MLTT_type_Colon_0, "A branch after '_' is unreachable.");
+      }
+      else if (name === "_") {
+        hasWildcard = true;
+        if (arm.parameters?.length) error(variantName, Diagnostics.Invalid_MLTT_type_Colon_0, "The '_' branch cannot bind fields.");
+      }
+      else {
+        const variant = variants.get(name);
+        if (!variant) {
+          error(variantName, Diagnostics.Invalid_MLTT_type_Colon_0, `Variant '${name}' is not part of the matched value.`);
+        }
+        else if (covered.has(name)) {
+          error(variantName, Diagnostics.Invalid_MLTT_type_Colon_0, `Duplicate match branch for variant '${name}'.`);
+        }
+        else {
+          covered.add(name);
+          const fields = variant.declaration?.parameters ?? emptyArray;
+          const parameters = arm.parameters ?? emptyArray;
+          if (parameters.length !== fields.length) {
+            error(variantName, Diagnostics.Invalid_MLTT_type_Colon_0, `Variant '${name}' expects ${fields.length} field binding(s), but this pattern has ${parameters.length}.`);
+          }
+          const count = Math.min(parameters.length, fields.length);
+          for (let i = 0; i < count; i++) {
+            const parameter = parameters[i];
+            if (!isIdentifier(parameter.name) || parameter.type || parameter.initializer || parameter.questionToken || parameter.dotDotDotToken) {
+              error(parameter, Diagnostics.Invalid_MLTT_type_Colon_0, "A value match binding must be a plain identifier.");
+              continue;
+            }
+            const field = fields[i];
+            const fieldType = isIdentifier(field.name) ? getTypeOfPropertyOfType(variant.type, field.name.escapedText) : undefined;
+            if (fieldType && isIdentifier(field.name)) {
+              (parameter as Mutable<ParameterDeclaration>).tsppMatchFieldName = field.name.escapedText;
+              getSymbolLinks(getSymbolOfDeclaration(parameter)).type = fieldType;
+            }
+          }
+        }
+      }
+      resultTypes.push(checkExpression(arm.result, checkMode));
+    }
+    if (!hasWildcard) {
+      const missing = arrayFrom(variants.keys()).filter(name => !covered.has(name));
+      if (missing.length) error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `Non-exhaustive value match. Missing: ${missing.join(", ")}.`);
+    }
+    return resultTypes.length ? getUnionType(resultTypes, UnionReduction.Literal) : neverType;
+  }
+
+  function isValueMatchTagType(type: Type): type is StringLiteralType {
+    return !!(type.flags & TypeFlags.StringLiteral);
+  }
+
   function checkVoidExpression(node: VoidExpression): Type {
+    if (node.tsppAssert || node.tsppAssume) {
+      requireTsppFeature(node, "formalContracts");
+      if (!findAncestor(node, isFunctionDeclaration)) {
+        error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `A proof ${node.tsppAssume ? "assumption" : "assertion"} is currently supported only inside a function declaration.`);
+      }
+      checkTruthinessExpression((node.expression as ParenthesizedExpression).expression);
+      return voidType;
+    }
     checkNodeDeferred(node);
     return undefinedWideningType;
   }
@@ -50247,7 +50471,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       grammarErrorOnNode(node, Diagnostics._0_declarations_can_only_be_declared_inside_a_block, "type");
     }
     checkExportsOnMergedDeclarations(node);
-    if (node.kindType) checkKindFeatures(node.kindType);
+    const termAnnotation = getTypeAliasTermAnnotation(node);
+    if (node.kindType) {
+      if (termAnnotation) checkSourceElement(node.kindType);
+      else checkKindFeatures(node.kindType as KindNode);
+    }
     checkTypeParameters(node.typeParameters);
     if (node.type.kind === SyntaxKind.IntrinsicKeyword) {
       const typeParameterCount = length(node.typeParameters);
@@ -50332,11 +50560,18 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     checkExportsOnMergedDeclarations(node);
     if (node.kindType) checkKindFeatures(node.kindType);
     checkTypeParameters(node.typeParameters);
-    getDeclaredTypeOfSymbol(getSymbolOfDeclaration(node));
+    const declaredType = getDeclaredTypeOfSymbol(getSymbolOfDeclaration(node));
+    if (node.kindType) {
+      const declaredKind = getKindFromNode(node.kindType);
+      const inferredKind = getKindOfType(declaredType);
+      if (!kindsAreIdentical(declaredKind, inferredKind)) {
+        error(node.kindType, Diagnostics.Type_0_has_kind_1_but_kind_2_was_expected, idText(node.name), kindToString(inferredKind), kindToString(declaredKind));
+      }
+    }
     for (const variant of node.variants) {
       for (const parameter of variant.parameters ?? emptyArray) {
         if (!isIdentifier(parameter.name) || parameter.questionToken || parameter.initializer || parameter.dotDotDotToken || !parameter.type) {
-          error(parameter, Diagnostics.A_data_variant_field_must_be_a_required_identifier_with_a_type_annotation);
+          error(parameter, Diagnostics.A_data_variant_field_must_use_name_Colon_Type_syntax_for_example_Some_value_Colon_T_a_bare_T_is_treated_as_a_field_name_not_a_type);
         }
         checkSourceElement(parameter.type);
       }
@@ -52875,6 +53110,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
     const classDecl = tryGetClassImplementingOrExtendingExpressionWithTypeArguments(node);
     const classType = classDecl && getDeclaredTypeOfClassOrInterface(getSymbolOfDeclaration(classDecl.class));
+    if (node.parent.kind === SyntaxKind.ReifyExpression && (node.parent as ReifyExpression).type === node) {
+      return getReifiedOperandType(node as TypeNode);
+    }
+
     if (isPartOfTypeNode(node)) {
       const typeFromTypeNode = getTypeFromTypeNode(node as TypeNode);
       return classType ? getTypeWithThisArgument(typeFromTypeNode, classType.thisType) : typeFromTypeNode;

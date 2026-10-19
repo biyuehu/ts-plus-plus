@@ -79,3 +79,32 @@ export type NaturalNumberInduction: Type1 =
 //   NatElim<P, z, s, Succ<N>> → s<N, NatElim<P, z, s, N>>
 //
 // 下一篇会用 Eq 把这些计算结果写成系统内部可表达的命题。
+
+// -----------------------------------------------------------------------------
+// 5. 用 Normalized 悬浮观察多步归约
+// -----------------------------------------------------------------------------
+//
+// 将鼠标悬停在下面的 `HoverComputedNat` term 名上。这个例子不是简单展开一个
+// alias，而是让内核连续执行两层递归加法：
+//
+//   1. 内层 NatAdd 计算 1 + 1，得到 Succ<Succ<Zero>>，也就是 2；
+//   2. 外层 NatAdd 再计算 2 + 2，得到 4；
+//   3. 悬浮窗直接显示这个 Nat term 的规范形和类型。
+//
+// MLTT term 也可以直接成为顶层声明。冒号右边的 `Nat` 是 term 的类型，而不是
+// universe kind；checker 会分别验证右侧的 Succ 和 NatAdd 确实产生 Nat。
+export type One: Nat = Succ<Zero>;
+export type Two: Nat = NatAdd<One, One>;
+export type HoverComputedNat: Nat = NatAdd<Two, Two>;
+
+// 如果还需要把计算结果写成命题，可以另外构造 Eq；它不是显示计算结果所必需的。
+export type ComputedNatIsFour: Type0 = Eq<
+  Nat,
+  HoverComputedNat,
+  Succ<Succ<Succ<Succ<Zero>>>>
+>;
+
+// HoverComputedNat 的规范形中 `NatAdd` 会消失，结果变成四层 Succ，也就是自然数 4；
+// 悬浮末尾显示 `Type: Nat`，因为这里观察的是 term，而不是属于 Type0 的类型。
+// 与 01-basics.tspp 的简单别名示例不同，这个悬浮可以用来确认嵌套 NatAdd
+// 的递归归约已经全部完成。

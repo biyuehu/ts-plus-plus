@@ -25,6 +25,7 @@ import {
   isTypeReferenceNode,
   isVariableDeclaration,
   isVariableStatement,
+  isVoidExpression,
   isWhileStatement,
 } from "./factory/nodeTests.js";
 import { forEachChild } from "./parser.js";
@@ -46,6 +47,7 @@ import {
   NewtypeDeclaration,
   Node,
   ObjectLiteralExpression,
+  ParenthesizedExpression,
   Program,
   SourceFile,
   Statement,
@@ -179,7 +181,8 @@ function needsVerification(checker: TypeChecker, declaration: FunctionDeclaratio
   let found = false;
   if (declaration.body) {
     visit(declaration.body, node => {
-      if (isWhileStatement(node) && getProperties(node.withClause, "invariant").length) found = true;
+      if (isTsppProofDirective(node)) found = true;
+      else if (isWhileStatement(node) && getProperties(node.withClause, "invariant").length) found = true;
       else if (isCallExpression(node) && getRefinementTarget(checker, node)) found = true;
       else if (isVariableDeclaration(node) && getRefinementTypeTarget(checker, node.type)) found = true;
       else if (isCallExpression(node) && getCallTarget(checker, node)?.withClause?.properties.some(property => idText(property.name) === "requires")) found = true;
@@ -542,6 +545,24 @@ function executeWhile(context: VerificationContext, statement: WhileStatement, i
 }
 
 function executeExpressionStatement(context: VerificationContext, state: SymbolicState, expression: Expression): string | undefined {
+  if (isVoidExpression(expression) && (expression.tsppAssert || expression.tsppAssume)) {
+    const condition = (expression.expression as ParenthesizedExpression).expression;
+    const goal = translateExpression(context, state, condition);
+    const isAssumption = expression.tsppAssume === true;
+    const kind = isAssumption ? "assumption" : "assertion";
+    const name = `${contractName(context.declaration)} ${kind}`;
+    if (typeof goal === "string") {
+      addUnknown(context, condition, kind, kind, name, goal);
+      return undefined;
+    }
+    if (goal.sort !== "Bool") {
+      addUnknown(context, condition, kind, kind, name, `An ${kind} must have Boolean SMT semantics.`);
+      return undefined;
+    }
+    if (!isAssumption) addQuery(context, condition, "assertion", "assertion", name, state.facts, goal.expression);
+    state.facts.push(goal.expression);
+    return undefined;
+  }
   if (isCallExpression(expression)) {
     const result = translateCallExpression(context, state, expression, /*resultUsed*/ false);
     return typeof result === "string" ? result : undefined;
@@ -571,6 +592,10 @@ function executeExpressionStatement(context: VerificationContext, state: Symboli
     return undefined;
   }
   return `Expression statement '${sourceText(context, expression)}' is outside the supported verification subset.`;
+}
+
+function isTsppProofDirective(node: Node): boolean {
+  return isVoidExpression(node) && (node.tsppAssert === true || node.tsppAssume === true);
 }
 
 function translateExpression(context: VerificationContext, state: SymbolicState, expression: Expression, result?: Term): Term | string {

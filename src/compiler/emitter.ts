@@ -3057,8 +3057,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
 
   function emitMlttMatchExpression(node: MlttMatchExpression) {
     writeKeyword("match");
-    writeSpace();
-    write("mltt");
+    if (node.mlttToken) {
+      writeSpace();
+      write("mltt");
+    }
     writeSpace();
     emitExpression(node.scrutinee);
     writeSpace();
@@ -3066,7 +3068,11 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     node.arms.forEach((arm, index) => {
       if (index) writePunctuation(",");
       writeSpace();
-      emit(arm.pattern);
+      if (node.mlttToken) emit(arm.pattern);
+      else {
+        emit(arm.variant);
+        if (arm.parameters) emitParameters(arm, arm.parameters);
+      }
       writeSpace();
       writePunctuation("=>");
       writeSpace();
@@ -3077,6 +3083,11 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
   }
 
   function emitVoidExpression(node: VoidExpression) {
+    if (node.tsppAssert || node.tsppAssume) {
+      write(node.tsppAssume ? "assume" : "assert");
+      emit(node.expression);
+      return;
+    }
     emitTokenWithComment(SyntaxKind.VoidKeyword, node.pos, writeKeyword, node);
     writeSpace();
     emitExpression(node.expression, parenthesizer.parenthesizeOperandOfPrefixUnary);
@@ -3959,7 +3970,10 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     if (!tsppCompatibilityDeclaration && node.kindType && (!currentSourceFile || fileExtensionIs(currentSourceFile.fileName, Extension.Tspp) || fileExtensionIs(currentSourceFile.fileName, Extension.Dtspp))) {
       writePunctuation(":");
       writeSpace();
-      emitKind(node.kindType);
+      if (node.kindType.kind === SyntaxKind.TypeKind || node.kindType.kind === SyntaxKind.FunctionKind || node.kindType.kind === SyntaxKind.TypeReference) {
+        emitKind(node.kindType as KindNode);
+      }
+      else emit(node.kindType);
     }
     writeSpace();
     writePunctuation("=");

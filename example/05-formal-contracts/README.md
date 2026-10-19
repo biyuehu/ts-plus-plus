@@ -10,6 +10,7 @@
 - [`06-sum-types.tspp`](./src/06-sum-types.tspp)：把 `data` 和封闭判别联合降低为 Z3 和类型，并复用 TypeScript 的控制流窄化。
 - [`07-recursive-data.tspp`](./src/07-recursive-data.tspp)：递归 `data`、variant 构造器和由 checker 窄化的 `switch`。
 - [`08-standard-predicates.tspp`](./src/08-standard-predicates.tspp)：标准库谓词 `isEven`、`isOdd`、`isPositive`、`isNegative`、`isNonNegative`、`isZero`、`divides` 与 `between` 在 `bigint` 和 `number`（需 `numberModel: "mathematical-real"`）上的精化类型引入。
+- [`09-local-proof-points.tspp`](./src/09-local-proof-points.tspp)：局部 `assert` 证明义务，以及显式可信但不生成证明义务的 `assume`。
 
 `divides(a, b)` 表示 `a` 整除 `b`；`between(value, lower, upper)` 是闭区间判断，即 `lower <= value <= upper`。
 
@@ -39,6 +40,24 @@ function successor(value: bigint) with {
 
 动态调用、复杂参数绑定和无法解析的调用不在当前直接调用子集内；相关值进入证明时会明确得到
 `unknown`，不会被当作验证成功。
+
+## 局部 `assert` 与 `assume`
+
+`assert(condition)` 要求 Z3 根据当前路径事实证明条件；证明成功后，该条件也会成为后续语句的事实。
+`assume(condition)` 不要求证明，直接把条件加入当前路径事实。两者都只允许出现在函数内，并从生成的
+JavaScript 中擦除：
+
+```ts
+function increment(value: bigint): bigint {
+  assume(value >= 0n); // 可信输入边界；这里不会产生证明义务
+  const next = value + 1n;
+  assert(next > 0n);  // 利用前面的假设进行证明
+  return next;
+}
+```
+
+`assume` 可以让错误命题“被证明”，因此应只用于验证器暂时无法建模、但由外部系统保证的事实。公开 API
+通常优先使用 `requires`，因为调用者必须证明前置条件，而 `assume` 不会检查调用者。
 
 ## 循环不变式
 

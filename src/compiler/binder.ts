@@ -2266,6 +2266,10 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
   }
 
   function declareSymbolAndAddToSymbolTable(node: Declaration, symbolFlags: SymbolFlags, symbolExcludes: SymbolFlags): Symbol | undefined {
+    if ((container as Node).kind === SyntaxKind.MatchTypeArm || (container as Node).kind === SyntaxKind.MlttMatchExpressionArm) {
+      const lexicalContainer = container as unknown as MatchTypeArm | MlttMatchExpressionArm;
+      return declareSymbol(lexicalContainer.locals!, /*parent*/ undefined, node, symbolFlags, symbolExcludes);
+    }
     switch (container.kind) {
       // Modules, source files, and classes need specialized handling for how their
       // members are declared (for example, a member of a class will go into a specific

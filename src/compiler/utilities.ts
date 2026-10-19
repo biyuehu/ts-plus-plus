@@ -435,6 +435,7 @@ import {
   MetaProperty,
   MethodDeclaration,
   MethodSignature,
+  MlttMatchExpressionArm,
   ModeAwareCache,
   ModifierFlags,
   ModifierLike,
@@ -3662,6 +3663,8 @@ export function isExpressionNode(node: Node): boolean {
     case SyntaxKind.VoidExpression:
     case SyntaxKind.DeleteExpression:
     case SyntaxKind.TypeOfExpression:
+    case SyntaxKind.MlttMatchExpression:
+    case SyntaxKind.ReifyExpression:
     case SyntaxKind.PrefixUnaryExpression:
     case SyntaxKind.PostfixUnaryExpression:
     case SyntaxKind.BinaryExpression:
@@ -3760,6 +3763,8 @@ export function isInExpressionContext(node: Node): boolean {
       return (parent as ShorthandPropertyAssignment).objectAssignmentInitializer === node;
     case SyntaxKind.SatisfiesExpression:
       return node === (parent as SatisfiesExpression).expression;
+    case SyntaxKind.MlttMatchExpressionArm:
+      return node === (parent as MlttMatchExpressionArm).result;
     default:
       return isExpressionNode(parent);
   }

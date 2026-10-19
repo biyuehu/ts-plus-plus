@@ -930,14 +930,17 @@ const visitEachChildTable: VisitEachChildTable = {
       node,
       Debug.checkDefined(nodeVisitor(node.scrutinee, visitor, isExpression)),
       Debug.checkDefined(nodesVisitor(node.arms, visitor, (n): n is typeof node.arms[number] => n.kind === SyntaxKind.MlttMatchExpressionArm)),
+      nodeVisitor(node.mlttToken, visitor, isIdentifier),
     );
   },
 
-  [SyntaxKind.MlttMatchExpressionArm]: function visitEachChildOfMlttMatchExpressionArm(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
+  [SyntaxKind.MlttMatchExpressionArm]: function visitEachChildOfMlttMatchExpressionArm(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
     return context.factory.updateMlttMatchExpressionArm(
       node,
-      Debug.checkDefined(nodeVisitor(node.pattern, visitor, isTypeNode)),
+      nodeVisitor(node.pattern, visitor, isTypeNode),
       Debug.checkDefined(nodeVisitor(node.result, visitor, isExpression)),
+      nodeVisitor(node.variant, visitor, isIdentifier),
+      nodesVisitor(node.parameters, visitor, isParameter),
     );
   },
 
@@ -1566,7 +1569,7 @@ const visitEachChildTable: VisitEachChildTable = {
     const modifiers = nodesVisitor(node.modifiers, visitor, isModifierLike);
     const name = Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier));
     const typeParameters = nodesVisitor(node.typeParameters, visitor, isTypeParameterDeclaration);
-    const kindType = nodeVisitor(node.kindType, visitor, isKindNode);
+    const kindType = nodeVisitor(node.kindType, visitor, node => isKindNode(node) || isTypeNode(node));
     const type = Debug.checkDefined(nodeVisitor(node.type, visitor, isTypeNode));
     return context.factory.updateTypeAliasDeclaration(
       node,

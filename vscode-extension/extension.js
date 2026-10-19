@@ -149,27 +149,12 @@ async function activate(context) {
     let expansions = [];
     let artifacts = [];
     try {
-      const ts = require(typescriptPath);
-      const configPath = ts.findConfigFile(path.dirname(document.fileName), ts.sys.fileExists, "tsppconfig.json");
-      if (!configPath) return { expansions, artifacts };
-      const config = ts.readConfigFile(configPath, ts.sys.readFile);
-      if (config.error) return { expansions, artifacts };
-      const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(configPath), /*existingOptions*/ undefined, configPath);
-      const host = ts.createCompilerHost(parsed.options);
-      const originalGetSourceFile = host.getSourceFile.bind(host);
-      host.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
-        const openDocument = vscode.workspace.textDocuments.find(candidate => candidate.uri.scheme === "file" && samePath(fileName, candidate.fileName));
-        if (openDocument) {
-          return ts.createSourceFile(fileName, openDocument.getText(), languageVersionOrOptions, /*setParentNodes*/ true, ts.ScriptKind.TS);
-        }
-        return originalGetSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
-      };
-      const rootNames = parsed.fileNames.some(fileName => samePath(fileName, document.fileName))
-        ? parsed.fileNames
-        : [...parsed.fileNames, document.fileName];
-      const program = await ts.createProgramAsync({ rootNames, options: parsed.options, host });
+      const loaded = await createOpenDocumentProgram(document);
+      if (!loaded) return { expansions, artifacts };
+      const { ts, program } = loaded;
       expansions = program.getMacroExpansions?.(document.fileName) || [];
       artifacts = program.getVerificationArtifacts?.(document.fileName) || [];
+      return { expansions, artifacts, ts, program };
     }
     catch {
       // Keep previews unavailable while the source is incomplete.
@@ -177,9 +162,62 @@ async function activate(context) {
     return { expansions, artifacts };
   }
 
-  async function expansionAt(document, position) {
+  function normalizedTypeAt(document, position, analysis) {
+    const { ts, program } = analysis;
+    if (!ts || !program) return undefined;
+    const sourceFile = program.getSourceFile(document.fileName);
+    if (!sourceFile) return undefined;
     const offset = document.offsetAt(position);
-    return (await getMacroExpansions(document)).find(expansion => expansion.start <= offset && offset <= expansion.start + expansion.length);
+    const token = ts.getTokenAtPosition(sourceFile, offset);
+    const checker = program.getTypeChecker();
+    let typeNode;
+
+    if (ts.isIdentifier(token)) {
+      const declaration = ts.isTypeAliasDeclaration(token.parent) && token.parent.name === token
+        ? token.parent
+        : checker.getSymbolAtLocation(token)?.declarations?.find(ts.isTypeAliasDeclaration);
+      if (declaration) {
+        typeNode = declaration.type;
+      }
+    }
+    if (!typeNode) {
+      let candidate = token;
+      while (candidate.parent && !ts.isTypeNode(candidate)) candidate = candidate.parent;
+      if (ts.isTypeNode(candidate)) typeNode = candidate;
+    }
+    if (!typeNode) return undefined;
+
+    const type = checker.getTypeAtLocation(typeNode);
+    const normalized = checker.getNormalizedTypeAtLocation?.(typeNode)
+      ?? checker.typeToString(type, typeNode, ts.TypeFormatFlags.NoTruncation | ts.TypeFormatFlags.InTypeAlias);
+    const source = typeNode.getText(sourceFile);
+    if (source.replace(/\s+/g, " ").trim() === normalized.replace(/\s+/g, " ").trim()) return undefined;
+    const classification = checker.getTypeClassificationAtLocation?.(typeNode)
+      ?? { label: "Kind", text: checker.getKindAtLocation?.(typeNode) || "Type0" };
+    return {
+      classification,
+      normalized,
+      range: new vscode.Range(document.positionAt(token.getStart(sourceFile)), document.positionAt(token.end)),
+    };
+  }
+
+  async function createOpenDocumentProgram(document) {
+    const ts = require(typescriptPath);
+    const configPath = ts.findConfigFile(path.dirname(document.fileName), ts.sys.fileExists, "tsppconfig.json");
+    if (!configPath) return undefined;
+    const config = ts.readConfigFile(configPath, ts.sys.readFile);
+    if (config.error) return undefined;
+    const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(configPath), /*existingOptions*/ undefined, configPath);
+    const host = ts.createCompilerHost(parsed.options);
+    const originalGetSourceFile = host.getSourceFile.bind(host);
+    host.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
+      const openDocument = vscode.workspace.textDocuments.find(candidate => candidate.uri.scheme === "file" && samePath(fileName, candidate.fileName));
+      if (openDocument) return ts.createSourceFile(fileName, openDocument.getText(), languageVersionOrOptions, /*setParentNodes*/ true, ts.ScriptKind.TS);
+      return originalGetSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+    };
+    const rootNames = parsed.fileNames.some(fileName => samePath(fileName, document.fileName)) ? parsed.fileNames : [...parsed.fileNames, document.fileName];
+    const program = await ts.createProgramAsync({ rootNames, options: parsed.options, host });
+    return { ts, program };
   }
 
   const macroSelector = { language: "tspp", scheme: "file", pattern: "**/*.tspp" };
@@ -199,7 +237,6 @@ async function activate(context) {
       return smtDocuments.get(uri.toString()) || "";
     },
   };
-
   async function createExpandedSource(document) {
     let text = document.getText();
     const expansions = [...await getMacroExpansions(document)].sort((left, right) => right.start - left.start);
@@ -216,21 +253,38 @@ async function activate(context) {
     vscode.workspace.registerTextDocumentContentProvider("tspp-smt", smtDocumentProvider),
     vscode.languages.registerHoverProvider(macroSelector, {
       async provideHover(document, position) {
-        const expansion = await expansionAt(document, position);
-        if (!expansion) return undefined;
+        const offset = document.offsetAt(position);
+        const analysis = await getDocumentAnalysis(document);
+        const expansion = analysis.expansions.find(candidate => candidate.start <= offset && offset <= candidate.start + candidate.length);
+        const artifacts = analysis.artifacts;
+        const artifact = artifacts.find(candidate => candidate.start <= offset && offset <= candidate.start + candidate.length);
+        const normalizedType = normalizedTypeAt(document, position, analysis);
+        if (!expansion && !artifact && !normalizedType) return undefined;
         const markdown = new vscode.MarkdownString();
-        markdown.appendMarkdown(`**TS++ macro expansion: \`${expansion.macroName}\`**\n\n`);
-        if (expansion.text.trim()) {
-          markdown.appendCodeblock(expansion.text, "typescript");
+        if (expansion) {
+          markdown.appendMarkdown(`**TS++ macro expansion: \`${expansion.macroName}\`**\n\n`);
+          if (expansion.text.trim()) markdown.appendCodeblock(expansion.text, "typescript");
+          else markdown.appendMarkdown("This is a validation-only macro; it emits no statements.");
         }
-        else {
-          markdown.appendMarkdown("This is a validation-only macro; it emits no statements.");
+        if (artifact) {
+          if (expansion) markdown.appendMarkdown("\n\n---\n\n");
+          const icon = artifact.status === "proved" ? "✓" : artifact.status === "failed" ? "✗" : "?";
+          markdown.appendMarkdown(`**${icon} TS++ verification: ${artifact.status}**\n\n${artifact.message}`);
+          if (artifact.counterexample) markdown.appendMarkdown(`\n\n**Counterexample**\n\n\`${artifact.counterexample.replaceAll("`", "\\`")}\``);
         }
+        if (normalizedType) {
+          if (expansion || artifact) markdown.appendMarkdown("\n\n---\n\n");
+          const normalized = normalizedType.normalized.replace(/\s+/g, " ").trim().replaceAll("`", "\\`");
+          markdown.appendMarkdown(`Normalized: \`${normalized}\` · ${normalizedType.classification.label}: \`${normalizedType.classification.text}\``);
+        }
+        if (normalizedType && !expansion && !artifact) return new vscode.Hover(markdown, normalizedType.range);
+        const start = expansion?.start ?? artifact.start;
+        const length = expansion?.length ?? artifact.length;
         return new vscode.Hover(
           markdown,
           new vscode.Range(
-            document.positionAt(expansion.start),
-            document.positionAt(expansion.start + expansion.length),
+            document.positionAt(start),
+            document.positionAt(start + length),
           ),
         );
       },

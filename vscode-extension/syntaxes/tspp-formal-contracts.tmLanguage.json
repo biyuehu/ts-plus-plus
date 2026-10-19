@@ -4,6 +4,12 @@
   "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string",
   "patterns": [
     {
+      "match": "\\b(assert|assume)\\b(?=\\s*\\()",
+      "captures": {
+        "1": { "name": "keyword.control.flow.tspp" }
+      }
+    },
+    {
       "match": "\\b(requires|ensures|invariant|predicate|numberModel|timeout)\\b(?=\\s*:)",
       "captures": {
         "1": { "name": "keyword.other.contract.tspp" }

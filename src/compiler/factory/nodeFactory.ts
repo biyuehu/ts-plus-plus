@@ -2742,9 +2742,11 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function createMlttMatchExpressionArm(pattern: TypeNode, result: Expression) {
+  function createMlttMatchExpressionArm(pattern: TypeNode | undefined, result: Expression, variant?: Identifier, parameters?: readonly ParameterDeclaration[]) {
     const node = createBaseNode<MlttMatchExpressionArm>(SyntaxKind.MlttMatchExpressionArm);
     node.pattern = pattern;
+    node.variant = variant;
+    node.parameters = parameters && createNodeArray(parameters);
     node.result = result;
     node.transformFlags = TransformFlags.ContainsTypeScript;
     node.locals = undefined;
@@ -2753,15 +2755,16 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode, result: Expression) {
-    return node.pattern !== pattern || node.result !== result
-      ? update(createMlttMatchExpressionArm(pattern, result), node)
+  function updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode | undefined, result: Expression, variant = node.variant, parameters = node.parameters) {
+    return node.pattern !== pattern || node.result !== result || node.variant !== variant || node.parameters !== parameters
+      ? update(createMlttMatchExpressionArm(pattern, result, variant, parameters), node)
       : node;
   }
 
   // @api
-  function createMlttMatchExpression(scrutinee: Expression, arms: readonly MlttMatchExpressionArm[]) {
+  function createMlttMatchExpression(scrutinee: Expression, arms: readonly MlttMatchExpressionArm[], mlttToken?: Identifier) {
     const node = createBaseNode<MlttMatchExpression>(SyntaxKind.MlttMatchExpression);
+    node.mlttToken = mlttToken;
     node.scrutinee = scrutinee;
     node.arms = createNodeArray(arms);
     node.transformFlags = TransformFlags.ContainsTypeScript;
@@ -2769,9 +2772,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function updateMlttMatchExpression(node: MlttMatchExpression, scrutinee: Expression, arms: readonly MlttMatchExpressionArm[]) {
-    return node.scrutinee !== scrutinee || node.arms !== arms
-      ? update(createMlttMatchExpression(scrutinee, arms), node)
+  function updateMlttMatchExpression(node: MlttMatchExpression, scrutinee: Expression, arms: readonly MlttMatchExpressionArm[], mlttToken = node.mlttToken) {
+    return node.scrutinee !== scrutinee || node.arms !== arms || node.mlttToken !== mlttToken
+      ? update(createMlttMatchExpression(scrutinee, arms, mlttToken), node)
       : node;
   }
 
@@ -3538,17 +3541,18 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function createReifyExpression(type: TypeNode) {
+  function createReifyExpression(type: TypeNode, reifyToken?: Identifier) {
     const node = createBaseNode<ReifyExpression>(SyntaxKind.ReifyExpression);
+    node.reifyToken = reifyToken;
     node.type = type;
-    node.transformFlags |= propagateChildFlags(type);
+    node.transformFlags |= propagateChildFlags(reifyToken) | propagateChildFlags(type);
     return node;
   }
 
   // @api
-  function updateReifyExpression(node: ReifyExpression, type: TypeNode) {
-    return node.type !== type
-      ? update(createReifyExpression(type), node)
+  function updateReifyExpression(node: ReifyExpression, type: TypeNode, reifyToken = node.reifyToken) {
+    return node.type !== type || node.reifyToken !== reifyToken
+      ? update(createReifyExpression(type, reifyToken), node)
       : node;
   }
 
@@ -3562,9 +3566,15 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
 
   // @api
   function updateVoidExpression(node: VoidExpression, expression: Expression) {
-    return node.expression !== expression
+    const updated = node.expression !== expression
       ? update(createVoidExpression(expression), node)
       : node;
+    if (updated !== node) {
+      (updated as Mutable<VoidExpression>).tsppKeywordToken = node.tsppKeywordToken;
+      (updated as Mutable<VoidExpression>).tsppAssert = node.tsppAssert;
+      (updated as Mutable<VoidExpression>).tsppAssume = node.tsppAssume;
+    }
+    return updated;
   }
 
   // @api
@@ -4756,7 +4766,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     name: string | Identifier,
     typeParameters: readonly TypeParameterDeclaration[] | undefined,
     type: TypeNode,
-    kindType?: KindNode,
+    kindType?: KindNode | TypeNode,
     withClause?: WithClause,
   ) {
     const node = createBaseDeclaration<TypeAliasDeclaration>(SyntaxKind.TypeAliasDeclaration);
@@ -4781,7 +4791,7 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     name: Identifier,
     typeParameters: readonly TypeParameterDeclaration[] | undefined,
     type: TypeNode,
-    kindType?: KindNode,
+    kindType?: KindNode | TypeNode,
     withClause?: WithClause,
   ) {
     if (arguments.length < 6) kindType = node.kindType;

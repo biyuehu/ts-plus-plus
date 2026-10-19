@@ -63,6 +63,13 @@ data List<T> = Nil | Cons(head: T, tail: List<T>);
 const emptyList: List<number> = Nil;
 const singleItem: List<number> = Cons(1, Nil);
 
+// value-level match 会检查构造器是否穷尽，并把字段绑定到分支局部变量。
+declare const maybe: Option<number>;
+const selected: number = match maybe {
+  None => 0,
+  Some(value) => value,
+};
+
 // 每个变体是值，不能直接作为独立类型使用，得通过 typeof。
 const extracted: typeof Nil = Nil;
 const tag: "Nil" = extracted._tag;
@@ -83,7 +90,7 @@ const error: typeof Nil = { _tag: "Nil" as const };
 // 品牌属性不会出现在 keyof、诊断消息或 hover 中。
 const keys: "x" | "y" = "x" satisfies keyof Point;
 
-export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, nothing, rightArm, singleItem, something, tag };
+export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, nothing, rightArm, selected, singleItem, something, tag };
 export type { Either, List, Option, OrderId, Point, Some, StringOrNumber, UserId };
 
 

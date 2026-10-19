@@ -105,6 +105,61 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.include(message, "Counterexample: x = 0");
   });
 
+  it("proves and erases local assert proof points", async () => {
+    const { fs, program } = await createProgram(`
+      function increment(x: bigint) with { requires: x >= 0n; }: bigint {
+        const next = x + 1n;
+        assert(next > 0n);
+        return next;
+      }
+    `);
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.kind, "assertion");
+    assert.equal(artifact.obligation, "assertion");
+    assert.equal(artifact.status, "proved");
+    assert.isEmpty(program.getSemanticDiagnostics());
+    program.emit();
+    assert.notInclude(fs.readFileSync("/file.js").toString(), "assert");
+  });
+
+  it("uses and erases trusted local assumptions", async () => {
+    const { fs, program } = await createProgram(`
+      function incrementFromTrustedInput(x: bigint): bigint {
+        assume(x >= 0n);
+        const next = x + 1n;
+        assert(next > 0n);
+        return next;
+      }
+    `);
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.kind, "assertion");
+    assert.equal(artifact.status, "proved");
+    assert.isEmpty(program.getSemanticDiagnostics());
+    const sourceFile = program.getSourceFile("/file.tspp")!;
+    const functionBody = (sourceFile.statements[0] as ts.FunctionDeclaration).body!;
+    const assume = (functionBody.statements[0] as ts.ExpressionStatement).expression;
+    const assumeChildren = assume.getChildren(sourceFile);
+    assert.strictEqual(assumeChildren[0].kind, ts.SyntaxKind.Identifier);
+    assert.strictEqual(assumeChildren[0].getText(sourceFile), "assume");
+    program.emit();
+    const output = fs.readFileSync("/file.js").toString();
+    assert.notInclude(output, "assume");
+    assert.notInclude(output, "assert");
+  });
+
+  it("reports a source-level counterexample for a false assert", async () => {
+    const { fileName, program } = await createProgram(`
+      function positive(x: bigint): bigint {
+        assert(x > 0n);
+        return x;
+      }
+    `);
+    const [artifact] = program.getVerificationArtifacts!();
+    assert.equal(artifact.status, "failed");
+    assert.equal(program.getSourceFile(fileName)!.text.slice(artifact.start, artifact.start + artifact.length), "x > 0n");
+    assert.include(artifact.counterexample!, "x =");
+  });
+
   it("supports standard predicates only in verification contexts", async () => {
     const { program } = await createProgram(
       `

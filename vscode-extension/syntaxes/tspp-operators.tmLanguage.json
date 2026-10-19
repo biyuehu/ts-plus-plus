@@ -1,0 +1,17 @@
+{
+  "name": "TS++ Operator Isolation",
+  "scopeName": "tspp.operators",
+  "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string",
+  "patterns": [
+    {
+      "comment": "TS++ arrows are isolated from angle-bracket pair colorization.",
+      "name": "meta.embedded.inline.tspp-operator storage.type.function.arrow.ts",
+      "match": "=>>|=>|->"
+    },
+    {
+      "comment": "Only unambiguous multi-character comparisons are isolated; bare angle brackets remain contextual.",
+      "name": "meta.embedded.inline.tspp-operator keyword.operator.comparison.ts",
+      "match": "===|!==|==|!=|<=|>="
+    }
+  ]
+}

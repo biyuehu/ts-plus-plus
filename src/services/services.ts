@@ -2327,24 +2327,24 @@ export function createLanguageService(
     return Completions.getCompletionEntrySymbol(program, log, getValidSourceFile(fileName), position, { name, source }, host, preferences);
   }
 
-  const mlttBuiltinQuickInfo: Record<string, { display: string; doc?: string; }> = {
-    Nat: { display: "type Nat: Type0\nNatural numbers", doc: "The MLTT natural number type." },
-    Zero: { display: "type Zero: Nat = 0", doc: "The base constructor for Nat (0)." },
-    Succ: { display: "type Succ<N: Nat>: Nat", doc: "The successor constructor for Nat (N + 1)." },
-    NatAdd: { display: "type NatAdd<A: Nat, B: Nat>: Nat", doc: "Compile-time addition of natural numbers." },
-    NatElim: { display: "type NatElim<P: (n: Nat) -> Type0, z: P<Zero>, s: (n: Nat) -> (prev: P<n>) -> P<Succ<n>>, n: Nat>: P<n>", doc: "Mathematical induction / primitive recursion for natural numbers." },
-    Bool: { display: "type Bool: Type0 = boolean", doc: "The MLTT boolean type." },
-    True: { display: "type True: Bool = true", doc: "Boolean true." },
-    False: { display: "type False: Bool = false", doc: "Boolean false." },
-    BoolElim: { display: "type BoolElim<P: (b: Bool) -> Type0, t: P<True>, f: P<False>, b: Bool>: P<b>", doc: "Boolean elimination principle." },
-    If: { display: "type If<Cond: Bool, Then, Else>", doc: "Conditional type selection." },
-    Eq: { display: "type Eq<A: Type0, x: A, y: A>: Type0", doc: "MLTT propositional identity (equality) type." },
-    Refl: { display: "type Refl<A: Type0, x: A>: Eq<A, x, x>", doc: "Proof of reflexivity (x = x)." },
-    J: { display: "type J<A, C, d, x, y, p>", doc: "Path induction principle for propositional equality." },
-    Sigma: { display: "type Sigma<A: Type0, B: (x: A) -> Type0>: Type0", doc: "Dependent pair (Σ) type." },
-    Pair: { display: "type Pair<A, B, fst, snd>", doc: "Dependent pair constructor." },
-    First: { display: "type First<P>", doc: "First projection of a dependent pair." },
-    Second: { display: "type Second<P>", doc: "Second projection of a dependent pair." },
+  const mlttBuiltinQuickInfo: Record<string, string> = {
+    Nat: "type Nat: Type0",
+    Zero: "type Zero: Nat = 0",
+    Succ: "type Succ<N: Nat>: Nat",
+    NatAdd: "type NatAdd<A: Nat, B: Nat>: Nat",
+    NatElim: "type NatElim<P: (n: Nat) -> Type0, z: P<Zero>, s: (n: Nat) -> (prev: P<n>) -> P<Succ<n>>, n: Nat>: P<n>",
+    Bool: "type Bool: Type0 = boolean",
+    True: "type True: Bool = true",
+    False: "type False: Bool = false",
+    BoolElim: "type BoolElim<P: (b: Bool) -> Type0, t: P<True>, f: P<False>, b: Bool>: P<b>",
+    If: "type If<Cond: Bool, Then, Else>",
+    Eq: "type Eq<A: Type0, x: A, y: A>: Type0",
+    Refl: "type Refl<A: Type0, x: A>: Eq<A, x, x>",
+    J: "type J<A, C, d, x, y, p>",
+    Sigma: "type Sigma<A: Type0, B: (x: A) -> Type0>: Type0",
+    Pair: "type Pair<A, B, fst, snd>",
+    First: "type First<P>",
+    Second: "type Second<P>",
   };
 
   function getNodeTextSafe(n: Node, sf: SourceFile): string {
@@ -2450,9 +2450,7 @@ export function createLanguageService(
             { text: " ", kind: SymbolDisplayPartKind[SymbolDisplayPartKind.space] },
             { text: `Type${nextLevel}`, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.aliasName] },
           ],
-          documentation: level !== undefined
-            ? [{ text: `Universe level ${level}.`, kind: "text" }]
-            : [{ text: "The base universe Type (equivalent to Type0).", kind: "text" }],
+          documentation: undefined,
           tags: undefined,
         };
       }
@@ -2464,9 +2462,9 @@ export function createLanguageService(
           kindModifiers: ScriptElementKindModifier.none,
           textSpan: createTextSpanFromNode(targetNode, sf),
           displayParts: [
-            { text: builtin.display, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.text] },
+            { text: builtin, kind: SymbolDisplayPartKind[SymbolDisplayPartKind.text] },
           ],
-          documentation: builtin.doc ? [{ text: builtin.doc, kind: "text" }] : undefined,
+          documentation: undefined,
           tags: undefined,
         };
       }

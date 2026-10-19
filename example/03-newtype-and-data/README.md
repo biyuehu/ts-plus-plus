@@ -60,6 +60,16 @@ data List<T> = Nil | Cons(head: T, tail: List<T>);
 const singleItem: List<number> = Cons(1, Nil);
 ```
 
+值层 `match` 会按构造器绑定字段，并检查所有变体是否都已覆盖：
+
+```tspp
+declare const maybe: Option<number>;
+const selected = match maybe {
+  None => 0,
+  Some(value) => value,
+};
+```
+
 ## 名义性与边界
 
 两种声明的名义性都由编译器内部的品牌属性实现。品牌不会出现在：

@@ -84,6 +84,24 @@ describe("unittests:: tspp:: newtype and data", () => {
       assert.include(output, "export newtype Box<T>: Type = T[];");
       assert.include(output, "export data Option<T>: Type = None | Some(value: T);");
     });
+
+    it("lowers value matches to a single-evaluation tag dispatch", () => {
+      const output = ts.transpileModule(
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        declare const result: Result<number>;
+        const selected = match result { Ok(value) => value, Err(error) => error };
+        `,
+        {
+          fileName: "file.tspp",
+          compilerOptions: { target: ts.ScriptTarget.ES2022, tsppFeatures: ["dataDeclarations"] },
+        },
+      ).outputText;
+      assert.include(output, '._tag === "Ok"');
+      assert.match(output, /_match\w*\.value/);
+      assert.match(output, /_match\w*\.error/);
+      assert.notInclude(output, "match result");
+    });
   });
 
   describe("newtype", () => {
@@ -177,9 +195,105 @@ describe("unittests:: tspp:: newtype and data", () => {
       );
       assert.isEmpty(semanticMessages(program));
     });
+
+    it("infers constructor kinds and rejects an incompatible data result kind", () => {
+      const valid = createProgram(
+        "/valid.tspp",
+        `
+        type Apply<F: Type => Type, A> = F<A>;
+        data Option<T> = None | Some(value: T);
+        type Applied = Apply<Option, number>;
+      `,
+        { tsppFeatures: ["newtypeDeclarations", "dataDeclarations", "higherKindedTypes"] },
+      );
+      assert.isEmpty(semanticMessages(valid));
+
+      const invalid = createProgram(
+        "/invalid.tspp",
+        `data Option<T>: (Type => Type) = None | Some(value: T);`,
+        { tsppFeatures: ["newtypeDeclarations", "dataDeclarations", "higherKindedTypes"] },
+      );
+      assert.isNotEmpty(semanticMessages(invalid));
+    });
+  });
+
+  describe("value match", () => {
+    it("types a pattern binding independently of match checking in the language service", () => {
+      const fileName = "/file.tspp";
+      const source = `
+        data Option<T> = None | Some(value: T);
+        declare const maybe: Option<number>;
+        const selected: number = match maybe {
+          None => 0,
+          Some(value) => value,
+        };
+      `;
+      const host: ts.LanguageServiceHost = {
+        getCompilationSettings: () => ({ noLib: true, strict: true, tsppFeatures: ["dataDeclarations"] }),
+        getScriptFileNames: () => [fileName],
+        getScriptVersion: () => "1",
+        getScriptSnapshot: name => name === fileName ? ts.ScriptSnapshot.fromString(source) : undefined,
+        getCurrentDirectory: () => "/",
+        getDefaultLibFileName: () => "/lib.d.ts",
+        fileExists: name => name === fileName,
+        readFile: name => name === fileName ? source : undefined,
+        readDirectory: () => [],
+      };
+      const service = ts.createLanguageService(host);
+      const bindingPosition = source.indexOf("value) =>");
+      const info = service.getQuickInfoAtPosition(fileName, bindingPosition);
+
+      assert.include(ts.displayPartsToString(info?.displayParts), "value: number");
+      assert.isEmpty(service.getSemanticDiagnostics(fileName));
+    });
+
+    it("binds data fields and infers the union of branch results", () => {
+      const program = createProgram(
+        "/file.tspp",
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        declare const result: Result<number>;
+        const selected: number | string = match result {
+          Ok(value) => value,
+          Err(error) => error,
+        };
+      `,
+      );
+      assert.isEmpty(semanticMessages(program));
+    });
+
+    it("reports missing, duplicate, and unknown variants", () => {
+      const missing = createProgram(
+        "/missing.tspp",
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        declare const result: Result<number>;
+        const selected = match result { Ok(value) => value };
+      `,
+      );
+      assert.match(semanticMessages(missing).join("\n"), /Non-exhaustive.*Err/);
+
+      const invalid = createProgram(
+        "/invalid.tspp",
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        declare const result: Result<number>;
+        const selected = match result { Ok(value) => value, Ok(other) => other, Missing => 0, _ => 0 };
+      `,
+      );
+      const messages = semanticMessages(invalid).join("\n");
+      assert.match(messages, /Duplicate match branch.*Ok/);
+      assert.match(messages, /Variant 'Missing' is not part/);
+    });
   });
 
   describe("data", () => {
+    it("explains that a bare generic name is not a variant field type", () => {
+      const messages = semanticMessages(createProgram("/file.tspp", `data Maybe<T> = None | Some(T);`));
+      assert.include(messages.join("\n"), "Some(value: T)");
+      assert.include(messages.join("\n"), "field name, not a type");
+    });
+
     it("forms a union of its variants and enforces field types", () => {
       const program = createProgram(
         "/file.tspp",
@@ -507,7 +621,7 @@ describe("unittests:: tspp:: newtype and data", () => {
       );
       const messages = semanticMessages(program);
       assert.lengthOf(messages, 5, messages.join("\n"));
-      assert.isTrue(messages.every(message => /must be a required identifier with a type annotation/.test(message)), messages.join("\n"));
+      assert.isTrue(messages.every(message => /must use 'name: Type' syntax/.test(message)), messages.join("\n"));
     });
   });
 });

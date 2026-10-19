@@ -36,23 +36,9 @@
             { "include": "source.ts#type" }
           ]
         },
-        {
-          "name": "meta.embedded.inline.tspp-arrow storage.type.function.arrow.ts",
-          "match": "=>(?!>)"
-        },
         { "include": "source.ts#expression" },
         { "include": "source.ts#type" }
       ]
-    },
-    {
-      "comment": "Type-level lambda arrow: =>>",
-      "name": "meta.embedded.inline.tspp-arrow storage.type.function.arrow.ts",
-      "match": "=>>"
-    },
-    {
-      "comment": "Match arm arrow outside an MLTT match expression",
-      "name": "meta.embedded.inline.tspp-arrow storage.type.function.arrow.ts",
-      "match": "=>(?!>)"
     },
     {
       "comment": "MLTT pattern matching: match mltt",

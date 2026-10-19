@@ -4,12 +4,8 @@
   "injectionSelector": "L:meta.type.declaration.ts -comment -string, L:meta.type.annotation.ts -comment -string, L:meta.type -comment -string",
   "patterns": [
     {
-      "name": "meta.embedded.inline.tspp-arrow storage.type.function.arrow.ts",
-      "match": "->"
-    },
-    {
-      "name": "meta.embedded.inline.tspp-arrow storage.type.function.arrow.ts",
-      "match": "=>(?=[^=;\\r\\n]*=(?!=|>))"
+      "name": "support.type.builtin.tspp",
+      "match": "\\b(?:Prop|Type(?:[0-9]+)?)\\b"
     }
   ]
 }

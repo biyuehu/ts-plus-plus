@@ -8612,7 +8612,7 @@
     "category": "Error",
     "code": 18075
   },
-  "A data variant field must be a required identifier with a type annotation.": {
+  "A data variant field must use 'name: Type' syntax (for example, 'Some(value: T)'); a bare 'T' is treated as a field name, not a type.": {
     "category": "Error",
     "code": 18076
   },

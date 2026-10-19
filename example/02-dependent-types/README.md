@@ -116,3 +116,37 @@ npm run emit-declarations
 `check` 也会验证 [`07-boundaries.tspp`](./src/07-boundaries.tspp) 中由 `@ts-expect-error` 保护的反例。`emit-declarations` 会在 `dist` 中按章节生成 `.d.tspp`，依赖函数语法会被保留。
 
 在仓库根目录按 `F5`，选择 **TS++: Run Example 02 — Dependent Types**，可以在 VS Code Extension Development Host 中阅读悬停结果。若 VS Code 询问是否允许工作区版本的 TypeScript，请选择 **Allow**。
+
+### 用悬浮窗查看规范形
+
+打开 [`src/01-basics.tspp`](./src/01-basics.tspp)，将鼠标悬停在
+`HoverToSeeNormalized` 类型名上。它的源码右侧写的是 `TextAlias`，别名展开后的
+规范形是 `string`，所以扩展会额外显示：
+
+```text
+Normalized: string · Kind: Type0
+```
+
+`Normalized` 表示 checker 完成透明别名展开和类型层计算后的结果。若观察的是类型，
+末尾的 `Kind` 表示它属于哪个 universe；若观察的是 term，则改为显示它的 `Type`。
+后续章节中的 `If`、`NatAdd`、
+`NatElim`、`match mltt` 和类型应用都可以用这种方式观察归约结果。
+
+如果想看一个真正包含递归计算的例子，请打开
+[`src/04-naturals.tspp`](./src/04-naturals.tspp)，悬停 `HoverComputedNat`。该 term 先用
+顶层 term `Two: Nat` 计算 `1 + 1`，再用 `NatAdd<Two, Two>` 计算 `2 + 2`，最后在
+悬浮窗中直接显示这个 Nat term 的计算结果。term alias 和 `NatAdd` 都会消失，结果为
+`Succ<Succ<Succ<Succ<Zero>>>>`（即 `4`），末尾显示 `Type: Nat`。这可以验证嵌套的
+自然数递归确实参与了规范化，而不只是展开一个普通 alias。`ComputedNatIsFour`
+另外展示了如何把同一个计算写成 `Eq` 命题；观察计算本身不需要用 `Eq` 包裹。
+
+这个额外提示不是每次悬停都会出现。它只在以下条件同时满足时显示：
+
+1. 文件是项目中的 `.tspp` 文件，Development Extension 能按 `tsppconfig.json` 成功建立程序；
+2. 光标位于类型别名名称或可查询的类型表达式上；
+3. 忽略排版空白后，源码写法与计算出的规范形不同。
+
+例如，悬停 `AlreadyNormalized` 时不会显示额外提示，因为它的源码和规范形都是
+`string`。光标位于普通值表达式上、源码暂时不完整、文件存在阻止分析的语法错误，
+或者所需实验特性没有启用时，也不会显示。没有额外的 `Normalized` 提示并不代表
+普通类型悬浮失效；语言服务器原有的类型签名和文档仍会照常显示。

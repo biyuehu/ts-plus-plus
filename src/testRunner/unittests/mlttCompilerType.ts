@@ -67,6 +67,76 @@ describe("unittests:: MLTT compiler type", () => {
     assert.isTrue(checker.isTypeAssignableTo(withGenericAlias, withStructuralBody));
   });
 
+  it("exposes fully normalized MLTT computations to editor tooling", () => {
+    const normalized = createProgram(
+      "/normalized.tspp",
+      `
+      type Computed: Type0 = Eq<
+        Nat,
+        NatAdd<Succ<Succ<Zero>>, NatAdd<Succ<Zero>, Succ<Zero>>>,
+        Succ<Succ<Succ<Succ<Zero>>>>
+      >;
+      type AlreadyNormal: Type0 = Eq<Nat, Zero, Zero>;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+    const normalizedChecker = normalized.getTypeChecker();
+    const normalizedFile = normalized.getSourceFile("/normalized.tspp")!;
+    const [computed, alreadyNormal] = normalizedFile.statements.filter(ts.isTypeAliasDeclaration);
+
+    const diagnostics = normalized.getSemanticDiagnostics();
+    assert.isEmpty(diagnostics, diagnostics.map(diagnostic => `${diagnostic.code}: ${diagnostic.messageText}`).join("\n"));
+    assert.strictEqual(
+      normalizedChecker.getNormalizedTypeAtLocation(computed.type),
+      "Eq<Nat, Succ<Succ<Succ<Succ<Zero>>>>, Succ<Succ<Succ<Succ<Zero>>>>>",
+    );
+    assert.deepEqual(normalizedChecker.getTypeClassificationAtLocation(computed.type), { label: "Kind", text: "Type0" });
+    assert.isUndefined(normalizedChecker.getNormalizedTypeAtLocation(alreadyNormal.type));
+  });
+
+  it("allows checked MLTT terms as transparent top-level aliases", () => {
+    const terms = createProgram(
+      "/top-level-terms.tspp",
+      `
+      type One: Nat = Succ<Zero>;
+      type Two = NatAdd<One, One>;
+      type Four: Nat = NatAdd<Two, Two>;
+      type Truth: Bool = True;
+      type TwoIsTwo: Eq<Nat, Two, Succ<Succ<Zero>>> = Refl<Nat, Two>;
+      type NatIdentity: (N: Nat) -> Nat = Lam<(N: Nat) -> N>;
+      type IdentityTwo: Nat = NatIdentity<Two>;
+      type Computed: Type0 = Eq<Nat, NatAdd<Two, Two>, Four>;
+      type SmallUniverse: Type1 = Type0;
+      type TextAtSmallUniverse: SmallUniverse = string;
+    `,
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+    const termsChecker = terms.getTypeChecker();
+    const termsFile = terms.getSourceFile("/top-level-terms.tspp")!;
+    const aliases = termsFile.statements.filter(ts.isTypeAliasDeclaration);
+    const diagnostics = terms.getSemanticDiagnostics();
+
+    assert.isEmpty(
+      diagnostics,
+      diagnostics.map(diagnostic => {
+        const location = termsFile.getLineAndCharacterOfPosition(diagnostic.start!);
+        return `${diagnostic.code}@${location.line + 1}:${location.character + 1}: ${diagnostic.messageText}`;
+      }).join("\n"),
+    );
+    assert.strictEqual(
+      termsChecker.getNormalizedTypeAtLocation(aliases[7].type),
+      "Eq<Nat, Succ<Succ<Succ<Succ<Zero>>>>, Succ<Succ<Succ<Succ<Zero>>>>>",
+    );
+    assert.deepEqual(termsChecker.getTypeClassificationAtLocation(aliases[2].type), { label: "Type", text: "Nat" });
+
+    const invalid = createProgram(
+      "/invalid-top-level-term.tspp",
+      "type NotABoolean: Bool = Zero;",
+      { tsppFeatures: allFeatures, noLib: true, strict: true },
+    );
+    assert.deepEqual(invalid.getSemanticDiagnostics().map(diagnostic => diagnostic.code), [18067]);
+  });
+
   it("bridges explicitly annotated TypeScript generic function signatures to Pi types", () => {
     const bridged = createProgram(
       "/bridged.tspp",
@@ -164,6 +234,18 @@ describe("unittests:: MLTT compiler type", () => {
     assert.strictEqual(runtimeChecker.typeToString(runtimeChecker.getTypeAtLocation(declarations[5].name)), '"type"');
     assert.strictEqual(runtimeChecker.typeToString(runtimeChecker.getTypeAtLocation(declarations[6].name)), "string");
 
+    const arrayConstructor = declarations[2].initializer as ts.ReifyExpression;
+    const arrayInstance = declarations[3].initializer as ts.ReifyExpression;
+    assert.isFalse(!!(runtimeChecker.getTypeAtLocation(arrayConstructor.type).flags & ts.TypeFlags.Any));
+    assert.strictEqual(runtimeChecker.getKindAtLocation(arrayConstructor.type), "Type0 => Type0");
+    assert.strictEqual(runtimeChecker.getKindAtLocation(arrayInstance.type), "Type0");
+
+    // Contextual syntax must be represented by a real child token. Otherwise the
+    // language service mistakes `reify` for an identifier hidden in node trivia.
+    const reifyChildren = declarations[1].initializer!.getChildren(runtimeFile);
+    assert.strictEqual(reifyChildren[0].kind, ts.SyntaxKind.Identifier);
+    assert.strictEqual(reifyChildren[0].getText(runtimeFile), "reify");
+
     const emitted = ts.transpileModule(
       "const primitive = reify string; const constructor = reify Array;",
       {
@@ -201,6 +283,8 @@ describe("unittests:: MLTT compiler type", () => {
     assert.isEmpty(matching.getSyntacticDiagnostics());
     const diagnostics = matching.getSemanticDiagnostics();
     assert.isEmpty(diagnostics, diagnostics.map(diagnostic => `${diagnostic.code}: ${diagnostic.messageText}`).join("\n"));
+    const matchExpression = declarations[1].initializer as ts.MlttMatchExpression;
+    assert.isFalse(!!(matchingChecker.getTypeAtLocation(matchExpression.scrutinee).flags & ts.TypeFlags.Any));
     assert.strictEqual(matchingChecker.typeToString(matchingChecker.getTypeAtLocation(declarations[1].name)), "string");
     assert.strictEqual(matchingChecker.typeToString(matchingChecker.getTypeAtLocation(declarations[2].name)), "true");
 
