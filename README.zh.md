@@ -153,7 +153,7 @@ function sumTo(n: bigint) with {
 
 每个证明义务都会得到 `proved`、`failed`、`unknown` 或 `error` 状态，任务结果还会区分取消与超时。不支持的语法以及求解器不可用都会产生 `unknown` 编译错误，绝不会伪装成证明成功。`Program.getVerificationArtifacts()` 会公开实际求解器输入、可重放的 SMT-LIB、状态、解码后的源码级反例、原始模型和源码位置。开发扩展中的 **TS++: Show Verification SMT-LIB** 命令会在源码旁一次打开当前文件的全部输入，按源码位置排序并标注对应行号。
 
-可以在被验证函数中使用 `assert(condition);` 创建局部证明义务。`assume(condition);` 则不进行证明，直接把可信条件加入后续路径事实；它适合验证器无法建模的外部边界，但错误假设会使证明失去意义。两者都会从 JavaScript 输出中擦除。在开发扩展中悬停于证明义务上，可以直接看到状态与源码级反例。
+可以在被验证函数中使用 `assert: condition;` 创建局部证明义务。`assume: condition;` 则不进行证明，直接把可信条件加入后续路径事实；它适合验证器无法建模的外部边界，但错误假设会使证明失去意义。`assert:`/`assume:` 语句形式保留给证明指令，因此用户自定义的 `assert` 或 `assume` 函数在任何位置都保持普通调用语义。两者都会从 JavaScript 输出中擦除。在开发扩展中悬停于证明义务上，可以直接看到状态与源码级反例。
 
 ## 穷尽值匹配
 

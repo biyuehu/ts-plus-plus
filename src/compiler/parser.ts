@@ -6010,12 +6010,6 @@ namespace Parser {
    *      2) UpdateExpression[?Yield] ** ExponentiationExpression[?Yield]
    */
   function parseUnaryExpressionOrHigher(): UnaryExpression | BinaryExpression {
-    if (isStartOfAssertExpression()) {
-      return parseAssertExpression();
-    }
-    if (isStartOfAssumeExpression()) {
-      return parseAssumeExpression();
-    }
     if (isStartOfMlttMatchExpression()) {
       return parseMlttMatchExpression();
     }
@@ -6063,53 +6057,6 @@ namespace Parser {
       }
     }
     return simpleUnaryExpression;
-  }
-
-  function isStartOfAssertExpression(): boolean {
-    return (token() === SyntaxKind.AssertKeyword || token() === SyntaxKind.Identifier && scanner.getTokenValue() === "assert") &&
-      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp)) &&
-      lookAhead(() => {
-        nextToken();
-        return token() === SyntaxKind.OpenParenToken;
-      });
-  }
-
-  function parseAssertExpression(): VoidExpression {
-    const pos = getNodePos();
-    nextToken();
-    const operandPos = getNodePos();
-    parseExpected(SyntaxKind.OpenParenToken);
-    const expression = parseExpression();
-    parseExpected(SyntaxKind.CloseParenToken);
-    const operand = finishNode(factory.createParenthesizedExpression(expression), operandPos) as UnaryExpression;
-    const node = factory.createVoidExpression(operand) as Mutable<VoidExpression>;
-    node.tsppAssert = true;
-    node.transformFlags |= TransformFlags.ContainsTypeScript;
-    return finishNode(node, pos);
-  }
-
-  function isStartOfAssumeExpression(): boolean {
-    return token() === SyntaxKind.Identifier && scanner.getTokenValue() === "assume" &&
-      (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp)) &&
-      lookAhead(() => {
-        nextToken();
-        return token() === SyntaxKind.OpenParenToken;
-      });
-  }
-
-  function parseAssumeExpression(): VoidExpression {
-    const pos = getNodePos();
-    const assumeToken = parseIdentifier();
-    const operandPos = getNodePos();
-    parseExpected(SyntaxKind.OpenParenToken);
-    const expression = parseExpression();
-    parseExpected(SyntaxKind.CloseParenToken);
-    const operand = finishNode(factory.createParenthesizedExpression(expression), operandPos) as UnaryExpression;
-    const node = factory.createVoidExpression(operand) as Mutable<VoidExpression>;
-    node.tsppKeywordToken = assumeToken;
-    node.tsppAssume = true;
-    node.transformFlags |= TransformFlags.ContainsTypeScript;
-    return finishNode(node, pos);
   }
 
   function isStartOfReifyExpression(): boolean {
@@ -7508,6 +7455,41 @@ namespace Parser {
     return withJSDoc(finishNode(factory.createDebuggerStatement(), pos), hasJSDoc);
   }
 
+  /**
+   * Proof directives are recognized at statement level from the unambiguous shape
+   * `assert: <condition>;` / `assume: <condition>;`. The label-like form cannot collide with user
+   * functions named `assert` or `assume` (those keep working as ordinary calls, trailing commas
+   * included), and a `{` after the colon keeps the stock labeled-statement reading because labels
+   * on blocks and loops are the only labels a `break` can actually reference.
+   */
+  function isStartOfProofDirectiveStatement(label: Identifier): boolean {
+    const name = idText(label);
+    if (name !== "assert" && name !== "assume") return false;
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    return !scanner.hasPrecedingLineBreak() && token() !== SyntaxKind.OpenBraceToken && isStartOfExpression();
+  }
+
+  function parseProofDirectiveStatement(pos: number, hasJSDoc: boolean, isAssumption: boolean, directiveToken: Identifier): ExpressionStatement {
+    const conditionPos = getNodePos();
+    const condition = allowInAnd(parseExpression);
+    const operandPos = conditionPos;
+    const operand = finishNode(factoryCreateParenthesizedExpression(condition), operandPos);
+    const directive = factory.createVoidExpression(operand) as Mutable<VoidExpression>;
+    directive.tsppKeywordToken = directiveToken;
+    if (isAssumption) {
+      directive.tsppAssume = true;
+    }
+    else {
+      directive.tsppAssert = true;
+    }
+    directive.transformFlags |= TransformFlags.ContainsTypeScript;
+    const expression = finishNode(directive, pos);
+    if (!tryParseSemicolon()) {
+      parseErrorForMissingSemicolonAfter(expression);
+    }
+    return withJSDoc(finishNode(factoryCreateExpressionStatement(expression), pos), hasJSDoc);
+  }
+
   function parseExpressionOrLabeledStatement(): ExpressionStatement | LabeledStatement {
     // Avoiding having to do the lookahead for a labeled statement by just trying to parse
     // out an expression, seeing if it is identifier and then seeing if it is followed by
@@ -7518,6 +7500,9 @@ namespace Parser {
     const hasParen = token() === SyntaxKind.OpenParenToken;
     const expression = allowInAnd(parseExpression);
     if (isIdentifierNode(expression) && parseOptional(SyntaxKind.ColonToken)) {
+      if (isStartOfProofDirectiveStatement(expression)) {
+        return parseProofDirectiveStatement(pos, hasJSDoc, idText(expression) === "assume", expression);
+      }
       node = factory.createLabeledStatement(expression, parseStatement());
     }
     else {

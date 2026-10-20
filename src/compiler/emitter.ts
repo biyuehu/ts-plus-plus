@@ -3085,6 +3085,8 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
   function emitVoidExpression(node: VoidExpression) {
     if (node.tsppAssert || node.tsppAssume) {
       write(node.tsppAssume ? "assume" : "assert");
+      writePunctuation(":");
+      writeSpace();
       emit(node.expression);
       return;
     }

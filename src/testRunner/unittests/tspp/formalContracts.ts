@@ -109,7 +109,7 @@ describe("unittests:: tspp:: formal contracts", () => {
     const { fs, program } = await createProgram(`
       function increment(x: bigint) with { requires: x >= 0n; }: bigint {
         const next = x + 1n;
-        assert(next > 0n);
+        assert: next > 0n;
         return next;
       }
     `);
@@ -125,9 +125,9 @@ describe("unittests:: tspp:: formal contracts", () => {
   it("uses and erases trusted local assumptions", async () => {
     const { fs, program } = await createProgram(`
       function incrementFromTrustedInput(x: bigint): bigint {
-        assume(x >= 0n);
+        assume: x >= 0n;
         const next = x + 1n;
-        assert(next > 0n);
+        assert: next > 0n;
         return next;
       }
     `);
@@ -150,7 +150,7 @@ describe("unittests:: tspp:: formal contracts", () => {
   it("reports a source-level counterexample for a false assert", async () => {
     const { fileName, program } = await createProgram(`
       function positive(x: bigint): bigint {
-        assert(x > 0n);
+        assert: x > 0n;
         return x;
       }
     `);
@@ -158,6 +158,38 @@ describe("unittests:: tspp:: formal contracts", () => {
     assert.equal(artifact.status, "failed");
     assert.equal(program.getSourceFile(fileName)!.text.slice(artifact.start, artifact.start + artifact.length), "x > 0n");
     assert.include(artifact.counterexample!, "x =");
+  });
+
+  it("keeps calls to a user-defined assert as ordinary function calls", async () => {
+    const { program } = await createProgram(`
+      function assert(condition: unknown, message?: string): void {}
+      function check(x: number) {
+        assert(
+          x > 0,
+        );
+        return x;
+      }
+    `);
+    assert.isEmpty(program.getSemanticDiagnostics());
+    const sourceFile = program.getSourceFile("/file.tspp")!;
+    const functionBody = (sourceFile.statements[1] as ts.FunctionDeclaration).body!;
+    const call = (functionBody.statements[0] as ts.ExpressionStatement).expression;
+    assert.isTrue(ts.isCallExpression(call), "expected an ordinary call, not a proof directive");
+  });
+
+  it("still parses a labeled statement when the colon is followed by a block", async () => {
+    const { program } = await createProgram(`
+      function check(x: number) {
+        assert: {
+          break assert;
+        }
+        return x;
+      }
+    `);
+    assert.isEmpty(program.getSemanticDiagnostics());
+    const sourceFile = program.getSourceFile("/file.tspp")!;
+    const functionBody = (sourceFile.statements[0] as ts.FunctionDeclaration).body!;
+    assert.isTrue(ts.isLabeledStatement(functionBody.statements[0]));
   });
 
   it("supports standard predicates only in verification contexts", async () => {
