@@ -92,7 +92,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build compiler
-        run: npx hereby tsc
+        run: npx hereby local
       - name: Check examples
         run: |
           status=0
