@@ -3210,8 +3210,16 @@ function parseJsonConfigFileContentWorker(
 
   function getFileNames(basePath: string): string[] {
     const fileNames = getFileNamesFromConfigSpecs(configFileSpecs, basePath, options, host, extraFileExtensions);
-    if (shouldReportNoInputFiles(fileNames, canJsonReportNoInputFiles(raw), resolutionStack)) {
-      errors.push(getErrorForNoInputFiles(configFileSpecs, configFileName));
+    if (fileNames.length === 0 && (!resolutionStack || resolutionStack.length === 0)) {
+      // Even configs whose raw form suppresses the generic "no inputs" error (a "references"
+      // or "files" property is present) must not stay silent when the include patterns only
+      // fail because '.tspp' inputs are being ignored, so this check runs unconditionally.
+      if (configHasIgnoredTsppInputs(configFileSpecs, basePath, host)) {
+        errors.push(createCompilerDiagnostic(Diagnostics.No_inputs_were_found_in_config_file_0_The_include_patterns_match_tspp_files_but_tspp_inputs_are_only_enabled_when_the_config_file_is_named_tsppconfig_json_or_the_tsppFeatures_option_is_set, configFileName || "tsconfig.json"));
+      }
+      else if (shouldReportNoInputFiles(fileNames, canJsonReportNoInputFiles(raw), resolutionStack)) {
+        errors.push(getErrorForNoInputFiles(configFileSpecs, configFileName));
+      }
     }
     return fileNames;
   }
@@ -3375,7 +3383,8 @@ function getSubstitutedMapLikeOfStringArrayWithConfigDirTemplate(mapLike: MapLik
 }
 
 function isErrorNoInputFiles(error: Diagnostic) {
-  return error.code === Diagnostics.No_inputs_were_found_in_config_file_0_Specified_include_paths_were_1_and_exclude_paths_were_2.code;
+  return error.code === Diagnostics.No_inputs_were_found_in_config_file_0_Specified_include_paths_were_1_and_exclude_paths_were_2.code
+    || error.code === Diagnostics.No_inputs_were_found_in_config_file_0_The_include_patterns_match_tspp_files_but_tspp_inputs_are_only_enabled_when_the_config_file_is_named_tsppconfig_json_or_the_tsppFeatures_option_is_set.code;
 }
 
 function getErrorForNoInputFiles({ includeSpecs, excludeSpecs }: ConfigFileSpecs, configFileName: string | undefined) {
@@ -3384,6 +3393,23 @@ function getErrorForNoInputFiles({ includeSpecs, excludeSpecs }: ConfigFileSpecs
     configFileName || "tsconfig.json",
     JSON.stringify(includeSpecs || []),
     JSON.stringify(excludeSpecs || []),
+  );
+}
+
+/**
+ * Detects that the config's include or file specs would pick up TS++ '.tspp' inputs that are being
+ * silently ignored because TS++ language features are not activated for this project (see
+ * `getSupportedExtensions`). Used to turn the generic "no inputs" error into an actionable one.
+ */
+function configHasIgnoredTsppInputs(configFileSpecs: ConfigFileSpecs, basePath: string, host: ParseConfigHost): boolean {
+  const { validatedFilesSpec, validatedIncludeSpecs, validatedExcludeSpecs } = configFileSpecs;
+  if (validatedIncludeSpecs) {
+    if (host.readDirectory(basePath, [Extension.Tspp, Extension.Dtspp], validatedExcludeSpecs, validatedIncludeSpecs, /*depth*/ undefined).length > 0) {
+      return true;
+    }
+  }
+  return !!validatedFilesSpec?.some(
+    fileName => (endsWith(fileName, Extension.Tspp) || endsWith(fileName, Extension.Dtspp)) && host.fileExists(getNormalizedAbsolutePath(fileName, basePath)),
   );
 }
 
