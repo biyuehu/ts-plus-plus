@@ -1,10 +1,10 @@
 // `assume` trusts a condition without asking Z3 to prove it. The condition is
 // available to later assertions and postconditions on the same control-flow path.
 export function incrementFromTrustedInput(value: bigint): bigint {
-  assume(value >= 0n);
+  assume: value >= 0n;
 
   const next = value + 1n;
-  assert(next > 0n);
+  assert: next > 0n;
   return next;
 }
 
@@ -15,6 +15,6 @@ export function incrementWithCheckedCaller(value: bigint) with {
   requires: value >= 0n;
 }: bigint {
   const next = value + 1n;
-  assert(next > 0n);
+  assert: next > 0n;
   return next;
 }

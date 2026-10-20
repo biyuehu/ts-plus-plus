@@ -43,15 +43,16 @@ function successor(value: bigint) with {
 
 ## 局部 `assert` 与 `assume`
 
-`assert(condition)` 要求 Z3 根据当前路径事实证明条件；证明成功后，该条件也会成为后续语句的事实。
-`assume(condition)` 不要求证明，直接把条件加入当前路径事实。两者都只允许出现在函数内，并从生成的
+`assert: condition;` 要求 Z3 根据当前路径事实证明条件；证明成功后，该条件也会成为后续语句的事实。
+`assume: condition;` 不要求证明，直接把条件加入当前路径事实。这种 `assert:`/`assume:` 语句形式保留给证明指令，
+因此用户自定义的 `assert` 或 `assume` 函数在任何位置都保持普通调用语义。两者都只允许出现在函数内，并从生成的
 JavaScript 中擦除：
 
 ```ts
 function increment(value: bigint): bigint {
-  assume(value >= 0n); // 可信输入边界；这里不会产生证明义务
+  assume: value >= 0n; // 可信输入边界；这里不会产生证明义务
   const next = value + 1n;
-  assert(next > 0n);  // 利用前面的假设进行证明
+  assert: next > 0n;  // 利用前面的假设进行证明
   return next;
 }
 ```
