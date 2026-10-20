@@ -82,6 +82,27 @@ jobs:
       - name: TS++ unit tests
         run: "npx hereby runtests --tests 'unittests:: (MLTT|tspp::)' --lint=false"
 
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build compiler
+        run: npx hereby tsc
+      - name: Check examples
+        run: |
+          status=0
+          for config in example/*/tsppconfig.json; do
+            dir=$(dirname "$config")
+            echo "Checking $dir"
+            (cd "$dir" && node ../../built/local/tsc.js --project tsppconfig.json) || status=1
+          done
+          exit $status
+
   # baselines:
   #   runs-on: ubuntu-latest
   #   steps:
