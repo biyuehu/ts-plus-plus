@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/biyuehu/ts-plus-plus.git",
+    "url": "git+https://github.com/tspp-lang/tspp.git",
     "directory": "packages/tspp-language-server"
   },
   "type": "module",

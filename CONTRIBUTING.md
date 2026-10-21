@@ -17,7 +17,7 @@ TS++ is an experimental TypeScript-derived language focused on advanced type sys
 Clone the repository and install dependencies:
 
 ```sh
-git clone https://github.com/biyuehu/ts-plus-plus.git
+git clone https://github.com/tspp-lang/tspp.git
 cd ts-plus-plus
 npm ci
 ```

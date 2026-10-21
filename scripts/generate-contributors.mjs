@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -13,71 +14,46 @@ const KNOWN_GIT_USER_MAP = {
   "lsby": "lsby",
 };
 
-const DEFAULT_BLACKLIST = new Set([
+const BOT_BLACKLIST = new Set([
   "dependabot[bot]",
   "github-actions[bot]",
+  "typescript-bot",
+  "typescript bot",
+  "typescript-bot[bot]",
 ]);
 
-function loadUpstreamBlacklist() {
-  const blacklist = new Set(DEFAULT_BLACKLIST);
-  const cachePath = path.resolve(__dirname, "upstream-contributors.json");
-  if (!fs.existsSync(cachePath)) {
-    return blacklist;
-  }
-
-  try {
-    const raw = fs.readFileSync(cachePath, "utf8");
-    const data = JSON.parse(raw);
-    for (const login of data.logins || []) {
-      blacklist.add(login.toLowerCase());
-    }
-    for (const email of data.emails || []) {
-      blacklist.add(email.toLowerCase());
-    }
-  }
-  catch {
-    // Ignore cache parse error.
-  }
-
-  return blacklist;
-}
-
-function getForkContributorsFromGit(blacklist) {
+function getContributorsFromGit() {
   const commitCounts = new Map();
 
-  let forkBase = "";
   try {
-    forkBase = execSync("git merge-base upstream/release-6.0 HEAD", { encoding: "utf8" }).trim();
-  }
-  catch {
-    try {
-      forkBase = execSync("git merge-base origin/main HEAD", { encoding: "utf8" }).trim();
-    }
-    catch {
-      forkBase = "";
-    }
-  }
+    const logOutput = execSync('git log --format="%an|%ae"', {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
+    });
 
-  const range = forkBase ? `${forkBase}..HEAD` : "HEAD";
-  try {
-    const logOutput = execSync(`git log ${range} --format="%an|%ae"`, { encoding: "utf8" });
     for (const line of logOutput.split(/\r?\n/)) {
       if (!line.trim()) continue;
       const [name, email] = line.split("|");
       const cleanName = (name || "").trim().toLowerCase();
       const cleanEmail = (email || "").trim().toLowerCase();
 
-      if (blacklist.has(cleanEmail) || blacklist.has(cleanName)) {
+      if (BOT_BLACKLIST.has(cleanEmail) || BOT_BLACKLIST.has(cleanName)) {
         continue;
       }
 
       const login = KNOWN_GIT_USER_MAP[cleanEmail] || KNOWN_GIT_USER_MAP[cleanName] || cleanName;
-      if (login && !blacklist.has(login.toLowerCase())) {
+      if (login && !BOT_BLACKLIST.has(login.toLowerCase())) {
         commitCounts.set(login, (commitCounts.get(login) || 0) + 1);
       }
     }
   }
   catch {
+    // Fallback if git command fails
+    commitCounts.set("biyuehu", 1);
+    commitCounts.set("lsby", 1);
+  }
+
+  if (commitCounts.size === 0) {
     commitCounts.set("biyuehu", 1);
     commitCounts.set("lsby", 1);
   }
@@ -223,27 +199,20 @@ async function main() {
     }
   }
 
-  const upstreamBlacklist = loadUpstreamBlacklist();
-  const gitContributors = getForkContributorsFromGit(upstreamBlacklist);
+  const gitContributors = getContributorsFromGit();
 
   let targetLogins = [];
   if (whitelist.length > 0) {
     targetLogins = whitelist.map(login => ({
       login,
-      commits: gitContributors.get(login),
+      commits: gitContributors.get(login) || 1,
     }));
   }
   else {
     const sorted = Array.from(gitContributors.entries()).sort((a, b) => b[1] - a[1]);
     for (const [login, commits] of sorted) {
-      if (!upstreamBlacklist.has(login.toLowerCase())) {
-        targetLogins.push({ login, commits });
-      }
+      targetLogins.push({ login, commits });
     }
-  }
-
-  if (targetLogins.length === 0) {
-    targetLogins = [{ login: "biyuehu" }, { login: "lsby" }];
   }
 
   const assetsDir = path.resolve(__dirname, "../assets");
@@ -259,7 +228,7 @@ async function main() {
       }
     }
     catch {
-      // Ignore cache read errors.
+      // Ignore cache read errors
     }
   }
 
@@ -268,7 +237,7 @@ async function main() {
     && targetLogins.length === Object.keys(existingCache).length
     && targetLogins.every(t => {
       const cached = existingCache[t.login.toLowerCase()];
-      return cached && cached.commits === t.commits;
+      return cached && (cached.commits || 0) === (t.commits || 0);
     });
 
   if (isUpToDate) {

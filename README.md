@@ -2,11 +2,11 @@
 
 **English** | [简体中文](README.zh.md)
 
-> The design proposal in [#](https://github.com/biyuehu/ts-plus-plus/issues/2) is for demonstration only. It is not a plan, not a TODO, and not a commitment. Treat it as a preview of a possible direction rather than a roadmap.
+> The design proposal in [#](https://github.com/tspp-lang/tspp/issues/2) is for demonstration only. It is not a plan, not a TODO, and not a commitment. Treat it as a preview of a possible direction rather than a roadmap.
 
 ts-plus-plus is an experimental TypeScript-derived language. It supports many powerful type features, extending the capabilities of TypeScript's type system, while also designing modern language features at the value level.
 
-TS++ starts from the [TypeScript 6.0.3 source snapshot at `050880ce`](https://github.com/microsoft/TypeScript/commit/050880ce59e30b356b686bd3144efe24f875ebc8). That upstream snapshot is preserved here as the root commit [`824eb723`](https://github.com/biyuehu/ts-plus-plus/commit/824eb7234d96fd5c538bdf693789399e6c758235) and tagged as `v0.0.0`. Every later commit belongs to the development of TS++.
+TS++ starts from the [TypeScript 6.0.3 source snapshot at `050880ce`](https://github.com/microsoft/TypeScript/commit/050880ce59e30b356b686bd3144efe24f875ebc8). That upstream snapshot is preserved here as the root commit [`824eb723`](https://github.com/tspp-lang/tspp/commit/824eb7234d96fd5c538bdf693789399e6c758235) and tagged as `v0.0.0`. Every later commit belongs to the development of TS++.
 
 <!-- markdownlint-disable -->
 
@@ -22,8 +22,8 @@ Language extensions are opt-in and are selected individually in `tsppconfig.json
 
 <!-- markdownlint-disable -->
 
-<a href="https://github.com/biyuehu/ts-plus-plus/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=biyuehu/ts-plus-plus" alt="Contributors" />
+<a href="https://github.com/tspp-lang/tspp/graphs/contributors">
+  <img src="assets/contributors.svg" alt="Contributors" />
 </a>
 
 <!-- markdownlint-enable -->

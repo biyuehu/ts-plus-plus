@@ -1,7 +1,7 @@
 {
   "name": "ts-plus-plus",
   "author": "",
-  "homepage": "https://github.com/biyuehu/ts-plus-plus#readme",
+  "homepage": "https://github.com/tspp-lang/tspp#readme",
   "version": "0.0.1",
   "license": "Apache-2.0",
   "description": "The experimental TS++ compiler with explicitly enabled type-system features.",
@@ -15,11 +15,11 @@
     "javascript"
   ],
   "bugs": {
-    "url": "https://github.com/biyuehu/ts-plus-plus/issues"
+    "url": "https://github.com/tspp-lang/tspp/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/biyuehu/ts-plus-plus.git"
+    "url": "https://github.com/tspp-lang/tspp.git"
   },
   "main": "./lib/typescript.js",
   "typings": "./lib/typescript.d.ts",
