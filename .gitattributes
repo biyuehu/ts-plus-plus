@@ -2,10 +2,3 @@
 *.mjs linguist-language=TypeScript
 **/*.json linguist-language=jsonc
 * -text
-
-# Exclude internal directories from GitHub language statistics
-src/** linguist-detectable=false linguist-vendored=true
-tests/** linguist-detectable=false linguist-vendored=true
-lib/** linguist-detectable=false linguist-vendored=true
-packages/** linguist-detectable=false linguist-vendored=true
-scripts/** linguist-detectable=false linguist-vendored=true
