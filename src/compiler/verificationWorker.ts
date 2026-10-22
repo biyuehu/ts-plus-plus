@@ -3,6 +3,7 @@ import {
   defaultAnalysisWorkerBudget,
 } from "./analysisTasks.js";
 import { scheduleAnalysisWorker } from "./analysisWorkerQueue.js";
+import { isNodeLikeSystem } from "./core.js";
 import {
   AnalysisTaskReason,
   CancellationToken,
@@ -103,7 +104,11 @@ async function runVerificationQueriesWorker(
   cancellationToken: CancellationToken | undefined,
 ): Promise<readonly VerificationSolverResult[]> {
   try {
-    if (typeof require !== "function") return inputs.map(() => unavailableResult("Z3 is unavailable in this runtime."));
+    // `typeof require !== "function"` is unreliable in the esbuild browser bundle:
+    // bare `require` becomes a Proxy-based shim whose typeof is still "function",
+    // so the require("node:worker_threads") below would throw a confusing
+    // "Dynamic require of ..." error instead of the clean unavailable result.
+    if (!isNodeLikeSystem()) return inputs.map(() => unavailableResult("Z3 is unavailable in this runtime."));
     const { Worker } = require("node:worker_threads") as typeof import("node:worker_threads");
     const z3Path = require.resolve("z3-solver");
     return await new Promise<readonly VerificationSolverResult[]>((resolve, reject) => {

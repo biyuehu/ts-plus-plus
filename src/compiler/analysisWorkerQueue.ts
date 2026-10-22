@@ -1,3 +1,4 @@
+import { isNodeLikeSystem } from "./core.js";
 import {
   CancellationToken,
   OperationCanceledException,
@@ -81,7 +82,11 @@ function drainQueue(queue: AnalysisWorkerQueue): void {
 }
 
 function getDefaultMaximumWorkerCount(): number {
-  if (typeof require !== "function") return 1;
+  // `typeof require !== "function"` is not a safe guard here: the esbuild bundle
+  // rewrites bare `require` to a Proxy-based shim whose typeof is still "function"
+  // in browsers, so requiring node:os would throw inside the queue drain (rejecting
+  // every pending analysis task). isNodeLikeSystem() checks the actual runtime shape.
+  if (!isNodeLikeSystem()) return 1;
   const os = require("node:os") as typeof import("node:os");
   const availableParallelism = os.availableParallelism?.() ?? os.cpus().length;
   return Math.max(1, Math.min(4, availableParallelism));
