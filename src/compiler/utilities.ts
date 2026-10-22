@@ -3663,6 +3663,8 @@ export function isExpressionNode(node: Node): boolean {
     case SyntaxKind.VoidExpression:
     case SyntaxKind.DeleteExpression:
     case SyntaxKind.TypeOfExpression:
+    case SyntaxKind.LetExpression:
+    case SyntaxKind.DoExpression:
     case SyntaxKind.MlttMatchExpression:
     case SyntaxKind.ReifyExpression:
     case SyntaxKind.PrefixUnaryExpression:

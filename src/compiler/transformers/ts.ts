@@ -30,6 +30,7 @@ import {
   Debug,
   Declaration,
   Decorator,
+  DoExpression,
   ElementAccessExpression,
   EmitFlags,
   EmitHint,
@@ -92,11 +93,13 @@ import {
   isExportOrDefaultModifier,
   isExportSpecifier,
   isExpression,
+  isExpressionStatement,
   isExternalModule,
   isExternalModuleImportEqualsDeclaration,
   isGeneratedIdentifier,
   isHeritageClause,
   isIdentifier,
+  isIfStatement,
   isImportClause,
   isImportDeclaration,
   isImportEqualsDeclaration,
@@ -126,8 +129,10 @@ import {
   isStatement,
   isTemplateLiteral,
   isTryStatement,
+  isVariableDeclarationList,
   JsxOpeningElement,
   JsxSelfClosingElement,
+  LetExpression,
   map,
   mapDefined,
   MethodDeclaration,
@@ -716,6 +721,12 @@ export function transformTypeScript(context: TransformationContext): Transformer
         // TypeScript index signatures are elided.
         return undefined;
 
+      case SyntaxKind.LetExpression:
+        return visitLetExpression(node as LetExpression);
+
+      case SyntaxKind.DoExpression:
+        return visitDoExpression(node as DoExpression);
+
       case SyntaxKind.MlttMatchExpression: {
         const match = node as MlttMatchExpression;
         if (!match.mlttToken) return visitValueMatchExpression(match);
@@ -903,6 +914,76 @@ export function transformTypeScript(context: TransformationContext): Transformer
     setOriginalNode(declaration, node);
     setTextRange(declaration, node);
     return visitFunctionDeclaration(declaration);
+  }
+
+  function visitDoFunctionBody(body: Block | undefined): Block | undefined {
+    if (!body) return undefined;
+    if (body.hasDoKeyword) {
+      const transformedStmts = transformDoBlockStatements(body.statements);
+      const newBlock = factory.updateBlock(body, transformedStmts);
+      return visitFunctionBody(newBlock, visitor, context);
+    }
+    return visitFunctionBody(body, visitor, context);
+  }
+
+  function transformDoBlockStatements(statements: readonly Statement[]): Statement[] {
+    if (!statements || statements.length === 0) return [];
+    const visited = visitNodes(factory.createNodeArray(statements), visitor, isStatement);
+    const result = [...visited];
+    const lastIdx = result.length - 1;
+    const last = result[lastIdx];
+    if (isExpressionStatement(last)) {
+      result[lastIdx] = factory.createReturnStatement(last.expression);
+    }
+    else if (isIfStatement(last)) {
+      function transformBranch(stmt: Statement): Statement {
+        if (isBlock(stmt)) {
+          return factory.updateBlock(stmt, transformDoBlockStatements(stmt.statements));
+        }
+        else if (isExpressionStatement(stmt)) {
+          return factory.createReturnStatement(stmt.expression);
+        }
+        return stmt;
+      }
+      result[lastIdx] = factory.updateIfStatement(
+        last,
+        last.expression,
+        transformBranch(last.thenStatement),
+        last.elseStatement ? transformBranch(last.elseStatement) : undefined,
+      );
+    }
+    return result;
+  }
+
+  function visitLetExpression(node: LetExpression): Expression {
+    const decls = Debug.checkDefined(visitNode(node.declarationList, visitor, isVariableDeclarationList));
+    const body = Debug.checkDefined(visitNode(node.body, visitor, isExpression));
+    const varStmt = factory.createVariableStatement(/*modifiers*/ undefined, decls);
+    const retStmt = factory.createReturnStatement(body);
+    const block = factory.createBlock([varStmt, retStmt], /*multiLine*/ true);
+    const arrow = factory.createArrowFunction(
+      /*modifiers*/ undefined,
+      /*typeParameters*/ undefined,
+      [],
+      /*type*/ undefined,
+      factory.createToken(SyntaxKind.EqualsGreaterThanToken),
+      block,
+    );
+    return factory.createCallExpression(factory.createParenthesizedExpression(arrow), /*typeArguments*/ undefined, []);
+  }
+
+  function visitDoExpression(node: DoExpression): Expression {
+    const stmts = transformDoBlockStatements(node.block.statements);
+    const block = factory.createBlock(stmts, /*multiLine*/ true);
+    const arrow = factory.createArrowFunction(
+      /*modifiers*/ undefined,
+      /*typeParameters*/ undefined,
+      [],
+      /*type*/ undefined,
+      factory.createToken(SyntaxKind.EqualsGreaterThanToken),
+      block,
+    );
+    return factory.createCallExpression(factory.createParenthesizedExpression(arrow), /*typeArguments*/ undefined, []);
   }
 
   function visitValueMatchExpression(node: MlttMatchExpression): Expression {
@@ -1698,7 +1779,7 @@ export function transformTypeScript(context: TransformationContext): Transformer
       /*typeParameters*/ undefined,
       visitParameterList(node.parameters, visitor, context),
       /*type*/ undefined,
-      visitFunctionBody(node.body, visitor, context),
+      visitDoFunctionBody(node.body),
     );
   }
 
@@ -1733,7 +1814,7 @@ export function transformTypeScript(context: TransformationContext): Transformer
       visitPropertyNameOfClassElement(node),
       visitParameterList(node.parameters, visitor, context),
       /*type*/ undefined,
-      visitFunctionBody(node.body, visitor, context) || factory.createBlock([]),
+      visitDoFunctionBody(node.body) || factory.createBlock([]),
     );
   }
 
@@ -1757,7 +1838,7 @@ export function transformTypeScript(context: TransformationContext): Transformer
       modifiers,
       visitPropertyNameOfClassElement(node),
       visitParameterList(node.parameters, visitor, context),
-      visitFunctionBody(node.body, visitor, context) || factory.createBlock([]),
+      visitDoFunctionBody(node.body) || factory.createBlock([]),
     );
   }
 
@@ -1773,7 +1854,7 @@ export function transformTypeScript(context: TransformationContext): Transformer
       /*typeParameters*/ undefined,
       visitParameterList(node.parameters, visitor, context),
       /*type*/ undefined,
-      visitFunctionBody(node.body, visitor, context) || factory.createBlock([]),
+      visitDoFunctionBody(node.body) || factory.createBlock([]),
       /*withClause*/ undefined,
     );
     if (isExportOfNamespace(node)) {
@@ -1796,7 +1877,7 @@ export function transformTypeScript(context: TransformationContext): Transformer
       /*typeParameters*/ undefined,
       visitParameterList(node.parameters, visitor, context),
       /*type*/ undefined,
-      visitFunctionBody(node.body, visitor, context) || factory.createBlock([]),
+      visitDoFunctionBody(node.body) || factory.createBlock([]),
     );
     return updated;
   }

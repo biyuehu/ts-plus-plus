@@ -165,6 +165,7 @@ import {
   DiagnosticRelatedInformation,
   Diagnostics,
   DiagnosticWithLocation,
+  DoExpression,
   DoStatement,
   DynamicNamedDeclaration,
   ElementAccessChain,
@@ -883,6 +884,7 @@ import {
   LateVisibilityPaintedStatement,
   LazyNodeCheckFlags,
   length,
+  LetExpression,
   LetTypeNode,
   LiteralExpression,
   LiteralType,
@@ -41541,6 +41543,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function functionHasImplicitReturn(func: FunctionLikeDeclaration) {
+    if (func.body && isBlock(func.body) && func.body.hasDoKeyword) return false;
     return func.endFlowNode && isReachableFlowNode(func.endFlowNode);
   }
 
@@ -41549,6 +41552,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const functionFlags = getFunctionFlags(func);
     const aggregatedTypes: Type[] = [];
     let hasReturnWithNoExpression = functionHasImplicitReturn(func);
+    if (func.body && isBlock(func.body) && func.body.hasDoKeyword) {
+      const completion = getBlockCompletionType(func.body, checkMode);
+      pushIfUnique(aggregatedTypes, completion);
+      hasReturnWithNoExpression = false;
+    }
     let hasReturnOfTypeNever = false;
     forEachReturnStatement(func.body as Block, returnStatement => {
       let expr = returnStatement.expression;
@@ -42044,6 +42052,35 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function getReifiedTypeFromDescriptor(type: Type): Type | undefined {
     const marker = getPropertyOfType(type, "__tspp_reified_type" as __String);
     return marker && getSymbolLinks(marker).type;
+  }
+
+  function checkLetExpression(node: LetExpression, checkMode: CheckMode | undefined): Type {
+    requireTsppFeature(node, "modernSyntax");
+    checkVariableDeclarationList(node.declarationList);
+    return checkExpression(node.body, checkMode);
+  }
+
+  function getBlockCompletionType(block: Block, checkMode: CheckMode | undefined): Type {
+    if (!block.statements || block.statements.length === 0) return voidType;
+    const last = block.statements[block.statements.length - 1];
+    if (last.kind === SyntaxKind.ExpressionStatement) {
+      return checkExpression((last as ExpressionStatement).expression, checkMode);
+    }
+    if (last.kind === SyntaxKind.ReturnStatement && (last as ReturnStatement).expression) {
+      return checkExpression((last as ReturnStatement).expression!, checkMode);
+    }
+    if (last.kind === SyntaxKind.IfStatement) {
+      const ifStmt = last as IfStatement;
+      const thenType = ifStmt.thenStatement.kind === SyntaxKind.Block ? getBlockCompletionType(ifStmt.thenStatement as Block, checkMode) : ifStmt.thenStatement.kind === SyntaxKind.ExpressionStatement ? checkExpression((ifStmt.thenStatement as ExpressionStatement).expression, checkMode) : voidType;
+      const elseType = ifStmt.elseStatement ? (ifStmt.elseStatement.kind === SyntaxKind.Block ? getBlockCompletionType(ifStmt.elseStatement as Block, checkMode) : ifStmt.elseStatement.kind === SyntaxKind.ExpressionStatement ? checkExpression((ifStmt.elseStatement as ExpressionStatement).expression, checkMode) : voidType) : undefinedType;
+      return getUnionType([thenType, elseType], UnionReduction.Subtype);
+    }
+    return voidType;
+  }
+
+  function checkDoExpression(node: DoExpression, checkMode: CheckMode | undefined): Type {
+    checkBlock(node.block);
+    return getBlockCompletionType(node.block, checkMode);
   }
 
   function checkMlttMatchExpression(node: MlttMatchExpression, checkMode: CheckMode | undefined): Type {
@@ -44309,6 +44346,10 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return checkFunctionExpressionOrObjectLiteralMethod(node as FunctionExpression | ArrowFunction, checkMode);
       case SyntaxKind.TypeOfExpression:
         return checkTypeOfExpression(node as TypeOfExpression);
+      case SyntaxKind.LetExpression:
+        return checkLetExpression(node as LetExpression, checkMode);
+      case SyntaxKind.DoExpression:
+        return checkDoExpression(node as DoExpression, checkMode);
       case SyntaxKind.MlttMatchExpression:
         return checkMlttMatchExpression(node as MlttMatchExpression, checkMode);
       case SyntaxKind.ReifyExpression:
@@ -47424,6 +47465,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function checkBlock(node: Block) {
+    if (node.hasDoKeyword) {
+      requireTsppFeature(node, "modernSyntax");
+    }
     // Grammar checking for SyntaxKind.Block
     if (node.kind === SyntaxKind.Block) {
       checkGrammarStatementInAmbientContext(node);

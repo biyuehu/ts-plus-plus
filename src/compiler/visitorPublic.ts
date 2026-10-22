@@ -926,6 +926,21 @@ const visitEachChildTable: VisitEachChildTable = {
     );
   },
 
+  [SyntaxKind.LetExpression]: function visitEachChildOfLetExpression(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateLetExpression(
+      node,
+      Debug.checkDefined(nodeVisitor(node.declarationList, visitor, isVariableDeclarationList)),
+      Debug.checkDefined(nodeVisitor(node.body, visitor, isExpression)),
+    );
+  },
+
+  [SyntaxKind.DoExpression]: function visitEachChildOfDoExpression(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateDoExpression(
+      node,
+      Debug.checkDefined(nodeVisitor(node.block, visitor, isBlock)),
+    );
+  },
+
   [SyntaxKind.MlttMatchExpression]: function visitEachChildOfMlttMatchExpression(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
     return context.factory.updateMlttMatchExpression(
       node,

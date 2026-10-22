@@ -72,6 +72,7 @@ import {
   DefaultClause,
   DeleteExpression,
   DependentFunctionTypeNode,
+  DoExpression,
   DoStatement,
   DotDotDotToken,
   ElementAccessChain,
@@ -300,6 +301,7 @@ import {
   LanguageVariant,
   lastOrUndefined,
   LeftHandSideExpression,
+  LetExpression,
   LetTypeNode,
   LiteralToken,
   LiteralTypeNode,
@@ -642,6 +644,10 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateMatchTypeNode,
     createValueMatchPattern,
     updateValueMatchPattern,
+    createLetExpression,
+    updateLetExpression,
+    createDoExpression,
+    updateDoExpression,
     createMlttMatchExpressionArm,
     updateMlttMatchExpressionArm,
     createMlttMatchExpression,
@@ -2776,6 +2782,39 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   function updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode | undefined, result: Expression, valuePatterns = node.valuePatterns, guard = node.guard) {
     return node.pattern !== pattern || node.result !== result || node.valuePatterns !== valuePatterns || node.guard !== guard
       ? update(createMlttMatchExpressionArm(pattern, result, valuePatterns, guard), node)
+      : node;
+  }
+
+  // @api
+  function createLetExpression(declarationList: VariableDeclarationList, body: Expression): LetExpression {
+    const node = createBaseNode<LetExpression>(SyntaxKind.LetExpression);
+    node.declarationList = declarationList;
+    node.body = body;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+    node.locals = undefined;
+    node.nextContainer = undefined;
+    return node;
+  }
+
+  // @api
+  function updateLetExpression(node: LetExpression, declarationList: VariableDeclarationList, body: Expression) {
+    return node.declarationList !== declarationList || node.body !== body
+      ? update(createLetExpression(declarationList, body), node)
+      : node;
+  }
+
+  // @api
+  function createDoExpression(block: Block): DoExpression {
+    const node = createBaseNode<DoExpression>(SyntaxKind.DoExpression);
+    node.block = block;
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+    return node;
+  }
+
+  // @api
+  function updateDoExpression(node: DoExpression, block: Block) {
+    return node.block !== block
+      ? update(createDoExpression(block), node)
       : node;
   }
 

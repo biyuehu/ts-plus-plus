@@ -297,6 +297,8 @@ export const enum SyntaxKind {
   ArrowFunction,
   DeleteExpression,
   TypeOfExpression,
+  LetExpression,
+  DoExpression,
   MlttMatchExpression,
   ReifyExpression,
   VoidExpression,
@@ -1251,7 +1253,9 @@ export type HasChildren =
   | DataVariant
   | SourceFile
   | PartiallyEmittedExpression
-  | CommaListExpression;
+  | CommaListExpression
+  | LetExpression
+  | DoExpression;
 
 export type HasJSDoc =
   | AccessorDeclaration
@@ -2656,6 +2660,19 @@ export interface MlttMatchExpressionArm extends Node, LocalsContainer {
   readonly result: Expression;
 }
 
+/** `let x = e1, y = e2 in body`: a value-level local binding expression. */
+export interface LetExpression extends PrimaryExpression, LocalsContainer {
+  readonly kind: SyntaxKind.LetExpression;
+  readonly declarationList: VariableDeclarationList;
+  readonly body: Expression;
+}
+
+/** `do { ... }`: a statement block evaluated as an expression. */
+export interface DoExpression extends PrimaryExpression {
+  readonly kind: SyntaxKind.DoExpression;
+  readonly block: Block;
+}
+
 /** A static `match mltt` or an exhaustive runtime match over a discriminated value. */
 export interface MlttMatchExpression extends PrimaryExpression {
   readonly kind: SyntaxKind.MlttMatchExpression;
@@ -3551,6 +3568,8 @@ export interface Block extends Statement, LocalsContainer {
   readonly kind: SyntaxKind.Block;
   readonly statements: NodeArray<Statement>;
   /** @internal */ multiLine?: boolean;
+  /** Whether this block was parsed with a leading `do` (e.g. `do { ... }` or `function f() do { ... }`). */
+  readonly hasDoKeyword?: boolean;
 }
 
 export interface VariableStatement extends Statement, FlowContainer {
@@ -9341,6 +9360,10 @@ export interface NodeFactory {
   updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken?: Identifier): MatchTypeNode;
   createValueMatchPattern(name: Identifier, elements?: readonly (ValueMatchPattern | ParameterDeclaration)[]): ValueMatchPattern;
   updateValueMatchPattern(node: ValueMatchPattern, name: Identifier, elements?: readonly (ValueMatchPattern | ParameterDeclaration)[]): ValueMatchPattern;
+  createLetExpression(declarationList: VariableDeclarationList, body: Expression): LetExpression;
+  updateLetExpression(node: LetExpression, declarationList: VariableDeclarationList, body: Expression): LetExpression;
+  createDoExpression(block: Block): DoExpression;
+  updateDoExpression(node: DoExpression, block: Block): DoExpression;
   createMlttMatchExpressionArm(pattern: TypeNode | undefined, result: Expression, valuePatterns?: readonly ValueMatchPattern[], guard?: Expression): MlttMatchExpressionArm;
   updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode | undefined, result: Expression, valuePatterns?: readonly ValueMatchPattern[], guard?: Expression): MlttMatchExpressionArm;
   createMlttMatchExpression(scrutinee: Expression, arms: readonly MlttMatchExpressionArm[], mlttToken?: Identifier): MlttMatchExpression;

@@ -47,6 +47,7 @@ import {
   DefaultClause,
   DefaultKeyword,
   DeleteExpression,
+  DoExpression,
   DoStatement,
   DotDotDotToken,
   ElementAccessExpression,
@@ -143,6 +144,7 @@ import {
   JsxText,
   KindNode,
   LabeledStatement,
+  LetExpression,
   LetTypeNode,
   LiteralTypeNode,
   MacroInvocationStatement,
@@ -551,6 +553,14 @@ export function isMatchTypeNode(node: Node): node is MatchTypeNode {
 
 export function isMatchTypeArm(node: Node): node is MatchTypeArm {
   return node.kind === SyntaxKind.MatchTypeArm;
+}
+
+export function isLetExpression(node: Node): node is LetExpression {
+  return node.kind === SyntaxKind.LetExpression;
+}
+
+export function isDoExpression(node: Node): node is DoExpression {
+  return node.kind === SyntaxKind.DoExpression;
 }
 
 export function isMlttMatchExpression(node: Node): node is MlttMatchExpression {

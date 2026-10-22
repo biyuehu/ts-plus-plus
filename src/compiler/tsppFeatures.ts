@@ -40,6 +40,14 @@ export const tsppFeatureDefinitions: readonly TsppFeatureDefinition[] = [
     ],
   },
   {
+    name: "modernSyntax",
+    dependencies: [],
+    initComments: [
+      "获得：值层表达式与求值语法：let ... in 表达式、do { ... } 表达式以及 do 函数/方法隐式返回体。",
+      "影响：TS超集=是；透明擦除=否（降级转换）。",
+    ],
+  },
+  {
     name: "macros",
     dependencies: [],
     initComments: [

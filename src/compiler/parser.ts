@@ -72,6 +72,7 @@ import {
   DiagnosticMessage,
   Diagnostics,
   DiagnosticWithDetachedLocation,
+  DoExpression,
   DoStatement,
   DotDotDotToken,
   ElementAccessExpression,
@@ -248,6 +249,7 @@ import {
   LanguageVariant,
   lastOrUndefined,
   LeftHandSideExpression,
+  LetExpression,
   LetTypeNode,
   LiteralExpression,
   LiteralLikeNode,
@@ -545,6 +547,12 @@ const forEachChildTable: ForEachChildTable = {
   },
   [SyntaxKind.ReifyExpression]: function forEachChildInReifyExpression<T>(node: ReifyExpression, cbNode: (node: Node) => T | undefined): T | undefined {
     return visitNode(cbNode, node.reifyToken) || visitNode(cbNode, node.type);
+  },
+  [SyntaxKind.LetExpression]: function forEachChildInLetExpression<T>(node: LetExpression, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.declarationList) || visitNode(cbNode, node.body);
+  },
+  [SyntaxKind.DoExpression]: function forEachChildInDoExpression<T>(node: DoExpression, cbNode: (node: Node) => T | undefined, _cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.block);
   },
   [SyntaxKind.MlttMatchExpression]: function forEachChildInMlttMatchExpression<T>(node: MlttMatchExpression, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNode(cbNode, node.mlttToken) || visitNode(cbNode, node.scrutinee) || visitNodes(cbNode, cbNodes, node.arms);
@@ -4097,7 +4105,7 @@ namespace Parser {
     const pos = getNodePos();
     const modifiers = parseModifiers(/*allowDecorators*/ false, /*permitConstAsModifier*/ true);
     const name = parseIdentifier();
-    const isTspp = fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp);
+    const isTspp = true;
     const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseKind() : undefined;
     let constraint: TypeNode | undefined;
     let expression: Expression | undefined;
@@ -4665,7 +4673,7 @@ namespace Parser {
 
   function isStartOfMatchType(): boolean {
     if (token() !== SyntaxKind.MatchKeyword) return false;
-    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    // tspp feature check
     return lookAhead(() => {
       nextToken();
       if (scanner.hasPrecedingLineBreak()) return false;
@@ -4703,7 +4711,7 @@ namespace Parser {
 
   function isStartOfLetType(): boolean {
     if (token() !== SyntaxKind.LetKeyword) return false;
-    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    // tspp feature check
     return lookAhead(() => {
       nextToken();
       if (!isIdentifier()) return false;
@@ -4727,7 +4735,7 @@ namespace Parser {
 
   function isStartOfDependentFunctionType(): boolean {
     if (token() !== SyntaxKind.OpenParenToken && token() !== SyntaxKind.OpenBraceToken) return false;
-    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    // tspp feature check
     return lookAhead(() => {
       const openToken = token();
       const closeToken = openToken === SyntaxKind.OpenBraceToken ? SyntaxKind.CloseBraceToken : SyntaxKind.CloseParenToken;
@@ -4768,7 +4776,7 @@ namespace Parser {
 
   function isStartOfTypeLambda(): boolean {
     if (token() !== SyntaxKind.LessThanToken) return false;
-    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    // tspp feature check
     return lookAhead(() => {
       const typeParameters = parseTypeParameters();
       if (!typeParameters || token() !== SyntaxKind.EqualsGreaterThanToken) return false;
@@ -5290,6 +5298,8 @@ namespace Parser {
       case SyntaxKind.YieldKeyword:
       case SyntaxKind.PrivateIdentifier:
       case SyntaxKind.AtToken:
+      case SyntaxKind.DoKeyword:
+      case SyntaxKind.LetKeyword:
         // Yield/await always starts an expression.  Either it is an identifier (in which case
         // it is definitely an expression).  Or it's a keyword (either because we're in
         // a generator or async function, or in strict mode (or both)) and it started a yield or await expression.
@@ -6014,6 +6024,12 @@ namespace Parser {
    *      2) UpdateExpression[?Yield] ** ExponentiationExpression[?Yield]
    */
   function parseUnaryExpressionOrHigher(): UnaryExpression | BinaryExpression {
+    if (isStartOfLetExpression()) {
+      return parseLetExpression();
+    }
+    if (isStartOfDoExpression()) {
+      return parseDoExpression();
+    }
     if (isStartOfMlttMatchExpression()) {
       return parseMlttMatchExpression();
     }
@@ -6063,6 +6079,64 @@ namespace Parser {
     return simpleUnaryExpression;
   }
 
+  function isStartOfLetExpression(): boolean {
+    if (token() !== SyntaxKind.LetKeyword) return false;
+    // tspp feature check
+    return lookAhead(() => {
+      nextToken();
+      if (token() !== SyntaxKind.Identifier && token() !== SyntaxKind.OpenBracketToken && token() !== SyntaxKind.OpenBraceToken) return false;
+      let depth = 0;
+      while (token() !== SyntaxKind.EndOfFileToken) {
+        if (token() === SyntaxKind.OpenBracketToken || token() === SyntaxKind.OpenBraceToken || token() === SyntaxKind.OpenParenToken) {
+          depth++;
+        }
+        else if (token() === SyntaxKind.CloseBracketToken || token() === SyntaxKind.CloseBraceToken || token() === SyntaxKind.CloseParenToken) {
+          depth--;
+        }
+        else if (depth === 0 && token() === SyntaxKind.InKeyword) {
+          return true;
+        }
+        else if (depth === 0 && (token() === SyntaxKind.SemicolonToken || scanner.hasPrecedingLineBreak())) {
+          return false;
+        }
+        nextToken();
+      }
+      return false;
+    });
+  }
+
+  function parseLetExpression(): LetExpression {
+    const pos = getNodePos();
+    const declarationList = parseVariableDeclarationList(/*inForStatementInitializer*/ true);
+    parseExpected(SyntaxKind.InKeyword);
+    const body = parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
+    return finishNode(factory.createLetExpression(declarationList, body), pos);
+  }
+  function isStartOfDoExpression(): boolean {
+    if (token() !== SyntaxKind.DoKeyword) return false;
+    // tspp feature check
+    return lookAhead(() => {
+      nextToken();
+      if (token() !== SyntaxKind.OpenBraceToken) return false;
+      let depth = 1;
+      nextToken();
+      while (token() !== SyntaxKind.EndOfFileToken && depth > 0) {
+        if (token() === SyntaxKind.OpenBraceToken) depth++;
+        else if (token() === SyntaxKind.CloseBraceToken) depth--;
+        nextToken();
+      }
+      return token() !== SyntaxKind.WhileKeyword;
+    });
+  }
+
+  function parseDoExpression(): DoExpression {
+    const pos = getNodePos();
+    parseExpected(SyntaxKind.DoKeyword);
+    const block = parseBlock(/*ignoreMissingOpenBrace*/ false);
+    (block as Mutable<Block>).hasDoKeyword = true;
+    return finishNode(factory.createDoExpression(block), pos);
+  }
+
   function isStartOfReifyExpression(): boolean {
     return token() === SyntaxKind.Identifier && scanner.getTokenValue() === "reify" &&
       (fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp));
@@ -6070,7 +6144,7 @@ namespace Parser {
 
   function isStartOfMlttMatchExpression(): boolean {
     if (token() !== SyntaxKind.MatchKeyword) return false;
-    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    // tspp feature check
     // 'match' is a contextual keyword in expression position: only claim it when it is followed by a
     // scrutinee and an opening brace on the same line, so that 'match' can still be used as an
     // identifier (e.g. `let match = 5; match = 6;`). This mirrors isStartOfMatchType in type
@@ -7502,7 +7576,7 @@ namespace Parser {
   function isStartOfProofDirectiveStatement(label: Identifier): boolean {
     const name = idText(label);
     if (name !== "assert" && name !== "assume") return false;
-    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
+    // tspp feature check
     return !scanner.hasPrecedingLineBreak() && token() !== SyntaxKind.OpenBraceToken && isStartOfExpression();
   }
 
@@ -8010,6 +8084,16 @@ namespace Parser {
   }
 
   function parseFunctionBlockOrSemicolon(flags: SignatureFlags, diagnosticMessage?: DiagnosticMessage): Block | undefined {
+    let hasDo = false;
+    if (
+      token() === SyntaxKind.DoKeyword && lookAhead(() => {
+        nextToken();
+        return token() === SyntaxKind.OpenBraceToken;
+      })
+    ) {
+      hasDo = true;
+      nextToken();
+    }
     if (token() !== SyntaxKind.OpenBraceToken) {
       if (flags & SignatureFlags.Type) {
         parseTypeMemberSemicolon();
@@ -8020,7 +8104,11 @@ namespace Parser {
         return;
       }
     }
-    return parseFunctionBlock(flags, diagnosticMessage);
+    const block = parseFunctionBlock(flags, diagnosticMessage);
+    if (hasDo && block) {
+      (block as Mutable<Block>).hasDoKeyword = true;
+    }
+    return block;
   }
 
   // DECLARATIONS
