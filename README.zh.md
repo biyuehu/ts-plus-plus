@@ -215,6 +215,41 @@ lambda 体可以引用任何在作用域内的类型。所有类型计算语法�
 
 在类型别名或类型表达式上悬停，会直接显示归约后的正规形与 kind。
 
+## 现代值层语法：let-in、do 表达式与 do 函数
+
+开启 `modernSyntax` 后，可以使用现代值层函数式表达式与隐式返回函数：
+
+```typescript
+// 1. 值层 let-in 局部变量绑定表达式
+const sum = let x = 10, y = 20 in x + y;
+
+// 2. do { ... } 语句块表达式（尾部表达式隐式返回为完成值）
+const user = do {
+  const firstName = "Alan";
+  const lastName = "Turing";
+  `${firstName} ${lastName}`;
+};
+
+// 3. do 函数与 do 类方法隐式返回
+function computeDiscount(price: number, isVip: boolean): number do {
+  const rate = isVip ? 0.8 : 0.95;
+  price * rate;
+}
+
+class Calculator {
+  public total(price: number): number do {
+    computeDiscount(price, true) + 15;
+  }
+}
+
+// 4. 普通 TS 函数保持 100% 行为隔离
+function standard(): void {
+  42; // 纯表达式语句，绝不会隐式返回
+}
+```
+
+值层 `let-in` 和 `do` 表达式会被降级为自执行箭头函数（`(() => { ... })()`），`do` 函数/方法体内的末尾表达式会在降级时自动转换为 `return expr;`。
+
 ## 协议
 
 Apache 许可证 2.0。ts-plus-plus 派生自 Microsoft 的 TypeScript；原始许可证、版权声明和 NOTICE 保持不变，修改过的文件将被标记为已修改。“TypeScript”是 Microsoft Corporation 的商标。

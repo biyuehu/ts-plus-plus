@@ -215,6 +215,41 @@ The lambda body may reference any type in scope. All type computation syntax is 
 
 Hovering a type alias or type expression in the development extension displays its normalized form and kind directly.
 
+## Modern syntax: let-in, do expressions, and do functions
+
+Enable `modernSyntax` to use modern value-level functional expressions and implicit return functions:
+
+```typescript
+// 1. Scoped value-level let-in expressions
+const sum = let x = 10, y = 20 in x + y;
+
+// 2. do { ... } block expressions (implicit return of the tail completion value)
+const user = do {
+  const firstName = "Alan";
+  const lastName = "Turing";
+  `${firstName} ${lastName}`;
+};
+
+// 3. do functions and methods with implicit return
+function computeDiscount(price: number, isVip: boolean): number do {
+  const rate = isVip ? 0.8 : 0.95;
+  price * rate;
+}
+
+class Calculator {
+  public total(price: number): number do {
+    computeDiscount(price, true) + 15;
+  }
+}
+
+// 4. Standard TS functions remain 100% untouched
+function standard(): void {
+  42; // pure expression statement, does NOT implicitly return
+}
+```
+
+Value-level `let-in` and `do` expressions are lowered to self-invoking arrow functions (`(() => { ... })()`), and `do` function bodies automatically rewrite the tail expression to `return expr;`.
+
 ## License
 
 Apache License 2.0. ts-plus-plus is derived from Microsoft's TypeScript; the original license, copyright notices and `NOTICE` remain in place, and modified files will be marked as modified. "TypeScript" is a trademark of Microsoft Corporation.
