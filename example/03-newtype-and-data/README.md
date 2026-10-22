@@ -82,6 +82,26 @@ const score = match screen {
 };
 ```
 
+支持递归数据类型的模式匹配以及解构：
+
+```tspp
+// 递归计算 List 长度
+function listLength(list: List<number>): number {
+  return match list {
+    Nil => 0,
+    Cons(_, tail) => 1 + listLength(tail),
+  };
+}
+
+// 解构 Option 取值
+function unwrapOr<T>(opt: Option<T>, defaultValue: T): T {
+  return match opt {
+    None => defaultValue,
+    Some(val) => val,
+  };
+}
+```
+
 ## 名义性与边界
 
 两种声明的名义性都由编译器内部的品牌属性实现。品牌不会出现在：

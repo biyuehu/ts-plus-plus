@@ -83,6 +83,42 @@ const score: number = match screen {
   Finished(Failure(code)) => -code,
 };
 
+// 递归数据结构模式匹配：计算 List 长度与求和
+function listLength(list: List<number>): number {
+  return match list {
+    Nil => 0,
+    Cons(_, tail) => 1 + listLength(tail),
+  };
+}
+
+function listSum(list: List<number>): number {
+  return match list {
+    Nil => 0,
+    Cons(head, tail) => head + listSum(tail),
+  };
+}
+
+// 解构 Either 与 Option 提取内容
+function unwrapOr<T>(opt: Option<T>, defaultValue: T): T {
+  return match opt {
+    None => defaultValue,
+    Some(val) => val,
+  };
+}
+
+function mapEither<L, R, U>(either: Either<L, R>, fn: (r: R) => U): Either<L, U> {
+  return match either {
+    Left(val) => Left(val),
+    Right(val) => Right(fn(val)),
+    Empty => Empty,
+  };
+}
+
+const sumResult = listSum(singleItem);
+const lengthResult = listLength(emptyList);
+const unwrappedValue = unwrapOr(something, 0);
+const mappedEither = mapEither(rightArm, s => s.length);
+
 // 每个变体是值，不能直接作为独立类型使用，得通过 typeof。
 const extracted: typeof Nil = Nil;
 const tag: "Nil" = extracted._tag;
@@ -103,7 +139,7 @@ const error: typeof Nil = { _tag: "Nil" as const };
 // 品牌属性不会出现在 keyof、诊断消息或 hover 中。
 const keys: "x" | "y" = "x" satisfies keyof Point;
 
-export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, nothing, rightArm, score, selected, singleItem, something, tag };
+export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, lengthResult, listLength, listSum, mappedEither, mapEither, nothing, rightArm, score, selected, singleItem, something, sumResult, tag, unwrappedValue, unwrapOr };
 export type { Either, List, Option, OrderId, Outcome, Point, ScreenState, Some, StringOrNumber, UserId };
 
 
