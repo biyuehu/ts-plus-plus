@@ -397,6 +397,24 @@ describe("unittests:: tspp:: type computation: type lambdas", () => {
     assert.isEmpty(messages, messages.join("\n"));
   });
 
+  it("checks nested type arguments of kind-directed type applications", () => {
+    const messages = lambdaMessages(`
+      interface Array<T> {}
+      type Bar<T extends number> = T;
+      type Id = <T> =>> T;
+      type Foo<T> = T;
+      type Apply = <F: Type => Type, T> =>> F<T>;
+      type InLambda = Id<Bar<string>>;
+      type InAlias = Foo<Bar<string>>;
+      type InWrongArity = Foo<Bar<string>, 1>;
+      type InHkt<F: Type => Type> = F<Bar<string>>;
+      type InApply = Apply<Array, Bar<string>>;
+    `);
+    assert.lengthOf(messages.filter(m => /does not satisfy the constraint/.test(m)), 5, messages.join("\n"));
+    assert.lengthOf(messages, 6, messages.join("\n"));
+    assert.match(messages.join("\n"), /Generic type 'Foo' requires 1 type argument/);
+  });
+
   it("captures outer type parameters in closure", () => {
     const messages = lambdaMessages(`
       type Const<X> = <T> =>> X;

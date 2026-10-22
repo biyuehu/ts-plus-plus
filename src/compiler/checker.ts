@@ -2516,6 +2516,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   var identityRelation = new Map<string, RelationComparisonResult>();
   var enumRelation = new Map<string, RelationComparisonResult>();
 
+  var functionKindTypeParameters = new WeakMap<FunctionKind, readonly TypeParameter[]>();
+
   // Extensions suggested for path imports when module resolution is node16 or higher.
   // The first element of each tuple is the extension a file has.
   // The second element of each tuple is the extension that should be used in a path import.
@@ -45120,10 +45122,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return result;
   }
 
-  var functionKindTypeParameters: WeakMap<FunctionKind, readonly TypeParameter[]> | undefined;
-
   function getTypeParametersForFunctionKind(kind: FunctionKind): readonly TypeParameter[] {
-    functionKindTypeParameters ??= new WeakMap();
     let typeParameters = functionKindTypeParameters.get(kind);
     if (!typeParameters) {
       typeParameters = kind.parameters.map(paramKind => {
@@ -45237,7 +45236,16 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const checkOrdinaryKinds = sourceFile ? fileExtensionIs(sourceFile.fileName, Extension.Tspp) || fileExtensionIs(sourceFile.fileName, Extension.Dtspp) : isTsppProject(compilerOptions);
     forEach(node.typeArguments, (typeArgument, index) => {
       if (typeParameters?.[index] && (checkOrdinaryKinds || !isOrdinaryTypeKind(getKindOfType(typeParameters[index])))) {
-        getTypeArgumentFromNode(typeArgument, typeParameters[index]);
+        const expectedKind = getKindOfType(typeParameters[index]);
+        getTypeArgumentFromNodeForKind(typeArgument, expectedKind);
+        // Kind-directed resolution only computes the argument's type, so nested type references
+        // (e.g. constraint violations in 'Id<Bar<string>>') still need a full check. Bare type
+        // constructors ('Apply<Array, number>') and universes are complete as resolved; checking
+        // them as ordinary types would report a missing type argument list.
+        const isBareConstructor = expectedKind.flags === KindFlags.Function && isTypeReferenceNode(typeArgument) && !typeArgument.typeArguments;
+        if (!isBareConstructor && getUniverseLevelFromTypeNode(typeArgument) === undefined) {
+          checkSourceElement(typeArgument);
+        }
       }
       else {
         checkSourceElement(typeArgument);
