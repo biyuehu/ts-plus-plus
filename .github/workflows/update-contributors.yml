@@ -3,7 +3,7 @@ name: Update Contributors
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'src/**'
       - 'scripts/**'
