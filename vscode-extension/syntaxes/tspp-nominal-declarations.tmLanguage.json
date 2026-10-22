@@ -11,6 +11,11 @@
         "3": { "name": "storage.type.ts" },
         "4": { "name": "entity.name.type.alias.ts" }
       }
+    },
+    {
+      "comment": "Value-level match expression keyword",
+      "name": "keyword.control.flow.ts",
+      "match": "\\bmatch\\b"
     }
   ]
 }
