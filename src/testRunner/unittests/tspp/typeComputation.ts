@@ -386,6 +386,17 @@ describe("unittests:: tspp:: type computation: type lambdas", () => {
     assert.isEmpty(messages, messages.join("\n"));
   });
 
+  it("applies higher-kinded type constructor arguments to plain type lambda alias (issue #25)", () => {
+    const messages = lambdaMessages(`
+      interface Array<T> {}
+      type Box<T> = { value: T };
+      type Apply = <F: Type => Type, T> =>> F<T>;
+      type TestArray = Apply<Array, number>;
+      type TestBox = Apply<Box, string>;
+    `);
+    assert.isEmpty(messages, messages.join("\n"));
+  });
+
   it("captures outer type parameters in closure", () => {
     const messages = lambdaMessages(`
       type Const<X> = <T> =>> X;

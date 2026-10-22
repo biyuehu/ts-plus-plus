@@ -45120,21 +45120,56 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return result;
   }
 
-  function getTypeParametersForTypeAndSymbol(type: Type, symbol: Symbol) {
-    if (!isErrorType(type)) {
-      return symbol.flags & SymbolFlags.TypeAlias && getSymbolLinks(symbol).typeParameters ||
-        (getObjectFlags(type) & ObjectFlags.Reference ? (type as TypeReference).target.localTypeParameters : undefined);
+  var functionKindTypeParameters: WeakMap<FunctionKind, readonly TypeParameter[]> | undefined;
+
+  function getTypeParametersForFunctionKind(kind: FunctionKind): readonly TypeParameter[] {
+    functionKindTypeParameters ??= new WeakMap();
+    let typeParameters = functionKindTypeParameters.get(kind);
+    if (!typeParameters) {
+      typeParameters = kind.parameters.map(paramKind => {
+        const tp = createTypeParameter();
+        tp.typeKind = paramKind;
+        return tp;
+      });
+      functionKindTypeParameters.set(kind, typeParameters);
+    }
+    return typeParameters;
+  }
+
+  function getTypeParametersForTypeAndSymbol(type: Type, symbol: Symbol): readonly TypeParameter[] | undefined {
+    if (symbol.flags & SymbolFlags.TypeAlias) {
+      const aliasParameters = getSymbolLinks(symbol).typeParameters;
+      if (aliasParameters) {
+        return aliasParameters;
+      }
+      const declaredType = tryGetDeclaredTypeOfSymbol(symbol);
+      if (declaredType?.typeLambda?.typeParameters) {
+        return declaredType.typeLambda.typeParameters;
+      }
+      const kind = declaredType && getKindOfType(declaredType);
+      if (kind && kind.flags === KindFlags.Function) {
+        return getTypeParametersForFunctionKind(kind);
+      }
+      return undefined;
+    }
+    const declaredType = tryGetDeclaredTypeOfSymbol(symbol);
+    if (declaredType && (declaredType.flags & TypeFlags.TypeParameter)) {
+      const kind = getKindOfType(declaredType);
+      if (kind.flags === KindFlags.Function) {
+        return getTypeParametersForFunctionKind(kind);
+      }
+    }
+    if (!isErrorType(type) && (getObjectFlags(type) & ObjectFlags.Reference)) {
+      return (type as TypeReference).target.localTypeParameters;
     }
     return undefined;
   }
 
   function getTypeParametersForTypeReferenceOrImport(node: TypeReferenceNode | ExpressionWithTypeArguments | ImportTypeNode) {
     const type = getTypeFromTypeNode(node);
-    if (!isErrorType(type)) {
-      const symbol = getNodeLinks(node).resolvedSymbol;
-      if (symbol) {
-        return getTypeParametersForTypeAndSymbol(type, symbol);
-      }
+    const symbol = getNodeLinks(node).resolvedSymbol;
+    if (symbol) {
+      return getTypeParametersForTypeAndSymbol(type, symbol);
     }
     return undefined;
   }
