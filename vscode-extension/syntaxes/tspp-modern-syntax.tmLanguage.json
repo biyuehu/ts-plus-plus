@@ -7,22 +7,24 @@
       "comment": "Value-level let-in binding expression",
       "match": "\\b(let)\\b(?=[^;\\r\\n]*?\\b(in)\\b)",
       "captures": {
-        "1": { "name": "keyword.control.flow.ts" }
+        "1": {
+          "name": "keyword.control.flow.ts"
+        }
       }
     },
     {
       "comment": "Value-level in keyword in let-in expression",
       "match": "(?<=\\blet\\b[^;\\r\\n]*?)\\b(in)\\b",
       "captures": {
-        "1": { "name": "keyword.control.flow.ts" }
+        "1": {
+          "name": "keyword.control.flow.ts"
+        }
       }
     },
     {
       "comment": "do keyword preceding a block: do { ... }, function ... do { ... }, method ... do { ... }",
-      "match": "\\b(do)(?=\\s*\\{)",
-      "captures": {
-        "1": { "name": "keyword.control.flow.ts" }
-      }
+      "match": "\\bdo\\b",
+      "name": "keyword.control.loop.ts"
     }
   ]
 }
