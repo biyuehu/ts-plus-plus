@@ -1,0 +1,84 @@
+/**
+ * TS++ 08 — modernSyntax 现代值层语法示例
+ * 演示：
+ * 1. 值层 let-in 局部变量绑定表达式
+ * 2. do { ... } 语句块表达式（尾部表达式隐式返回）
+ * 3. do 函数与 do 类方法隐式返回
+ * 4. 普通 TS 函数与 do 函数的 100% 行为兼容隔离
+ */
+
+// -------------------------------------------------------------
+// 1. 值层 let ... in ... 局部绑定表达式
+// -------------------------------------------------------------
+
+// let-in 允许在局部声明变量并在 in 后续的主体表达式中计算结果
+// 其生命周期和作用域严格局限在表达式内部，并支持模式与多变量绑定
+const sum = let x = 10, y = 20 in x + y;
+console.log("sum:", sum); // 30
+
+// 嵌套 let-in 与复杂计算
+const complexMath =
+  let base = 100 in
+  let factor = 2 in
+  base * factor + (let offset = 5 in offset * 3);
+console.log("complexMath:", complexMath); // 215
+
+// -------------------------------------------------------------
+// 2. do { ... } 语句块表达式
+// -------------------------------------------------------------
+
+// do { ... } 将一系列语句组织为一个带作用域的完成值表达式
+// 块内末尾表达式自动作为该 do 表达式的求值结果
+const formattedUser = do {
+  const firstName = "Alan";
+  const lastName = "Turing";
+  const title = "Dr.";
+  `${title} ${firstName} ${lastName}`;
+};
+console.log("formattedUser:", formattedUser); // "Dr. Alan Turing"
+
+// do 表达式内部支持条件分支的隐式返回
+declare const debugMode: boolean;
+const configPort = do {
+  if (debugMode) {
+    8080;
+  } else {
+    443;
+  }
+};
+console.log("configPort:", configPort);
+
+// -------------------------------------------------------------
+// 3. do 函数与 do 方法（隐式返回）
+// -------------------------------------------------------------
+
+// 在函数或方法体的 `{}` 前添加 `do` 关键字，表示该函数支持尾部隐式返回
+function calculateDiscount(price: number, isVip: boolean): number do {
+  const discountRate = isVip ? 0.8 : 0.95;
+  price * discountRate;
+}
+
+// 在类方法上同样支持 do 语法
+class OrderCalculator {
+  public baseFee = 15;
+
+  public total(price: number): number do {
+    const discounted = calculateDiscount(price, true);
+    discounted + this.baseFee;
+  }
+}
+
+const calculator = new OrderCalculator();
+console.log("total:", calculator.total(100)); // 80 + 15 = 95
+
+// -------------------------------------------------------------
+// 4. 与标准 TypeScript 函数的 100% 兼容隔离
+// -------------------------------------------------------------
+
+// 未添加 `do` 关键字的普通函数保持既有语义，末尾表达式绝不隐式返回（返回类型为 void）
+function standardFunction(): void {
+  const result = 42;
+  result; // 纯表达式语句，不作为返回值
+}
+
+standardFunction();

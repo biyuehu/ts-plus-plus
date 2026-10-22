@@ -108,6 +108,7 @@ Current features:
 | `standardLibraryPredicates` | Built-in numeric predicates `isEven`, `isOdd`, `isPositive`, `isNegative`, `isNonNegative`, `isZero`, `divides`, and `between`; `number` requires `numberModel: "mathematical-real"` | `formalContracts` | Yes | Yes |
 | `refinementTypes` | Z3-verified predicates on structural type aliases | `formalContracts` | Yes | Yes |
 | `typeComputation` | Type-level `let X = T in U` bindings, pattern matching `match T { ... }`, and type lambdas `<T> =>> Body` | — | Yes | Yes |
+| modernSyntax | Value-level let ... in ... local binding expressions, do { ... } block expressions, and do function/method bodies with implicit return | — | Yes | No (emits runtime IIFEs and explicit returns) |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
