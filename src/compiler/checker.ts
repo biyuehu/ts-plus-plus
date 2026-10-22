@@ -42060,6 +42060,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function checkLetExpression(node: LetExpression, checkMode: CheckMode | undefined): Type {
     requireTsppFeature(node, "modernSyntax");
+    for (const decl of node.declarationList.declarations) {
+      if (!decl.initializer) {
+        grammarErrorOnNode(decl, Diagnostics._0_declarations_must_be_initialized, "let");
+      }
+    }
     checkVariableDeclarationList(node.declarationList);
     return checkExpression(node.body, checkMode);
   }
@@ -47471,6 +47476,19 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function checkBlock(node: Block) {
     if (node.hasDoKeyword) {
       requireTsppFeature(node, "modernSyntax");
+      const container = getContainingFunctionOrClassStaticBlock(node);
+      if (container && isFunctionLikeDeclaration(container) && container.body === node) {
+        const signature = getSignatureFromDeclaration(container);
+        const returnType = getReturnTypeOfSignature(signature);
+        if (getReturnTypeFromAnnotation(container)) {
+          const unwrappedReturnType = unwrapReturnType(returnType, getFunctionFlags(container)) ?? returnType;
+          const lastStmt = node.statements && node.statements.length > 0 ? node.statements[node.statements.length - 1] : undefined;
+          const lastExpr = lastStmt && isExpressionStatement(lastStmt) ? lastStmt.expression : undefined;
+          const completionType = getBlockCompletionType(node, CheckMode.Normal);
+          if (lastExpr) checkReturnExpression(container, unwrappedReturnType, lastExpr, lastExpr, completionType);
+          else checkTypeAssignableToAndOptionallyElaborate(completionType, unwrappedReturnType, node, /*expr*/ undefined);
+        }
+      }
     }
     // Grammar checking for SyntaxKind.Block
     if (node.kind === SyntaxKind.Block) {

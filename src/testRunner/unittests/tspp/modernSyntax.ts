@@ -154,4 +154,29 @@ describe("unittests:: tspp:: modernSyntax", () => {
     assert.isTrue(js.includes("return 1;"));
     assert.isTrue(js.includes("return 2;"));
   });
+  it("reports error when do function completion type does not match return type annotation", () => {
+    const program = createProgram(
+      "/src/main.ts",
+      `
+      function calculateDiscount(price: number, isVip: boolean): number do {
+        "";
+      }
+    `,
+    );
+    assert.deepEqual(semanticMessages(program), [
+      "Type 'string' is not assignable to type 'number'.",
+    ]);
+  });
+
+  it("reports error when variable in let-in expression lacks initializer", () => {
+    const program = createProgram(
+      "/src/main.ts",
+      `
+      let y = let x in x;
+    `,
+    );
+    assert.deepEqual(semanticMessages(program), [
+      "'let' declarations must be initialized.",
+    ]);
+  });
 });

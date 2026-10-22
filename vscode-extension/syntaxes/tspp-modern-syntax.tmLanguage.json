@@ -4,6 +4,29 @@
   "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string",
   "patterns": [
     {
+      "name": "meta.do.expression.tspp",
+      "begin": "\\b(do)\\s*(\\{)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.loop.ts"
+        },
+        "2": {
+          "name": "punctuation.definition.block.begin.ts"
+        }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.block.end.ts"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.ts"
+        }
+      ]
+    },
+    {
       "comment": "Value-level let-in binding expression",
       "match": "\\b(let)\\b(?=[^;\\r\\n]*?\\b(in)\\b)",
       "captures": {
@@ -22,8 +45,8 @@
       }
     },
     {
-      "comment": "do keyword preceding a block: do { ... }, function ... do { ... }, method ... do { ... }",
-      "match": "\\bdo\\b",
+      "comment": "do function/method body header: ) do { or : Type do {",
+      "match": "\\bdo\\b(?=\\s*\\{)",
       "name": "keyword.control.loop.ts"
     }
   ]
