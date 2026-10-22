@@ -8,16 +8,26 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Programming Languages"],
-  "activationEvents": ["onLanguage:tspp", "onStartupFinished"],
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:tspp",
+    "onStartupFinished"
+  ],
   "main": "./extension.js",
   "icon": "tspp.svg",
   "contributes": {
     "languages": [
       {
         "id": "tspp",
-        "aliases": ["TS++", "TypeScript++"],
-        "extensions": [".tspp"],
+        "aliases": [
+          "TS++",
+          "TypeScript++"
+        ],
+        "extensions": [
+          ".tspp"
+        ],
         "configuration": "./language-configuration.json",
         "icon": {
           "light": "./tspp.svg",
@@ -34,12 +44,18 @@
       {
         "scopeName": "tspp.kind-operators",
         "path": "./syntaxes/tspp-kind-operators.tmLanguage.json",
-        "injectTo": ["source.tspp", "source.ts"]
+        "injectTo": [
+          "source.tspp",
+          "source.ts"
+        ]
       },
       {
         "scopeName": "tspp.operators",
         "path": "./syntaxes/tspp-operators.tmLanguage.json",
-        "injectTo": ["source.tspp", "source.ts"],
+        "injectTo": [
+          "source.tspp",
+          "source.ts"
+        ],
         "embeddedLanguages": {
           "meta.embedded.inline.tspp-operator": "plaintext"
         }
@@ -47,22 +63,42 @@
       {
         "scopeName": "tspp.nominal-declarations",
         "path": "./syntaxes/tspp-nominal-declarations.tmLanguage.json",
-        "injectTo": ["source.tspp", "source.ts"]
+        "injectTo": [
+          "source.tspp",
+          "source.ts"
+        ]
       },
       {
         "scopeName": "tspp.macros",
         "path": "./syntaxes/tspp-macros.tmLanguage.json",
-        "injectTo": ["source.tspp", "source.ts"]
+        "injectTo": [
+          "source.tspp",
+          "source.ts"
+        ]
       },
       {
         "scopeName": "tspp.formal-contracts",
         "path": "./syntaxes/tspp-formal-contracts.tmLanguage.json",
-        "injectTo": ["source.tspp", "source.ts"]
+        "injectTo": [
+          "source.tspp",
+          "source.ts"
+        ]
       },
       {
         "scopeName": "tspp.type-computation",
         "path": "./syntaxes/tspp-type-computation.tmLanguage.json",
-        "injectTo": ["source.tspp", "source.ts"]
+        "injectTo": [
+          "source.tspp",
+          "source.ts"
+        ]
+      },
+      {
+        "scopeName": "tspp.modern-syntax",
+        "path": "./syntaxes/tspp-modern-syntax.tmLanguage.json",
+        "injectTo": [
+          "source.tspp",
+          "source.ts"
+        ]
       }
     ],
     "commands": [

@@ -1,0 +1,28 @@
+{
+  "name": "TS++ Modern Syntax",
+  "scopeName": "tspp.modern-syntax",
+  "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string",
+  "patterns": [
+    {
+      "comment": "Value-level let-in binding expression",
+      "match": "\\b(let)\\b(?=[^;\\r\\n]*?\\b(in)\\b)",
+      "captures": {
+        "1": { "name": "keyword.control.flow.ts" }
+      }
+    },
+    {
+      "comment": "Value-level in keyword in let-in expression",
+      "match": "(?<=\\blet\\b[^;\\r\\n]*?)\\b(in)\\b",
+      "captures": {
+        "1": { "name": "keyword.control.flow.ts" }
+      }
+    },
+    {
+      "comment": "do keyword preceding a block: do { ... }, function ... do { ... }, method ... do { ... }",
+      "match": "\\b(do)(?=\\s*\\{)",
+      "captures": {
+        "1": { "name": "keyword.control.flow.ts" }
+      }
+    }
+  ]
+}

@@ -40,6 +40,7 @@ describe("unittests:: tspp:: editor grammars", () => {
     "tspp-nominal-declarations.tmLanguage.json",
     "tspp-operators.tmLanguage.json",
     "tspp-type-computation.tmLanguage.json",
+    "tspp-modern-syntax.tmLanguage.json",
   ];
 
   function readGrammar(fileName: string): Grammar {
@@ -154,5 +155,15 @@ describe("unittests:: tspp:: editor grammars", () => {
     const operatorGrammar = readExtensionManifest().contributes.grammars.find(grammar => grammar.scopeName === "tspp.operators");
     assert.isDefined(operatorGrammar);
     assert.strictEqual(operatorGrammar.embeddedLanguages?.[operatorScope], "plaintext");
+  });
+
+  it("highlights modern syntax let-in and do keywords", () => {
+    const patterns = collectPatterns(readGrammar("tspp-modern-syntax.tmLanguage.json"));
+    const doPattern = patterns.find(pattern => pattern.match?.includes("do"));
+    const letPattern = patterns.find(pattern => pattern.match?.includes("let"));
+    const inPattern = patterns.find(pattern => pattern.match?.includes("in"));
+    assert.isDefined(doPattern, "Expected modern-syntax grammar to highlight do");
+    assert.isDefined(letPattern, "Expected modern-syntax grammar to highlight let");
+    assert.isDefined(inPattern, "Expected modern-syntax grammar to highlight in");
   });
 });
