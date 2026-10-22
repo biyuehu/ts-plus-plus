@@ -2755,7 +2755,6 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     const node = createBaseNode<ValueMatchPattern>(SyntaxKind.ValueMatchPattern);
     node.name = name;
     node.elements = elements && createNodeArray(elements);
-    node.parameters = createNodeArray(elements?.filter((element): element is ParameterDeclaration => element.kind === SyntaxKind.Parameter) ?? []);
     node.transformFlags = TransformFlags.ContainsTypeScript;
     return node;
   }

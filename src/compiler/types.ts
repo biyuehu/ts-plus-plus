@@ -2641,8 +2641,6 @@ export interface ValueMatchPattern extends Node {
   readonly kind: SyntaxKind.ValueMatchPattern;
   readonly name: Identifier;
   readonly elements?: NodeArray<ValueMatchPattern | ParameterDeclaration>;
-  /** @internal Direct bindings, retained for parameter-like checker compatibility. */
-  readonly parameters: NodeArray<ParameterDeclaration>;
   /** @internal Runtime field names corresponding to `elements`, populated by the checker. */
   readonly tsppMatchFieldNames?: readonly __String[];
 }

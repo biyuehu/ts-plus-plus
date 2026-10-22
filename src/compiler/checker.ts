@@ -807,6 +807,7 @@ import {
   isValidBigIntString,
   isValidESSymbolDeclaration,
   isValidTypeOnlyAliasUseSite,
+  isValueMatchPattern,
   isValueSignatureDeclaration,
   isVariableDeclaration,
   isVariableDeclarationInitializedToBareOrAccessedRequire,
@@ -32993,6 +32994,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       // narrowed tuple type.
       if (isParameter(declaration) && !declaration.type && !declaration.initializer && !declaration.dotDotDotToken) {
         const func = declaration.parent;
+        // A parameter bound by a value `match` pattern is not a function parameter; it has no
+        // positional list to narrow against, so skip the contextual-tuple narrowing below.
+        if (isValueMatchPattern(func)) return type;
         if (func.parameters.length >= 2 && isContextSensitiveFunctionOrObjectLiteralMethod(func)) {
           const contextualSignature = getContextualSignature(func);
           if (contextualSignature && contextualSignature.parameters.length === 1 && signatureHasRestParameter(contextualSignature)) {

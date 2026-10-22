@@ -4105,7 +4105,7 @@ namespace Parser {
     const pos = getNodePos();
     const modifiers = parseModifiers(/*allowDecorators*/ false, /*permitConstAsModifier*/ true);
     const name = parseIdentifier();
-    const isTspp = true;
+    const isTspp = fileExtensionIs(fileName, Extension.Tspp) || fileExtensionIs(fileName, Extension.Dtspp);
     const kindType = isTspp && parseOptional(SyntaxKind.ColonToken) ? parseKind() : undefined;
     let constraint: TypeNode | undefined;
     let expression: Expression | undefined;
@@ -4673,7 +4673,7 @@ namespace Parser {
 
   function isStartOfMatchType(): boolean {
     if (token() !== SyntaxKind.MatchKeyword) return false;
-    // tspp feature check
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     return lookAhead(() => {
       nextToken();
       if (scanner.hasPrecedingLineBreak()) return false;
@@ -4711,7 +4711,7 @@ namespace Parser {
 
   function isStartOfLetType(): boolean {
     if (token() !== SyntaxKind.LetKeyword) return false;
-    // tspp feature check
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     return lookAhead(() => {
       nextToken();
       if (!isIdentifier()) return false;
@@ -4735,7 +4735,7 @@ namespace Parser {
 
   function isStartOfDependentFunctionType(): boolean {
     if (token() !== SyntaxKind.OpenParenToken && token() !== SyntaxKind.OpenBraceToken) return false;
-    // tspp feature check
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     return lookAhead(() => {
       const openToken = token();
       const closeToken = openToken === SyntaxKind.OpenBraceToken ? SyntaxKind.CloseBraceToken : SyntaxKind.CloseParenToken;
@@ -4776,7 +4776,7 @@ namespace Parser {
 
   function isStartOfTypeLambda(): boolean {
     if (token() !== SyntaxKind.LessThanToken) return false;
-    // tspp feature check
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     return lookAhead(() => {
       const typeParameters = parseTypeParameters();
       if (!typeParameters || token() !== SyntaxKind.EqualsGreaterThanToken) return false;
@@ -6144,7 +6144,7 @@ namespace Parser {
 
   function isStartOfMlttMatchExpression(): boolean {
     if (token() !== SyntaxKind.MatchKeyword) return false;
-    // tspp feature check
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     // 'match' is a contextual keyword in expression position: only claim it when it is followed by a
     // scrutinee and an opening brace on the same line, so that 'match' can still be used as an
     // identifier (e.g. `let match = 5; match = 6;`). This mirrors isStartOfMatchType in type
@@ -7576,7 +7576,7 @@ namespace Parser {
   function isStartOfProofDirectiveStatement(label: Identifier): boolean {
     const name = idText(label);
     if (name !== "assert" && name !== "assume") return false;
-    // tspp feature check
+    if (!fileExtensionIs(fileName, Extension.Tspp) && !fileExtensionIs(fileName, Extension.Dtspp)) return false;
     return !scanner.hasPrecedingLineBreak() && token() !== SyntaxKind.OpenBraceToken && isStartOfExpression();
   }
 
