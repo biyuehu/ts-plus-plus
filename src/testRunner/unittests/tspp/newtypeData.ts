@@ -268,9 +268,7 @@ describe("unittests:: tspp:: newtype and data", () => {
         readDirectory: () => [],
       };
       const service = ts.createLanguageService(host);
-      const diagnostic = service.getSemanticDiagnostics(fileName).find(candidate =>
-        candidate.code === 18072 && ts.flattenDiagnosticMessageText(candidate.messageText, "\n").includes("'typeUniverses'")
-      )!;
+      const diagnostic = service.getSemanticDiagnostics(fileName).find(candidate => candidate.code === 18072 && ts.flattenDiagnosticMessageText(candidate.messageText, "\n").includes("'typeUniverses'"))!;
       const fix = service.getCodeFixesAtPosition(
         fileName,
         diagnostic.start!,

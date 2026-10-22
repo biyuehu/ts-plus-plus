@@ -28,9 +28,7 @@ registerCodeFix({
       candidate.start === context.span.start &&
       candidate.length === context.span.length
     );
-    const requested = tsppFeatureDefinitions.filter(definition => diagnostics.some(diagnostic =>
-      formatStringFromArgs(getLocaleSpecificMessage(Diagnostics.TS_feature_0_is_not_enabled_in_tsppconfig_json), [definition.name]) === flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-    )).map(definition => definition.name);
+    const requested = tsppFeatureDefinitions.filter(definition => diagnostics.some(diagnostic => formatStringFromArgs(getLocaleSpecificMessage(Diagnostics.TS_feature_0_is_not_enabled_in_tsppconfig_json), [definition.name]) === flattenDiagnosticMessageText(diagnostic.messageText, "\n"))).map(definition => definition.name);
     if (!requested.length) return undefined;
 
     let features: readonly string[] = options.tsppFeatures ?? [];
@@ -43,9 +41,11 @@ registerCodeFix({
         factory.createArrayLiteralExpression(features.map(name => factory.createStringLiteral(name)), /*multiLine*/ true),
       );
     });
-    return [requested.length === 1
-      ? createCodeFixActionWithoutFixAll(fixId, changes, [Diagnostics.Enable_TS_feature_0_and_its_required_dependencies, requested[0]])
-      : createCodeFixActionWithoutFixAll(fixId, changes, Diagnostics.Enable_missing_TS_features_and_their_required_dependencies)];
+    return [
+      requested.length === 1
+        ? createCodeFixActionWithoutFixAll(fixId, changes, [Diagnostics.Enable_TS_feature_0_and_its_required_dependencies, requested[0]])
+        : createCodeFixActionWithoutFixAll(fixId, changes, Diagnostics.Enable_missing_TS_features_and_their_required_dependencies),
+    ];
   },
 });
 
