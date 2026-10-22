@@ -234,6 +234,7 @@ import {
   TypeQueryNode,
   TypeReferenceNode,
   UnionTypeNode,
+  ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
   VariableStatement,
@@ -558,6 +559,10 @@ export function isMlttMatchExpression(node: Node): node is MlttMatchExpression {
 
 export function isMlttMatchExpressionArm(node: Node): node is MlttMatchExpressionArm {
   return node.kind === SyntaxKind.MlttMatchExpressionArm;
+}
+
+export function isValueMatchPattern(node: Node): node is ValueMatchPattern {
+  return node.kind === SyntaxKind.ValueMatchPattern;
 }
 
 export function isTypeLambdaNode(node: Node): node is TypeLambdaNode {

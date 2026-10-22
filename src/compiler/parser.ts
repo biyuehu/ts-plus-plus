@@ -408,6 +408,7 @@ import {
   UnionTypeNode,
   unsetNodeChildren,
   UpdateExpression,
+  ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
   VariableStatement,
@@ -549,7 +550,10 @@ const forEachChildTable: ForEachChildTable = {
     return visitNode(cbNode, node.mlttToken) || visitNode(cbNode, node.scrutinee) || visitNodes(cbNode, cbNodes, node.arms);
   },
   [SyntaxKind.MlttMatchExpressionArm]: function forEachChildInMlttMatchExpressionArm<T>(node: MlttMatchExpressionArm, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
-    return visitNode(cbNode, node.pattern) || visitNode(cbNode, node.variant) || visitNodes(cbNode, cbNodes, node.parameters) || visitNode(cbNode, node.result);
+    return visitNode(cbNode, node.pattern) || visitNodes(cbNode, cbNodes, node.valuePatterns) || visitNode(cbNode, node.guard) || visitNode(cbNode, node.result);
+  },
+  [SyntaxKind.ValueMatchPattern]: function forEachChildInValueMatchPattern<T>(node: ValueMatchPattern, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.name) || visitNodes(cbNode, cbNodes, node.elements);
   },
   [SyntaxKind.ShorthandPropertyAssignment]: function forEachChildInShorthandPropertyAssignment<T>(node: ShorthandPropertyAssignment, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNodes(cbNode, cbNodes, node.modifiers) ||
@@ -6093,16 +6097,49 @@ namespace Parser {
     while (token() !== SyntaxKind.CloseBraceToken && token() !== SyntaxKind.EndOfFileToken) {
       const armPos = getNodePos();
       const pattern = isMltt ? parseType() : undefined;
-      const variant = isMltt ? undefined : parseIdentifier();
-      const parameters = !isMltt && token() === SyntaxKind.OpenParenToken ? parseParameters(SignatureFlags.None) : undefined;
+      const valuePatternsPos = getNodePos();
+      const parsedValuePatterns = isMltt ? undefined : [parseValueMatchPattern()];
+      while (!isMltt && parseOptional(SyntaxKind.BarToken)) parsedValuePatterns!.push(parseValueMatchPattern());
+      const valuePatterns = parsedValuePatterns && createNodeArray(parsedValuePatterns, valuePatternsPos);
+      const guard = !isMltt && parseOptional(SyntaxKind.IfKeyword)
+        ? parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true)
+        : undefined;
       parseExpected(SyntaxKind.EqualsGreaterThanToken);
       const result = parseAssignmentExpressionOrHigher(/*allowReturnTypeInArrowFunction*/ true);
-      arms.push(finishNode(factory.createMlttMatchExpressionArm(pattern, result, variant, parameters), armPos));
+      arms.push(finishNode(factory.createMlttMatchExpressionArm(pattern, result, valuePatterns, guard), armPos));
       if (!parseOptional(SyntaxKind.CommaToken) && !parseOptional(SyntaxKind.SemicolonToken)) break;
     }
     const armList = createNodeArray(arms, armsPos);
     parseExpected(SyntaxKind.CloseBraceToken);
     return finishNode(factory.createMlttMatchExpression(scrutinee, armList, mlttToken), pos);
+  }
+
+  function parseValueMatchPattern(): ValueMatchPattern {
+    const pos = getNodePos();
+    const name = parseIdentifier();
+    let elements: NodeArray<ValueMatchPattern | ParameterDeclaration> | undefined;
+    if (parseOptional(SyntaxKind.OpenParenToken)) {
+      const elementsPos = getNodePos();
+      const parsed: (ValueMatchPattern | ParameterDeclaration)[] = [];
+      while (token() !== SyntaxKind.CloseParenToken && token() !== SyntaxKind.EndOfFileToken) {
+        const nested = lookAhead(() => {
+          parseIdentifier();
+          return token() === SyntaxKind.OpenParenToken;
+        });
+        if (nested) {
+          parsed.push(parseValueMatchPattern());
+        }
+        else {
+          const bindingPos = getNodePos();
+          const bindingName = parseIdentifier();
+          parsed.push(finishNode(factory.createParameterDeclaration(/*modifiers*/ undefined, /*dotDotDotToken*/ undefined, bindingName), bindingPos));
+        }
+        if (!parseOptional(SyntaxKind.CommaToken)) break;
+      }
+      elements = createNodeArray(parsed, elementsPos);
+      parseExpected(SyntaxKind.CloseParenToken);
+    }
+    return finishNode(factory.createValueMatchPattern(name, elements), pos);
   }
 
   function parseReifyExpression(): ReifyExpression {

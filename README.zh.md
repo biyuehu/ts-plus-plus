@@ -55,7 +55,7 @@ tspp --init
 }
 ```
 
-依赖项也必须显式列出。未知特性、重复特性或缺少依赖都会成为配置错误：编译器拒绝启动编译，不修改配置，也不会容错降级运行。
+依赖项也必须显式列出。未知特性、重复特性或缺少依赖都会成为配置错误：编译器拒绝启动编译，不修改配置，也不会容错降级运行。源码使用了尚未开启的特性时，编辑器可以通过快速修复把该特性及其完整依赖链加入 `tsppconfig.json`。
 
 ## TypeScript 互操作
 
@@ -161,14 +161,18 @@ function sumTo(n: bigint) with {
 
 ```ts
 data Result<T> = Ok(value: T) | Err(error: string);
+declare const result: Result<string>;
 
 const text = match result {
-  Ok(value) => `value: ${value}`,
+  Ok(value) if value.length > 0 => `value: ${value}`,
+  Ok(_) => "empty",
   Err(error) => error,
 };
 ```
 
-构造器字段按位置绑定。重复、未知、不可达以及缺失的变体都会产生诊断；最终分支可以使用 `_` 兜底。被匹配表达式只会求值一次。
+构造器字段按位置绑定。分支可以在模式后添加 `if` guard；带 guard 的分支不会单独形成穷尽覆盖，因此后续分支仍可处理该变体的剩余取值。重复、未知、不可达以及缺失的变体都会产生诊断；最终分支可以使用 `_` 兜底。被匹配表达式只会求值一次，编辑器还能通过快速修复补齐全部缺失变体。
+
+无字段变体可以通过 or-pattern 共用分支，例如 `Idle | Loading => wait()`。构造器模式支持嵌套，例如 `Wrapped(Ok(value)) => value`；嵌套绑定会保留准确的字段类型，嵌套分支会参与穷尽性检查，而 guard 仍需无 guard 的后备分支。嵌套的无字段构造器写作带括号的形式（`Wrapped(None())`），以便与字段绑定区分。
 
 ## 类型层计算：let-in、match 与类型 lambda
 

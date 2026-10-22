@@ -106,6 +106,7 @@ import {
   Statement,
   SyntaxKind,
   TransformationContext,
+  ValueMatchPattern,
   Visitor,
 } from "./_namespaces/ts.js";
 
@@ -939,8 +940,16 @@ const visitEachChildTable: VisitEachChildTable = {
       node,
       nodeVisitor(node.pattern, visitor, isTypeNode),
       Debug.checkDefined(nodeVisitor(node.result, visitor, isExpression)),
-      nodeVisitor(node.variant, visitor, isIdentifier),
-      nodesVisitor(node.parameters, visitor, isParameter),
+      nodesVisitor(node.valuePatterns, visitor, (n): n is ValueMatchPattern => n.kind === SyntaxKind.ValueMatchPattern),
+      nodeVisitor(node.guard, visitor, isExpression),
+    );
+  },
+
+  [SyntaxKind.ValueMatchPattern]: function visitEachChildOfValueMatchPattern(node, visitor, context, nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateValueMatchPattern(
+      node,
+      Debug.checkDefined(nodeVisitor(node.name, visitor, isIdentifier)),
+      nodesVisitor(node.elements, visitor, (n): n is ValueMatchPattern | ParameterDeclaration => n.kind === SyntaxKind.ValueMatchPattern || isParameter(n)),
     );
   },
 

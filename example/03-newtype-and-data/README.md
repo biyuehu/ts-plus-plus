@@ -8,7 +8,8 @@
 
 1. `newtype`：给已有类型一个不可互换的新名字；
 2. `data`：可辨识联合与变体构造器；
-3. 名义性、`_tag` 判别式与 `as` 的边界。
+3. `match` 的 guard、or-pattern 与嵌套构造器模式；
+4. 名义性、`_tag` 判别式与 `as` 的边界。
 
 ## newtype
 
@@ -67,6 +68,17 @@ declare const maybe: Option<number>;
 const selected = match maybe {
   None => 0,
   Some(value) => value,
+};
+```
+
+无字段变体可以用 `|` 合并；构造器可以继续嵌套，guard 只覆盖满足条件的值：
+
+```tspp
+const score = match screen {
+  Idle | Loading => 0,
+  Finished(Success(value)) if value > 0 => value,
+  Finished(Success(_)) => 0,
+  Finished(Failure(code)) => -code,
 };
 ```
 

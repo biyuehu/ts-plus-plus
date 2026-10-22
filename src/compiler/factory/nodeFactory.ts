@@ -468,6 +468,7 @@ import {
   TypeReferenceNode,
   UnionOrIntersectionTypeNode,
   UnionTypeNode,
+  ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
   VariableStatement,
@@ -639,6 +640,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateMatchTypeArm,
     createMatchTypeNode,
     updateMatchTypeNode,
+    createValueMatchPattern,
+    updateValueMatchPattern,
     createMlttMatchExpressionArm,
     updateMlttMatchExpressionArm,
     createMlttMatchExpression,
@@ -2742,11 +2745,26 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function createMlttMatchExpressionArm(pattern: TypeNode | undefined, result: Expression, variant?: Identifier, parameters?: readonly ParameterDeclaration[]) {
+  function createValueMatchPattern(name: Identifier, elements?: readonly (ValueMatchPattern | ParameterDeclaration)[]) {
+    const node = createBaseNode<ValueMatchPattern>(SyntaxKind.ValueMatchPattern);
+    node.name = name;
+    node.elements = elements && createNodeArray(elements);
+    node.parameters = createNodeArray(elements?.filter((element): element is ParameterDeclaration => element.kind === SyntaxKind.Parameter) ?? []);
+    node.transformFlags = TransformFlags.ContainsTypeScript;
+    return node;
+  }
+
+  function updateValueMatchPattern(node: ValueMatchPattern, name: Identifier, elements = node.elements) {
+    return node.name !== name || node.elements !== elements
+      ? update(createValueMatchPattern(name, elements), node)
+      : node;
+  }
+
+  function createMlttMatchExpressionArm(pattern: TypeNode | undefined, result: Expression, valuePatterns?: readonly ValueMatchPattern[], guard?: Expression) {
     const node = createBaseNode<MlttMatchExpressionArm>(SyntaxKind.MlttMatchExpressionArm);
     node.pattern = pattern;
-    node.variant = variant;
-    node.parameters = parameters && createNodeArray(parameters);
+    node.valuePatterns = valuePatterns && createNodeArray(valuePatterns);
+    node.guard = guard;
     node.result = result;
     node.transformFlags = TransformFlags.ContainsTypeScript;
     node.locals = undefined;
@@ -2755,9 +2773,9 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   }
 
   // @api
-  function updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode | undefined, result: Expression, variant = node.variant, parameters = node.parameters) {
-    return node.pattern !== pattern || node.result !== result || node.variant !== variant || node.parameters !== parameters
-      ? update(createMlttMatchExpressionArm(pattern, result, variant, parameters), node)
+  function updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode | undefined, result: Expression, valuePatterns = node.valuePatterns, guard = node.guard) {
+    return node.pattern !== pattern || node.result !== result || node.valuePatterns !== valuePatterns || node.guard !== guard
+      ? update(createMlttMatchExpressionArm(pattern, result, valuePatterns, guard), node)
       : node;
   }
 

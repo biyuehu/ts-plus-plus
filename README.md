@@ -55,7 +55,7 @@ Enable features manually:
 }
 ```
 
-Dependencies must also be listed explicitly. An unknown feature, duplicate feature, or missing dependency is a configuration error: compilation is rejected, and the compiler neither edits the file nor starts in a fallback mode.
+Dependencies must also be listed explicitly. An unknown feature, duplicate feature, or missing dependency is a configuration error: compilation is rejected, and the compiler neither edits the file nor starts in a fallback mode. When source code uses a disabled feature, editors can offer a quick fix that adds the feature and its complete dependency chain to `tsppconfig.json`.
 
 ## TypeScript interoperability
 
@@ -161,14 +161,18 @@ Use `assert: condition;` inside a verified function to create a local proof obli
 
 ```ts
 data Result<T> = Ok(value: T) | Err(error: string);
+declare const result: Result<string>;
 
 const text = match result {
-  Ok(value) => `value: ${value}`,
+  Ok(value) if value.length > 0 => `value: ${value}`,
+  Ok(_) => "empty",
   Err(error) => error,
 };
 ```
 
-Constructor fields are bound positionally. Duplicate, unknown, unreachable, and missing variants are diagnosed; `_` may be used as the final fallback branch. The scrutinee is evaluated exactly once.
+Constructor fields are bound positionally. A branch may include an `if` guard after its pattern; guarded branches do not by themselves make a variant exhaustive, so a later guarded or unguarded branch can handle the remaining values. Duplicate, unknown, unreachable, and missing variants are diagnosed; `_` may be used as the final fallback branch. The scrutinee is evaluated exactly once. Editors can offer a quick fix that inserts every missing variant branch.
+
+Nullary variants can share a branch through an or-pattern, such as `Idle | Loading => wait()`. Constructor patterns may be nested, for example `Wrapped(Ok(value)) => value`; nested bindings keep the exact field type, nested alternatives participate in exhaustiveness checking, and guards still require an unguarded fallback. A nested nullary constructor is written with parentheses (`Wrapped(None())`) to distinguish it from a field binding.
 
 ## Type computation: let-in, match, and type lambdas
 

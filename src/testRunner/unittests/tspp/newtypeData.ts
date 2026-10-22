@@ -218,6 +218,74 @@ describe("unittests:: tspp:: newtype and data", () => {
   });
 
   describe("value match", () => {
+    it("offers to enable a missing TS++ feature in tsppconfig.json", () => {
+      const fileName = "/file.tspp";
+      const source = `data Option<T> = None | Some(value: T);`;
+      const configText = `{"compilerOptions":{"tsppFeatures":[]}}`;
+      const configFile = ts.parseJsonText("/tsppconfig.json", configText) as ts.TsConfigSourceFile;
+      const options: ts.CompilerOptions = { noLib: true, strict: true, tsppFeatures: [], configFile };
+      const host: ts.LanguageServiceHost = {
+        getCompilationSettings: () => options,
+        getScriptFileNames: () => [fileName],
+        getScriptVersion: () => "1",
+        getScriptSnapshot: name => name === fileName ? ts.ScriptSnapshot.fromString(source) : undefined,
+        getCurrentDirectory: () => "/",
+        getDefaultLibFileName: () => "/lib.d.ts",
+        fileExists: name => name === fileName,
+        readFile: name => name === fileName ? source : undefined,
+        readDirectory: () => [],
+      };
+      const service = ts.createLanguageService(host);
+      const diagnostic = service.getSemanticDiagnostics(fileName).find(candidate => candidate.code === 18072)!;
+      const fixes = service.getCodeFixesAtPosition(
+        fileName,
+        diagnostic.start!,
+        diagnostic.start! + diagnostic.length!,
+        [diagnostic.code],
+        {},
+        {},
+      );
+
+      assert.strictEqual(fixes[0]?.description, "Enable TS++ feature 'dataDeclarations' and its required dependencies");
+      assert.strictEqual(fixes[0]?.changes[0].fileName, "/tsppconfig.json");
+      assert.include(fixes[0]?.changes[0].textChanges[0].newText, '"dataDeclarations"');
+    });
+
+    it("enables missing TS++ feature dependencies in dependency-first order", () => {
+      const fileName = "/file.tspp";
+      const source = `type Id1<B: Type1> = B;`;
+      const configFile = ts.parseJsonText("/tsppconfig.json", `{"compilerOptions":{"tsppFeatures":[]}}`) as ts.TsConfigSourceFile;
+      const options: ts.CompilerOptions = { noLib: true, strict: true, tsppFeatures: [], configFile };
+      const host: ts.LanguageServiceHost = {
+        getCompilationSettings: () => options,
+        getScriptFileNames: () => [fileName],
+        getScriptVersion: () => "1",
+        getScriptSnapshot: name => name === fileName ? ts.ScriptSnapshot.fromString(source) : undefined,
+        getCurrentDirectory: () => "/",
+        getDefaultLibFileName: () => "/lib.d.ts",
+        fileExists: name => name === fileName,
+        readFile: name => name === fileName ? source : undefined,
+        readDirectory: () => [],
+      };
+      const service = ts.createLanguageService(host);
+      const diagnostic = service.getSemanticDiagnostics(fileName).find(candidate =>
+        candidate.code === 18072 && ts.flattenDiagnosticMessageText(candidate.messageText, "\n").includes("'typeUniverses'")
+      )!;
+      const fix = service.getCodeFixesAtPosition(
+        fileName,
+        diagnostic.start!,
+        diagnostic.start! + diagnostic.length!,
+        [diagnostic.code],
+        {},
+        {},
+      )[0];
+      const replacement = fix?.changes[0].textChanges[0].newText ?? "";
+
+      assert.include(replacement, '"higherKindedTypes"');
+      assert.include(replacement, '"typeUniverses"');
+      assert.isBelow(replacement.indexOf('"higherKindedTypes"'), replacement.indexOf('"typeUniverses"'));
+    });
+
     it("types a pattern binding independently of match checking in the language service", () => {
       const fileName = "/file.tspp";
       const source = `
@@ -260,6 +328,197 @@ describe("unittests:: tspp:: newtype and data", () => {
       `,
       );
       assert.isEmpty(semanticMessages(program));
+    });
+
+    it("supports guarded branches without treating them as exhaustive", () => {
+      const valid = createProgram(
+        "/guarded.tspp",
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        declare const result: Result<number>;
+        const selected: number | string = match result {
+          Ok(value) if value > 0 => value,
+          Ok(value) => -value,
+          Err(error) if error !== "" => error,
+          Err(_) => "unknown",
+        };
+      `,
+      );
+      assert.isEmpty(semanticMessages(valid));
+
+      const missingFallback = createProgram(
+        "/guarded-missing.tspp",
+        `
+        data Option<T> = None | Some(value: T);
+        declare const option: Option<number>;
+        const selected = match option { Some(value) if value > 0 => value, None => 0 };
+      `,
+      );
+      assert.match(semanticMessages(missingFallback).join("\n"), /Non-exhaustive.*Some/);
+    });
+
+    it("emits value match guards after binding variant fields", () => {
+      const output = ts.transpileModule(
+        `
+        data Option<T> = None | Some(value: T);
+        declare const option: Option<number>;
+        const selected = match option { Some(value) if value > 0 => value, _ => 0 };
+        `,
+        {
+          fileName: "guarded.tspp",
+          compilerOptions: { target: ts.ScriptTarget.ES2022, tsppFeatures: ["dataDeclarations"] },
+        },
+      ).outputText;
+      assert.include(output, '._tag === "Some"');
+      assert.include(output, "> 0");
+      assert.notInclude(output, "match option");
+    });
+
+    it("supports or-patterns for nullary variants", () => {
+      const program = createProgram(
+        "/or-pattern.tspp",
+        `
+        data State = Idle | Loading | Ready(value: string);
+        declare const state: State;
+        const selected: number = match state {
+          Idle | Loading => 0,
+          Ready(value) => 1,
+        };
+      `,
+      );
+      assert.isEmpty(semanticMessages(program));
+
+      const output = ts.transpileModule(
+        `
+        data State = Idle | Loading | Ready(value: string);
+        const state: State = Loading;
+        const selected = match state { Idle | Loading => 0, Ready(value) => value.length };
+        `,
+        {
+          fileName: "or-pattern.tspp",
+          compilerOptions: { target: ts.ScriptTarget.ES2022, tsppFeatures: ["dataDeclarations"] },
+        },
+      ).outputText;
+      assert.include(output, '._tag === "Idle" ||');
+      assert.include(output, '._tag === "Loading"');
+    });
+
+    it("supports exhaustive nested constructor patterns", () => {
+      const program = createProgram(
+        "/nested-pattern.tspp",
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        data Envelope<T> = Empty | Wrapped(result: Result<T>);
+        declare const envelope: Envelope<number>;
+        const selected: number = match envelope {
+          Empty => 0,
+          Wrapped(Ok(value)) if value > 0 => value,
+          Wrapped(Ok(value)) => -value,
+          Wrapped(Err(error)) => error === "" ? 0 : 1,
+        };
+      `,
+      );
+      const messages = semanticMessages(program);
+      assert.isEmpty(messages, messages.join("\n"));
+    });
+
+    it("distinguishes nested nullary constructors from bindings", () => {
+      const program = createProgram(
+        "/nested-nullary.tspp",
+        `
+        data Optional<T> = Absent | Present(value: T);
+        data Holder<T> = Held(option: Optional<T>);
+        declare const holder: Holder<number>;
+        const selected: number = match holder {
+          Held(Absent()) => 0,
+          Held(Present(value)) => value,
+        };
+      `,
+      );
+      const messages = semanticMessages(program);
+      assert.isEmpty(messages, messages.join("\n"));
+    });
+
+    it("types nested pattern bindings in the language service", () => {
+      const fileName = "/nested-hover.tspp";
+      const source = `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        data Envelope<T> = Wrapped(result: Result<T>);
+        declare const envelope: Envelope<number>;
+        const selected = match envelope { Wrapped(Ok(value)) => value, Wrapped(Err(error)) => error === "" ? 0 : 1 };
+      `;
+      const host: ts.LanguageServiceHost = {
+        getCompilationSettings: () => ({ noLib: true, strict: true, tsppFeatures: ["dataDeclarations"] }),
+        getScriptFileNames: () => [fileName],
+        getScriptVersion: () => "1",
+        getScriptSnapshot: name => name === fileName ? ts.ScriptSnapshot.fromString(source) : undefined,
+        getCurrentDirectory: () => "/",
+        getDefaultLibFileName: () => "/lib.d.ts",
+        fileExists: name => name === fileName,
+        readFile: name => name === fileName ? source : undefined,
+        readDirectory: () => [],
+      };
+      const service = ts.createLanguageService(host);
+      const info = service.getQuickInfoAtPosition(fileName, source.indexOf("value))"));
+
+      assert.include(ts.displayPartsToString(info?.displayParts), "value: number");
+      const diagnostics = service.getSemanticDiagnostics(fileName);
+      assert.isEmpty(diagnostics, diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")).join("\n"));
+    });
+
+    it("emits nested tag checks and field bindings", () => {
+      const output = ts.transpileModule(
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        data Envelope<T> = Wrapped(result: Result<T>);
+        const envelope: Envelope<number> = Wrapped(Ok(2));
+        const selected = match envelope { Wrapped(Ok(value)) => value, Wrapped(Err(error)) => error === "" ? 0 : 1 };
+        `,
+        {
+          fileName: "nested-emit.tspp",
+          compilerOptions: { target: ts.ScriptTarget.ES2022, tsppFeatures: ["dataDeclarations"] },
+        },
+      ).outputText;
+
+      assert.include(output, '.result._tag === "Ok"');
+      assert.include(output, ".result.value");
+      assert.notInclude(output, "match envelope");
+    });
+
+    it("reports incomplete and invalid nested patterns", () => {
+      const incomplete = createProgram(
+        "/nested-missing.tspp",
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        data Envelope<T> = Empty | Wrapped(result: Result<T>);
+        declare const envelope: Envelope<number>;
+        const selected = match envelope { Empty => 0, Wrapped(Ok(value)) => value };
+      `,
+      );
+      assert.match(semanticMessages(incomplete).join("\n"), /Non-exhaustive.*Wrapped/);
+
+      const invalid = createProgram(
+        "/nested-invalid.tspp",
+        `
+        data Result<T> = Ok(value: T) | Err(error: string);
+        data Envelope<T> = Wrapped(result: Result<T>);
+        declare const envelope: Envelope<number>;
+        const selected = match envelope { Wrapped(Missing(value)) => value, Wrapped(_) => 0 };
+      `,
+      );
+      assert.match(semanticMessages(invalid).join("\n"), /Variant 'Missing' is not part of field 'result'/);
+    });
+
+    it("rejects field bindings on value match or-patterns", () => {
+      const program = createProgram(
+        "/invalid-or-pattern.tspp",
+        `
+        data Result = Ok(value: number) | Err(value: number);
+        declare const result: Result;
+        const selected = match result { Ok | Err(value) => value };
+      `,
+      );
+      assert.match(semanticMessages(program).join("\n"), /or-patterns currently support only variants without fields/);
     });
 
     it("reports missing, duplicate, and unknown variants", () => {

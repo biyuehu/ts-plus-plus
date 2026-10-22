@@ -8659,5 +8659,22 @@
   "No inputs were found in config file '{0}'. The include patterns match '.tspp' files, but '.tspp' inputs are only enabled when the config file is named 'tsppconfig.json' or the 'tsppFeatures' option is set.": {
     "category": "Error",
     "code": 18087
+  },
+  "Non-exhaustive value match. Missing: {0}.": {
+    "category": "Error",
+    "code": 18088
+  },
+  "Add missing value match branches": {
+    "category": "Message",
+    "code": 18089
+  },
+  "Enable TS++ feature '{0}' and its required dependencies": {
+    "category": "Message",
+    "code": 18090
+  },
+  "Enable missing TS++ features and their required dependencies": {
+    "category": "Message",
+    "code": 18091
+  }
   }
 }

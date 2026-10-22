@@ -353,6 +353,7 @@ export const enum SyntaxKind {
   DataDeclaration,
   MatchTypeArm,
   MlttMatchExpressionArm,
+  ValueMatchPattern,
   EnumDeclaration,
   ModuleDeclaration,
   ModuleBlock,
@@ -1131,6 +1132,7 @@ export type HasChildren =
   | MatchTypeArm
   | MlttMatchExpression
   | MlttMatchExpressionArm
+  | ValueMatchPattern
   | TypeLambdaNode
   | ImportTypeNode
   | ImportTypeAssertionContainer
@@ -1970,8 +1972,8 @@ export interface ParameterDeclaration extends NamedDeclaration, JSDocContainer {
     readonly questionToken?: QuestionToken;      // Present on optional parameter
     readonly type?: TypeNode;                    // Optional type annotation
     readonly initializer?: Expression;           // Optional initializer
-    /** @internal Runtime field selected by a value-level match binding. */
-    readonly tsppMatchFieldName?: __String;
+    /** @internal Runtime field path selected by a value-level match binding. */
+    readonly tsppMatchFieldPath?: readonly __String[];
 }
 
 // dprint-ignore
@@ -2630,16 +2632,27 @@ export interface ReifyExpression extends UnaryExpression {
   readonly type: TypeNode;
 }
 
+/** A constructor pattern used by a value-level `match`. */
+export interface ValueMatchPattern extends Node {
+  readonly kind: SyntaxKind.ValueMatchPattern;
+  readonly name: Identifier;
+  readonly elements?: NodeArray<ValueMatchPattern | ParameterDeclaration>;
+  /** @internal Direct bindings, retained for parameter-like checker compatibility. */
+  readonly parameters: NodeArray<ParameterDeclaration>;
+  /** @internal Runtime field names corresponding to `elements`, populated by the checker. */
+  readonly tsppMatchFieldNames?: readonly __String[];
+}
+
 /** One arm of an expression-level `match mltt` or value-level `match`. */
 export interface MlttMatchExpressionArm extends Node, LocalsContainer {
   readonly kind: SyntaxKind.MlttMatchExpressionArm;
   readonly parent: MlttMatchExpression;
   /** Type pattern for `match mltt`. */
   readonly pattern?: TypeNode;
-  /** Data-constructor name (or `_`) for value-level `match`. */
-  readonly variant?: Identifier;
-  /** Field bindings for a value-level constructor pattern. */
-  readonly parameters?: NodeArray<ParameterDeclaration>;
+  /** Constructor patterns (or `_`) joined by `|` for value-level `match`. */
+  readonly valuePatterns?: NodeArray<ValueMatchPattern>;
+  /** Optional value-level branch guard. */
+  readonly guard?: Expression;
   readonly result: Expression;
 }
 
@@ -9326,8 +9339,10 @@ export interface NodeFactory {
   updateMatchTypeArm(node: MatchTypeArm, pattern: TypeNode, result: TypeNode): MatchTypeArm;
   createMatchTypeNode(scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken?: Identifier): MatchTypeNode;
   updateMatchTypeNode(node: MatchTypeNode, scrutinee: TypeNode, arms: readonly MatchTypeArm[], mlttToken?: Identifier): MatchTypeNode;
-  createMlttMatchExpressionArm(pattern: TypeNode | undefined, result: Expression, variant?: Identifier, parameters?: readonly ParameterDeclaration[]): MlttMatchExpressionArm;
-  updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode | undefined, result: Expression, variant?: Identifier, parameters?: readonly ParameterDeclaration[]): MlttMatchExpressionArm;
+  createValueMatchPattern(name: Identifier, elements?: readonly (ValueMatchPattern | ParameterDeclaration)[]): ValueMatchPattern;
+  updateValueMatchPattern(node: ValueMatchPattern, name: Identifier, elements?: readonly (ValueMatchPattern | ParameterDeclaration)[]): ValueMatchPattern;
+  createMlttMatchExpressionArm(pattern: TypeNode | undefined, result: Expression, valuePatterns?: readonly ValueMatchPattern[], guard?: Expression): MlttMatchExpressionArm;
+  updateMlttMatchExpressionArm(node: MlttMatchExpressionArm, pattern: TypeNode | undefined, result: Expression, valuePatterns?: readonly ValueMatchPattern[], guard?: Expression): MlttMatchExpressionArm;
   createMlttMatchExpression(scrutinee: Expression, arms: readonly MlttMatchExpressionArm[], mlttToken?: Identifier): MlttMatchExpression;
   updateMlttMatchExpression(node: MlttMatchExpression, scrutinee: Expression, arms: readonly MlttMatchExpressionArm[], mlttToken?: Identifier): MlttMatchExpression;
   createTypeLambdaNode(typeParameters: readonly TypeParameterDeclaration[], body: TypeNode): TypeLambdaNode;

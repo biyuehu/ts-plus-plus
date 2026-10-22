@@ -99,6 +99,10 @@
         "title": "TS++: Open Type Computation Example"
       },
       {
+        "command": "tspp.openTypescriptInteropExample",
+        "title": "TS++: Open TypeScript Interop Example"
+      },
+      {
         "command": "tspp.showExpandedSource",
         "title": "TS++: Show Expanded Source",
         "icon": "$(preview)"

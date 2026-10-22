@@ -420,6 +420,7 @@ import {
   TypeQueryNode,
   TypeReferenceNode,
   UnionTypeNode,
+  ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
   VariableStatement,
@@ -3070,8 +3071,20 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
       writeSpace();
       if (node.mlttToken) emit(arm.pattern);
       else {
-        emit(arm.variant);
-        if (arm.parameters) emitParameters(arm, arm.parameters);
+        for (const [patternIndex, pattern] of (arm.valuePatterns ?? emptyArray).entries()) {
+          if (patternIndex) {
+            writeSpace();
+            writePunctuation("|");
+            writeSpace();
+          }
+          emitValueMatchPattern(pattern);
+        }
+      }
+      if (arm.guard) {
+        writeSpace();
+        writeKeyword("if");
+        writeSpace();
+        emitExpression(arm.guard);
       }
       writeSpace();
       writePunctuation("=>");
@@ -3080,6 +3093,22 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     });
     writeSpace();
     writePunctuation("}");
+  }
+
+  function emitValueMatchPattern(pattern: ValueMatchPattern) {
+    emit(pattern.name);
+    if (pattern.elements) {
+      writePunctuation("(");
+      pattern.elements.forEach((element, index) => {
+        if (index) {
+          writePunctuation(",");
+          writeSpace();
+        }
+        if (element.kind === SyntaxKind.ValueMatchPattern) emitValueMatchPattern(element);
+        else emit(element.name);
+      });
+      writePunctuation(")");
+    }
   }
 
   function emitVoidExpression(node: VoidExpression) {

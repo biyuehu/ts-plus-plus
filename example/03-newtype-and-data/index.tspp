@@ -70,6 +70,19 @@ const selected: number = match maybe {
   Some(value) => value,
 };
 
+// 无字段变体可以通过 | 共用分支；带字段的变体可以继续嵌套匹配。
+// guard 只处理满足条件的值，后续分支仍负责剩余情况。
+data Outcome = Success(value: number) | Failure(code: number);
+data ScreenState = Idle | Loading | Finished(outcome: Outcome);
+
+declare const screen: ScreenState;
+const score: number = match screen {
+  Idle | Loading => 0,
+  Finished(Success(value)) if value > 0 => value,
+  Finished(Success(_)) => 0,
+  Finished(Failure(code)) => -code,
+};
+
 // 每个变体是值，不能直接作为独立类型使用，得通过 typeof。
 const extracted: typeof Nil = Nil;
 const tag: "Nil" = extracted._tag;
@@ -90,8 +103,8 @@ const error: typeof Nil = { _tag: "Nil" as const };
 // 品牌属性不会出现在 keyof、诊断消息或 hover 中。
 const keys: "x" | "y" = "x" satisfies keyof Point;
 
-export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, nothing, rightArm, selected, singleItem, something, tag };
-export type { Either, List, Option, OrderId, Point, Some, StringOrNumber, UserId };
+export { asNumber, created, createdOrder, emptyArm, emptyList, extracted, keys, leftArm, nothing, rightArm, score, selected, singleItem, something, tag };
+export type { Either, List, Option, OrderId, Outcome, Point, ScreenState, Some, StringOrNumber, UserId };
 
 
 // -----------------------------------------------------------------------------

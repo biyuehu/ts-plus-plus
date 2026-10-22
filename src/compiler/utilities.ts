@@ -3764,7 +3764,7 @@ export function isInExpressionContext(node: Node): boolean {
     case SyntaxKind.SatisfiesExpression:
       return node === (parent as SatisfiesExpression).expression;
     case SyntaxKind.MlttMatchExpressionArm:
-      return node === (parent as MlttMatchExpressionArm).result;
+      return node === (parent as MlttMatchExpressionArm).guard || node === (parent as MlttMatchExpressionArm).result;
     default:
       return isExpressionNode(parent);
   }

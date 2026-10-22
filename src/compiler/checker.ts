@@ -1153,6 +1153,7 @@ import {
   UniqueESSymbolType,
   usesWildcardTypes,
   usingSingleLineStringWriter,
+  ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
   VariableLikeDeclaration,
@@ -12338,28 +12339,38 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function getTypeForValueMatchBinding(declaration: ParameterDeclaration): Type | undefined {
-    if ((declaration.parent as Node).kind !== SyntaxKind.MlttMatchExpressionArm) return undefined;
-    const arm = declaration.parent as unknown as MlttMatchExpressionArm;
-    if (!arm.variant || idText(arm.variant) === "_") return undefined;
-    const index = arm.parameters?.indexOf(declaration) ?? -1;
-    if (index < 0) return undefined;
+    if ((declaration.parent as Node).kind !== SyntaxKind.ValueMatchPattern) return undefined;
+    let root = declaration.parent as unknown as ValueMatchPattern;
+    while (root.parent.kind === SyntaxKind.ValueMatchPattern) root = root.parent as ValueMatchPattern;
+    if (root.parent.kind !== SyntaxKind.MlttMatchExpressionArm) return undefined;
+    const arm = root.parent as MlttMatchExpressionArm;
+    const rootVariant = getValueMatchVariants(checkExpression(arm.parent.scrutinee)).get(idText(root.name));
+    if (!rootVariant) return undefined;
 
-    const scrutineeType = checkExpression(arm.parent.scrutinee);
-    const constituents = scrutineeType.flags & TypeFlags.Union ? (scrutineeType as UnionType).types : [scrutineeType];
-    for (const constituent of constituents) {
-      const tag = getPropertyOfType(constituent, "_tag" as __String);
-      const tagType = tag && getTypeOfSymbol(tag);
-      if (!tagType || !isValueMatchTagType(tagType) || tagType.value !== idText(arm.variant)) continue;
-      const variant = constituent.aliasSymbol?.declarations?.find(isDataVariant);
-      const field = variant?.parameters?.[index];
-      if (!field || !isIdentifier(field.name)) return undefined;
-      const fieldType = getTypeOfPropertyOfType(constituent, field.name.escapedText);
-      if (fieldType) {
-        (declaration as Mutable<ParameterDeclaration>).tsppMatchFieldName = field.name.escapedText;
+    const resolve = (pattern: ValueMatchPattern, variantType: Type, variant: DataVariant | undefined, path: readonly __String[]): Type | undefined => {
+      const elements = pattern.elements ?? emptyArray;
+      const fields = variant?.parameters ?? emptyArray;
+      for (let index = 0; index < Math.min(elements.length, fields.length); index++) {
+        const element = elements[index];
+        const field = fields[index];
+        if (!isIdentifier(field.name)) continue;
+        const fieldType = getTypeOfPropertyOfType(variantType, field.name.escapedText);
+        if (!fieldType) continue;
+        if (element === declaration) {
+          (declaration as Mutable<ParameterDeclaration>).tsppMatchFieldPath = [...path, field.name.escapedText];
+          return fieldType;
+        }
+        if (element.kind === SyntaxKind.ValueMatchPattern) {
+          const nested = getValueMatchVariants(fieldType).get(idText(element.name));
+          if (nested) {
+            const resolved = resolve(element, nested.type, nested.declaration, [...path, field.name.escapedText]);
+            if (resolved) return resolved;
+          }
+        }
       }
-      return fieldType;
-    }
-    return undefined;
+      return undefined;
+    };
+    return resolve(root, rootVariant.type, rootVariant.declaration, emptyArray);
   }
 
   function isConstructorDeclaredProperty(symbol: Symbol) {
@@ -42133,7 +42144,72 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function checkValueMatchExpression(node: MlttMatchExpression, checkMode: CheckMode | undefined): Type {
     if (!requireTsppFeature(node, "dataDeclarations")) return errorType;
     const scrutineeType = checkExpression(node.scrutinee, checkMode);
-    const constituents = scrutineeType.flags & TypeFlags.Union ? (scrutineeType as UnionType).types : [scrutineeType];
+    const variants = getValueMatchVariants(scrutineeType);
+    if (!variants.size) {
+      error(node.scrutinee, Diagnostics.Invalid_MLTT_type_Colon_0, "A value-level 'match' scrutinee must be a closed union discriminated by a string-literal '_tag' property.");
+      return errorType;
+    }
+
+    const covered = new Set<string>();
+    const unguardedPatterns = new Map<string, ValueMatchPattern[]>();
+    let hasWildcard = false;
+    const resultTypes: Type[] = [];
+    for (const arm of node.arms) {
+      const armPatterns = arm.valuePatterns ?? emptyArray;
+      if (!armPatterns.length) continue;
+      const wildcard = armPatterns.find(pattern => idText(pattern.name) === "_");
+      if (hasWildcard) {
+        error(arm, Diagnostics.Invalid_MLTT_type_Colon_0, "A branch after '_' is unreachable.");
+      }
+      else if (wildcard) {
+        if (armPatterns.length > 1) error(wildcard, Diagnostics.Invalid_MLTT_type_Colon_0, "The '_' pattern cannot be combined with other variants using '|'.");
+        if (!arm.guard) hasWildcard = true;
+        if (wildcard.elements) error(wildcard, Diagnostics.Invalid_MLTT_type_Colon_0, "The '_' branch cannot contain nested patterns.");
+      }
+      else {
+        if (armPatterns.length > 1 && armPatterns.some(pattern => pattern.elements?.length)) {
+          error(arm, Diagnostics.Invalid_MLTT_type_Colon_0, "Value match or-patterns currently support only variants without fields.");
+        }
+        const seenInArm = new Set<string>();
+        for (const currentPattern of armPatterns) {
+          const name = idText(currentPattern.name);
+          const variant = variants.get(name);
+          if (!variant) {
+            error(currentPattern.name, Diagnostics.Invalid_MLTT_type_Colon_0, `Variant '${name}' is not part of the matched value.`);
+          }
+          else if (covered.has(name) || seenInArm.has(name)) {
+            error(currentPattern.name, Diagnostics.Invalid_MLTT_type_Colon_0, `Duplicate match branch for variant '${name}'.`);
+          }
+          else {
+            seenInArm.add(name);
+            const irrefutable = checkValueMatchConstructorPattern(currentPattern, variant.type, variant.declaration, emptyArray);
+            if (!arm.guard) {
+              if (irrefutable) covered.add(name);
+              else {
+                const patterns = unguardedPatterns.get(name);
+                if (patterns) patterns.push(currentPattern);
+                else unguardedPatterns.set(name, [currentPattern]);
+              }
+            }
+          }
+        }
+      }
+      if (arm.guard) checkTruthinessExpression(arm.guard, checkMode);
+      resultTypes.push(checkExpression(arm.result, checkMode));
+    }
+    if (!hasWildcard) {
+      const missing = arrayFrom(variants.keys()).filter(name => {
+        if (covered.has(name)) return false;
+        const variant = variants.get(name)!;
+        return !isValueMatchVariantCovered(unguardedPatterns.get(name) ?? emptyArray, variant.type, variant.declaration);
+      });
+      if (missing.length) error(node, Diagnostics.Non_exhaustive_value_match_Missing_Colon_0, missing.join(", "));
+    }
+    return resultTypes.length ? getUnionType(resultTypes, UnionReduction.Literal) : neverType;
+  }
+
+  function getValueMatchVariants(type: Type): Map<string, { type: Type; declaration?: DataVariant; }> {
+    const constituents = type.flags & TypeFlags.Union ? (type as UnionType).types : [type];
     const variants = new Map<string, { type: Type; declaration?: DataVariant; }>();
     for (const constituent of constituents) {
       const tag = getPropertyOfType(constituent, "_tag" as __String);
@@ -42142,63 +42218,74 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const declaration = constituent.aliasSymbol?.declarations?.find(isDataVariant);
       variants.set(tagType.value, { type: constituent, declaration });
     }
-    if (!variants.size) {
-      error(node.scrutinee, Diagnostics.Invalid_MLTT_type_Colon_0, "A value-level 'match' scrutinee must be a closed union discriminated by a string-literal '_tag' property.");
-      return errorType;
-    }
+    return variants;
+  }
 
-    const covered = new Set<string>();
-    let hasWildcard = false;
-    const resultTypes: Type[] = [];
-    for (const arm of node.arms) {
-      const variantName = arm.variant;
-      if (!variantName) continue;
-      const name = idText(variantName);
-      if (hasWildcard) {
-        error(arm, Diagnostics.Invalid_MLTT_type_Colon_0, "A branch after '_' is unreachable.");
-      }
-      else if (name === "_") {
-        hasWildcard = true;
-        if (arm.parameters?.length) error(variantName, Diagnostics.Invalid_MLTT_type_Colon_0, "The '_' branch cannot bind fields.");
-      }
-      else {
-        const variant = variants.get(name);
-        if (!variant) {
-          error(variantName, Diagnostics.Invalid_MLTT_type_Colon_0, `Variant '${name}' is not part of the matched value.`);
-        }
-        else if (covered.has(name)) {
-          error(variantName, Diagnostics.Invalid_MLTT_type_Colon_0, `Duplicate match branch for variant '${name}'.`);
+  function checkValueMatchConstructorPattern(pattern: ValueMatchPattern, variantType: Type, declaration: DataVariant | undefined, path: readonly __String[]): boolean {
+    const fields = declaration?.parameters ?? emptyArray;
+    const elements = pattern.elements ?? emptyArray;
+    if (elements.length !== fields.length) {
+      error(pattern.name, Diagnostics.Invalid_MLTT_type_Colon_0, `Variant '${idText(pattern.name)}' expects ${fields.length} field pattern(s), but this pattern has ${elements.length}.`);
+    }
+    const fieldNames: __String[] = [];
+    let irrefutable = true;
+    const count = Math.min(elements.length, fields.length);
+    for (let i = 0; i < count; i++) {
+      const element = elements[i];
+      const field = fields[i];
+      if (!isIdentifier(field.name)) continue;
+      const fieldName = field.name.escapedText;
+      fieldNames.push(fieldName);
+      const fieldType = getTypeOfPropertyOfType(variantType, fieldName);
+      if (!fieldType) continue;
+      if (element.kind === SyntaxKind.ValueMatchPattern) {
+        irrefutable = false;
+        const nestedName = idText(element.name);
+        const nestedVariant = getValueMatchVariants(fieldType).get(nestedName);
+        if (!nestedVariant) {
+          error(element.name, Diagnostics.Invalid_MLTT_type_Colon_0, `Variant '${nestedName}' is not part of field '${idText(field.name)}'.`);
         }
         else {
-          covered.add(name);
-          const fields = variant.declaration?.parameters ?? emptyArray;
-          const parameters = arm.parameters ?? emptyArray;
-          if (parameters.length !== fields.length) {
-            error(variantName, Diagnostics.Invalid_MLTT_type_Colon_0, `Variant '${name}' expects ${fields.length} field binding(s), but this pattern has ${parameters.length}.`);
-          }
-          const count = Math.min(parameters.length, fields.length);
-          for (let i = 0; i < count; i++) {
-            const parameter = parameters[i];
-            if (!isIdentifier(parameter.name) || parameter.type || parameter.initializer || parameter.questionToken || parameter.dotDotDotToken) {
-              error(parameter, Diagnostics.Invalid_MLTT_type_Colon_0, "A value match binding must be a plain identifier.");
-              continue;
-            }
-            const field = fields[i];
-            const fieldType = isIdentifier(field.name) ? getTypeOfPropertyOfType(variant.type, field.name.escapedText) : undefined;
-            if (fieldType && isIdentifier(field.name)) {
-              (parameter as Mutable<ParameterDeclaration>).tsppMatchFieldName = field.name.escapedText;
-              getSymbolLinks(getSymbolOfDeclaration(parameter)).type = fieldType;
-            }
-          }
+          checkValueMatchConstructorPattern(element, nestedVariant.type, nestedVariant.declaration, [...path, fieldName]);
         }
       }
-      resultTypes.push(checkExpression(arm.result, checkMode));
+      else {
+        if (!isIdentifier(element.name) || element.type || element.initializer || element.questionToken || element.dotDotDotToken) {
+          error(element, Diagnostics.Invalid_MLTT_type_Colon_0, "A value match binding must be a plain identifier.");
+          continue;
+        }
+        (element as Mutable<ParameterDeclaration>).tsppMatchFieldPath = [...path, fieldName];
+        getSymbolLinks(getSymbolOfDeclaration(element)).type = fieldType;
+      }
     }
-    if (!hasWildcard) {
-      const missing = arrayFrom(variants.keys()).filter(name => !covered.has(name));
-      if (missing.length) error(node, Diagnostics.Invalid_MLTT_type_Colon_0, `Non-exhaustive value match. Missing: ${missing.join(", ")}.`);
+    (pattern as Mutable<ValueMatchPattern>).tsppMatchFieldNames = fieldNames;
+    return irrefutable;
+  }
+
+  function isValueMatchVariantCovered(patterns: readonly ValueMatchPattern[], variantType: Type, declaration: DataVariant | undefined): boolean {
+    if (!patterns.length) return false;
+    if (patterns.some(pattern => !(pattern.elements ?? emptyArray).some(element => element.kind === SyntaxKind.ValueMatchPattern))) return true;
+    const fields = declaration?.parameters ?? emptyArray;
+    for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
+      const field = fields[fieldIndex];
+      if (!isIdentifier(field.name)) continue;
+      const nestedPatterns: ValueMatchPattern[] = [];
+      let onlyThisFieldIsRefutable = true;
+      for (const pattern of patterns) {
+        const elements = pattern.elements ?? emptyArray;
+        for (let index = 0; index < elements.length; index++) {
+          if (elements[index].kind === SyntaxKind.ValueMatchPattern && index !== fieldIndex) onlyThisFieldIsRefutable = false;
+        }
+        const nested = elements[fieldIndex];
+        if (nested?.kind === SyntaxKind.ValueMatchPattern) nestedPatterns.push(nested);
+      }
+      if (!onlyThisFieldIsRefutable || !nestedPatterns.length) continue;
+      const fieldType = getTypeOfPropertyOfType(variantType, field.name.escapedText);
+      if (!fieldType) continue;
+      const nestedVariants = getValueMatchVariants(fieldType);
+      if (nestedVariants.size && arrayFrom(nestedVariants.entries()).every(([name, nestedVariant]) => isValueMatchVariantCovered(nestedPatterns.filter(pattern => idText(pattern.name) === name), nestedVariant.type, nestedVariant.declaration))) return true;
     }
-    return resultTypes.length ? getUnionType(resultTypes, UnionReduction.Literal) : neverType;
+    return false;
   }
 
   function isValueMatchTagType(type: Type): type is StringLiteralType {

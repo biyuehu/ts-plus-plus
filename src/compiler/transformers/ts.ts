@@ -196,6 +196,7 @@ import {
   TransformationContext,
   Transformer,
   TransformFlags,
+  ValueMatchPattern,
   VariableDeclaration,
   VariableStatement,
   visitEachChild,
@@ -273,6 +274,7 @@ export function transformTypeScript(context: TransformationContext): Transformer
   let currentNamespaceContainerName: Identifier;
   let currentLexicalScope: SourceFile | Block | ModuleBlock | CaseBlock;
   let currentScopeFirstDeclarationsOfName: Map<__String, Node> | undefined;
+  let valueMatchVariantFields = new Map<string, readonly string[]>();
 
   /**
    * Keeps track of whether expression substitution has been enabled for specific edge cases.
@@ -312,6 +314,13 @@ export function transformTypeScript(context: TransformationContext): Transformer
     }
 
     currentSourceFile = node;
+    valueMatchVariantFields = new Map();
+    for (const statement of node.statements) {
+      if (statement.kind !== SyntaxKind.DataDeclaration) continue;
+      for (const variant of (statement as DataDeclaration).variants) {
+        valueMatchVariantFields.set(idText(variant.name), mapDefined(variant.parameters, parameter => isIdentifier(parameter.name) ? idText(parameter.name) : undefined));
+      }
+    }
 
     const visited = saveStateAndInvoke(node, visitSourceFile);
     addEmitHelpers(visited, context.readEmitHelpers());
@@ -899,40 +908,72 @@ export function transformTypeScript(context: TransformationContext): Transformer
   function visitValueMatchExpression(node: MlttMatchExpression): Expression {
     const value = factory.createUniqueName("_match");
     let expression: Expression = factory.createVoidZero();
+    const bindFields = (bindings: readonly { parameter: ParameterDeclaration; value: Expression; }[], body: Expression): Expression => {
+      if (!bindings.length) return body;
+      const parameters = bindings.map(({ parameter }) =>
+        factory.createParameterDeclaration(
+          /*modifiers*/ undefined,
+          /*dotDotDotToken*/ undefined,
+          parameter.name,
+        )
+      );
+      return factory.createCallExpression(
+        factory.createParenthesizedExpression(factory.createArrowFunction(
+          /*modifiers*/ undefined,
+          /*typeParameters*/ undefined,
+          parameters,
+          /*type*/ undefined,
+          factory.createToken(SyntaxKind.EqualsGreaterThanToken),
+          body,
+        )),
+        /*typeArguments*/ undefined,
+        bindings.map(binding => binding.value),
+      );
+    };
+    const lowerPattern = (pattern: ValueMatchPattern, matchedValue: Expression): { condition: Expression; bindings: { parameter: ParameterDeclaration; value: Expression; }[]; } => {
+      let condition = factory.createStrictEquality(
+        factory.createPropertyAccessExpression(matchedValue, "_tag"),
+        factory.createStringLiteral(idText(pattern.name)),
+      );
+      const bindings: { parameter: ParameterDeclaration; value: Expression; }[] = [];
+      const fallbackNames = valueMatchVariantFields.get(idText(pattern.name)) ?? [];
+      const fieldNames = pattern.tsppMatchFieldNames ?? fallbackNames;
+      for (let index = 0; index < (pattern.elements?.length ?? 0); index++) {
+        const element = pattern.elements![index];
+        const fieldName = fieldNames[index] ?? (element.kind === SyntaxKind.Parameter && isIdentifier(element.name) ? idText(element.name) : `_${index}`);
+        const fieldValue = factory.createPropertyAccessExpression(matchedValue, fieldName);
+        if (element.kind === SyntaxKind.ValueMatchPattern) {
+          const nested = lowerPattern(element, fieldValue);
+          condition = factory.createLogicalAnd(condition, nested.condition);
+          bindings.push(...nested.bindings);
+        }
+        else if (isIdentifier(element.name) && idText(element.name) !== "_") {
+          bindings.push({ parameter: element, value: fieldValue });
+        }
+      }
+      return { condition, bindings };
+    };
     for (let index = node.arms.length - 1; index >= 0; index--) {
       const arm = node.arms[index];
-      let result = Debug.checkDefined(visitNode(arm.result, visitor, isExpression));
-      if (arm.parameters?.length) {
-        const parameters = arm.parameters.map(parameter =>
-          factory.createParameterDeclaration(
-            /*modifiers*/ undefined,
-            /*dotDotDotToken*/ undefined,
-            parameter.name,
-          )
-        );
-        const argumentsArray = arm.parameters.map(parameter =>
-          factory.createPropertyAccessExpression(
-            value,
-            parameter.tsppMatchFieldName || (isIdentifier(parameter.name) ? idText(parameter.name) : "value"),
-          )
-        );
-        result = factory.createCallExpression(
-          factory.createParenthesizedExpression(factory.createArrowFunction(
-            /*modifiers*/ undefined,
-            /*typeParameters*/ undefined,
-            parameters,
-            /*type*/ undefined,
-            factory.createToken(SyntaxKind.EqualsGreaterThanToken),
-            result,
-          )),
-          /*typeArguments*/ undefined,
-          argumentsArray,
-        );
+      const patterns = arm.valuePatterns ?? [];
+      const wildcard = patterns.some(pattern => idText(pattern.name) === "_");
+      const lowered = patterns.filter(pattern => idText(pattern.name) !== "_").map(pattern => lowerPattern(pattern, value));
+      const bindings = lowered[0]?.bindings ?? [];
+      const result = bindFields(bindings, Debug.checkDefined(visitNode(arm.result, visitor, isExpression)));
+      const guard = arm.guard && bindFields(bindings, Debug.checkDefined(visitNode(arm.guard, visitor, isExpression)));
+      if (wildcard) {
+        expression = guard
+          ? factory.createConditionalExpression(guard, factory.createToken(SyntaxKind.QuestionToken), result, factory.createToken(SyntaxKind.ColonToken), expression)
+          : result;
       }
-      if (arm.variant && idText(arm.variant) === "_") expression = result;
-      else if (arm.variant) {
+      else if (lowered.length) {
+        let condition = lowered[0].condition;
+        for (let patternIndex = 1; patternIndex < lowered.length; patternIndex++) {
+          condition = factory.createLogicalOr(condition, lowered[patternIndex].condition);
+        }
+        if (guard) condition = factory.createLogicalAnd(condition, guard);
         expression = factory.createConditionalExpression(
-          factory.createStrictEquality(factory.createPropertyAccessExpression(value, "_tag"), factory.createStringLiteral(idText(arm.variant))),
+          condition,
           factory.createToken(SyntaxKind.QuestionToken),
           result,
           factory.createToken(SyntaxKind.ColonToken),

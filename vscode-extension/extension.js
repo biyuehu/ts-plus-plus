@@ -48,6 +48,20 @@ async function activate(context) {
       directory: path.join(examplesRoot, "05-formal-contracts"),
       entry: path.join("src", "01-function-contracts.tspp"),
     },
+    {
+      label: "06 — Type Computation",
+      description: "Type-level let bindings, matching, and lambdas",
+      command: "tspp.openTypeComputationExample",
+      directory: path.join(examplesRoot, "06-type-computation"),
+      entry: path.join("src", "01-let-bindings.tspp"),
+    },
+    {
+      label: "07 — TypeScript Interop",
+      description: "Mixed TS++ and TypeScript package boundaries",
+      command: "tspp.openTypescriptInteropExample",
+      directory: path.join(examplesRoot, "07-typescript-interop"),
+      entry: path.join("src", "index.tspp"),
+    },
   ];
 
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -374,17 +388,17 @@ async function activate(context) {
     vscode.commands.registerCommand("tspp.openNewtypeAndDataExample", () => openExample(examples[2])),
     vscode.commands.registerCommand("tspp.openMacrosExample", () => openExample(examples[3])),
     vscode.commands.registerCommand("tspp.openFormalContractsExample", () => openExample(examples[4])),
+    vscode.commands.registerCommand("tspp.openTypeComputationExample", () => openExample(examples[5])),
+    vscode.commands.registerCommand("tspp.openTypescriptInteropExample", () => openExample(examples[6])),
     vscode.commands.registerCommand("tspp.openAllExamples", async () => {
-      await openExample(examples[0], vscode.ViewColumn.One);
-      await openExample(examples[1], vscode.ViewColumn.Two);
-      await openExample(examples[2], vscode.ViewColumn.Three);
-      await openExample(examples[3], vscode.ViewColumn.Beside);
-      await openExample(examples[4], vscode.ViewColumn.Beside);
+      for (const [index, example] of examples.entries()) {
+        await openExample(example, index < 3 ? index + 1 : vscode.ViewColumn.Beside);
+      }
     }),
     vscode.commands.registerCommand("tspp.pickExample", async () => {
       const selection = await vscode.window.showQuickPick(
         [
-          { label: "All examples", description: "Open examples 01 through 05", command: "tspp.openAllExamples" },
+          { label: "All examples", description: "Open examples 01 through 07", command: "tspp.openAllExamples" },
           ...examples,
         ],
         { placeHolder: "Choose a TS++ example to open" },
