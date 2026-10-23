@@ -236,6 +236,7 @@ import {
   TypeQueryNode,
   TypeReferenceNode,
   UnionTypeNode,
+  UseBindingStatement,
   ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
@@ -789,6 +790,10 @@ export function isExpressionStatement(node: Node): node is ExpressionStatement {
 
 export function isMacroInvocationStatement(node: Node): node is MacroInvocationStatement {
   return node.kind === SyntaxKind.MacroInvocationStatement;
+}
+
+export function isUseBindingStatement(node: Node): node is UseBindingStatement {
+  return node.kind === SyntaxKind.UseBindingStatement;
 }
 
 export function isWithClause(node: Node): node is WithClause {

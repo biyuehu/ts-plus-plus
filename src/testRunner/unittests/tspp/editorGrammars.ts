@@ -165,5 +165,9 @@ describe("unittests:: tspp:: editor grammars", () => {
     assert.isDefined(doPattern, "Expected modern-syntax grammar to highlight do");
     assert.isDefined(letPattern, "Expected modern-syntax grammar to highlight let");
     assert.isDefined(inPattern, "Expected modern-syntax grammar to highlight in");
+    const usePattern = patterns.find(pattern => pattern.match?.includes("use"));
+    const arrowPattern = patterns.find(pattern => pattern.match?.includes("<-"));
+    assert.isDefined(usePattern, "Expected modern-syntax grammar to highlight use");
+    assert.isDefined(arrowPattern, "Expected modern-syntax grammar to highlight <-");
   });
 });

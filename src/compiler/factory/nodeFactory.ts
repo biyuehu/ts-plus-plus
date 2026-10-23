@@ -470,6 +470,7 @@ import {
   TypeReferenceNode,
   UnionOrIntersectionTypeNode,
   UnionTypeNode,
+  UseBindingStatement,
   ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
@@ -767,6 +768,8 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
     updateWithProperty,
     createMacroInvocationStatement,
     updateMacroInvocationStatement,
+    createUseBindingStatement,
+    updateUseBindingStatement,
     createIfStatement,
     updateIfStatement,
     createDoStatement,
@@ -4255,6 +4258,22 @@ export function createNodeFactory(flags: NodeFactoryFlags, baseFactory: BaseNode
   function updateMacroInvocationStatement(node: MacroInvocationStatement, macro: EntityName, targets: readonly EntityName[]) {
     return node.macro !== macro || node.targets !== targets
       ? update(createMacroInvocationStatement(macro, targets), node)
+      : node;
+  }
+
+  function createUseBindingStatement(name: BindingName, type: TypeNode | undefined, expression: Expression): UseBindingStatement {
+    const node = createBaseNode<UseBindingStatement>(SyntaxKind.UseBindingStatement);
+    node.name = name;
+    node.type = type;
+    node.expression = expression;
+    node.flags |= NodeFlags.BlockScoped;
+    node.transformFlags |= propagateChildFlags(name) | propagateChildFlags(type) | propagateChildFlags(expression) | TransformFlags.ContainsTypeScript;
+    return node;
+  }
+
+  function updateUseBindingStatement(node: UseBindingStatement, name: BindingName, type: TypeNode | undefined, expression: Expression) {
+    return node.name !== name || node.type !== type || node.expression !== expression
+      ? update(createUseBindingStatement(name, type, expression), node)
       : node;
   }
 

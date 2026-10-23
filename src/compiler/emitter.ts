@@ -420,6 +420,7 @@ import {
   TypeQueryNode,
   TypeReferenceNode,
   UnionTypeNode,
+  UseBindingStatement,
   ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
@@ -1760,6 +1761,8 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
           return emitWithProperty(node as WithProperty);
         case SyntaxKind.MacroInvocationStatement:
           return emitMacroInvocationStatement(node as MacroInvocationStatement);
+        case SyntaxKind.UseBindingStatement:
+          return emitUseBindingStatement(node as UseBindingStatement);
         case SyntaxKind.IfStatement:
           return emitIfStatement(node as IfStatement);
         case SyntaxKind.DoStatement:
@@ -3394,6 +3397,22 @@ export function createPrinter(printerOptions: PrinterOptions = {}, handlers: Pri
     if (!currentSourceFile || !isJsonSourceFile(currentSourceFile) || nodeIsSynthesized(node.expression)) {
       writeTrailingSemicolon();
     }
+  }
+
+  function emitUseBindingStatement(node: UseBindingStatement) {
+    writeKeyword("use");
+    writeSpace();
+    emit(node.name);
+    if (node.type) {
+      writePunctuation(":");
+      writeSpace();
+      emit(node.type);
+    }
+    writeSpace();
+    writePunctuation("<-");
+    writeSpace();
+    emit(node.expression);
+    writeTrailingSemicolon();
   }
 
   function emitMacroInvocationStatement(node: MacroInvocationStatement) {

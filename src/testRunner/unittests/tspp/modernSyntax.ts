@@ -179,4 +179,120 @@ describe("unittests:: tspp:: modernSyntax", () => {
       "'let' declarations must be initialized.",
     ]);
   });
+
+  it("requires modernSyntax feature flag for use binding", () => {
+    const enabledProgram = createProgram(
+      "/src/main.ts",
+      `
+      declare function withRes<T>(cb: (x: number) => T): T;
+      function f() do {
+        use x <- withRes();
+        x + 1;
+      }
+      `,
+    );
+    assert.deepEqual(semanticMessages(enabledProgram), []);
+
+    const disabledProgram = createProgram(
+      "/src/main.ts",
+      `
+      declare function withRes<T>(cb: (x: number) => T): T;
+      function f() do {
+        use x <- withRes();
+        x + 1;
+      }
+      `,
+      { tsppFeatures: [] },
+    );
+    assert.deepEqual(semanticMessages(disabledProgram), [
+      "TS++ feature 'modernSyntax' is not enabled in 'tsppconfig.json'.",
+      "TS++ feature 'modernSyntax' is not enabled in 'tsppconfig.json'.",
+    ]);
+  });
+
+  it("reports error when use binding is placed outside do context", () => {
+    const program = createProgram(
+      "/src/main.ts",
+      `
+      declare function withRes<T>(cb: (x: number) => T): T;
+      function normalBlock() {
+        use x <- withRes();
+        x + 1;
+      }
+      `,
+    );
+    assert.deepEqual(semanticMessages(program), [
+      "Invalid MLTT type: A 'use <-' binding is only allowed directly inside a 'do' block or 'do' function.",
+    ]);
+  });
+
+  it("desugars use binding in do expression and infers types", () => {
+    const program = createProgram(
+      "/src/main.ts",
+      `
+      declare function withResource<T>(fn: (res: string) => T): T;
+      declare function takesString(s: string): void;
+      const val = do {
+        use r <- withResource();
+        takesString(r);
+        r;
+      };
+      takesString(val);
+      `,
+    );
+    assert.deepEqual(semanticMessages(program), []);
+
+    const js = emitOutput(program, "/src/main.ts");
+    assert.isTrue(js.includes("return withResource(r => {"));
+    assert.isTrue(js.includes("return r;"));
+  });
+
+  it("desugars chained use bindings in do function", () => {
+    const program = createProgram(
+      "/src/main.ts",
+      `
+      declare function withA<T>(fn: (a: number) => T): T;
+      declare function withB<T>(fn: (b: string) => T): T;
+      declare function takesString(s: string): void;
+
+      function run(): string do {
+        use a <- withA();
+        use b <- withB();
+        b + a;
+      }
+
+      takesString(run());
+      `,
+    );
+    assert.deepEqual(semanticMessages(program), []);
+
+    const js = emitOutput(program, "/src/main.ts");
+    assert.isTrue(js.includes("return withA(a => {"));
+    assert.isTrue(js.includes("return withB(b => {"));
+    assert.isTrue(js.includes("return b + a;"));
+  });
+
+  it("supports destructuring in use binding", () => {
+    const program = createProgram(
+      "/src/main.ts",
+      `
+      declare function withPair<T>(fn: (pair: [number, string]) => T): T;
+      declare function takesNumber(n: number): void;
+      declare function takesString(s: string): void;
+
+      const res = do {
+        use [num, str] <- withPair();
+        takesNumber(num);
+        takesString(str);
+        num;
+      };
+      takesNumber(res);
+      `,
+    );
+    assert.deepEqual(semanticMessages(program), []);
+
+    const js = emitOutput(program, "/src/main.ts");
+    assert.isTrue(js.includes("return withPair(([num, str]) => {"));
+    assert.isTrue(js.includes("return num;"));
+  });
 });

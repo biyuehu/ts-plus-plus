@@ -308,6 +308,7 @@ import {
   TypeOfExpression,
   TypeParameterDeclaration,
   unescapeLeadingUnderscores,
+  UseBindingStatement,
   VariableDeclaration,
   WhileStatement,
   WithStatement,
@@ -1192,6 +1193,9 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
       case SyntaxKind.VariableDeclaration:
         bindVariableDeclarationFlow(node as VariableDeclaration);
         break;
+      case SyntaxKind.UseBindingStatement:
+        bindUseBindingStatementFlow(node as UseBindingStatement);
+        break;
       case SyntaxKind.PropertyAccessExpression:
       case SyntaxKind.ElementAccessExpression:
         bindAccessExpressionFlow(node as AccessExpression);
@@ -2069,6 +2073,11 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
     else {
       currentFlow = createFlowMutation(FlowFlags.Assignment, currentFlow, node);
     }
+  }
+
+  function bindUseBindingStatementFlow(node: UseBindingStatement) {
+    bindEachChild(node);
+    bindInitializedVariableFlow(node as any);
   }
 
   function bindVariableDeclarationFlow(node: VariableDeclaration) {
@@ -2981,6 +2990,8 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
       case SyntaxKind.BindingElement:
         (node as BindingElement).flowNode = currentFlow;
         return bindVariableDeclarationOrBindingElement(node as BindingElement);
+      case SyntaxKind.UseBindingStatement:
+        return bindUseBindingStatement(node as UseBindingStatement);
       case SyntaxKind.PropertyDeclaration:
       case SyntaxKind.PropertySignature:
         return bindPropertyWorker(node as PropertyDeclaration | PropertySignature);
@@ -3671,6 +3682,15 @@ function createBinder(): (file: SourceFile, options: CompilerOptions) => void {
     return isEnumConst(node)
       ? bindBlockScopedDeclaration(node, SymbolFlags.ConstEnum, SymbolFlags.ConstEnumExcludes)
       : bindBlockScopedDeclaration(node, SymbolFlags.RegularEnum, SymbolFlags.RegularEnumExcludes);
+  }
+
+  function bindUseBindingStatement(node: UseBindingStatement) {
+    if (inStrictMode) {
+      checkStrictModeEvalOrArguments(node, node.name);
+    }
+    if (!isBindingPattern(node.name)) {
+      bindBlockScopedDeclaration(node, SymbolFlags.BlockScopedVariable, SymbolFlags.BlockScopedVariableExcludes);
+    }
   }
 
   function bindVariableDeclarationOrBindingElement(node: VariableDeclaration | BindingElement) {

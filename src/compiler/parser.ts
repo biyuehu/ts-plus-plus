@@ -410,6 +410,7 @@ import {
   UnionTypeNode,
   unsetNodeChildren,
   UpdateExpression,
+  UseBindingStatement,
   ValueMatchPattern,
   VariableDeclaration,
   VariableDeclarationList,
@@ -688,6 +689,9 @@ const forEachChildTable: ForEachChildTable = {
       visitNode(cbNode, node.withClause) ||
       visitNode(cbNode, node.type) ||
       visitNode(cbNode, node.body);
+  },
+  [SyntaxKind.UseBindingStatement]: function forEachChildInUseBindingStatement<T>(node: UseBindingStatement, cbNode: (node: Node) => T | undefined): T | undefined {
+    return visitNode(cbNode, node.name) || visitNode(cbNode, node.type) || visitNode(cbNode, node.expression);
   },
   [SyntaxKind.MacroInvocationStatement]: function forEachChildInMacroInvocationStatement<T>(node: MacroInvocationStatement, cbNode: (node: Node) => T | undefined, cbNodes?: (nodes: NodeArray<Node>) => T | undefined): T | undefined {
     return visitNode(cbNode, node.macro) || visitNodes(cbNode, cbNodes, node.targets);
@@ -7229,7 +7233,20 @@ namespace Parser {
     const typeParameters = parseTypeParameters();
     const parameters = parseParameters(isGenerator | isAsync);
     const type = parseReturnType(SyntaxKind.ColonToken, /*isType*/ false);
+    let hasDo = false;
+    if (
+      token() === SyntaxKind.DoKeyword && lookAhead(() => {
+        nextToken();
+        return token() === SyntaxKind.OpenBraceToken;
+      })
+    ) {
+      hasDo = true;
+      nextToken();
+    }
     const body = parseFunctionBlock(isGenerator | isAsync);
+    if (hasDo && body) {
+      (body as Mutable<Block>).hasDoKeyword = true;
+    }
 
     setDecoratorContext(savedDecoratorContext);
 
@@ -7953,7 +7970,53 @@ namespace Parser {
         }
         break;
     }
+    if (isStartOfUseBindingStatement()) {
+      return parseUseBindingStatement();
+    }
     return parseExpressionOrLabeledStatement();
+  }
+
+  function isStartOfUseBindingStatement(): boolean {
+    if (token() !== SyntaxKind.Identifier || scanner.getTokenValue() !== "use") return false;
+    return lookAhead(() => {
+      nextToken();
+      if (scanner.hasPrecedingLineBreak()) return false;
+      if (!isBindingIdentifierOrPrivateIdentifierOrPattern()) return false;
+      let depth = 0;
+      while (token() !== SyntaxKind.EndOfFileToken) {
+        if (token() === SyntaxKind.OpenBraceToken || token() === SyntaxKind.OpenBracketToken || token() === SyntaxKind.OpenParenToken) {
+          depth++;
+        }
+        else if (token() === SyntaxKind.CloseBraceToken || token() === SyntaxKind.CloseBracketToken || token() === SyntaxKind.CloseParenToken) {
+          depth--;
+        }
+        else if (depth === 0) {
+          if (token() === SyntaxKind.LessThanToken) {
+            const lessPos = scanner.getTextPos();
+            nextToken();
+            return token() === SyntaxKind.MinusToken && scanner.getTokenPos() === lessPos;
+          }
+          if (token() === SyntaxKind.SemicolonToken || scanner.hasPrecedingLineBreak()) {
+            return false;
+          }
+        }
+        nextToken();
+      }
+      return false;
+    });
+  }
+
+  function parseUseBindingStatement(): UseBindingStatement {
+    const pos = getNodePos();
+    parseIdentifier();
+    const name = parseIdentifierOrPattern();
+    const type = parseTypeAnnotation();
+    parseExpected(SyntaxKind.LessThanToken);
+    parseExpected(SyntaxKind.MinusToken);
+    const expression = allowInAnd(parseExpression);
+    parseSemicolon();
+    const node = factory.createUseBindingStatement(name, type, expression);
+    return finishNode(node, pos);
   }
 
   function parseMacroInvocationStatement(): MacroInvocationStatement {

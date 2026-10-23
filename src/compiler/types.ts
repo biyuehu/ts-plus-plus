@@ -330,6 +330,7 @@ export const enum SyntaxKind {
   VariableStatement,
   ExpressionStatement,
   MacroInvocationStatement,
+  UseBindingStatement,
   IfStatement,
   DoStatement,
   WhileStatement,
@@ -1186,6 +1187,7 @@ export type HasChildren =
   | WithClause
   | WithProperty
   | MacroInvocationStatement
+  | UseBindingStatement
   | IfStatement
   | DoStatement
   | WhileStatement
@@ -3599,6 +3601,14 @@ export interface MacroInvocationStatement extends Statement {
   readonly kind: SyntaxKind.MacroInvocationStatement;
   readonly macro: EntityName;
   readonly targets: NodeArray<EntityName>;
+}
+
+/** A use pattern <- expr; statement in a do block. */
+export interface UseBindingStatement extends Statement, Declaration {
+  readonly kind: SyntaxKind.UseBindingStatement;
+  readonly name: BindingName;
+  readonly type?: TypeNode;
+  readonly expression: Expression;
 }
 
 /** @internal */
@@ -9504,6 +9514,8 @@ export interface NodeFactory {
   updateWithProperty(node: WithProperty, name: Identifier, value: Expression): WithProperty;
   createMacroInvocationStatement(macro: EntityName, targets: readonly EntityName[]): MacroInvocationStatement;
   updateMacroInvocationStatement(node: MacroInvocationStatement, macro: EntityName, targets: readonly EntityName[]): MacroInvocationStatement;
+  createUseBindingStatement(name: BindingName, type: TypeNode | undefined, expression: Expression): UseBindingStatement;
+  updateUseBindingStatement(node: UseBindingStatement, name: BindingName, type: TypeNode | undefined, expression: Expression): UseBindingStatement;
   createIfStatement(expression: Expression, thenStatement: Statement, elseStatement?: Statement): IfStatement;
   updateIfStatement(node: IfStatement, expression: Expression, thenStatement: Statement, elseStatement: Statement | undefined): IfStatement;
   createDoStatement(statement: Statement, expression: Expression): DoStatement;

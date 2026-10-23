@@ -804,6 +804,7 @@ import {
   isTypeReferenceType,
   isTypeUsableAsPropertyName,
   isUMDExportSymbol,
+  isUseBindingStatement,
   isValidBigIntString,
   isValidESSymbolDeclaration,
   isValidTypeOnlyAliasUseSite,
@@ -1154,6 +1155,7 @@ import {
   UnionType,
   UnionTypeNode,
   UniqueESSymbolType,
+  UseBindingStatement,
   usesWildcardTypes,
   usingSingleLineStringWriter,
   ValueMatchPattern,
@@ -11960,6 +11962,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   // Return the type of a binding element parent. We check SymbolLinks first to see if a type has been
   // assigned by contextual typing.
   function getTypeForBindingElementParent(node: BindingElementGrandparent, checkMode: CheckMode) {
+    if (isUseBindingStatement(node as Node)) {
+      return tryGetTypeFromEffectiveTypeNode(node as unknown as UseBindingStatement) || getTypeOfUseBindingStatement(node as unknown as UseBindingStatement);
+    }
     if (checkMode !== CheckMode.Normal) {
       return getTypeForVariableLikeDeclaration(node, /*includeOptionality*/ false, checkMode);
     }
@@ -13047,6 +13052,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       || isJSDocPropertyLikeTag(declaration)
     ) {
       type = getWidenedTypeForVariableLikeDeclaration(declaration, /*reportErrors*/ true);
+    }
+    else if (isUseBindingStatement(declaration)) {
+      type = tryGetTypeFromEffectiveTypeNode(declaration) || getTypeOfUseBindingStatement(declaration);
     }
     // getTypeOfSymbol dispatches some JS merges incorrectly because their symbol flags are not mutually exclusive.
     // Re-dispatch based on valueDeclaration.kind instead.
@@ -33205,7 +33213,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     // the entire control flow graph from the variable's declaration (i.e. when the flow container and
     // declaration container are the same).
     const isNeverInitialized = immediateDeclaration && isVariableDeclaration(immediateDeclaration) && !isForInOrOfStatement(immediateDeclaration.parent.parent) && !immediateDeclaration.initializer && !immediateDeclaration.exclamationToken && isMutableLocalVariableDeclaration(immediateDeclaration) && !isSymbolAssignedDefinitely(symbol);
-    const assumeInitialized = isParameter || isAlias ||
+    const isUseBinding = declaration && (isUseBindingStatement(declaration) || isBindingElement(declaration) && isUseBindingStatement(declaration.parent.parent));
+    const assumeInitialized = isParameter || isAlias || isUseBinding ||
       (isOuterVariable && !isNeverInitialized) ||
       isSpreadDestructuringAssignmentTarget || isModuleExports || isSameScopedBindingElement(node, declaration) ||
       type !== autoType && type !== autoArrayType && (!strictNullChecks || (type.flags & (TypeFlags.AnyOrUnknown | TypeFlags.Void)) !== 0 ||
@@ -48035,6 +48044,53 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     checkVariableDeclarationList(node.declarationList);
   }
 
+  function getTypeOfUseBindingStatement(node: UseBindingStatement): Type {
+    const links = getNodeLinks(node);
+    if (!links.resolvedType) {
+      const targetExpr = isCallExpression(node.expression) ? node.expression.expression : node.expression;
+      const fnType = checkExpression(targetExpr);
+      const fnSignatures = getSignaturesOfType(fnType, SignatureKind.Call);
+      let exprType: Type = anyType;
+      if (fnSignatures.length > 0) {
+        const fnSig = fnSignatures[0];
+        if (fnSig.parameters.length > 0) {
+          const lastParam = fnSig.parameters[fnSig.parameters.length - 1];
+          exprType = getTypeOfSymbolAtLocation(lastParam, targetExpr);
+        }
+      }
+      const callSignatures = getSignaturesOfType(exprType, SignatureKind.Call);
+      if (callSignatures.length > 0) {
+        const sig = callSignatures[0];
+        links.resolvedType = sig.parameters.length > 0 ? getTypeOfSymbolAtLocation(sig.parameters[0], node.expression) : voidType;
+      }
+      else {
+        links.resolvedType = anyType;
+      }
+    }
+    return links.resolvedType;
+  }
+
+  function checkUseBindingStatement(node: UseBindingStatement): void {
+    requireTsppFeature(node, "modernSyntax");
+    const block = findAncestor(node.parent, isBlock);
+    if (!block || !block.hasDoKeyword) {
+      error(node, Diagnostics.Invalid_MLTT_type_Colon_0, "A 'use <-' binding is only allowed directly inside a 'do' block or 'do' function.");
+    }
+    if (node.type) {
+      checkSourceElement(node.type);
+    }
+    if (isCallExpression(node.expression)) {
+      checkExpression(node.expression.expression);
+      forEach(node.expression.arguments, checkExpression);
+    }
+    else {
+      checkExpression(node.expression);
+    }
+    if (isBindingPattern(node.name)) {
+      forEach(node.name.elements, checkSourceElement);
+    }
+  }
+
   function checkExpressionStatement(node: ExpressionStatement) {
     // Grammar checking
     checkGrammarStatementInAmbientContext(node);
@@ -52175,6 +52231,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return checkExpressionStatement(node as ExpressionStatement);
       case SyntaxKind.MacroInvocationStatement:
         return checkMacroInvocationStatement(node as MacroInvocationStatement);
+      case SyntaxKind.UseBindingStatement:
+        return checkUseBindingStatement(node as UseBindingStatement);
       case SyntaxKind.IfStatement:
         return checkIfStatement(node as IfStatement);
       case SyntaxKind.DoStatement:

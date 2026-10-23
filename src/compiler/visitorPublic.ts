@@ -1407,6 +1407,14 @@ const visitEachChildTable: VisitEachChildTable = {
       nodesVisitor(node.targets, visitor, isEntityName),
     );
   },
+  [SyntaxKind.UseBindingStatement]: function visitEachChildOfUseBindingStatement(node, visitor, context, _nodesVisitor, nodeVisitor, _tokenVisitor) {
+    return context.factory.updateUseBindingStatement(
+      node,
+      Debug.checkDefined(nodeVisitor(node.name, visitor, isBindingName)),
+      nodeVisitor(node.type, visitor, isTypeNode),
+      Debug.checkDefined(nodeVisitor(node.expression, visitor, isExpression)),
+    );
+  },
 
   [SyntaxKind.WithClause]: function visitEachChildOfWithClause(node, visitor, context, nodesVisitor, _nodeVisitor, _tokenVisitor) {
     return context.factory.updateWithClause(node, nodesVisitor(node.properties, visitor, isWithProperty));

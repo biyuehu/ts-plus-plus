@@ -80,6 +80,7 @@ import {
   isBindingName,
   isBindingPattern,
   isBlock,
+  isCallExpression,
   isCatchClause,
   isClassElement,
   isClassLike,
@@ -129,6 +130,7 @@ import {
   isStatement,
   isTemplateLiteral,
   isTryStatement,
+  isUseBindingStatement,
   isVariableDeclarationList,
   JsxOpeningElement,
   JsxSelfClosingElement,
@@ -201,6 +203,7 @@ import {
   TransformationContext,
   Transformer,
   TransformFlags,
+  UseBindingStatement,
   ValueMatchPattern,
   VariableDeclaration,
   VariableStatement,
@@ -928,6 +931,40 @@ export function transformTypeScript(context: TransformationContext): Transformer
 
   function transformDoBlockStatements(statements: readonly Statement[]): Statement[] {
     if (!statements || statements.length === 0) return [];
+    const useIndex = statements.findIndex(isUseBindingStatement);
+    if (useIndex !== -1) {
+      const prefixStmts = statements.slice(0, useIndex);
+      const useStmt = statements[useIndex] as UseBindingStatement;
+      const restStmts = statements.slice(useIndex + 1);
+      const innerTransformed = transformDoBlockStatements(restStmts);
+      const param = factory.createParameterDeclaration(
+        /*modifiers*/ undefined,
+        /*dotDotDotToken*/ undefined,
+        Debug.checkDefined(visitNode(useStmt.name, visitor, isBindingName)),
+        /*questionToken*/ undefined,
+        /*type*/ undefined,
+        /*initializer*/ undefined,
+      );
+      const arrow = factory.createArrowFunction(
+        /*modifiers*/ undefined,
+        /*typeParameters*/ undefined,
+        [param],
+        /*type*/ undefined,
+        factory.createToken(SyntaxKind.EqualsGreaterThanToken),
+        factory.createBlock(innerTransformed, /*multiLine*/ true),
+      );
+      const visitedExpr = Debug.checkDefined(visitNode(useStmt.expression, visitor, isExpression));
+      let callExpr: Expression;
+      if (isCallExpression(visitedExpr)) {
+        callExpr = factory.updateCallExpression(visitedExpr, visitedExpr.expression, visitedExpr.typeArguments, [...visitedExpr.arguments, arrow]);
+      }
+      else {
+        callExpr = factory.createCallExpression(visitedExpr, /*typeArguments*/ undefined, [arrow]);
+      }
+      const callStmt = factory.createReturnStatement(callExpr);
+      const visitedPrefix = visitNodes(factory.createNodeArray(prefixStmts), visitor, isStatement);
+      return [...visitedPrefix, callStmt];
+    }
     const visited = visitNodes(factory.createNodeArray(statements), visitor, isStatement);
     const result = [...visited];
     const lastIdx = result.length - 1;

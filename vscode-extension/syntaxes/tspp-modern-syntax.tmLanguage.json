@@ -48,6 +48,24 @@
       "comment": "do function/method body header: ) do { or : Type do {",
       "match": "\\bdo\\b(?=\\s*\\{)",
       "name": "keyword.control.loop.ts"
+    },
+    {
+      "comment": "use binding keyword",
+      "match": "\\b(use)\\b(?=[^;\\r\\n]*?<-)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.flow.ts"
+        }
+      }
+    },
+    {
+      "comment": "use binding arrow",
+      "match": "(?<=\\buse\\b[^;\\r\\n]*?)(<-)",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.assignment.ts"
+        }
+      }
     }
   ]
 }
