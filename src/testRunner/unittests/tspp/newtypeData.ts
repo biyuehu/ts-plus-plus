@@ -881,4 +881,54 @@ describe("unittests:: tspp:: newtype and data", () => {
       assert.isTrue(messages.every(message => /must use 'name: Type' syntax/.test(message)), messages.join("\n"));
     });
   });
+
+  describe("value match pattern hover", () => {
+    it("provides quickInfo for variants and pattern bindings in value-level match", () => {
+      const source = `
+      data Outcome = Success(value: number) | Failure(code: number);
+      data ScreenState = Idle | Loading | Finished(outcome: Outcome);
+      declare const screen: ScreenState;
+      const score: number = match screen {
+        Idle | Loading => 0,
+        Finished(Success(value)) if value > 0 => value,
+        Finished(Success(_)) => 0,
+        Finished(Failure(code)) => -code,
+      };
+      `;
+      const fileName = "/file.tspp";
+      const host: ts.LanguageServiceHost = {
+        getCompilationSettings: () => ({ noLib: true, strict: true, tsppFeatures: ["dataDeclarations", "modernSyntax", "typeComputation"] }),
+        getScriptFileNames: () => [fileName],
+        getScriptVersion: () => "1",
+        getScriptSnapshot: name => name === fileName ? ts.ScriptSnapshot.fromString(source) : undefined,
+        getCurrentDirectory: () => "/",
+        getDefaultLibFileName: () => "/lib.d.ts",
+        fileExists: name => name === fileName,
+        readFile: name => name === fileName ? source : undefined,
+        readDirectory: () => [],
+      };
+      const ls = ts.createLanguageService(host);
+
+      const idleInfo = ls.getQuickInfoAtPosition(fileName, source.indexOf("Idle |"));
+      assert.isDefined(idleInfo);
+      assert.include(ts.displayPartsToString(idleInfo.displayParts), "Idle");
+
+      const loadingInfo = ls.getQuickInfoAtPosition(fileName, source.indexOf("Loading =>"));
+      assert.isDefined(loadingInfo);
+      assert.include(ts.displayPartsToString(loadingInfo.displayParts), "Loading");
+
+      const finishedInfo = ls.getQuickInfoAtPosition(fileName, source.indexOf("Finished(Success"));
+      assert.isDefined(finishedInfo);
+      assert.include(ts.displayPartsToString(finishedInfo.displayParts), "Finished");
+
+      const successInfo = ls.getQuickInfoAtPosition(fileName, source.indexOf("Success(value)"));
+      assert.isDefined(successInfo);
+      assert.include(ts.displayPartsToString(successInfo.displayParts), "Success");
+
+      const valueInfo = ls.getQuickInfoAtPosition(fileName, source.indexOf("value)) if"));
+      assert.isDefined(valueInfo);
+      assert.strictEqual(valueInfo.kind, "parameter");
+      assert.include(ts.displayPartsToString(valueInfo.displayParts), "number");
+    });
+  });
 });

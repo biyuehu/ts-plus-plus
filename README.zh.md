@@ -108,7 +108,7 @@ TS++ 把 TypeScript 作为稳定的兼容层与 FFI 边界：
 | `standardLibraryPredicates` | 标准库数值谓词 `isEven`、`isOdd`、`isPositive`、`isNegative`、`isNonNegative`、`isZero`、`divides`、`between`；`number` 需设置 `numberModel: "mathematical-real"` | `formalContracts` | 是 | 是 |
 | `refinementTypes` | 由 Z3 验证结构类型别名引入点的谓词 | `formalContracts` | 是 | 是 |
 | `typeComputation` | 类型层局部绑定 `let X = T in U`、模式匹配 `match T { ... }` 与类型 lambda `<T> =>> Body` | 无 | 是 | 是 |
-| modernSyntax | 值层 let ... in ... 局部绑定表达式、do { ... } 语句块表达式，以及显式 do 函数/方法的隐式返回 | 无 | 是 | 否（生成运行时 IIFE 与显式 return） |
+| `modernSyntax` | 值层 `let ... in ...` 表达式、`do { ... }` 语句块表达式、`do` 函数/方法隐式返回，以及 `use pattern <- expr` 尾随回调解糖 | 无 | 是 | 否（生成运行时 IIFE、尾随闭包回调与显式 return） |
 | `typeUniverses` | `Type0`、`Type1` 等类型宇宙与 kind 分层 | `higherKindedTypes` | 是 | 是 |
 | `dependentFunctionTypes` | Pi 类型，以及显式的 `Lam`/`Ann` MLTT 项 | `typeUniverses` | 是 | 是 |
 | `dependentFunctionInterop` | Pi 类型与 TypeScript 泛型函数之间的赋值和调用 | `dependentFunctionTypes` | 是 | 是 |
@@ -242,13 +242,21 @@ class Calculator {
   }
 }
 
-// 4. 普通 TS 函数保持 100% 行为隔离
+// 4. do 块与 do 函数内的 use pattern <- expr 尾随闭包解糖
+function runPipeline(): string do {
+  use token <- withAuth("admin");
+  use [code, status] <- withPair();
+  use res <- withResource();
+  `${res.name}: [${code}] ${status} for ${token}`;
+}
+
+// 5. 普通 TS 函数保持 100% 行为隔离
 function standard(): void {
   42; // 纯表达式语句，绝不会隐式返回
 }
 ```
 
-值层 `let-in` 和 `do` 表达式会被降级为自执行箭头函数（`(() => { ... })()`），`do` 函数/方法体内的末尾表达式会在降级时自动转换为 `return expr;`。
+值层 `let-in` 和 `do` 表达式会被降级为自执行箭头函数（`(() => { ... })()`），`do` 函数/方法体内的末尾表达式自动转换为 `return expr;`，`use pattern <- f(args); rest...` 会被脱糖转换为尾随闭包调用 `f(args, (pattern) => { rest... })`。
 
 ## 协议
 

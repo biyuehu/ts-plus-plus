@@ -295,4 +295,72 @@ describe("unittests:: tspp:: modernSyntax", () => {
     assert.isTrue(js.includes("return withPair(([num, str]) => {"));
     assert.isTrue(js.includes("return num;"));
   });
+
+  it("supports language service quickInfo and completions for use bindings", () => {
+    const source = `
+      declare function withResource<T>(fn: (res: string) => T): T;
+      const val = do {
+        use r <- withResource();
+        r;
+      };
+    `;
+    const fileName = "/src/main.ts";
+    const ls = ts.createLanguageService({
+      getScriptFileNames: () => [fileName],
+      getScriptVersion: () => "1",
+      getScriptSnapshot: f => f === fileName ? ts.ScriptSnapshot.fromString(source) : undefined,
+      getCurrentDirectory: () => "/",
+      getCompilationSettings: () => ({ noLib: true, strict: true, tsppFeatures: ["modernSyntax"] }),
+      getDefaultLibFileName: () => "/lib.d.ts",
+      fileExists: f => f === fileName,
+      readFile: f => f === fileName ? source : undefined,
+    });
+    const declPos = source.indexOf("use r") + 4;
+    const quickInfo = ls.getQuickInfoAtPosition(fileName, declPos);
+    assert.isDefined(quickInfo);
+    assert.strictEqual(quickInfo.kind, "var");
+    assert.isTrue(quickInfo.displayParts?.some(part => part.text === "string"));
+
+    const completions = ls.getCompletionsAtPosition(fileName, source.indexOf("r;"), {});
+    assert.isDefined(completions);
+    assert.isTrue(completions.entries.some(entry => entry.name === "r"));
+  });
+
+  it("type-checks trailing closure return type and block completion type in use bindings", () => {
+    const errorProgram = createProgram(
+      "/src/main.ts",
+      `
+      declare function withResource<T>(fn: (res: { name: string; close: () => void }) => T): T;
+      declare function withAuth<T>(role: string, fn: (token: string) => T): T;
+      declare function withPair<T>(fn: (pair: [number, string]) => T): T;
+
+      function runPipeline(): string do {
+        use token <- withAuth("admin");
+        use [code, status] <- withPair();
+        use res <- withResource<number>();
+        \`\${res.name}: [\${code}] \${status} for \${token}\`;
+      }
+      `,
+    );
+    const messages = semanticMessages(errorProgram);
+    assert.isTrue(messages.some(m => m.includes("Type 'string' is not assignable to type 'number'")));
+    assert.isTrue(messages.some(m => m.includes("Type 'number' is not assignable to type 'string'")));
+
+    const validProgram = createProgram(
+      "/src/main.ts",
+      `
+      declare function withResource<T>(fn: (res: { name: string; close: () => void }) => T): T;
+      declare function withAuth<T>(role: string, fn: (token: string) => T): T;
+      declare function withPair<T>(fn: (pair: [number, string]) => T): T;
+
+      function runPipeline(): string do {
+        use token <- withAuth("admin");
+        use [code, status] <- withPair();
+        use res <- withResource();
+        \`\${res.name}: [\${code}] \${status} for \${token}\`;
+      }
+      `,
+    );
+    assert.deepEqual(semanticMessages(validProgram), []);
+  });
 });

@@ -60,12 +60,8 @@
     },
     {
       "comment": "use binding arrow",
-      "match": "(?<=\\buse\\b[^;\\r\\n]*?)(<-)",
-      "captures": {
-        "1": {
-          "name": "keyword.operator.assignment.ts"
-        }
-      }
+      "match": "<-",
+      "name": "meta.embedded.inline.tspp-operator keyword.operator.assignment.ts storage.type.function.arrow.ts"
     }
   ]
 }

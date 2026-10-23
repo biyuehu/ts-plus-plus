@@ -2364,6 +2364,7 @@ function isDeclarationKind(kind: SyntaxKind) {
     || kind === SyntaxKind.DataVariant
     || kind === SyntaxKind.TypeParameter
     || kind === SyntaxKind.VariableDeclaration
+    || kind === SyntaxKind.UseBindingStatement
     || kind === SyntaxKind.JSDocTypedefTag
     || kind === SyntaxKind.JSDocCallbackTag
     || kind === SyntaxKind.JSDocPropertyTag

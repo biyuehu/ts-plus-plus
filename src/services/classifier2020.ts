@@ -26,6 +26,7 @@ import {
   isPropertyAccessExpression,
   isQualifiedName,
   isSourceFile,
+  isUseBindingStatement,
   isVariableDeclaration,
   ModifierFlags,
   NamedDeclaration,
@@ -42,6 +43,7 @@ import {
   textSpanIntersectsWith,
   Type,
   TypeChecker,
+  UseBindingStatement,
   VariableDeclaration,
 } from "./_namespaces/ts.js";
 
@@ -262,19 +264,25 @@ function isLocalDeclaration(decl: Declaration, sourceFile: SourceFile): boolean 
   if (isVariableDeclaration(decl)) {
     return (!isSourceFile(decl.parent.parent.parent) || isCatchClause(decl.parent)) && decl.getSourceFile() === sourceFile;
   }
+  else if (isUseBindingStatement(decl)) {
+    return decl.getSourceFile() === sourceFile;
+  }
+  else if (decl.kind === SyntaxKind.Parameter && decl.parent.kind === SyntaxKind.ValueMatchPattern) {
+    return decl.getSourceFile() === sourceFile;
+  }
   else if (isFunctionDeclaration(decl)) {
     return !isSourceFile(decl.parent) && decl.getSourceFile() === sourceFile;
   }
   return false;
 }
 
-function getDeclarationForBindingElement(element: BindingElement): VariableDeclaration | ParameterDeclaration {
+function getDeclarationForBindingElement(element: BindingElement): VariableDeclaration | ParameterDeclaration | UseBindingStatement {
   while (true) {
     if (isBindingElement(element.parent.parent)) {
       element = element.parent.parent;
     }
     else {
-      return element.parent.parent;
+      return element.parent.parent as any;
     }
   }
 }
@@ -297,6 +305,7 @@ function isRightSideOfQualifiedNameOrPropertyAccess(node: Node): boolean {
 
 const tokenFromDeclarationMapping = new Map<SyntaxKind, TokenType>([
   [SyntaxKind.VariableDeclaration, TokenType.variable],
+  [SyntaxKind.UseBindingStatement, TokenType.variable],
   [SyntaxKind.Parameter, TokenType.parameter],
   [SyntaxKind.PropertyDeclaration, TokenType.property],
   [SyntaxKind.ModuleDeclaration, TokenType.namespace],

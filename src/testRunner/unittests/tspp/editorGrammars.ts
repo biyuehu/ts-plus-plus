@@ -1,6 +1,7 @@
 import * as Harness from "../../_namespaces/Harness.js";
 
 interface GrammarPattern {
+  readonly comment?: string;
   readonly begin?: string;
   readonly beginCaptures?: Readonly<Record<string, GrammarPattern>>;
   readonly contentName?: string;
@@ -145,7 +146,7 @@ describe("unittests:: tspp:: editor grammars", () => {
     assert.include(comparisonPattern.name!, operatorScope);
     const arrow = new RegExp(`^(?:${arrowPattern.match})$`);
     const comparison = new RegExp(`^(?:${comparisonPattern.match})$`);
-    for (const text of ["->", "=>", "=>>"]) assert.match(text, arrow);
+    for (const text of ["->", "=>", "=>>", "<-"]) assert.match(text, arrow);
     for (const text of [">=", "<=", "===", "!==", "==", "!="]) assert.match(text, comparison);
     for (const text of [">", "<"]) {
       assert.notMatch(text, arrow, "A bare angle bracket must remain in TypeScript's contextual grammar");
@@ -169,5 +170,17 @@ describe("unittests:: tspp:: editor grammars", () => {
     const arrowPattern = patterns.find(pattern => pattern.match?.includes("<-"));
     assert.isDefined(usePattern, "Expected modern-syntax grammar to highlight use");
     assert.isDefined(arrowPattern, "Expected modern-syntax grammar to highlight <-");
+  });
+
+  it("highlights value-level match expressions, or-patterns and guards", () => {
+    const patterns = collectPatterns(readGrammar("tspp-nominal-declarations.tmLanguage.json"));
+    const valueMatch = patterns.find(pattern => pattern.name === "meta.match.value.tspp");
+    assert.isDefined(valueMatch, "Expected a grammar region for value-level match expression");
+    const armPattern = patterns.find(pattern => pattern.name === "meta.match.arm.tspp");
+    assert.isDefined(armPattern, "Expected a grammar region for match arm patterns");
+    const guardPattern = patterns.find(pattern => pattern.comment?.includes("Match guard"));
+    assert.isDefined(guardPattern, "Expected a grammar region for match guard");
+    assert.isTrue(patterns.some(pattern => pattern.match?.includes("_")), "Expected wildcard pattern support");
+    assert.isTrue(patterns.some(pattern => pattern.match?.includes("|")), "Expected or-pattern operator support");
   });
 });

@@ -108,7 +108,7 @@ Current features:
 | `standardLibraryPredicates` | Built-in numeric predicates `isEven`, `isOdd`, `isPositive`, `isNegative`, `isNonNegative`, `isZero`, `divides`, and `between`; `number` requires `numberModel: "mathematical-real"` | `formalContracts` | Yes | Yes |
 | `refinementTypes` | Z3-verified predicates on structural type aliases | `formalContracts` | Yes | Yes |
 | `typeComputation` | Type-level `let X = T in U` bindings, pattern matching `match T { ... }`, and type lambdas `<T> =>> Body` | — | Yes | Yes |
-| modernSyntax | Value-level let ... in ... local binding expressions, do { ... } block expressions, and do function/method bodies with implicit return | — | Yes | No (emits runtime IIFEs and explicit returns) |
+| `modernSyntax` | Value-level `let ... in ...` expressions, `do { ... }` block expressions, `do` functions/methods with implicit return, and `use pattern <- expr` trailing closure desugaring | — | Yes | No (emits runtime IIFEs, trailing closure callbacks, and explicit returns) |
 | `typeUniverses` | `Type0`, `Type1`, … and kind stratification | `higherKindedTypes` | Yes | Yes |
 | `dependentFunctionTypes` | Pi types plus explicit `Lam`/`Ann` MLTT terms | `typeUniverses` | Yes | Yes |
 | `dependentFunctionInterop` | Assignment and calls between Pi types and TypeScript generic functions | `dependentFunctionTypes` | Yes | Yes |
@@ -242,13 +242,21 @@ class Calculator {
   }
 }
 
-// 4. Standard TS functions remain 100% untouched
+// 4. use pattern <- expr trailing closure sugar in do blocks and do functions
+function runPipeline(): string do {
+  use token <- withAuth("admin");
+  use [code, status] <- withPair();
+  use res <- withResource();
+  `${res.name}: [${code}] ${status} for ${token}`;
+}
+
+// 5. Standard TS functions remain 100% untouched
 function standard(): void {
   42; // pure expression statement, does NOT implicitly return
 }
 ```
 
-Value-level `let-in` and `do` expressions are lowered to self-invoking arrow functions (`(() => { ... })()`), and `do` function bodies automatically rewrite the tail expression to `return expr;`.
+Value-level `let-in` and `do` expressions are lowered to self-invoking arrow functions (`(() => { ... })()`), `do` function bodies automatically rewrite the tail expression to `return expr;`, and `use pattern <- f(args); rest...` statements are lowered to trailing closure invocations `f(args, (pattern) => { rest... })`.
 
 ## License
 

@@ -6,7 +6,7 @@
     {
       "comment": "TS++ arrows are isolated from angle-bracket pair colorization.",
       "name": "meta.embedded.inline.tspp-operator storage.type.function.arrow.ts",
-      "match": "=>>|=>|->"
+      "match": "=>>|=>|->|<-"
     },
     {
       "comment": "Only unambiguous multi-character comparisons are isolated; bare angle brackets remain contextual.",

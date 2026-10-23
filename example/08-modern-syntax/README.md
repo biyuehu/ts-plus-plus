@@ -9,7 +9,8 @@
 1. **值层 `let ... in ...` 局部绑定表达式**：声明局部计算变量，避免污染外部作用域；
 2. **`do { ... }` 语句块表达式**：将多条语句与分支逻辑封装为求值表达式；
 3. **`do` 函数与方法隐式返回**：在函数体前显式标注 `do` 开启尾表达式隐式返回；
-4. **与既有普通函数的 100% 隔离**：未标注 `do` 的函数保持标准 TS/JS 行为，绝不自动隐式返回。
+4. **与既有普通函数的 100% 隔离**：未标注 `do` 的函数保持标准 TS/JS 行为，绝不自动隐式返回；
+5. **`use pattern <- expr` 尾随回调解糖**：在 `do` 块与 `do` 函数中消除嵌套回调金字塔。
 
 ## 语法概览
 
@@ -64,6 +65,32 @@ class Counter {
 ```tspp
 function standard(): void {
   1 + 2; // 不会隐式返回
+}
+```
+
+### 4. use pattern <- expr 尾随闭包糖 (Trailing Closure Desugaring)
+
+受 Koka / Idris 等现代函数式语言启发，专用于在 `do` 块与 `do` 函数/方法中消除嵌套回调（Callback Hell）。
+
+语句：
+```tspp
+use r <- withResource();
+r.process();
+```
+
+在编译时自动脱糖为高阶函数尾随回调传参：
+```tspp
+withResource(r => {
+  return r.process();
+});
+```
+
+支持多重链式嵌套与解构模式：
+```tspp
+function handleRequest(): string do {
+  use [userId, role] <- withSession();
+  use db <- withDatabase();
+  db.query(userId, role);
 }
 ```
 

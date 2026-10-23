@@ -12348,6 +12348,38 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return undefined;
   }
 
+  function getVariantForValueMatchPattern(pattern: ValueMatchPattern): { type: Type; declaration?: DataVariant; } | undefined {
+    if (pattern.parent.kind === SyntaxKind.MlttMatchExpressionArm) {
+      const arm = pattern.parent as MlttMatchExpressionArm;
+      const matchExpr = arm.parent;
+      if (!matchExpr || !matchExpr.scrutinee) return undefined;
+      const scrutineeType = checkExpression(matchExpr.scrutinee);
+      return getValueMatchVariants(scrutineeType).get(idText(pattern.name));
+    }
+    if (pattern.parent.kind === SyntaxKind.ValueMatchPattern) {
+      const parentPattern = pattern.parent as ValueMatchPattern;
+      const parentVariant = getVariantForValueMatchPattern(parentPattern);
+      if (!parentVariant) return undefined;
+      const elements = parentPattern.elements ?? emptyArray;
+      const index = (elements as readonly (ValueMatchPattern | ParameterDeclaration)[]).indexOf(pattern);
+      if (index === -1) return undefined;
+      const fields = parentVariant.declaration?.parameters ?? emptyArray;
+      let fieldType: Type | undefined;
+      if (index < fields.length && isIdentifier(fields[index].name)) {
+        fieldType = getTypeOfPropertyOfType(parentVariant.type, fields[index].name.escapedText);
+      }
+      if (!fieldType) {
+        const props = getPropertiesOfType(parentVariant.type).filter(p => p.escapedName !== "_tag");
+        if (index < props.length) {
+          fieldType = getTypeOfSymbol(props[index]);
+        }
+      }
+      if (!fieldType) return undefined;
+      return getValueMatchVariants(fieldType).get(idText(pattern.name));
+    }
+    return undefined;
+  }
+
   function getTypeForValueMatchBinding(declaration: ParameterDeclaration): Type | undefined {
     if ((declaration.parent as Node).kind !== SyntaxKind.ValueMatchPattern) return undefined;
     let root = declaration.parent as unknown as ValueMatchPattern;
@@ -12360,20 +12392,24 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     const resolve = (pattern: ValueMatchPattern, variantType: Type, variant: DataVariant | undefined, path: readonly __String[]): Type | undefined => {
       const elements = pattern.elements ?? emptyArray;
       const fields = variant?.parameters ?? emptyArray;
-      for (let index = 0; index < Math.min(elements.length, fields.length); index++) {
+      const propSymbols = getPropertiesOfType(variantType).filter(p => p.escapedName !== "_tag");
+      const count = Math.max(fields.length, propSymbols.length);
+      for (let index = 0; index < Math.min(elements.length, count); index++) {
         const element = elements[index];
-        const field = fields[index];
-        if (!isIdentifier(field.name)) continue;
-        const fieldType = getTypeOfPropertyOfType(variantType, field.name.escapedText);
+        const field = index < fields.length ? fields[index] : undefined;
+        const prop = index < propSymbols.length ? propSymbols[index] : undefined;
+        const fieldName = (field && isIdentifier(field.name)) ? field.name.escapedText : prop?.escapedName;
+        if (!fieldName) continue;
+        const fieldType = getTypeOfPropertyOfType(variantType, fieldName);
         if (!fieldType) continue;
         if (element === declaration) {
-          (declaration as Mutable<ParameterDeclaration>).tsppMatchFieldPath = [...path, field.name.escapedText];
+          (declaration as Mutable<ParameterDeclaration>).tsppMatchFieldPath = [...path, fieldName];
           return fieldType;
         }
         if (element.kind === SyntaxKind.ValueMatchPattern) {
           const nested = getValueMatchVariants(fieldType).get(idText(element.name));
           if (nested) {
-            const resolved = resolve(element, nested.type, nested.declaration, [...path, field.name.escapedText]);
+            const resolved = resolve(element, nested.type, nested.declaration, [...path, fieldName]);
             if (resolved) return resolved;
           }
         }
@@ -42080,7 +42116,19 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function getBlockCompletionType(block: Block, checkMode: CheckMode | undefined): Type {
     if (!block.statements || block.statements.length === 0) return voidType;
-    const last = block.statements[block.statements.length - 1];
+    return getDoBlockStatementsCompletionType(block.statements, 0, checkMode);
+  }
+
+  function getDoBlockStatementsCompletionType(statements: readonly Statement[], startIndex: number, checkMode: CheckMode | undefined): Type {
+    if (!statements || statements.length <= startIndex) return voidType;
+    for (let i = startIndex; i < statements.length; i++) {
+      const stmt = statements[i];
+      if (isUseBindingStatement(stmt)) {
+        const continuationType = getDoBlockStatementsCompletionType(statements, i + 1, checkMode);
+        return getUseBindingCallReturnType(stmt, continuationType);
+      }
+    }
+    const last = statements[statements.length - 1];
     if (last.kind === SyntaxKind.ExpressionStatement) {
       return checkExpression((last as ExpressionStatement).expression, checkMode);
     }
@@ -42272,7 +42320,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       const tag = getPropertyOfType(constituent, "_tag" as __String);
       const tagType = tag && getTypeOfSymbol(tag);
       if (!tagType || !isValueMatchTagType(tagType)) continue;
-      const declaration = constituent.aliasSymbol?.declarations?.find(isDataVariant);
+      const declaration = constituent.aliasSymbol?.declarations?.find(isDataVariant) || constituent.symbol?.declarations?.find(isDataVariant);
       variants.set(tagType.value, { type: constituent, declaration });
     }
     return variants;
@@ -47491,8 +47539,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         const returnType = getReturnTypeOfSignature(signature);
         if (getReturnTypeFromAnnotation(container)) {
           const unwrappedReturnType = unwrapReturnType(returnType, getFunctionFlags(container)) ?? returnType;
+          const hasUse = node.statements && node.statements.some(isUseBindingStatement);
           const lastStmt = node.statements && node.statements.length > 0 ? node.statements[node.statements.length - 1] : undefined;
-          const lastExpr = lastStmt && isExpressionStatement(lastStmt) ? lastStmt.expression : undefined;
+          const lastExpr = (!hasUse && lastStmt && isExpressionStatement(lastStmt)) ? lastStmt.expression : undefined;
           const completionType = getBlockCompletionType(node, CheckMode.Normal);
           if (lastExpr) checkReturnExpression(container, unwrappedReturnType, lastExpr, lastExpr, completionType);
           else checkTypeAssignableToAndOptionallyElaborate(completionType, unwrappedReturnType, node, /*expr*/ undefined);
@@ -48049,7 +48098,11 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (!links.resolvedType) {
       const targetExpr = isCallExpression(node.expression) ? node.expression.expression : node.expression;
       const fnType = checkExpression(targetExpr);
-      const fnSignatures = getSignaturesOfType(fnType, SignatureKind.Call);
+      let fnSignatures = getSignaturesOfType(fnType, SignatureKind.Call);
+      if (fnSignatures.length > 0 && isCallExpression(node.expression) && node.expression.typeArguments) {
+        const typeArgs = node.expression.typeArguments.map(getTypeFromTypeNode);
+        fnSignatures = [createSignatureInstantiation(fnSignatures[0], typeArgs)];
+      }
       let exprType: Type = anyType;
       if (fnSignatures.length > 0) {
         const fnSig = fnSignatures[0];
@@ -48070,6 +48123,38 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return links.resolvedType;
   }
 
+  function getUseBindingCallReturnType(node: UseBindingStatement, continuationType?: Type): Type {
+    const targetExpr = isCallExpression(node.expression) ? node.expression.expression : node.expression;
+    const fnType = checkExpression(targetExpr);
+    const fnSignatures = getSignaturesOfType(fnType, SignatureKind.Call);
+    if (fnSignatures.length === 0) return anyType;
+    let fnSig = fnSignatures[0];
+    if (isCallExpression(node.expression) && node.expression.typeArguments) {
+      const typeArgs = node.expression.typeArguments.map(getTypeFromTypeNode);
+      fnSig = createSignatureInstantiation(fnSig, typeArgs);
+    }
+    if (fnSig.typeParameters && fnSig.typeParameters.length > 0 && !(isCallExpression(node.expression) && node.expression.typeArguments)) {
+      if (continuationType && !(continuationType.flags & (TypeFlags.Any | TypeFlags.Void | TypeFlags.Unknown))) {
+        fnSig = createSignatureInstantiation(fnSig, fnSig.typeParameters.map(() => continuationType));
+      }
+    }
+    let expectedCallbackReturnType: Type | undefined;
+    if (fnSig.parameters.length > 0) {
+      const lastParam = fnSig.parameters[fnSig.parameters.length - 1];
+      const callbackParamType = getTypeOfSymbolAtLocation(lastParam, targetExpr);
+      const callbackSigs = getSignaturesOfType(callbackParamType, SignatureKind.Call);
+      if (callbackSigs.length > 0) {
+        expectedCallbackReturnType = getReturnTypeOfSignature(callbackSigs[0]);
+      }
+    }
+    if (expectedCallbackReturnType && continuationType) {
+      if (!(expectedCallbackReturnType.flags & (TypeFlags.Any | TypeFlags.Void | TypeFlags.Unknown))) {
+        checkTypeAssignableToAndOptionallyElaborate(continuationType, expectedCallbackReturnType, node.expression, /*expr*/ undefined);
+      }
+    }
+    return getReturnTypeOfSignature(fnSig);
+  }
+
   function checkUseBindingStatement(node: UseBindingStatement): void {
     requireTsppFeature(node, "modernSyntax");
     const block = findAncestor(node.parent, isBlock);
@@ -48081,6 +48166,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
     if (isCallExpression(node.expression)) {
       checkExpression(node.expression.expression);
+      forEach(node.expression.typeArguments, checkSourceElement);
       forEach(node.expression.arguments, checkExpression);
     }
     else {
@@ -48088,6 +48174,13 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     }
     if (isBindingPattern(node.name)) {
       forEach(node.name.elements, checkSourceElement);
+    }
+    if (block && block.statements) {
+      const useIndex = block.statements.indexOf(node);
+      if (useIndex !== -1) {
+        const continuationType = getDoBlockStatementsCompletionType(block.statements, useIndex + 1, CheckMode.Normal);
+        getUseBindingCallReturnType(node, continuationType);
+      }
     }
   }
 
@@ -53227,6 +53320,15 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     if (node.flags & NodeFlags.InWithStatement) {
       // We cannot answer semantic questions within a with block, do not proceed any further
       return undefined;
+    }
+
+    if (node.kind === SyntaxKind.Identifier && node.parent && node.parent.kind === SyntaxKind.ValueMatchPattern && (node.parent as ValueMatchPattern).name === node) {
+      const pattern = node.parent as ValueMatchPattern;
+      const variant = getVariantForValueMatchPattern(pattern);
+      if (variant?.declaration) {
+        return getSymbolOfDeclaration(variant.declaration);
+      }
+      return resolveEntityName(node as Identifier, SymbolFlags.Value | SymbolFlags.Type | SymbolFlags.Alias, /*ignoreErrors*/ true);
     }
 
     if (isDeclarationNameOrImportPropertyName(node)) {

@@ -13,7 +13,99 @@
       }
     },
     {
-      "comment": "Value-level match expression keyword",
+      "comment": "Value-level match expression with pattern arms",
+      "name": "meta.match.value.tspp",
+      "begin": "\\b(match)(\\s+)(?!mltt\\b)([^\\r\\n{]+?)(\\s*)(\\{)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.flow.ts" },
+        "3": {
+          "patterns": [
+            { "include": "source.ts#expression" }
+          ]
+        },
+        "5": { "name": "punctuation.section.block.begin.ts" }
+      },
+      "end": "^(\\s*)(\\})(?=\\s*[,;]?)",
+      "endCaptures": {
+        "2": { "name": "punctuation.section.block.end.ts" }
+      },
+      "patterns": [
+        {
+          "comment": "Match arm pattern up to =>",
+          "name": "meta.match.arm.tspp",
+          "begin": "^([\\t ]*)(?=\\S[^\\r\\n]*?=>)",
+          "end": "(=>)",
+          "endCaptures": {
+            "1": { "name": "storage.type.function.arrow.ts" }
+          },
+          "patterns": [
+            {
+              "comment": "Match guard: if <expr>",
+              "begin": "\\b(if)\\b",
+              "beginCaptures": {
+                "1": { "name": "keyword.control.conditional.ts" }
+              },
+              "end": "(?=\\s*=>)",
+              "patterns": [
+                { "include": "source.ts#expression" }
+              ]
+            },
+            {
+              "comment": "Wildcard pattern _",
+              "name": "constant.language.wildcard.ts",
+              "match": "\\b_\\b"
+            },
+            {
+              "comment": "Or-pattern separator |",
+              "name": "keyword.operator.logical.ts",
+              "match": "\\|"
+            },
+            {
+              "comment": "Variant constructor name",
+              "name": "entity.name.type.ts",
+              "match": "\\b[A-Z][\\w$]*\\b"
+            },
+            {
+              "comment": "Nested constructor or binding parameters in parentheses",
+              "begin": "\\(",
+              "beginCaptures": {
+                "0": { "name": "punctuation.definition.parameters.begin.ts" }
+              },
+              "end": "\\)",
+              "endCaptures": {
+                "0": { "name": "punctuation.definition.parameters.end.ts" }
+              },
+              "patterns": [
+                {
+                  "name": "constant.language.wildcard.ts",
+                  "match": "\\b_\\b"
+                },
+                {
+                  "name": "entity.name.type.ts",
+                  "match": "\\b[A-Z][\\w$]*\\b"
+                },
+                {
+                  "name": "variable.parameter.ts",
+                  "match": "\\b[a-z_$][\\w$]*\\b"
+                },
+                {
+                  "name": "punctuation.separator.comma.ts",
+                  "match": ","
+                },
+                {
+                  "include": "$self"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "include": "source.ts#expression"
+        }
+      ]
+    },
+    {
+      "comment": "Fallback value-level match expression keyword",
       "name": "keyword.control.flow.ts",
       "match": "\\bmatch\\b"
     }

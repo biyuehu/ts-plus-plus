@@ -5,6 +5,7 @@
  * 2. do { ... } 语句块表达式（尾部表达式隐式返回）
  * 3. do 函数与 do 类方法隐式返回
  * 4. 普通 TS 函数与 do 函数的 100% 行为兼容隔离
+ * 5. use pattern <- expr 尾随回调解糖
  */
 
 // -------------------------------------------------------------
@@ -58,6 +59,8 @@ function calculateDiscount(price: number, isVip: boolean): number do {
   price * discountRate;
 }
 
+const f = (p: number, g: (x: number) => number) => do { g(1) + g(2) }
+
 // 在类方法上同样支持 do 语法
 class OrderCalculator {
   public baseFee = 15;
@@ -82,4 +85,33 @@ function standardFunction(): void {
 }
 
 standardFunction();
+
+// -------------------------------------------------------------
+// 5. use x <- f 尾随回调解糖 (Trailing Closure / Resource Binding)
+// -------------------------------------------------------------
+
+// 类似 Koka 的 `use` 绑定，专用于 do 块或 do 函数内部平铺回调地狱。
+// `use pattern <- f(args); rest...` 自动将后续语句转换为尾随回调闭包 `f(args, (pattern) => { rest... })`。
+
+declare function withResource<T>(fn: (res: { name: string; close: () => void }) => T): T;
+declare function withAuth<T>(role: string, fn: (token: string) => T): T;
+declare function withPair<T>(fn: (pair: [number, string]) => T): T;
+
+// 1) 基础单资源绑定
+const resourceResult = do {
+  use r <- withResource();
+  console.log("Using resource:", r.name);
+  `done with ${r.name}`;
+};
+console.log("resourceResult:", resourceResult);
+
+// 2) 链式 use 嵌套平铺与解构模式绑定
+function runPipeline(): string do {
+  use token <- withAuth("admin");
+  use [code, status] <- withPair();
+  use res <- withResource();
+  `${res.name}: [${code}] ${status} for ${token}`;
+}
+
+console.log("pipeline result:", runPipeline());
 
