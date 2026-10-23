@@ -2,5 +2,14 @@
   "name": "@tspp/examples",
   "version": "0.0.0",
   "private": true,
-  "description": "Examples for the TS++ compiler and editor tooling"
+  "description": "Examples for the TS++ compiler and editor tooling",
+  "dependencies": {
+    "ts-plus-plus": "0.0.1"
+  },
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "check": "node scripts/run-all.mjs check"
+  }
 }

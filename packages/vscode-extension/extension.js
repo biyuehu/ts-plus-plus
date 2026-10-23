@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { createRequire } = require("module");
 const path = require("path");
 const vscode = require("vscode");
 const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
@@ -6,13 +7,12 @@ const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
 let languageClient;
 
 async function activate(context) {
-  const repositoryRoot = path.resolve(context.extensionPath, "..", "..");
-  const compilerRoot = path.join(repositoryRoot, "packages", "compiler");
-  const compilerPath = path.join(compilerRoot, "built", "local", "tsserver.js");
-  const typescriptPath = path.join(compilerRoot, "built", "local", "typescript.js");
-  const defaultSdkPath = path.join(compilerRoot, "built", "local", "lib");
-  const languageServerModule = path.join(repositoryRoot, "packages", "language-server", "lib", "cli.mjs");
-  const examplesRoot = path.join(repositoryRoot, "packages", "examples");
+  const compilerPath = require.resolve("ts-plus-plus/tsserver");
+  const typescriptPath = require.resolve("ts-plus-plus");
+  const defaultSdkPath = path.dirname(require.resolve("ts-plus-plus/sdk"));
+  const languageServerRequire = createRequire(path.resolve(context.extensionPath, "..", "language-server", "package.json"));
+  const languageServerModule = languageServerRequire.resolve("tspp-language-server");
+  const examplesRoot = path.dirname(require.resolve("@tspp/examples/package.json"));
   const examples = [
     {
       label: "01 — Higher-Kinded Types",
@@ -86,7 +86,7 @@ async function activate(context) {
   const configuredSdkPath = vscode.workspace.getConfiguration("tspp").get("tsdk", "").trim();
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   const sdkPath = configuredSdkPath
-    ? path.resolve(workspaceRoot || repositoryRoot, configuredSdkPath)
+    ? path.resolve(workspaceRoot || context.extensionPath, configuredSdkPath)
     : defaultSdkPath;
   const serverOptions = {
     run: { module: languageServerModule, transport: TransportKind.stdio },

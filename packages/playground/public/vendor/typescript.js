@@ -26,7 +26,7 @@ var require_source_map_support = __commonJS({
   }
 });
 
-// ../../src/compiler/corePublic.ts
+// ../compiler/src/compiler/corePublic.ts
 var versionMajorMinor = "6.0";
 var version = "6.0.3";
 var Comparison = /* @__PURE__ */ ((Comparison3) => {
@@ -36,7 +36,7 @@ var Comparison = /* @__PURE__ */ ((Comparison3) => {
   return Comparison3;
 })(Comparison || {});
 
-// ../../src/compiler/core.ts
+// ../compiler/src/compiler/core.ts
 var emptyArray = [];
 var emptyMap = /* @__PURE__ */ new Map();
 function length(array) {
@@ -1512,7 +1512,7 @@ function isNodeLikeSystem() {
   return typeof process !== "undefined" && !!process.nextTick && !process.browser && typeof __require !== "undefined";
 }
 
-// ../../src/compiler/debug.ts
+// ../compiler/src/compiler/debug.ts
 var LogLevel = /* @__PURE__ */ ((LogLevel3) => {
   LogLevel3[LogLevel3["Off"] = 0] = "Off";
   LogLevel3[LogLevel3["Error"] = 1] = "Error";
@@ -2539,7 +2539,7 @@ ${lanes.join("\n")}
   Debug2.formatControlFlowGraph = formatControlFlowGraph;
 })(Debug || (Debug = {}));
 
-// ../../src/compiler/semver.ts
+// ../compiler/src/compiler/semver.ts
 var versionRegExp = /^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:-([a-z0-9-.]+))?(?:\+([a-z0-9-.]+))?)?)?$/i;
 var prereleaseRegExp = /^(?:0|[1-9]\d*|[a-z-][a-z0-9-]*)(?:\.(?:0|[1-9]\d*|[a-z-][a-z0-9-]*))*$/i;
 var prereleasePartRegExp = /^(?:0|[1-9]\d*|[a-z-][a-z0-9-]*)$/i;
@@ -2819,7 +2819,7 @@ function formatComparator(comparator) {
   return `${comparator.operator}${comparator.operand}`;
 }
 
-// ../../src/compiler/performanceCore.ts
+// ../compiler/src/compiler/performanceCore.ts
 function tryGetPerformance() {
   if (isNodeLikeSystem()) {
     try {
@@ -2865,7 +2865,7 @@ function tryGetNativePerformanceHooks() {
 }
 var timestamp = nativePerformanceTime ? () => nativePerformanceTime.now() : Date.now;
 
-// ../../src/compiler/_namespaces/ts.performance.ts
+// ../compiler/src/compiler/_namespaces/ts.performance.ts
 var ts_performance_exports = {};
 __export(ts_performance_exports, {
   clearMarks: () => clearMarks,
@@ -2884,7 +2884,7 @@ __export(ts_performance_exports, {
   nullTimer: () => nullTimer
 });
 
-// ../../src/compiler/performance.ts
+// ../compiler/src/compiler/performance.ts
 var perfHooks;
 var performanceImpl;
 function createTimerIf(condition, measureName, startMarkName, endMarkName) {
@@ -2989,7 +2989,7 @@ function disable() {
   }
 }
 
-// ../../src/compiler/tracing.ts
+// ../compiler/src/compiler/tracing.ts
 var tracing;
 var tracingEnabled;
 ((tracingEnabled2) => {
@@ -3257,7 +3257,7 @@ var tracingEnabled;
 var startTracing = tracingEnabled.startTracing;
 var dumpTracingLegend = tracingEnabled.dumpLegend;
 
-// ../../src/compiler/types.ts
+// ../compiler/src/compiler/types.ts
 var SyntaxKind = /* @__PURE__ */ ((SyntaxKind5) => {
   SyntaxKind5[SyntaxKind5["Unknown"] = 0] = "Unknown";
   SyntaxKind5[SyntaxKind5["EndOfFileToken"] = 1] = "EndOfFileToken";
@@ -5070,7 +5070,7 @@ var JSDocParsingMode = /* @__PURE__ */ ((JSDocParsingMode6) => {
   return JSDocParsingMode6;
 })(JSDocParsingMode || {});
 
-// ../../src/compiler/sys.ts
+// ../compiler/src/compiler/sys.ts
 function generateDjb2Hash(data) {
   let acc = 5381;
   for (let i = 0; i < data.length; i++) {
@@ -6447,7 +6447,7 @@ if (sys && sys.debugMode) {
   Debug.isDebugging = true;
 }
 
-// ../../src/compiler/path.ts
+// ../compiler/src/compiler/path.ts
 var directorySeparator = "/";
 var altDirectorySeparator = "\\";
 var urlSchemeSeparator = "://";
@@ -6925,7 +6925,7 @@ function isNodeModulesDirectory(dirPath) {
   return endsWith(dirPath, "/node_modules");
 }
 
-// ../../src/compiler/diagnosticInformationMap.generated.ts
+// ../compiler/src/compiler/diagnosticInformationMap.generated.ts
 function diag(code, category, key, message, reportsUnnecessary, elidedInCompatabilityPyramid, reportsDeprecated) {
   return { code, category, key, message, reportsUnnecessary, elidedInCompatabilityPyramid, reportsDeprecated };
 }
@@ -9213,7 +9213,7 @@ var Diagnostics = {
   Enable_missing_TS_features_and_their_required_dependencies: diag(18091, 3 /* Message */, "Enable_missing_TS_features_and_their_required_dependencies_18091", "Enable missing TS++ features and their required dependencies")
 };
 
-// ../../src/compiler/scanner.ts
+// ../compiler/src/compiler/scanner.ts
 function tokenIsIdentifierOrKeyword(token) {
   return token >= 80 /* Identifier */;
 }
@@ -12453,7 +12453,7 @@ var valuesOfNonBinaryUnicodeProperties = {
 };
 valuesOfNonBinaryUnicodeProperties.Script_Extensions = valuesOfNonBinaryUnicodeProperties.Script;
 
-// ../../src/compiler/utilitiesPublic.ts
+// ../compiler/src/compiler/utilitiesPublic.ts
 function isExternalModuleNameRelative(moduleName) {
   return pathIsRelative(moduleName) || isRootedDiskPath(moduleName);
 }
@@ -14038,7 +14038,7 @@ function isInternalDeclaration(node, sourceFile) {
   });
 }
 
-// ../../src/compiler/tsppFeatures.ts
+// ../compiler/src/compiler/tsppFeatures.ts
 var tsppFeatureDefinitions = [
   {
     name: "higherKindedTypes",
@@ -14237,7 +14237,7 @@ function generateTsppConfig(commitHash, newLine) {
   return lines.join(newLine);
 }
 
-// ../../src/compiler/utilities.ts
+// ../compiler/src/compiler/utilities.ts
 var resolvingEmptyArray = [];
 var externalHelpersModuleNameText = "tslib";
 var defaultMaximumTruncationLength = 160;
@@ -22336,7 +22336,7 @@ function isPotentiallyExecutableNode(node) {
   return isClassDeclaration(node) || isEnumDeclaration(node) || isModuleDeclaration(node);
 }
 
-// ../../src/compiler/factory/baseNodeFactory.ts
+// ../compiler/src/compiler/factory/baseNodeFactory.ts
 function createBaseNodeFactory() {
   let NodeConstructor2;
   let TokenConstructor2;
@@ -22397,7 +22397,7 @@ function createBaseNodeFactory() {
   }
 }
 
-// ../../src/compiler/factory/parenthesizerRules.ts
+// ../compiler/src/compiler/factory/parenthesizerRules.ts
 function createParenthesizerRules(factory2) {
   let binaryLeftOperandParenthesizerCache;
   let binaryRightOperandParenthesizerCache;
@@ -22780,7 +22780,7 @@ var nullParenthesizerRules = {
   parenthesizeLeadingTypeArgument: identity
 };
 
-// ../../src/compiler/factory/nodeConverters.ts
+// ../compiler/src/compiler/factory/nodeConverters.ts
 function createNodeConverters(factory2) {
   return {
     convertToFunctionBlock,
@@ -22927,7 +22927,7 @@ var nullNodeConverters = {
   convertToAssignmentElementTarget: notImplemented
 };
 
-// ../../src/compiler/factory/nodeFactory.ts
+// ../compiler/src/compiler/factory/nodeFactory.ts
 var nextAutoGenerateId = 0;
 var NodeFactoryFlags = /* @__PURE__ */ ((NodeFactoryFlags2) => {
   NodeFactoryFlags2[NodeFactoryFlags2["None"] = 0] = "None";
@@ -27713,7 +27713,7 @@ function mergeTokenSourceMapRanges(sourceRanges, destRanges) {
   return destRanges;
 }
 
-// ../../src/compiler/factory/emitNode.ts
+// ../compiler/src/compiler/factory/emitNode.ts
 function getOrCreateEmitNode(node) {
   if (!node.emitNode) {
     if (isParseTreeNode(node)) {
@@ -27913,7 +27913,7 @@ function getIdentifierGeneratedImportReference(node) {
   return node.emitNode?.generatedImportReference;
 }
 
-// ../../src/compiler/factory/emitHelpers.ts
+// ../compiler/src/compiler/factory/emitHelpers.ts
 var PrivateIdentifierKind = /* @__PURE__ */ ((PrivateIdentifierKind2) => {
   PrivateIdentifierKind2["Field"] = "f";
   PrivateIdentifierKind2["Method"] = "m";
@@ -29013,7 +29013,7 @@ function isCallToHelper(firstSegment, helperName) {
   return isCallExpression(firstSegment) && isIdentifier(firstSegment.expression) && (getEmitFlags(firstSegment.expression) & 8192 /* HelperName */) !== 0 && firstSegment.expression.escapedText === helperName;
 }
 
-// ../../src/compiler/factory/nodeTests.ts
+// ../compiler/src/compiler/factory/nodeTests.ts
 function isNumericLiteral(node) {
   return node.kind === 9 /* NumericLiteral */;
 }
@@ -29747,7 +29747,7 @@ function isSyntaxList(n) {
   return n.kind === 374 /* SyntaxList */;
 }
 
-// ../../src/compiler/factory/nodeChildren.ts
+// ../compiler/src/compiler/factory/nodeChildren.ts
 var sourceFileToNodeChildren = /* @__PURE__ */ new WeakMap();
 function getNodeChildren(node, sourceFile) {
   const kind = node.kind;
@@ -29785,7 +29785,7 @@ function transferSourceFileChildren(sourceFile, targetSourceFile) {
   }
 }
 
-// ../../src/compiler/factory/utilities.ts
+// ../compiler/src/compiler/factory/utilities.ts
 function createEmptyExports(factory2) {
   return factory2.createExportDeclaration(
     /*modifiers*/
@@ -30849,7 +30849,7 @@ function containsObjectRestOrSpread(node) {
   return false;
 }
 
-// ../../src/compiler/factory/utilitiesPublic.ts
+// ../compiler/src/compiler/factory/utilitiesPublic.ts
 function setTextRange(range, location) {
   return location ? setTextRangePosEnd(range, location.pos, location.end) : range;
 }
@@ -30862,7 +30862,7 @@ function canHaveDecorators(node) {
   return kind === 174 /* Parameter */ || kind === 177 /* PropertyDeclaration */ || kind === 179 /* MethodDeclaration */ || kind === 182 /* GetAccessor */ || kind === 183 /* SetAccessor */ || kind === 243 /* ClassExpression */ || kind === 279 /* ClassDeclaration */;
 }
 
-// ../../src/compiler/parser.ts
+// ../compiler/src/compiler/parser.ts
 var NodeConstructor;
 var TokenConstructor;
 var IdentifierConstructor;
@@ -39634,7 +39634,7 @@ function tagNamesAreEquivalent(lhs, rhs) {
   return lhs.name.escapedText === rhs.name.escapedText && tagNamesAreEquivalent(lhs.expression, rhs.expression);
 }
 
-// ../../src/compiler/commandLineParser.ts
+// ../compiler/src/compiler/commandLineParser.ts
 var compileOnSaveCommandLineOption = {
   name: "compileOnSave",
   type: "boolean",
@@ -43162,7 +43162,7 @@ function getOptionValueWithEmptyStrings(value, option) {
   }
 }
 
-// ../../src/compiler/moduleNameResolver.ts
+// ../compiler/src/compiler/moduleNameResolver.ts
 function trace(host, message, ...args) {
   host.trace(formatMessage(message, ...args));
 }
@@ -45787,7 +45787,7 @@ function useCaseSensitiveFileNames(state) {
   return !state.host.useCaseSensitiveFileNames ? true : typeof state.host.useCaseSensitiveFileNames === "boolean" ? state.host.useCaseSensitiveFileNames : state.host.useCaseSensitiveFileNames();
 }
 
-// ../../src/compiler/binder.ts
+// ../compiler/src/compiler/binder.ts
 var ModuleInstanceState = /* @__PURE__ */ ((ModuleInstanceState2) => {
   ModuleInstanceState2[ModuleInstanceState2["NonInstantiated"] = 0] = "NonInstantiated";
   ModuleInstanceState2[ModuleInstanceState2["Instantiated"] = 1] = "Instantiated";
@@ -48810,7 +48810,7 @@ function lookupSymbolForName(container, name) {
   }
 }
 
-// ../../src/compiler/symbolWalker.ts
+// ../compiler/src/compiler/symbolWalker.ts
 function createGetSymbolWalker(getRestTypeOfSignature, getTypePredicateOfSignature, getReturnTypeOfSignature, getBaseTypes, resolveStructuredTypeMembers, getTypeOfSymbol, getResolvedSymbol, getConstraintOfTypeParameter, getFirstIdentifier2, getTypeArguments) {
   return getSymbolWalker;
   function getSymbolWalker(accept = () => true) {
@@ -48962,7 +48962,7 @@ function createGetSymbolWalker(getRestTypeOfSignature, getTypePredicateOfSignatu
   }
 }
 
-// ../../src/compiler/_namespaces/ts.moduleSpecifiers.ts
+// ../compiler/src/compiler/_namespaces/ts.moduleSpecifiers.ts
 var ts_moduleSpecifiers_exports = {};
 __export(ts_moduleSpecifiers_exports, {
   RelativePreference: () => RelativePreference,
@@ -48980,7 +48980,7 @@ __export(ts_moduleSpecifiers_exports, {
   updateModuleSpecifier: () => updateModuleSpecifier
 });
 
-// ../../src/compiler/moduleSpecifiers.ts
+// ../compiler/src/compiler/moduleSpecifiers.ts
 var stringToRegex = memoizeOne((pattern) => {
   try {
     let slash = pattern.indexOf("/");
@@ -49975,7 +49975,7 @@ function prefersTsExtension(allowedEndings) {
   return tsPriority > -1 && tsPriority < allowedEndings.indexOf(2 /* JsExtension */);
 }
 
-// ../../src/compiler/mlttCore.ts
+// ../compiler/src/compiler/mlttCore.ts
 var MlttTypeError = class extends Error {
   constructor(code, message) {
     super(message);
@@ -50897,7 +50897,7 @@ function freshName(preferredName, names) {
   return `${base}${suffix}`;
 }
 
-// ../../src/compiler/standardPredicates.ts
+// ../compiler/src/compiler/standardPredicates.ts
 var standardPredicateDefinitions = [
   { name: "isEven", kind: "even", arity: 1 },
   { name: "isOdd", kind: "odd", arity: 1 },
@@ -50926,7 +50926,7 @@ function isStandardPredicateSymbol(symbol) {
   });
 }
 
-// ../../src/compiler/checker.ts
+// ../compiler/src/compiler/checker.ts
 var ambientModuleSymbolRegex = /^".+"$/;
 var anon = "(anonymous)";
 var nextSymbolId = 1;
@@ -98379,7 +98379,7 @@ var SymbolTrackerImpl = class _SymbolTrackerImpl {
   }
 };
 
-// ../../src/compiler/visitorPublic.ts
+// ../compiler/src/compiler/visitorPublic.ts
 function visitNode(node, visitor, test, lift) {
   if (node === void 0) {
     return node;
@@ -99831,7 +99831,7 @@ function extractSingleNode(nodes) {
   return singleOrUndefined(nodes);
 }
 
-// ../../src/compiler/sourcemap.ts
+// ../compiler/src/compiler/sourcemap.ts
 function createSourceMapGenerator(host, file, sourceRoot, sourcesDirectoryPath, generatorOptions) {
   var { enter, exit } = generatorOptions.extendedDiagnostics ? createTimer("Source Map", "beforeSourcemap", "afterSourcemap") : nullTimer;
   var rawSources = [];
@@ -100373,7 +100373,7 @@ var identitySourceMapConsumer = {
   getGeneratedPosition: identity
 };
 
-// ../../src/compiler/transformers/utilities.ts
+// ../compiler/src/compiler/transformers/utilities.ts
 function getOriginalNodeId(node) {
   node = getOriginalNode(node);
   return node ? getNodeId(node) : 0;
@@ -100887,7 +100887,7 @@ function rewriteModuleSpecifier(node, compilerOptions) {
   return updatedText !== node.text ? setOriginalNode(setTextRange(factory.createStringLiteral(updatedText, node.singleQuote), node), node) : node;
 }
 
-// ../../src/compiler/transformers/destructuring.ts
+// ../compiler/src/compiler/transformers/destructuring.ts
 var FlattenLevel = /* @__PURE__ */ ((FlattenLevel2) => {
   FlattenLevel2[FlattenLevel2["All"] = 0] = "All";
   FlattenLevel2[FlattenLevel2["ObjectRest"] = 1] = "ObjectRest";
@@ -101344,7 +101344,7 @@ function makeAssignmentElement(name) {
   return name;
 }
 
-// ../../src/compiler/transformers/classThis.ts
+// ../compiler/src/compiler/transformers/classThis.ts
 function createClassThisAssignmentBlock(factory2, classThis, thisExpression = factory2.createThis()) {
   const expression = factory2.createAssignment(classThis, thisExpression);
   const statement = factory2.createExpressionStatement(expression);
@@ -101400,7 +101400,7 @@ function injectClassThisAssignmentIfMissing(factory2, node, classThis, thisExpre
   return updatedNode;
 }
 
-// ../../src/compiler/transformers/namedEvaluation.ts
+// ../compiler/src/compiler/transformers/namedEvaluation.ts
 function getAssignedNameOfIdentifier(factory2, name, expression) {
   const original = getOriginalNode(skipOuterExpressions(expression));
   if ((isClassDeclaration(original) || isFunctionDeclaration(original)) && !original.name && hasSyntacticModifier(original, 2048 /* Default */)) {
@@ -101609,7 +101609,7 @@ function transformNamedEvaluation(context, node, ignoreEmptyStringLiteral, assig
   }
 }
 
-// ../../src/compiler/transformers/taggedTemplate.ts
+// ../compiler/src/compiler/transformers/taggedTemplate.ts
 var ProcessLevel = /* @__PURE__ */ ((ProcessLevel2) => {
   ProcessLevel2[ProcessLevel2["LiftRestriction"] = 0] = "LiftRestriction";
   ProcessLevel2[ProcessLevel2["All"] = 1] = "All";
@@ -101677,7 +101677,7 @@ function getRawLiteral(factory2, node, currentSourceFile) {
   return setTextRange(factory2.createStringLiteral(text), node);
 }
 
-// ../../src/compiler/transformers/ts.ts
+// ../compiler/src/compiler/transformers/ts.ts
 var USE_NEW_TYPE_METADATA_FORMAT = false;
 function transformTypeScript(context) {
   const {
@@ -103877,7 +103877,7 @@ function transformTypeScript(context) {
   }
 }
 
-// ../../src/compiler/transformers/classFields.ts
+// ../compiler/src/compiler/transformers/classFields.ts
 function transformClassFields(context) {
   const {
     factory: factory2,
@@ -106092,7 +106092,7 @@ function isStaticPropertyDeclarationOrClassStaticBlock(node) {
   return isClassStaticBlockDeclaration(node) || isStaticPropertyDeclaration2(node);
 }
 
-// ../../src/compiler/transformers/typeSerializer.ts
+// ../compiler/src/compiler/transformers/typeSerializer.ts
 function createRuntimeTypeSerializer(context) {
   const {
     factory: factory2,
@@ -106445,7 +106445,7 @@ function createRuntimeTypeSerializer(context) {
   }
 }
 
-// ../../src/compiler/transformers/legacyDecorators.ts
+// ../compiler/src/compiler/transformers/legacyDecorators.ts
 function transformLegacyDecorators(context) {
   const {
     factory: factory2,
@@ -106961,7 +106961,7 @@ function transformLegacyDecorators(context) {
   }
 }
 
-// ../../src/compiler/transformers/esDecorators.ts
+// ../compiler/src/compiler/transformers/esDecorators.ts
 function transformESDecorators(context) {
   const {
     factory: factory2,
@@ -108820,7 +108820,7 @@ function transformESDecorators(context) {
   }
 }
 
-// ../../src/compiler/transformers/es2017.ts
+// ../compiler/src/compiler/transformers/es2017.ts
 function transformES2017(context) {
   const {
     factory: factory2,
@@ -109691,7 +109691,7 @@ function createSuperAccessVariableStatement(factory2, resolver, node, names) {
   );
 }
 
-// ../../src/compiler/transformers/es2018.ts
+// ../compiler/src/compiler/transformers/es2018.ts
 function transformES2018(context) {
   const {
     factory: factory2,
@@ -110919,7 +110919,7 @@ function transformES2018(context) {
   }
 }
 
-// ../../src/compiler/transformers/es2019.ts
+// ../compiler/src/compiler/transformers/es2019.ts
 function transformES2019(context) {
   const factory2 = context.factory;
   return chainBundle(context, transformSourceFile);
@@ -110955,7 +110955,7 @@ function transformES2019(context) {
   }
 }
 
-// ../../src/compiler/transformers/es2020.ts
+// ../compiler/src/compiler/transformers/es2020.ts
 function transformES2020(context) {
   const {
     factory: factory2,
@@ -111217,7 +111217,7 @@ function transformES2020(context) {
   }
 }
 
-// ../../src/compiler/transformers/es2021.ts
+// ../compiler/src/compiler/transformers/es2021.ts
 function transformES2021(context) {
   const {
     hoistVariableDeclaration,
@@ -111290,7 +111290,7 @@ function transformES2021(context) {
   }
 }
 
-// ../../src/compiler/transformers/esnext.ts
+// ../compiler/src/compiler/transformers/esnext.ts
 function transformESNext(context) {
   const {
     factory: factory2,
@@ -111857,7 +111857,7 @@ function getUsingKindOfStatements(statements) {
   return result;
 }
 
-// ../../src/compiler/transformers/jsx.ts
+// ../compiler/src/compiler/transformers/jsx.ts
 function transformJsx(context) {
   const {
     factory: factory2,
@@ -112656,7 +112656,7 @@ var entities = new Map(Object.entries({
   diams: 9830
 }));
 
-// ../../src/compiler/transformers/es2016.ts
+// ../compiler/src/compiler/transformers/es2016.ts
 function transformES2016(context) {
   const {
     factory: factory2,
@@ -112747,7 +112747,7 @@ function transformES2016(context) {
   }
 }
 
-// ../../src/compiler/transformers/es2015.ts
+// ../compiler/src/compiler/transformers/es2015.ts
 function createSpreadSegment(kind, expression) {
   return { kind, expression };
 }
@@ -116114,7 +116114,7 @@ function transformES2015(context) {
   }
 }
 
-// ../../src/compiler/transformers/generators.ts
+// ../compiler/src/compiler/transformers/generators.ts
 function getInstructionName(instruction) {
   switch (instruction) {
     case 2 /* Return */:
@@ -118101,7 +118101,7 @@ function transformGenerators(context) {
   }
 }
 
-// ../../src/compiler/transformers/module/module.ts
+// ../compiler/src/compiler/transformers/module/module.ts
 function transformModule(context) {
   function getTransformModuleDelegate(moduleKind2) {
     switch (moduleKind2) {
@@ -120060,7 +120060,7 @@ var dynamicImportUMDHelper = {
             var __syncRequire = typeof module === "object" && typeof module.exports === "object";`
 };
 
-// ../../src/compiler/transformers/module/system.ts
+// ../compiler/src/compiler/transformers/module/system.ts
 function transformSystemModule(context) {
   const {
     factory: factory2,
@@ -121378,7 +121378,7 @@ function transformSystemModule(context) {
   }
 }
 
-// ../../src/compiler/transformers/module/esnextAnd2015.ts
+// ../compiler/src/compiler/transformers/module/esnextAnd2015.ts
 function transformECMAScriptModule(context) {
   const {
     factory: factory2,
@@ -121739,7 +121739,7 @@ function transformECMAScriptModule(context) {
   }
 }
 
-// ../../src/compiler/transformers/module/impliedNodeFormatDependent.ts
+// ../compiler/src/compiler/transformers/module/impliedNodeFormatDependent.ts
 function transformImpliedNodeFormatDependentModule(context) {
   const previousOnSubstituteNode = context.onSubstituteNode;
   const previousOnEmitNode = context.onEmitNode;
@@ -121805,7 +121805,7 @@ function transformImpliedNodeFormatDependentModule(context) {
   }
 }
 
-// ../../src/compiler/transformers/declarations/diagnostics.ts
+// ../compiler/src/compiler/transformers/declarations/diagnostics.ts
 function canProduceDiagnostics(node) {
   return isVariableDeclaration(node) || isPropertyDeclaration(node) || isPropertySignature(node) || isBindingElement(node) || isSetAccessor(node) || isGetAccessor(node) || isConstructSignatureDeclaration(node) || isCallSignatureDeclaration(node) || isMethodDeclaration(node) || isMethodSignature(node) || isFunctionDeclaration(node) || isParameter(node) || isTypeParameterDeclaration(node) || isExpressionWithTypeArguments(node) || isImportEqualsDeclaration(node) || isTypeAliasDeclaration(node) || isConstructorDeclaration(node) || isIndexSignatureDeclaration(node) || isPropertyAccessExpression(node) || isElementAccessExpression(node) || isBinaryExpression(node) || isJSDocTypeAlias(node);
 }
@@ -122258,7 +122258,7 @@ function createGetIsolatedDeclarationErrors(resolver) {
   }
 }
 
-// ../../src/compiler/transformers/declarations.ts
+// ../compiler/src/compiler/transformers/declarations.ts
 function getDeclarationDiagnostics(host, resolver, file) {
   const compilerOptions = host.getCompilerOptions();
   const files = filter(getSourceFilesToEmit(host, file), isSourceFileNotJson);
@@ -123938,7 +123938,7 @@ function isProcessedComponent(node) {
   return false;
 }
 
-// ../../src/compiler/transformer.ts
+// ../compiler/src/compiler/transformer.ts
 function getModuleTransformer(moduleKind) {
   switch (moduleKind) {
     case 200 /* Preserve */:
@@ -124369,7 +124369,7 @@ var nullTransformationContext = {
   addDiagnostic: noop
 };
 
-// ../../src/compiler/emitter.ts
+// ../compiler/src/compiler/emitter.ts
 var brackets = createBracketsMap();
 function isBuildInfoFile(file) {
   return fileExtensionIs(file, ".tsbuildinfo" /* TsBuildInfo */);
@@ -130111,7 +130111,7 @@ function getEmitListItem(emit, parenthesizerRule) {
   return emit.length === 1 ? emitListItemNoParenthesizer : typeof parenthesizerRule === "object" ? emitListItemWithParenthesizerRuleSelector : emitListItemWithParenthesizerRule;
 }
 
-// ../../src/compiler/watchUtilities.ts
+// ../compiler/src/compiler/watchUtilities.ts
 function createCachedDirectoryStructureHost(host, currentDirectory, useCaseSensitiveFileNames2) {
   if (!host.getDirectories || !host.readDirectory) {
     return void 0;
@@ -130608,7 +130608,7 @@ function closeFileWatcherOf(objWithWatcher) {
   objWithWatcher.watcher.close();
 }
 
-// ../../src/compiler/analysisTasks.ts
+// ../compiler/src/compiler/analysisTasks.ts
 function createAnalysisTaskId(taskKind, fileName, start, length2, name) {
   let hash = 2166136261;
   const text = `${taskKind}\0${fileName}\0${start}\0${length2}\0${name}`;
@@ -130652,7 +130652,7 @@ function analysisReasonForVerificationStatus(status, message) {
   }
 }
 
-// ../../src/compiler/verificationIR.ts
+// ../compiler/src/compiler/verificationIR.ts
 function verificationConstant(name, sort) {
   return { kind: "constant", name, sort };
 }
@@ -130713,7 +130713,7 @@ function verificationSortsEqual(left, right) {
   return left === right || verificationSortKey(left) === verificationSortKey(right);
 }
 
-// ../../src/compiler/verificationContext.ts
+// ../compiler/src/compiler/verificationContext.ts
 function createVerificationContext(checker, sourceFile, declaration, pending, numberModel) {
   return {
     checker,
@@ -130736,7 +130736,7 @@ function createVerificationConstant(context, sourceName, sort) {
   return { expression: verificationConstant(smtName, sort), sort };
 }
 
-// ../../src/compiler/verificationRefinement.ts
+// ../compiler/src/compiler/verificationRefinement.ts
 function cloneVerificationRefinementState(state) {
   return { values: new Map(state.values), facts: [...state.facts], reason: state.reason };
 }
@@ -130745,7 +130745,7 @@ function stopVerificationRefinement(state, reason) {
   return { live: [state], returns: [] };
 }
 
-// ../../src/compiler/verificationSmt.ts
+// ../compiler/src/compiler/verificationSmt.ts
 function hashText(text) {
   let hash = 2166136261;
   for (let index = 0; index < text.length; index++) {
@@ -130947,7 +130947,7 @@ function createModelMetadata(problem, structuredSorts, allNames) {
   };
 }
 
-// ../../src/compiler/verificationTasks.ts
+// ../compiler/src/compiler/verificationTasks.ts
 var verificationDiagnosticCode = 18090;
 function createVerificationArtifact(sourceFile, node, kind, obligation, name, status, solverInput, replayableSmtLib, message, reason) {
   const target = node.kind === 254 /* WithProperty */ ? node.value : node;
@@ -130993,7 +130993,7 @@ function formatVerificationMessage(artifact) {
   return artifact.counterexample ? `${summary} Counterexample: ${artifact.counterexample}.` : summary;
 }
 
-// ../../src/compiler/verificationTypeLowering.ts
+// ../compiler/src/compiler/verificationTypeLowering.ts
 function verificationTypeLoweringFailed(result) {
   return hasProperty(result, "reason");
 }
@@ -131076,7 +131076,7 @@ function getStringDiscriminant(checker, type) {
   return tagType && tagType.flags & 1024 /* StringLiteral */ ? tagType.value : void 0;
 }
 
-// ../../src/compiler/analysisWorkerQueue.ts
+// ../compiler/src/compiler/analysisWorkerQueue.ts
 var queues = /* @__PURE__ */ new Map();
 function scheduleAnalysisWorker(queueName, start, cancellationToken) {
   const queue = getQueue(queueName);
@@ -131142,7 +131142,7 @@ function getDefaultMaximumWorkerCount() {
   return Math.max(1, Math.min(4, availableParallelism));
 }
 
-// ../../src/compiler/verificationIncremental.ts
+// ../compiler/src/compiler/verificationIncremental.ts
 var VerificationQueryCache = class {
   constructor(maximumSize) {
     this.maximumSize = maximumSize;
@@ -131176,7 +131176,7 @@ var VerificationQueryCache = class {
   }
 };
 
-// ../../src/compiler/verificationWorker.ts
+// ../compiler/src/compiler/verificationWorker.ts
 var defaultVerificationWorkerBudget = {
   minimumTimeoutMs: 3e4,
   timeoutPerQueryMs: 12e3,
@@ -131412,7 +131412,7 @@ run().then(
 );
 `;
 
-// ../../src/compiler/formalVerification.ts
+// ../compiler/src/compiler/formalVerification.ts
 var standardPredicateNames = new Set(standardPredicateDefinitions.map((definition) => definition.name));
 var maximumPaths = 64;
 async function verifyFormalContracts(program, host, cancellationToken) {
@@ -132420,7 +132420,7 @@ function unsupportedFlow(state, reason) {
   return stopVerificationRefinement(state, reason);
 }
 
-// ../../src/compiler/macroWorker.ts
+// ../compiler/src/compiler/macroWorker.ts
 var defaultMacroWorkerOptions = {
   ...defaultAnalysisWorkerBudget
 };
@@ -132656,7 +132656,7 @@ function cloneCompilerOptions(options) {
   return clone2;
 }
 
-// ../../src/compiler/program.ts
+// ../compiler/src/compiler/program.ts
 function findConfigFile(searchPath, fileExists, configName = "tsconfig.json") {
   return forEachAncestorDirectory(searchPath, (ancestor) => {
     const fileName = combinePaths(ancestor, configName);
@@ -133527,10 +133527,12 @@ function expandCompileTimeMacros(program, host, allowAsync = false) {
     const names = sourceFile.statements.filter((statement) => statement.kind === 278 /* FunctionDeclaration */ && hasSyntacticModifier(statement, 131072 /* Macro */)).map((statement) => statement.name && getTextOfNode(statement.name)).filter((name) => !!name);
     javascript += `
 module.exports.__tsppLocalMacros = {${names.map((name) => `${JSON.stringify(name)}: typeof ${name} === "function" ? ${name} : undefined`).join(",")}};`;
-    const nativeRequire = __require("module").createRequire(sourceFile.fileName);
+    let nativeRequire;
     const moduleRecord = { exports: {} };
     moduleCache.set(cacheKey, moduleRecord.exports);
     const macroRequire = (specifier) => {
+      const hostModule = macroHost.resolveMacroModule?.(specifier, sourceFile.fileName);
+      if (hostModule !== void 0) return hostModule;
       const resolved = resolveModuleName(specifier, sourceFile.fileName, buildProgram.getCompilerOptions(), macroHost).resolvedModule;
       const dependency = resolved && buildProgram.getSourceFile(resolved.resolvedFileName);
       if (dependency && !dependency.isDeclarationFile && !fileExtensionIs(dependency.fileName, ".json" /* Json */)) {
@@ -133540,11 +133542,12 @@ module.exports.__tsppLocalMacros = {${names.map((name) => `${JSON.stringify(name
           false
         );
       }
+      nativeRequire ?? (nativeRequire = __require("module").createRequire(sourceFile.fileName));
       return nativeRequire(specifier);
     };
     const execute = new Function("require", "exports", "module", "__filename", "__dirname", javascript);
     try {
-      execute(macroRequire, moduleRecord.exports, moduleRecord, sourceFile.fileName, __require("path").dirname(sourceFile.fileName));
+      execute(macroRequire, moduleRecord.exports, moduleRecord, sourceFile.fileName, getDirectoryPath(sourceFile.fileName));
     } catch (e) {
       moduleCache.delete(cacheKey);
       throw e;
@@ -137582,7 +137585,7 @@ function getModuleNameStringLiteralAt({ imports, moduleAugmentations }, index) {
   Debug.fail("should never ask for module name at index higher than possible module name");
 }
 
-// ../../src/compiler/programDiagnostics.ts
+// ../compiler/src/compiler/programDiagnostics.ts
 function createProgramDiagnostics(getCompilerOptionsObjectLiteralSyntax) {
   let computedDiagnostics;
   let fileReasons = createMultiMap();
@@ -137867,7 +137870,7 @@ function createProgramDiagnostics(getCompilerOptionsObjectLiteralSyntax) {
   }
 }
 
-// ../../src/compiler/builderState.ts
+// ../compiler/src/compiler/builderState.ts
 function getFileEmitOutput(program, sourceFile, emitOnlyDtsFiles, cancellationToken, customTransformers, forceDtsEmit) {
   const outputFiles = [];
   const { emitSkipped, diagnostics } = program.emit(sourceFile, writeFile2, cancellationToken, emitOnlyDtsFiles, customTransformers, forceDtsEmit);
@@ -138231,7 +138234,7 @@ var BuilderState;
   }
 })(BuilderState || (BuilderState = {}));
 
-// ../../src/compiler/builder.ts
+// ../compiler/src/compiler/builder.ts
 var BuilderFileEmit = /* @__PURE__ */ ((BuilderFileEmit2) => {
   BuilderFileEmit2[BuilderFileEmit2["None"] = 0] = "None";
   BuilderFileEmit2[BuilderFileEmit2["Js"] = 1] = "Js";
@@ -139758,7 +139761,7 @@ function createRedirectedBuilderProgram(state, configFileParsingDiagnostics) {
   }
 }
 
-// ../../src/compiler/builderPublic.ts
+// ../compiler/src/compiler/builderPublic.ts
 function createSemanticDiagnosticsBuilderProgram(newProgramOrRootNames, hostOrOptions, oldProgramOrHost, configFileParsingDiagnosticsOrOldProgram, configFileParsingDiagnostics, projectReferences) {
   return createBuilderProgram(
     0 /* SemanticDiagnosticsBuilderProgram */,
@@ -139800,7 +139803,7 @@ function createAbstractBuilder(newProgramOrRootNames, hostOrOptions, oldProgramO
   );
 }
 
-// ../../src/compiler/resolutionCache.ts
+// ../compiler/src/compiler/resolutionCache.ts
 function removeIgnoredPath(path) {
   if (endsWith(path, "/node_modules/.staging")) {
     return removeSuffix(path, "/.staging");
@@ -140900,7 +140903,7 @@ function resolutionIsSymlink(resolution) {
   return !!(resolution.resolvedModule?.originalPath || resolution.resolvedTypeReferenceDirective?.originalPath);
 }
 
-// ../../src/compiler/watch.ts
+// ../compiler/src/compiler/watch.ts
 var sysFormatDiagnosticsHost = sys ? {
   getCurrentDirectory: () => sys.getCurrentDirectory(),
   getNewLine: () => sys.newLine,
@@ -141542,7 +141545,7 @@ function performIncrementalCompilation(input) {
   return exitStatus;
 }
 
-// ../../src/compiler/watchPublic.ts
+// ../compiler/src/compiler/watchPublic.ts
 function readBuilderProgram(compilerOptions, host) {
   const buildInfoPath = getTsBuildInfoEmitOutputFilePath(compilerOptions);
   if (!buildInfoPath) return void 0;
@@ -142268,7 +142271,7 @@ function createWatchProgram(host) {
   }
 }
 
-// ../../src/compiler/tsbuild.ts
+// ../compiler/src/compiler/tsbuild.ts
 var UpToDateStatusType = /* @__PURE__ */ ((UpToDateStatusType2) => {
   UpToDateStatusType2[UpToDateStatusType2["Unbuildable"] = 0] = "Unbuildable";
   UpToDateStatusType2[UpToDateStatusType2["UpToDate"] = 1] = "UpToDate";
@@ -142297,7 +142300,7 @@ function resolveConfigFileProjectName(project) {
   return combinePaths(project, "tsconfig.json");
 }
 
-// ../../src/compiler/tsbuildPublic.ts
+// ../compiler/src/compiler/tsbuildPublic.ts
 var minimumDate = /* @__PURE__ */ new Date(-864e13);
 function getOrCreateValueFromConfigFileMap(configFileMap, resolved, createT) {
   const existingValue = configFileMap.get(resolved);
@@ -144019,7 +144022,7 @@ function verboseReportProjectStatus(state, configFileName, status) {
   }
 }
 
-// ../../src/compiler/executeCommandLine.ts
+// ../compiler/src/compiler/executeCommandLine.ts
 var StatisticType = /* @__PURE__ */ ((StatisticType2) => {
   StatisticType2[StatisticType2["time"] = 0] = "time";
   StatisticType2[StatisticType2["count"] = 1] = "count";
@@ -145223,7 +145226,7 @@ function isFullCommitHash(value) {
   return value !== void 0 && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(value);
 }
 
-// ../../src/compiler/expressionToTypeNode.ts
+// ../compiler/src/compiler/expressionToTypeNode.ts
 function syntacticResult(type, reportFallback = true) {
   return { type, reportFallback };
 }
@@ -146415,7 +146418,7 @@ function createSyntacticTypeNodeBuilder(options, resolver) {
   }
 }
 
-// ../../src/jsTyping/_namespaces/ts.JsTyping.ts
+// ../compiler/src/jsTyping/_namespaces/ts.JsTyping.ts
 var ts_JsTyping_exports = {};
 __export(ts_JsTyping_exports, {
   NameValidationResult: () => NameValidationResult,
@@ -146428,7 +146431,7 @@ __export(ts_JsTyping_exports, {
   validatePackageName: () => validatePackageName
 });
 
-// ../../src/jsTyping/shared.ts
+// ../compiler/src/jsTyping/shared.ts
 var ActionSet = "action::set";
 var ActionInvalidate = "action::invalidate";
 var ActionPackageInstalled = "action::packageInstalled";
@@ -146466,7 +146469,7 @@ function stringifyIndented(json) {
   return indent2(JSON.stringify(json, void 0, 2));
 }
 
-// ../../src/jsTyping/jsTyping.ts
+// ../compiler/src/jsTyping/jsTyping.ts
 function isTypingUpToDate(cachedTyping, availableTypingVersions) {
   const availableVersion = new Version(getProperty(availableTypingVersions, `ts${versionMajorMinor}`) || getProperty(availableTypingVersions, "latest"));
   return availableVersion.compareTo(cachedTyping.version) <= 0;
@@ -146711,7 +146714,7 @@ function renderPackageNameValidationFailureWorker(typing, result, name, isScopeN
   }
 }
 
-// ../../src/services/types.ts
+// ../compiler/src/services/types.ts
 var ScriptSnapshot;
 ((ScriptSnapshot2) => {
   class StringScriptSnapshot {
@@ -147021,7 +147024,7 @@ var ClassificationType = /* @__PURE__ */ ((ClassificationType2) => {
   return ClassificationType2;
 })(ClassificationType || {});
 
-// ../../src/services/utilities.ts
+// ../compiler/src/services/utilities.ts
 var scanner = createScanner(
   99 /* Latest */,
   /*skipTrivia*/
@@ -149742,7 +149745,7 @@ function createFutureSourceFile(fileName, syntaxModuleIndicator, program, module
   };
 }
 
-// ../../src/services/exportInfoMap.ts
+// ../compiler/src/services/exportInfoMap.ts
 var ImportKind = /* @__PURE__ */ ((ImportKind2) => {
   ImportKind2[ImportKind2["Named"] = 0] = "Named";
   ImportKind2[ImportKind2["Default"] = 1] = "Default";
@@ -150203,7 +150206,7 @@ function forEachNameOfDefaultExport(defaultExport, checker, scriptTarget, cb) {
   }
 }
 
-// ../../src/services/classifier.ts
+// ../compiler/src/services/classifier.ts
 function createClassifier() {
   const scanner2 = createScanner(
     99 /* Latest */,
@@ -151085,7 +151088,7 @@ function getEncodedSyntacticClassifications(cancellationToken, sourceFile, span)
   }
 }
 
-// ../../src/services/documentHighlights.ts
+// ../compiler/src/services/documentHighlights.ts
 var DocumentHighlights;
 ((DocumentHighlights3) => {
   function getDocumentHighlights(program, cancellationToken, sourceFile, position, sourceFilesToSearch) {
@@ -151489,7 +151492,7 @@ var DocumentHighlights;
   }
 })(DocumentHighlights || (DocumentHighlights = {}));
 
-// ../../src/services/documentRegistry.ts
+// ../compiler/src/services/documentRegistry.ts
 function isDocumentRegistryEntry(entry) {
   return !!entry.sourceFile;
 }
@@ -151695,7 +151698,7 @@ function getDocumentRegistryBucketKeyWithMode(key, mode) {
   return mode ? `${key}|${mode}` : key;
 }
 
-// ../../src/services/getEditsForFileRename.ts
+// ../compiler/src/services/getEditsForFileRename.ts
 function getEditsForFileRename(program, oldFileOrDirPath, newFileOrDirPath, host, formatContext, preferences, sourceMapper) {
   const useCaseSensitiveFileNames2 = hostUsesCaseSensitiveFileNames(host);
   const getCanonicalFileName = createGetCanonicalFileName(useCaseSensitiveFileNames2);
@@ -151879,7 +151882,7 @@ function forEachProperty(objectLiteral, cb) {
   }
 }
 
-// ../../src/services/patternMatcher.ts
+// ../compiler/src/services/patternMatcher.ts
 var PatternMatchKind = /* @__PURE__ */ ((PatternMatchKind2) => {
   PatternMatchKind2[PatternMatchKind2["exact"] = 0] = "exact";
   PatternMatchKind2[PatternMatchKind2["prefix"] = 1] = "prefix";
@@ -152235,7 +152238,7 @@ function every2(s, pred, start = 0, end = s.length) {
   return everyInRange(start, end, (i) => pred(s.charCodeAt(i), i));
 }
 
-// ../../src/services/preProcess.ts
+// ../compiler/src/services/preProcess.ts
 function preProcessFile(sourceText2, readImportFiles = true, detectJavaScriptImports = false) {
   const pragmaContext = {
     languageVersion: 12 /* LatestStandard */,
@@ -152573,7 +152576,7 @@ function preProcessFile(sourceText2, readImportFiles = true, detectJavaScriptImp
   }
 }
 
-// ../../src/services/sourcemaps.ts
+// ../compiler/src/services/sourcemaps.ts
 var base64UrlRegExp = /^data:(?:application\/json;charset=[uU][tT][fF]-8;base64,([A-Za-z0-9+/=]+)$)?/;
 function getSourceMapper(host) {
   const getCanonicalFileName = createGetCanonicalFileName(host.useCaseSensitiveFileNames());
@@ -152711,7 +152714,7 @@ function createSourceFileLike(text, lineMap) {
   };
 }
 
-// ../../src/services/suggestionDiagnostics.ts
+// ../compiler/src/services/suggestionDiagnostics.ts
 var visitedNestedConvertibleFunctions = /* @__PURE__ */ new Map();
 function computeSuggestionDiagnostics(sourceFile, program, cancellationToken) {
   program.getSemanticDiagnostics(sourceFile, cancellationToken);
@@ -152921,7 +152924,7 @@ function canBeConvertedToAsync(node) {
   }
 }
 
-// ../../src/services/transpile.ts
+// ../compiler/src/services/transpile.ts
 var optionsRedundantWithVerbatimModuleSyntax = /* @__PURE__ */ new Set([
   "isolatedModules"
 ]);
@@ -153098,13 +153101,13 @@ function fixupCompilerOptions(options, diagnostics) {
   return options;
 }
 
-// ../../src/services/_namespaces/ts.NavigateTo.ts
+// ../compiler/src/services/_namespaces/ts.NavigateTo.ts
 var ts_NavigateTo_exports = {};
 __export(ts_NavigateTo_exports, {
   getNavigateToItems: () => getNavigateToItems
 });
 
-// ../../src/services/navigateTo.ts
+// ../compiler/src/services/navigateTo.ts
 function getNavigateToItems(sourceFiles, checker, cancellationToken, searchValue, maxResultCount, excludeDtsFiles, excludeLibFiles, program) {
   const patternMatcher = createPatternMatcher(searchValue);
   if (!patternMatcher) return emptyArray;
@@ -153205,14 +153208,14 @@ function createNavigateToItem(rawItem) {
   };
 }
 
-// ../../src/services/_namespaces/ts.NavigationBar.ts
+// ../compiler/src/services/_namespaces/ts.NavigationBar.ts
 var ts_NavigationBar_exports = {};
 __export(ts_NavigationBar_exports, {
   getNavigationBarItems: () => getNavigationBarItems,
   getNavigationTree: () => getNavigationTree
 });
 
-// ../../src/services/navigationBar.ts
+// ../compiler/src/services/navigationBar.ts
 var whiteSpaceRegex = /\s+/g;
 var maxLength = 150;
 var curCancellationToken;
@@ -153967,7 +153970,7 @@ function cleanText(text) {
   return text.replace(/\\?(?:\r?\n|[\r\u2028\u2029])/g, "");
 }
 
-// ../../src/services/_namespaces/ts.refactor.ts
+// ../compiler/src/services/_namespaces/ts.refactor.ts
 var ts_refactor_exports = {};
 __export(ts_refactor_exports, {
   addExportsInOldFile: () => addExportsInOldFile,
@@ -153998,7 +154001,7 @@ __export(ts_refactor_exports, {
   registerRefactor: () => registerRefactor
 });
 
-// ../../src/services/refactorProvider.ts
+// ../compiler/src/services/refactorProvider.ts
 var refactors = /* @__PURE__ */ new Map();
 function registerRefactor(name, refactor) {
   refactors.set(name, refactor);
@@ -154011,7 +154014,7 @@ function getEditsForRefactor(context, refactorName14, actionName2, interactiveRe
   return refactor && refactor.getEditsForAction(context, actionName2, interactiveRefactorArguments);
 }
 
-// ../../src/services/refactors/convertExport.ts
+// ../compiler/src/services/refactors/convertExport.ts
 var refactorName = "Convert export";
 var defaultToNamedAction = {
   name: "Convert default export to named export",
@@ -154256,7 +154259,7 @@ function getExportingModuleSymbol(parent2, checker) {
   return symbol;
 }
 
-// ../../src/services/refactors/convertImport.ts
+// ../compiler/src/services/refactors/convertImport.ts
 var refactorName2 = "Convert import";
 var actions = {
   [0 /* Named */]: {
@@ -154479,7 +154482,7 @@ function createImportClause(defaultImportName, elements) {
   );
 }
 
-// ../../src/services/refactors/extractType.ts
+// ../compiler/src/services/refactors/extractType.ts
 var refactorName3 = "Extract type";
 var extractToTypeAliasAction = {
   name: "Extract to type alias",
@@ -154840,7 +154843,7 @@ function getExpandedSelectionNode(firstType, enclosingNode) {
   }) ?? firstType;
 }
 
-// ../../src/services/refactors/moveToFile.ts
+// ../compiler/src/services/refactors/moveToFile.ts
 var refactorNameForMoveToFile = "Move to file";
 var description = getLocaleSpecificMessage(Diagnostics.Move_to_file);
 var moveToFileAction = {
@@ -155659,7 +155662,7 @@ function getExistingLocals(sourceFile, statements, checker) {
   return existingLocals;
 }
 
-// ../../src/services/refactors/helpers.ts
+// ../compiler/src/services/refactors/helpers.ts
 function isRefactorErrorInfo(info) {
   return info.error !== void 0;
 }
@@ -155691,7 +155694,7 @@ function addTargetFileImports(oldFile, importsToCopy, targetFileImportsFromOldFi
   addImportsForMovedSymbols(targetFileImportsFromOldFile, oldFile.fileName, importAdder, program);
 }
 
-// ../../src/services/refactors/inlineVariable.ts
+// ../compiler/src/services/refactors/inlineVariable.ts
 var refactorName4 = "Inline variable";
 var refactorDescription = getLocaleSpecificMessage(Diagnostics.Inline_variable);
 var inlineVariableAction = {
@@ -155855,7 +155858,7 @@ function replaceTemplateStringVariableWithLiteral(tracker, sourceFile, reference
   );
 }
 
-// ../../src/services/refactors/moveToNewFile.ts
+// ../compiler/src/services/refactors/moveToNewFile.ts
 var refactorName5 = "Move to a new file";
 var description2 = getLocaleSpecificMessage(Diagnostics.Move_to_a_new_file);
 var moveToNewFileAction = {
@@ -155906,10 +155909,10 @@ function doChange4(oldFile, program, toMove, changes, host, context, preferences
   addNewFileToTsconfig(program, changes, oldFile.fileName, newFilename, hostGetCanonicalFileName(host));
 }
 
-// ../../src/services/_namespaces/ts.refactor.addOrRemoveBracesToArrowFunction.ts
+// ../compiler/src/services/_namespaces/ts.refactor.addOrRemoveBracesToArrowFunction.ts
 var ts_refactor_addOrRemoveBracesToArrowFunction_exports = {};
 
-// ../../src/services/refactors/convertOverloadListToSingleSignature.ts
+// ../compiler/src/services/refactors/convertOverloadListToSingleSignature.ts
 var refactorName6 = "Convert overload list to single signature";
 var refactorDescription2 = getLocaleSpecificMessage(Diagnostics.Convert_overload_list_to_single_signature);
 var functionOverloadAction = {
@@ -156123,7 +156126,7 @@ function getConvertableOverloadListAtPosition(file, startPosition, program) {
   return signatureDecls;
 }
 
-// ../../src/services/refactors/addOrRemoveBracesToArrowFunction.ts
+// ../compiler/src/services/refactors/addOrRemoveBracesToArrowFunction.ts
 var refactorName7 = "Add or remove braces in an arrow function";
 var refactorDescription3 = getLocaleSpecificMessage(Diagnostics.Add_or_remove_braces_in_an_arrow_function);
 var addBracesAction = {
@@ -156254,10 +156257,10 @@ function getConvertibleArrowFunctionAtPosition(file, startPosition, considerFunc
   return void 0;
 }
 
-// ../../src/services/_namespaces/ts.refactor.convertArrowFunctionOrFunctionExpression.ts
+// ../compiler/src/services/_namespaces/ts.refactor.convertArrowFunctionOrFunctionExpression.ts
 var ts_refactor_convertArrowFunctionOrFunctionExpression_exports = {};
 
-// ../../src/services/refactors/convertArrowFunctionOrFunctionExpression.ts
+// ../compiler/src/services/refactors/convertArrowFunctionOrFunctionExpression.ts
 var refactorName8 = "Convert arrow function or function expression";
 var refactorDescription4 = getLocaleSpecificMessage(Diagnostics.Convert_arrow_function_or_function_expression);
 var toAnonymousFunctionAction = {
@@ -156472,10 +156475,10 @@ function isFunctionReferencedInFile(sourceFile, typeChecker, node) {
   return !!node.name && ts_FindAllReferences_exports.Core.isSymbolReferencedInFile(node.name, typeChecker, sourceFile);
 }
 
-// ../../src/services/_namespaces/ts.refactor.convertParamsToDestructuredObject.ts
+// ../compiler/src/services/_namespaces/ts.refactor.convertParamsToDestructuredObject.ts
 var ts_refactor_convertParamsToDestructuredObject_exports = {};
 
-// ../../src/services/refactors/convertParamsToDestructuredObject.ts
+// ../compiler/src/services/refactors/convertParamsToDestructuredObject.ts
 var refactorName9 = "Convert parameters to destructured object";
 var minimumParameterLength = 1;
 var refactorDescription5 = getLocaleSpecificMessage(Diagnostics.Convert_parameters_to_destructured_object);
@@ -157007,10 +157010,10 @@ function getFunctionNames(functionDeclaration) {
   }
 }
 
-// ../../src/services/_namespaces/ts.refactor.convertStringOrTemplateLiteral.ts
+// ../compiler/src/services/_namespaces/ts.refactor.convertStringOrTemplateLiteral.ts
 var ts_refactor_convertStringOrTemplateLiteral_exports = {};
 
-// ../../src/services/refactors/convertStringOrTemplateLiteral.ts
+// ../compiler/src/services/refactors/convertStringOrTemplateLiteral.ts
 var refactorName10 = "Convert to template string";
 var refactorDescription6 = getLocaleSpecificMessage(Diagnostics.Convert_to_template_string);
 var convertStringAction = {
@@ -157230,10 +157233,10 @@ function getExpressionFromParenthesesOrExpression(node) {
   return node;
 }
 
-// ../../src/services/_namespaces/ts.refactor.convertToOptionalChainExpression.ts
+// ../compiler/src/services/_namespaces/ts.refactor.convertToOptionalChainExpression.ts
 var ts_refactor_convertToOptionalChainExpression_exports = {};
 
-// ../../src/services/refactors/convertToOptionalChainExpression.ts
+// ../compiler/src/services/refactors/convertToOptionalChainExpression.ts
 var refactorName11 = "Convert to optional chain expression";
 var convertToOptionalChainExpressionMessage = getLocaleSpecificMessage(Diagnostics.Convert_to_optional_chain_expression);
 var toOptionalChainAction = {
@@ -157430,7 +157433,7 @@ function doChange6(sourceFile, checker, changes, info, _actionName) {
   }
 }
 
-// ../../src/services/_namespaces/ts.refactor.extractSymbol.ts
+// ../compiler/src/services/_namespaces/ts.refactor.extractSymbol.ts
 var ts_refactor_extractSymbol_exports = {};
 __export(ts_refactor_extractSymbol_exports, {
   Messages: () => Messages,
@@ -157440,7 +157443,7 @@ __export(ts_refactor_extractSymbol_exports, {
   getRefactorEditsToExtractSymbol: () => getRefactorEditsToExtractSymbol
 });
 
-// ../../src/services/refactors/extractSymbol.ts
+// ../compiler/src/services/refactors/extractSymbol.ts
 var refactorName12 = "Extract Symbol";
 var extractConstantAction = {
   name: "Extract Constant",
@@ -159009,10 +159012,10 @@ function isStringLiteralJsxAttribute(node) {
   return isStringLiteral(node) && node.parent && isJsxAttribute(node.parent);
 }
 
-// ../../src/services/_namespaces/ts.refactor.generateGetAccessorAndSetAccessor.ts
+// ../compiler/src/services/_namespaces/ts.refactor.generateGetAccessorAndSetAccessor.ts
 var ts_refactor_generateGetAccessorAndSetAccessor_exports = {};
 
-// ../../src/services/refactors/generateGetAccessorAndSetAccessor.ts
+// ../compiler/src/services/refactors/generateGetAccessorAndSetAccessor.ts
 var actionName = "Generate 'get' and 'set' accessors";
 var actionDescription = getLocaleSpecificMessage(Diagnostics.Generate_get_and_set_accessors);
 var generateGetSetAction = {
@@ -159062,10 +159065,10 @@ registerRefactor(actionName, {
   }
 });
 
-// ../../src/services/_namespaces/ts.refactor.inferFunctionReturnType.ts
+// ../compiler/src/services/_namespaces/ts.refactor.inferFunctionReturnType.ts
 var ts_refactor_inferFunctionReturnType_exports = {};
 
-// ../../src/services/refactors/inferFunctionReturnType.ts
+// ../compiler/src/services/refactors/inferFunctionReturnType.ts
 var refactorName13 = "Infer function return type";
 var refactorDescription7 = getLocaleSpecificMessage(Diagnostics.Infer_function_return_type);
 var inferReturnTypeAction = {
@@ -159166,7 +159169,7 @@ function isConvertibleDeclaration(node) {
   }
 }
 
-// ../../src/services/classifier2020.ts
+// ../compiler/src/services/classifier2020.ts
 var TokenEncodingConsts = /* @__PURE__ */ ((TokenEncodingConsts2) => {
   TokenEncodingConsts2[TokenEncodingConsts2["typeOffset"] = 8] = "typeOffset";
   TokenEncodingConsts2[TokenEncodingConsts2["modifierMask"] = 255] = "modifierMask";
@@ -159406,7 +159409,7 @@ var tokenFromDeclarationMapping = /* @__PURE__ */ new Map([
   [325 /* ShorthandPropertyAssignment */, 9 /* property */]
 ]);
 
-// ../../src/services/services.ts
+// ../compiler/src/services/services.ts
 var servicesVersion = "0.8";
 function createNode(kind, pos, end, parent2) {
   const node = isNodeKind(kind) ? new NodeObject(kind, pos, end) : kind === 80 /* Identifier */ ? new IdentifierObject(80 /* Identifier */, pos, end) : kind === 81 /* PrivateIdentifier */ ? new PrivateIdentifierObject(81 /* PrivateIdentifier */, pos, end) : new TokenObject(kind, pos, end);
@@ -161934,7 +161937,7 @@ function getDefaultLibFilePath(options) {
 }
 setObjectAllocator(getServicesObjectAllocator());
 
-// ../../src/services/transform.ts
+// ../compiler/src/services/transform.ts
 function transform(source, transformers, compilerOptions) {
   const diagnostics = [];
   compilerOptions = fixupCompilerOptions(compilerOptions, diagnostics);
@@ -161955,13 +161958,13 @@ function transform(source, transformers, compilerOptions) {
   return result;
 }
 
-// ../../src/services/_namespaces/ts.BreakpointResolver.ts
+// ../compiler/src/services/_namespaces/ts.BreakpointResolver.ts
 var ts_BreakpointResolver_exports = {};
 __export(ts_BreakpointResolver_exports, {
   spanInSourceFileAtLocation: () => spanInSourceFileAtLocation
 });
 
-// ../../src/services/breakpoints.ts
+// ../compiler/src/services/breakpoints.ts
 function spanInSourceFileAtLocation(sourceFile, position) {
   if (sourceFile.isDeclarationFile) {
     return void 0;
@@ -162450,7 +162453,7 @@ function spanInSourceFileAtLocation(sourceFile, position) {
   }
 }
 
-// ../../src/services/_namespaces/ts.CallHierarchy.ts
+// ../compiler/src/services/_namespaces/ts.CallHierarchy.ts
 var ts_CallHierarchy_exports = {};
 __export(ts_CallHierarchy_exports, {
   createCallHierarchyItem: () => createCallHierarchyItem,
@@ -162459,7 +162462,7 @@ __export(ts_CallHierarchy_exports, {
   resolveCallHierarchyDeclaration: () => resolveCallHierarchyDeclaration
 });
 
-// ../../src/services/callHierarchy.ts
+// ../compiler/src/services/callHierarchy.ts
 function isNamedExpression(node) {
   return (isFunctionExpression(node) || isClassExpression(node)) && isNamedDeclaration(node);
 }
@@ -162898,13 +162901,13 @@ function getOutgoingCalls(program, declaration) {
   return group(collectCallSites(program, declaration), getCallSiteGroupKey, (entries) => convertCallSiteGroupToOutgoingCall(program, entries));
 }
 
-// ../../src/services/_namespaces/ts.classifier.ts
+// ../compiler/src/services/_namespaces/ts.classifier.ts
 var ts_classifier_exports = {};
 __export(ts_classifier_exports, {
   v2020: () => ts_classifier_v2020_exports
 });
 
-// ../../src/services/_namespaces/ts.classifier.v2020.ts
+// ../compiler/src/services/_namespaces/ts.classifier.v2020.ts
 var ts_classifier_v2020_exports = {};
 __export(ts_classifier_v2020_exports, {
   TokenEncodingConsts: () => TokenEncodingConsts,
@@ -162914,7 +162917,7 @@ __export(ts_classifier_v2020_exports, {
   getSemanticClassifications: () => getSemanticClassifications2
 });
 
-// ../../src/services/_namespaces/ts.codefix.ts
+// ../compiler/src/services/_namespaces/ts.codefix.ts
 var ts_codefix_exports = {};
 __export(ts_codefix_exports, {
   PreserveOptionalFlags: () => PreserveOptionalFlags,
@@ -162956,7 +162959,7 @@ __export(ts_codefix_exports, {
   typeToMinimizedReferenceType: () => typeToMinimizedReferenceType
 });
 
-// ../../src/services/codeFixProvider.ts
+// ../compiler/src/services/codeFixProvider.ts
 var errorCodeToFixes = createMultiMap();
 var fixIdToRegistration = /* @__PURE__ */ new Map();
 function createCodeFixActionWithoutFixAll(fixName8, changes, description3) {
@@ -163047,7 +163050,7 @@ function getDiagnostics({ program, sourceFile, cancellationToken }) {
   return diagnostics;
 }
 
-// ../../src/services/codefixes/addConvertToUnknownForNonOverlappingTypes.ts
+// ../compiler/src/services/codefixes/addConvertToUnknownForNonOverlappingTypes.ts
 var fixId = "addConvertToUnknownForNonOverlappingTypes";
 var errorCodes = [Diagnostics.Conversion_of_type_0_to_type_1_may_be_a_mistake_because_neither_type_sufficiently_overlaps_with_the_other_If_this_was_intentional_convert_the_expression_to_unknown_first.code];
 registerCodeFix({
@@ -163075,7 +163078,7 @@ function getAssertion(sourceFile, pos) {
   return findAncestor(getTokenAtPosition(sourceFile, pos), (n) => isAsExpression(n) || isTypeAssertionExpression(n));
 }
 
-// ../../src/services/codefixes/addEmptyExportDeclaration.ts
+// ../compiler/src/services/codefixes/addEmptyExportDeclaration.ts
 registerCodeFix({
   errorCodes: [
     Diagnostics.await_expressions_are_only_allowed_at_the_top_level_of_a_file_when_that_file_is_a_module_but_this_file_has_no_imports_or_exports_Consider_adding_an_empty_export_to_make_this_file_a_module.code,
@@ -163100,7 +163103,7 @@ registerCodeFix({
   }
 });
 
-// ../../src/services/codefixes/addMissingAsync.ts
+// ../compiler/src/services/codefixes/addMissingAsync.ts
 var fixId2 = "addMissingAsync";
 var errorCodes2 = [
   Diagnostics.Argument_of_type_0_is_not_assignable_to_parameter_of_type_1.code,
@@ -163175,7 +163178,7 @@ function getIsMatchingAsyncError(span, errorCode) {
   return ({ start, length: length2, relatedInformation, code }) => isNumber(start) && isNumber(length2) && textSpansEqual({ start, length: length2 }, span) && code === errorCode && !!relatedInformation && some(relatedInformation, (related) => related.code === Diagnostics.Did_you_mean_to_mark_this_function_as_async.code);
 }
 
-// ../../src/services/codefixes/addMissingAwait.ts
+// ../compiler/src/services/codefixes/addMissingAwait.ts
 var fixId3 = "addMissingAwait";
 var propertyAccessCode = Diagnostics.Property_0_does_not_exist_on_type_1.code;
 var callableConstructableErrorCodes = [
@@ -163397,7 +163400,7 @@ function insertLeadingSemicolonIfNeeded(changeTracker, beforeNode, sourceFile) {
   }
 }
 
-// ../../src/services/codefixes/addMissingConst.ts
+// ../compiler/src/services/codefixes/addMissingConst.ts
 var fixId4 = "addMissingConst";
 var errorCodes4 = [
   Diagnostics.Cannot_find_name_0.code,
@@ -163486,7 +163489,7 @@ function expressionCouldBeVariableDeclaration(expression, checker) {
   return expression.operatorToken.kind === 64 /* EqualsToken */ && isIdentifier(expression.left) && !checker.getSymbolAtLocation(expression.left);
 }
 
-// ../../src/services/codefixes/addMissingDeclareProperty.ts
+// ../compiler/src/services/codefixes/addMissingDeclareProperty.ts
 var fixId5 = "addMissingDeclareProperty";
 var errorCodes5 = [
   Diagnostics.Property_0_will_overwrite_the_base_property_in_1_If_this_is_intentional_add_an_initializer_Otherwise_add_a_declare_modifier_or_remove_the_redundant_declaration.code
@@ -163516,7 +163519,7 @@ function makeChange5(changeTracker, sourceFile, pos, fixedNodes) {
   }
 }
 
-// ../../src/services/codefixes/addMissingInvocationForDecorator.ts
+// ../compiler/src/services/codefixes/addMissingInvocationForDecorator.ts
 var fixId6 = "addMissingInvocationForDecorator";
 var errorCodes6 = [Diagnostics._0_accepts_too_few_arguments_to_be_used_as_a_decorator_here_Did_you_mean_to_call_it_first_and_write_0.code];
 registerCodeFix({
@@ -163542,7 +163545,7 @@ function makeChange6(changeTracker, sourceFile, pos) {
   changeTracker.replaceNode(sourceFile, decorator.expression, replacement);
 }
 
-// ../../src/services/codefixes/addMissingResolutionModeImportAttribute.ts
+// ../compiler/src/services/codefixes/addMissingResolutionModeImportAttribute.ts
 var fixId7 = "addMissingResolutionModeImportAttribute";
 var errorCodes7 = [
   Diagnostics.Type_only_import_of_an_ECMAScript_module_from_a_CommonJS_module_must_have_a_resolution_mode_attribute.code,
@@ -163621,7 +163624,7 @@ function makeChange7(changeTracker, sourceFile, pos, program, host, preferences)
   }
 }
 
-// ../../src/services/codefixes/addNameToNamelessParameter.ts
+// ../compiler/src/services/codefixes/addNameToNamelessParameter.ts
 var fixId8 = "addNameToNamelessParameter";
 var errorCodes8 = [Diagnostics.Parameter_has_a_name_but_no_type_Did_you_mean_0_Colon_1.code];
 registerCodeFix({
@@ -163672,7 +163675,7 @@ function tryGetNextParam(sourceFile, param) {
   return void 0;
 }
 
-// ../../src/services/codefixes/addOptionalPropertyUndefined.ts
+// ../compiler/src/services/codefixes/addOptionalPropertyUndefined.ts
 var addOptionalPropertyUndefined = "addOptionalPropertyUndefined";
 var errorCodes9 = [
   Diagnostics.Type_0_is_not_assignable_to_type_1_with_exactOptionalPropertyTypes_Colon_true_Consider_adding_undefined_to_the_type_of_the_target.code,
@@ -163748,7 +163751,7 @@ function addUndefinedToOptionalProperty(changes, toAdd) {
   }
 }
 
-// ../../src/services/codefixes/annotateWithTypeFromJSDoc.ts
+// ../compiler/src/services/codefixes/annotateWithTypeFromJSDoc.ts
 var fixId9 = "annotateWithTypeFromJSDoc";
 var errorCodes10 = [Diagnostics.JSDoc_types_may_be_moved_to_TypeScript_types.code];
 registerCodeFix({
@@ -163916,7 +163919,7 @@ function transformJSDocIndexSignature(node) {
   return indexSignature;
 }
 
-// ../../src/services/codefixes/convertFunctionToEs6Class.ts
+// ../compiler/src/services/codefixes/convertFunctionToEs6Class.ts
 var fixId10 = "convertFunctionToEs6Class";
 var errorCodes11 = [Diagnostics.This_constructor_function_may_be_converted_to_a_class_declaration.code];
 registerCodeFix({
@@ -164196,7 +164199,7 @@ function tryGetPropertyName(node, compilerOptions, quotePreference) {
   return void 0;
 }
 
-// ../../src/services/codefixes/convertToAsyncFunction.ts
+// ../compiler/src/services/codefixes/convertToAsyncFunction.ts
 var fixId11 = "convertToAsyncFunction";
 var errorCodes12 = [Diagnostics.This_may_be_converted_to_an_async_function.code];
 var codeActionSucceeded = true;
@@ -164873,7 +164876,7 @@ function shouldReturn(expression, transformer) {
   return !!expression.original && transformer.setOfExpressionsToReturn.has(getNodeId(expression.original));
 }
 
-// ../../src/services/codefixes/convertToEsModule.ts
+// ../compiler/src/services/codefixes/convertToEsModule.ts
 registerCodeFix({
   errorCodes: [Diagnostics.File_is_a_CommonJS_module_it_may_be_converted_to_an_ES_module.code],
   getCodeActions(context) {
@@ -165409,7 +165412,7 @@ function convertedImports(newImports, useSitesToUnqualify) {
   };
 }
 
-// ../../src/services/codefixes/correctQualifiedNameToIndexedAccessType.ts
+// ../compiler/src/services/codefixes/correctQualifiedNameToIndexedAccessType.ts
 var fixId12 = "correctQualifiedNameToIndexedAccessType";
 var errorCodes13 = [Diagnostics.Cannot_access_0_1_because_0_is_a_type_but_not_a_namespace_Did_you_mean_to_retrieve_the_type_of_the_property_1_in_0_with_0_1.code];
 registerCodeFix({
@@ -165447,7 +165450,7 @@ function doChange10(changeTracker, sourceFile, qualifiedName) {
   changeTracker.replaceNode(sourceFile, qualifiedName, replacement);
 }
 
-// ../../src/services/codefixes/convertToTypeOnlyExport.ts
+// ../compiler/src/services/codefixes/convertToTypeOnlyExport.ts
 var errorCodes14 = [Diagnostics.Re_exporting_a_type_when_0_is_enabled_requires_using_export_type.code];
 var fixId13 = "convertToTypeOnlyExport";
 registerCodeFix({
@@ -165523,7 +165526,7 @@ function getTypeExportSpecifiers(originExportSpecifier, context) {
   });
 }
 
-// ../../src/services/codefixes/convertToTypeOnlyImport.ts
+// ../compiler/src/services/codefixes/convertToTypeOnlyImport.ts
 var errorCodes15 = [
   Diagnostics._0_is_a_type_and_must_be_imported_using_a_type_only_import_when_verbatimModuleSyntax_is_enabled.code,
   Diagnostics._0_resolves_to_a_type_only_declaration_and_must_be_imported_using_a_type_only_import_when_verbatimModuleSyntax_is_enabled.code
@@ -165679,7 +165682,7 @@ function doChange11(changes, sourceFile, declaration) {
   }
 }
 
-// ../../src/services/codefixes/convertTypedefToType.ts
+// ../compiler/src/services/codefixes/convertTypedefToType.ts
 var fixId15 = "convertTypedefToType";
 var errorCodes16 = [Diagnostics.JSDoc_typedef_may_be_converted_to_TypeScript_type.code];
 registerCodeFix({
@@ -165844,7 +165847,7 @@ function getJSDocTypedefNodes(node) {
   return [];
 }
 
-// ../../src/services/codefixes/convertLiteralTypeToMappedType.ts
+// ../compiler/src/services/codefixes/convertLiteralTypeToMappedType.ts
 var fixId16 = "convertLiteralTypeToMappedType";
 var errorCodes17 = [Diagnostics._0_only_refers_to_a_type_but_is_being_used_as_a_value_here_Did_you_mean_to_use_1_in_0.code];
 registerCodeFix({
@@ -165905,7 +165908,7 @@ function doChange13(changes, sourceFile, { container, typeNode, constraint, name
   );
 }
 
-// ../../src/services/codefixes/fixClassIncorrectlyImplementsInterface.ts
+// ../compiler/src/services/codefixes/fixClassIncorrectlyImplementsInterface.ts
 var errorCodes18 = [
   Diagnostics.Class_0_incorrectly_implements_interface_1.code,
   Diagnostics.Class_0_incorrectly_implements_class_1_Did_you_mean_to_extend_1_and_inherit_its_members_as_a_subclass.code
@@ -165987,7 +165990,7 @@ function getHeritageClauseSymbolTable(classDeclaration, checker) {
   return createSymbolTable(heritageClauseTypeSymbols.filter(symbolPointsToNonPrivateMember));
 }
 
-// ../../src/services/codefixes/importFixes.ts
+// ../compiler/src/services/codefixes/importFixes.ts
 var importFixName = "import";
 var importFixId = "fixMissingImport";
 var errorCodes19 = [
@@ -167576,7 +167579,7 @@ function getEmitModuleFormatOfFile(file, program) {
   return isFullSourceFile(file) ? program.getEmitModuleFormatOfFile(file) : getEmitModuleFormatOfFileWorker(file, program.getCompilerOptions());
 }
 
-// ../../src/services/codefixes/fixAddMissingConstraint.ts
+// ../compiler/src/services/codefixes/fixAddMissingConstraint.ts
 var fixId18 = "addMissingConstraint";
 var errorCodes20 = [
   // We want errors this could be attached to:
@@ -167682,7 +167685,7 @@ function tryGetConstraintType(checker, node) {
   return contextualType || checker.getTypeAtLocation(node);
 }
 
-// ../../src/services/codefixes/fixOverrideModifier.ts
+// ../compiler/src/services/codefixes/fixOverrideModifier.ts
 var fixName = "fixOverrideModifier";
 var fixAddOverrideId = "fixAddOverrideModifier";
 var fixRemoveOverrideId = "fixRemoveOverrideModifier";
@@ -167837,7 +167840,7 @@ function findContainerClassElementLike(sourceFile, pos) {
   return classElement;
 }
 
-// ../../src/services/codefixes/fixNoPropertyAccessFromIndexSignature.ts
+// ../compiler/src/services/codefixes/fixNoPropertyAccessFromIndexSignature.ts
 var fixId19 = "fixNoPropertyAccessFromIndexSignature";
 var errorCodes22 = [
   Diagnostics.Property_0_comes_from_an_index_signature_so_it_must_be_accessed_with_0.code
@@ -167866,7 +167869,7 @@ function getPropertyAccessExpression(sourceFile, pos) {
   return cast(getTokenAtPosition(sourceFile, pos).parent, isPropertyAccessExpression);
 }
 
-// ../../src/services/codefixes/fixImplicitThis.ts
+// ../compiler/src/services/codefixes/fixImplicitThis.ts
 var fixId20 = "fixImplicitThis";
 var errorCodes23 = [Diagnostics.this_implicitly_has_type_any_because_it_does_not_have_a_type_annotation.code];
 registerCodeFix({
@@ -167924,7 +167927,7 @@ function doChange15(changes, sourceFile, pos, checker) {
   }
 }
 
-// ../../src/services/codefixes/fixImportNonExportedMember.ts
+// ../compiler/src/services/codefixes/fixImportNonExportedMember.ts
 var fixId21 = "fixImportNonExportedMember";
 var errorCodes24 = [
   Diagnostics.Module_0_declares_1_locally_but_it_is_not_exported.code
@@ -168081,7 +168084,7 @@ function getNodeOfSymbol(symbol) {
   return variableStatement && length(variableStatement.declarationList.declarations) === 1 ? variableStatement : declaration;
 }
 
-// ../../src/services/codefixes/fixIncorrectNamedTupleSyntax.ts
+// ../compiler/src/services/codefixes/fixIncorrectNamedTupleSyntax.ts
 var fixId22 = "fixIncorrectNamedTupleSyntax";
 var errorCodes25 = [
   Diagnostics.A_labeled_tuple_element_is_declared_as_optional_with_a_question_mark_after_the_name_and_before_the_colon_rather_than_after_the_type.code,
@@ -168129,7 +168132,7 @@ function doChange17(changes, sourceFile, namedTupleMember) {
   changes.replaceNode(sourceFile, namedTupleMember, updated);
 }
 
-// ../../src/services/codefixes/fixSpelling.ts
+// ../compiler/src/services/codefixes/fixSpelling.ts
 var fixId23 = "fixSpelling";
 var errorCodes26 = [
   Diagnostics.Property_0_does_not_exist_on_type_1_Did_you_mean_2.code,
@@ -168246,7 +168249,7 @@ function getResolvedSourceFileFromImportDeclaration(context, importDeclaration, 
   return context.program.getSourceFile(resolvedModule.resolvedFileName);
 }
 
-// ../../src/services/codefixes/returnValueCorrect.ts
+// ../compiler/src/services/codefixes/returnValueCorrect.ts
 var fixId24 = "returnValueCorrect";
 var fixIdAddReturnStatement = "fixAddReturnStatement";
 var fixRemoveBracesFromArrowFunctionBody = "fixRemoveBracesFromArrowFunctionBody";
@@ -168490,7 +168493,7 @@ function getActionForfixWrapTheBlockWithParen(context, declaration, expression) 
   return createCodeFixAction(fixId24, changes, Diagnostics.Wrap_the_following_body_with_parentheses_which_should_be_an_object_literal, fixIdWrapTheBlockWithParen, Diagnostics.Wrap_all_object_literal_with_parentheses);
 }
 
-// ../../src/services/codefixes/fixAddMissingMember.ts
+// ../compiler/src/services/codefixes/fixAddMissingMember.ts
 var fixMissingMember = "fixMissingMember";
 var fixMissingProperties = "fixMissingProperties";
 var fixMissingAttributes = "fixMissingAttributes";
@@ -169131,7 +169134,7 @@ function getAllSupers(decl, checker) {
   return res;
 }
 
-// ../../src/services/codefixes/fixAddMissingNewOperator.ts
+// ../compiler/src/services/codefixes/fixAddMissingNewOperator.ts
 var fixId25 = "addMissingNewOperator";
 var errorCodes29 = [Diagnostics.Value_of_type_0_is_not_callable_Did_you_mean_to_include_new.code];
 registerCodeFix({
@@ -169158,7 +169161,7 @@ function findAncestorMatchingSpan2(sourceFile, span) {
   return token;
 }
 
-// ../../src/services/codefixes/fixAddMissingParam.ts
+// ../compiler/src/services/codefixes/fixAddMissingParam.ts
 var addMissingParamFixId = "addMissingParam";
 var addOptionalParamFixId = "addOptionalParam";
 var errorCodes30 = [Diagnostics.Expected_0_arguments_but_got_1.code];
@@ -169395,7 +169398,7 @@ function getParameterType(importAdder, typeNode, scriptTarget) {
   return typeNode;
 }
 
-// ../../src/services/codefixes/fixCannotFindModule.ts
+// ../compiler/src/services/codefixes/fixCannotFindModule.ts
 var fixName2 = "fixCannotFindModule";
 var fixIdInstallTypesPackage = "installTypesPackage";
 var errorCodeCannotFindModule = Diagnostics.Cannot_find_module_0_or_its_corresponding_type_declarations.code;
@@ -169463,7 +169466,7 @@ function getTypesPackageNameToInstall(packageName, host, diagCode) {
   return void 0;
 }
 
-// ../../src/services/codefixes/fixClassDoesntImplementInheritedAbstractMember.ts
+// ../compiler/src/services/codefixes/fixClassDoesntImplementInheritedAbstractMember.ts
 var errorCodes32 = [
   Diagnostics.Non_abstract_class_0_does_not_implement_inherited_abstract_member_1_from_class_2.code,
   Diagnostics.Non_abstract_class_0_is_missing_implementations_for_the_following_members_of_1_Colon_2.code,
@@ -169509,7 +169512,7 @@ function symbolPointsToNonPrivateAndAbstractMember(symbol) {
   return !(flags & 2 /* Private */) && !!(flags & 64 /* Abstract */);
 }
 
-// ../../src/services/codefixes/fixClassSuperMustPrecedeThisAccess.ts
+// ../compiler/src/services/codefixes/fixClassSuperMustPrecedeThisAccess.ts
 var fixId27 = "classSuperMustPrecedeThisAccess";
 var errorCodes33 = [Diagnostics.super_must_be_called_before_accessing_this_in_the_constructor_of_a_derived_class.code];
 registerCodeFix({
@@ -169551,7 +169554,7 @@ function findSuperCall(n) {
   return isExpressionStatement(n) && isSuperCall(n.expression) ? n : isFunctionLike(n) ? void 0 : forEachChild(n, findSuperCall);
 }
 
-// ../../src/services/codefixes/fixConstructorForDerivedNeedSuperCall.ts
+// ../compiler/src/services/codefixes/fixConstructorForDerivedNeedSuperCall.ts
 var fixId28 = "constructorForDerivedNeedSuperCall";
 var errorCodes34 = [Diagnostics.Constructors_for_derived_classes_must_contain_a_super_call.code];
 registerCodeFix({
@@ -169581,7 +169584,7 @@ function doChange21(changes, sourceFile, ctr) {
   changes.insertNodeAtConstructorStart(sourceFile, ctr, superCall);
 }
 
-// ../../src/services/codefixes/fixEnableJsxFlag.ts
+// ../compiler/src/services/codefixes/fixEnableJsxFlag.ts
 var fixID = "fixEnableJsxFlag";
 var errorCodes35 = [Diagnostics.Cannot_use_JSX_unless_the_jsx_flag_is_provided.code];
 registerCodeFix({
@@ -169609,7 +169612,7 @@ function doChange22(changeTracker, configFile) {
   setJsonCompilerOptionValue(changeTracker, configFile, "jsx", factory.createStringLiteral("react"));
 }
 
-// ../../src/services/codefixes/fixNaNEquality.ts
+// ../compiler/src/services/codefixes/fixNaNEquality.ts
 var fixId29 = "fixNaNEquality";
 var errorCodes36 = [
   Diagnostics.This_condition_will_always_return_0.code
@@ -169665,7 +169668,7 @@ function getSuggestion(messageText) {
   return suggestion;
 }
 
-// ../../src/services/codefixes/fixModuleAndTargetOptions.ts
+// ../compiler/src/services/codefixes/fixModuleAndTargetOptions.ts
 registerCodeFix({
   errorCodes: [
     Diagnostics.Top_level_await_expressions_are_only_allowed_when_the_module_option_is_set_to_es2022_esnext_system_node16_node18_node20_nodenext_or_preserve_and_the_target_option_is_set_to_es2017_or_higher.code,
@@ -169705,7 +169708,7 @@ registerCodeFix({
   }
 });
 
-// ../../src/services/codefixes/fixPropertyAssignment.ts
+// ../compiler/src/services/codefixes/fixPropertyAssignment.ts
 var fixId30 = "fixPropertyAssignment";
 var errorCodes37 = [
   Diagnostics.Did_you_mean_to_use_a_Colon_An_can_only_follow_a_property_name_when_the_containing_object_literal_is_part_of_a_destructuring_pattern.code
@@ -169728,7 +169731,7 @@ function getProperty2(sourceFile, pos) {
   return cast(getTokenAtPosition(sourceFile, pos).parent, isShorthandPropertyAssignment);
 }
 
-// ../../src/services/codefixes/fixExtendsInterfaceBecomesImplements.ts
+// ../compiler/src/services/codefixes/fixExtendsInterfaceBecomesImplements.ts
 var fixId31 = "extendsInterfaceBecomesImplements";
 var errorCodes38 = [Diagnostics.Cannot_extend_an_interface_0_Did_you_mean_implements.code];
 registerCodeFix({
@@ -169768,7 +169771,7 @@ function doChanges2(changes, sourceFile, extendsToken, heritageClauses) {
   }
 }
 
-// ../../src/services/codefixes/fixForgottenThisPropertyAccess.ts
+// ../compiler/src/services/codefixes/fixForgottenThisPropertyAccess.ts
 var fixId32 = "forgottenThisPropertyAccess";
 var didYouMeanStaticMemberCode = Diagnostics.Cannot_find_name_0_Did_you_mean_the_static_member_1_0.code;
 var errorCodes39 = [
@@ -169804,7 +169807,7 @@ function doChange25(changes, sourceFile, { node, className }) {
   changes.replaceNode(sourceFile, node, factory.createPropertyAccessExpression(className ? factory.createIdentifier(className) : factory.createThis(), node));
 }
 
-// ../../src/services/codefixes/fixInvalidJsxCharacters.ts
+// ../compiler/src/services/codefixes/fixInvalidJsxCharacters.ts
 var fixIdExpression = "fixInvalidJsxCharacters_expression";
 var fixIdHtmlEntity = "fixInvalidJsxCharacters_htmlEntity";
 var errorCodes40 = [
@@ -169857,7 +169860,7 @@ function doChange26(changes, preferences, sourceFile, start, useHtmlEntity) {
   changes.replaceRangeWithText(sourceFile, { pos: start, end: start + 1 }, replacement);
 }
 
-// ../../src/services/codefixes/fixUnmatchedParameter.ts
+// ../compiler/src/services/codefixes/fixUnmatchedParameter.ts
 var deleteUnmatchedParameter = "deleteUnmatchedParameter";
 var renameUnmatchedParameter = "renameUnmatchedParameter";
 var errorCodes41 = [
@@ -169942,7 +169945,7 @@ function getInfo14(sourceFile, pos) {
   return void 0;
 }
 
-// ../../src/services/codefixes/fixUnreferenceableDecoratorMetadata.ts
+// ../compiler/src/services/codefixes/fixUnreferenceableDecoratorMetadata.ts
 var fixId33 = "fixUnreferenceableDecoratorMetadata";
 var errorCodes42 = [Diagnostics.A_type_referenced_in_a_decorated_signature_must_be_imported_with_import_type_or_a_namespace_import_when_isolatedModules_and_emitDecoratorMetadata_are_enabled.code];
 registerCodeFix({
@@ -169992,7 +169995,7 @@ function doNamespaceImportChange(changes, sourceFile, importDeclaration, program
   ts_refactor_exports.doChangeNamedToNamespaceOrDefault(sourceFile, program, changes, importDeclaration.parent);
 }
 
-// ../../src/services/codefixes/fixUnusedIdentifier.ts
+// ../compiler/src/services/codefixes/fixUnusedIdentifier.ts
 var fixName3 = "unusedIdentifier";
 var fixIdPrefix = "unusedIdentifier_prefix";
 var fixIdDelete = "unusedIdentifier_delete";
@@ -170338,7 +170341,7 @@ function deleteFunctionLikeDeclaration(changes, sourceFile, node) {
   }
 }
 
-// ../../src/services/codefixes/fixUnreachableCode.ts
+// ../compiler/src/services/codefixes/fixUnreachableCode.ts
 var fixId34 = "fixUnreachableCode";
 var errorCodes44 = [Diagnostics.Unreachable_code_detected.code];
 registerCodeFix({
@@ -170401,7 +170404,7 @@ function lastWhere(a, pred) {
   return last2;
 }
 
-// ../../src/services/codefixes/fixUnusedLabel.ts
+// ../compiler/src/services/codefixes/fixUnusedLabel.ts
 var fixId35 = "fixUnusedLabel";
 var errorCodes45 = [Diagnostics.Unused_label.code];
 registerCodeFix({
@@ -170427,7 +170430,7 @@ function doChange28(changes, sourceFile, start) {
   changes.deleteRange(sourceFile, { pos, end });
 }
 
-// ../../src/services/codefixes/fixJSDocTypes.ts
+// ../compiler/src/services/codefixes/fixJSDocTypes.ts
 var fixIdPlain = "fixJSDocTypes_plain";
 var fixIdNullable = "fixJSDocTypes_nullable";
 var errorCodes46 = [
@@ -170517,7 +170520,7 @@ function getType(checker, node) {
   return checker.getTypeFromTypeNode(node);
 }
 
-// ../../src/services/codefixes/fixMissingCallParentheses.ts
+// ../compiler/src/services/codefixes/fixMissingCallParentheses.ts
 var fixId36 = "fixMissingCallParentheses";
 var errorCodes47 = [
   Diagnostics.This_condition_will_always_return_true_since_this_function_is_always_defined_Did_you_mean_to_call_it_instead.code
@@ -170555,7 +170558,7 @@ function getCallName(sourceFile, start) {
   return void 0;
 }
 
-// ../../src/services/codefixes/fixMissingTypeAnnotationOnExports.ts
+// ../compiler/src/services/codefixes/fixMissingTypeAnnotationOnExports.ts
 var fixId37 = "fixMissingTypeAnnotationOnExports";
 var addAnnotationFix = "add-annotation";
 var addInlineTypeAssertion = "add-type-assertion";
@@ -171449,7 +171452,7 @@ function withContext(context, typePrintMode, cb) {
   }
 }
 
-// ../../src/services/codefixes/fixAwaitInSyncFunction.ts
+// ../compiler/src/services/codefixes/fixAwaitInSyncFunction.ts
 var fixId38 = "fixAwaitInSyncFunction";
 var errorCodes49 = [
   Diagnostics.await_expressions_are_only_allowed_within_async_functions_and_at_the_top_levels_of_modules.code,
@@ -171521,7 +171524,7 @@ function doChange31(changes, sourceFile, { insertBefore, returnType }) {
   changes.insertModifierBefore(sourceFile, 134 /* AsyncKeyword */, insertBefore);
 }
 
-// ../../src/services/codefixes/fixPropertyOverrideAccessor.ts
+// ../compiler/src/services/codefixes/fixPropertyOverrideAccessor.ts
 var errorCodes50 = [
   Diagnostics._0_is_defined_as_an_accessor_in_class_1_but_is_overridden_here_in_2_as_an_instance_property.code,
   Diagnostics._0_is_defined_as_a_property_in_class_1_but_is_overridden_here_in_2_as_an_accessor.code
@@ -171577,7 +171580,7 @@ function doChange32(file, start, length2, code, context) {
   return generateAccessorFromProperty(file, context.program, startPosition, endPosition, context, Diagnostics.Generate_get_and_set_accessors.message);
 }
 
-// ../../src/services/codefixes/inferFromUsage.ts
+// ../compiler/src/services/codefixes/inferFromUsage.ts
 var fixId40 = "inferFromUsage";
 var errorCodes51 = [
   // Variable declarations
@@ -172590,7 +172593,7 @@ function inferTypeFromReferences(program, references, cancellationToken) {
   }
 }
 
-// ../../src/services/codefixes/fixReturnTypeInAsyncFunction.ts
+// ../compiler/src/services/codefixes/fixReturnTypeInAsyncFunction.ts
 var fixId41 = "fixReturnTypeInAsyncFunction";
 var errorCodes52 = [
   Diagnostics.The_return_type_of_an_async_function_or_method_must_be_the_global_Promise_T_type_Did_you_mean_to_write_Promise_0.code
@@ -172649,7 +172652,7 @@ function doChange34(changes, sourceFile, returnTypeNode, promisedTypeNode) {
   changes.replaceNode(sourceFile, returnTypeNode, factory.createTypeReferenceNode("Promise", [promisedTypeNode]));
 }
 
-// ../../src/services/codefixes/disableJsDiagnostics.ts
+// ../compiler/src/services/codefixes/disableJsDiagnostics.ts
 var fixName4 = "disableJsDiagnostics";
 var fixId42 = "disableJsDiagnostics";
 var errorCodes53 = mapDefined(Object.keys(Diagnostics), (key) => {
@@ -172699,7 +172702,7 @@ function makeChange9(changes, sourceFile, position, seenLines) {
   }
 }
 
-// ../../src/services/codefixes/helpers.ts
+// ../compiler/src/services/codefixes/helpers.ts
 function createMissingMemberNodes(classDeclaration, possiblyMissingSymbols, sourceFile, context, preferences, importAdder, addClassElement) {
   const classMembers = classDeclaration.symbol.members;
   for (const symbol of possiblyMissingSymbols) {
@@ -173415,7 +173418,7 @@ function findAncestorMatchingSpan(sourceFile, span) {
   return token;
 }
 
-// ../../src/services/codefixes/generateAccessors.ts
+// ../compiler/src/services/codefixes/generateAccessors.ts
 function generateAccessorFromProperty(file, program, start, end, context, _actionName) {
   const fieldInfo = getAccessorConvertiblePropertyAtPosition(file, program, start, end);
   if (!fieldInfo || ts_refactor_exports.isRefactorErrorInfo(fieldInfo)) return void 0;
@@ -173625,7 +173628,7 @@ function getDeclarationType(declaration, program) {
   return typeNode;
 }
 
-// ../../src/services/codefixes/fixInvalidImportSyntax.ts
+// ../compiler/src/services/codefixes/fixInvalidImportSyntax.ts
 var fixName5 = "invalidImportSyntax";
 function getCodeFixesForImportDeclaration(context, node) {
   const sourceFile = getSourceFileOfNode(node);
@@ -173720,7 +173723,7 @@ function getImportCodeFixesForExpression(context, expr) {
   return fixes;
 }
 
-// ../../src/services/codefixes/fixStrictClassInitialization.ts
+// ../compiler/src/services/codefixes/fixStrictClassInitialization.ts
 var fixName6 = "strictClassInitialization";
 var fixIdAddDefiniteAssignmentAssertions = "addMissingPropertyDefiniteAssignmentAssertions";
 var fixIdAddUndefinedType = "addMissingPropertyUndefinedType";
@@ -173861,7 +173864,7 @@ function getDefaultValueFromType(checker, type) {
   return void 0;
 }
 
-// ../../src/services/codefixes/requireInTs.ts
+// ../compiler/src/services/codefixes/requireInTs.ts
 var fixId43 = "requireInTs";
 var errorCodes55 = [Diagnostics.require_call_may_be_converted_to_an_import.code];
 registerCodeFix({
@@ -173951,7 +173954,7 @@ function tryCreateNamedImportsFromObjectBindingPattern(node) {
   }
 }
 
-// ../../src/services/codefixes/useDefaultImport.ts
+// ../compiler/src/services/codefixes/useDefaultImport.ts
 var fixId44 = "useDefaultImport";
 var errorCodes56 = [Diagnostics.Import_may_be_converted_to_a_default_import.code];
 registerCodeFix({
@@ -173990,7 +173993,7 @@ function doChange36(changes, sourceFile, info, preferences) {
   ));
 }
 
-// ../../src/services/codefixes/useBigintLiteral.ts
+// ../compiler/src/services/codefixes/useBigintLiteral.ts
 var fixId45 = "useBigintLiteral";
 var errorCodes57 = [
   Diagnostics.Numeric_literals_with_absolute_values_equal_to_2_53_or_greater_are_too_large_to_be_represented_accurately_as_integers.code
@@ -174017,7 +174020,7 @@ function makeChange10(changeTracker, sourceFile, span) {
   changeTracker.replaceNode(sourceFile, numericLiteral, factory.createBigIntLiteral(newText));
 }
 
-// ../../src/services/codefixes/fixAddModuleReferTypeMissingTypeof.ts
+// ../compiler/src/services/codefixes/fixAddModuleReferTypeMissingTypeof.ts
 var fixIdAddMissingTypeof = "fixAddModuleReferTypeMissingTypeof";
 var fixId46 = fixIdAddMissingTypeof;
 var errorCodes58 = [Diagnostics.Module_0_does_not_refer_to_a_type_but_is_used_as_a_type_here_Did_you_mean_typeof_import_0.code];
@@ -174051,7 +174054,7 @@ function doChange37(changes, sourceFile, importType) {
   changes.replaceNode(sourceFile, importType, newTypeNode);
 }
 
-// ../../src/services/codefixes/wrapJsxInFragment.ts
+// ../compiler/src/services/codefixes/wrapJsxInFragment.ts
 var fixID2 = "wrapJsxInFragment";
 var errorCodes59 = [Diagnostics.JSX_expressions_must_have_one_parent_element.code];
 registerCodeFix({
@@ -174102,7 +174105,7 @@ function flattenInvalidBinaryExpr(node) {
   }
 }
 
-// ../../src/services/codefixes/wrapDecoratorInParentheses.ts
+// ../compiler/src/services/codefixes/wrapDecoratorInParentheses.ts
 var fixId47 = "wrapDecoratorInParentheses";
 var errorCodes60 = [Diagnostics.Expression_must_be_enclosed_in_parentheses_to_be_used_as_a_decorator.code];
 registerCodeFix({
@@ -174122,7 +174125,7 @@ function makeChange11(changeTracker, sourceFile, pos) {
   changeTracker.replaceNode(sourceFile, decorator.expression, replacement);
 }
 
-// ../../src/services/codefixes/convertToMappedObjectType.ts
+// ../compiler/src/services/codefixes/convertToMappedObjectType.ts
 var fixId48 = "fixConvertToMappedObjectType";
 var errorCodes61 = [Diagnostics.An_index_signature_parameter_type_cannot_be_a_literal_type_or_generic_type_Consider_using_a_mapped_object_type_instead.code];
 registerCodeFix({
@@ -174180,7 +174183,7 @@ function doChange39(changes, sourceFile, { indexSignature, container }) {
   changes.replaceNode(sourceFile, container, createTypeAliasFromInterface(container, intersectionType));
 }
 
-// ../../src/services/codefixes/removeAccidentalCallParentheses.ts
+// ../compiler/src/services/codefixes/removeAccidentalCallParentheses.ts
 var fixId49 = "removeAccidentalCallParentheses";
 var errorCodes62 = [
   Diagnostics.This_expression_is_not_callable_because_it_is_a_get_accessor_Did_you_mean_to_use_it_without.code
@@ -174200,7 +174203,7 @@ registerCodeFix({
   fixIds: [fixId49]
 });
 
-// ../../src/services/codefixes/removeUnnecessaryAwait.ts
+// ../compiler/src/services/codefixes/removeUnnecessaryAwait.ts
 var fixId50 = "removeUnnecessaryAwait";
 var errorCodes63 = [
   Diagnostics.await_has_no_effect_on_the_type_of_this_expression.code
@@ -174242,7 +174245,7 @@ function makeChange12(changeTracker, sourceFile, span) {
   changeTracker.replaceNode(sourceFile, expressionToReplace, awaitExpression.expression);
 }
 
-// ../../src/services/codefixes/splitTypeOnlyImport.ts
+// ../compiler/src/services/codefixes/splitTypeOnlyImport.ts
 var errorCodes64 = [Diagnostics.A_type_only_import_can_specify_a_default_import_or_named_bindings_but_not_both.code];
 var fixId51 = "splitTypeOnlyImport";
 registerCodeFix({
@@ -174304,7 +174307,7 @@ function splitTypeOnlyImport(changes, importDeclaration, context) {
   );
 }
 
-// ../../src/services/codefixes/convertConstToLet.ts
+// ../compiler/src/services/codefixes/convertConstToLet.ts
 var fixId52 = "fixConvertConstToLet";
 var errorCodes65 = [Diagnostics.Cannot_assign_to_0_because_it_is_a_constant.code];
 registerCodeFix({
@@ -174347,7 +174350,7 @@ function doChange40(changes, sourceFile, token) {
   changes.replaceNode(sourceFile, token, factory.createToken(121 /* LetKeyword */));
 }
 
-// ../../src/services/codefixes/fixExpectedComma.ts
+// ../compiler/src/services/codefixes/fixExpectedComma.ts
 var fixId53 = "fixExpectedComma";
 var expectedErrorCode = Diagnostics._0_expected.code;
 var errorCodes66 = [expectedErrorCode];
@@ -174381,7 +174384,7 @@ function doChange41(changes, sourceFile, { node }) {
   changes.replaceNode(sourceFile, node, newNode);
 }
 
-// ../../src/services/codefixes/fixAddVoidToPromise.ts
+// ../compiler/src/services/codefixes/fixAddVoidToPromise.ts
 var fixName7 = "addVoidToPromise";
 var fixId54 = "addVoidToPromise";
 var errorCodes67 = [
@@ -174447,7 +174450,7 @@ function getEffectiveTypeArguments(node) {
   }
 }
 
-// ../../src/services/codefixes/fixAddMissingValueMatchBranches.ts
+// ../compiler/src/services/codefixes/fixAddMissingValueMatchBranches.ts
 var fixId55 = "addMissingValueMatchBranches";
 var errorCodes68 = [Diagnostics.Non_exhaustive_value_match_Missing_Colon_0.code];
 registerCodeFix({
@@ -174509,7 +174512,7 @@ function insertBranches(changeTracker, sourceFile, match, branches) {
   changeTracker.insertText(sourceFile, lineStart, `${branchIndent}${branches.join(`,${newLine}${branchIndent}`)},${newLine}`);
 }
 
-// ../../src/services/codefixes/fixEnableTsppFeature.ts
+// ../compiler/src/services/codefixes/fixEnableTsppFeature.ts
 var fixId56 = "enableTsppFeature";
 var errorCodes69 = [Diagnostics.TS_feature_0_is_not_enabled_in_tsppconfig_json.code];
 registerCodeFix({
@@ -174557,7 +174560,7 @@ function collectFeaturesWithDependencies(existing, requested) {
   return result;
 }
 
-// ../../src/services/_namespaces/ts.Completions.ts
+// ../compiler/src/services/_namespaces/ts.Completions.ts
 var ts_Completions_exports = {};
 __export(ts_Completions_exports, {
   CompletionKind: () => CompletionKind,
@@ -174578,7 +174581,7 @@ __export(ts_Completions_exports, {
   moduleSpecifierResolutionLimit: () => moduleSpecifierResolutionLimit
 });
 
-// ../../src/services/completions.ts
+// ../compiler/src/services/completions.ts
 var moduleSpecifierResolutionLimit = 100;
 var moduleSpecifierResolutionCacheAttemptLimit = 1e3;
 var SortText = {
@@ -178664,14 +178667,14 @@ function isContextualKeywordInAutoImportableExpressionSpace(keyword) {
   return keyword === "abstract" || keyword === "async" || keyword === "await" || keyword === "declare" || keyword === "module" || keyword === "namespace" || keyword === "type" || keyword === "satisfies" || keyword === "as";
 }
 
-// ../../src/services/_namespaces/ts.Completions.StringCompletions.ts
+// ../compiler/src/services/_namespaces/ts.Completions.StringCompletions.ts
 var ts_Completions_StringCompletions_exports = {};
 __export(ts_Completions_StringCompletions_exports, {
   getStringLiteralCompletionDetails: () => getStringLiteralCompletionDetails,
   getStringLiteralCompletions: () => getStringLiteralCompletions
 });
 
-// ../../src/services/stringCompletions.ts
+// ../compiler/src/services/stringCompletions.ts
 var kindPrecedence = {
   ["directory" /* directory */]: 0,
   ["script" /* scriptElement */]: 1,
@@ -179703,7 +179706,7 @@ function isRequireCallArgument(node) {
   return isCallExpression(node.parent) && firstOrUndefined(node.parent.arguments) === node && isIdentifier(node.parent.expression) && node.parent.expression.escapedText === "require";
 }
 
-// ../../src/services/_namespaces/ts.FindAllReferences.ts
+// ../compiler/src/services/_namespaces/ts.FindAllReferences.ts
 var ts_FindAllReferences_exports = {};
 __export(ts_FindAllReferences_exports, {
   Core: () => Core,
@@ -179730,7 +179733,7 @@ __export(ts_FindAllReferences_exports, {
   toRenameLocation: () => toRenameLocation
 });
 
-// ../../src/services/importTracker.ts
+// ../compiler/src/services/importTracker.ts
 function createImportTracker(sourceFiles, sourceFilesSet, checker, cancellationToken) {
   const allDirectImports = getDirectImportsMap(sourceFiles, checker, cancellationToken);
   return (exportSymbol, exportInfo, isForRename) => {
@@ -180265,7 +180268,7 @@ function isExternalModuleImportEquals(eq) {
   return eq.moduleReference.kind === 304 /* ExternalModuleReference */ && eq.moduleReference.expression.kind === 11 /* StringLiteral */;
 }
 
-// ../../src/services/findAllReferences.ts
+// ../compiler/src/services/findAllReferences.ts
 var DefinitionKind = /* @__PURE__ */ ((DefinitionKind2) => {
   DefinitionKind2[DefinitionKind2["Symbol"] = 0] = "Symbol";
   DefinitionKind2[DefinitionKind2["Label"] = 1] = "Label";
@@ -182143,7 +182146,7 @@ var Core;
   }
 })(Core || (Core = {}));
 
-// ../../src/services/_namespaces/ts.GoToDefinition.ts
+// ../compiler/src/services/_namespaces/ts.GoToDefinition.ts
 var ts_GoToDefinition_exports = {};
 __export(ts_GoToDefinition_exports, {
   createDefinitionInfo: () => createDefinitionInfo,
@@ -182153,7 +182156,7 @@ __export(ts_GoToDefinition_exports, {
   getTypeDefinitionAtPosition: () => getTypeDefinitionAtPosition
 });
 
-// ../../src/services/goToDefinition.ts
+// ../compiler/src/services/goToDefinition.ts
 function getDefinitionAtPosition(program, sourceFile, position, searchOtherFilesOnly, stopAtAlias) {
   const resolvedRef = getReferenceAtPosition(sourceFile, position, program);
   const fileReferenceDefinition = resolvedRef && [getDefinitionInfoForFileReference(resolvedRef.reference.fileName, resolvedRef.fileName, resolvedRef.unverified)] || emptyArray;
@@ -182727,13 +182730,13 @@ function isJsxConstructorLike(node) {
   }
 }
 
-// ../../src/services/_namespaces/ts.InlayHints.ts
+// ../compiler/src/services/_namespaces/ts.InlayHints.ts
 var ts_InlayHints_exports = {};
 __export(ts_InlayHints_exports, {
   provideInlayHints: () => provideInlayHints
 });
 
-// ../../src/services/inlayHints.ts
+// ../compiler/src/services/inlayHints.ts
 var leadingParameterNameCommentRegexFactory = (name) => {
   return new RegExp(`^\\s?/\\*\\*?\\s?${name}\\s?\\*\\/\\s?$`);
 };
@@ -183521,7 +183524,7 @@ function provideInlayHints(context) {
   }
 }
 
-// ../../src/services/_namespaces/ts.JsDoc.ts
+// ../compiler/src/services/_namespaces/ts.JsDoc.ts
 var ts_JsDoc_exports = {};
 __export(ts_JsDoc_exports, {
   getDocCommentTemplateAtPosition: () => getDocCommentTemplateAtPosition,
@@ -183535,7 +183538,7 @@ __export(ts_JsDoc_exports, {
   getJsDocTagsFromDeclarations: () => getJsDocTagsFromDeclarations
 });
 
-// ../../src/services/jsDoc.ts
+// ../compiler/src/services/jsDoc.ts
 var jsDocTagNames = [
   "abstract",
   "access",
@@ -183947,13 +183950,13 @@ function getRightHandSideOfAssignment(rightHandSide) {
   }
 }
 
-// ../../src/services/_namespaces/ts.MapCode.ts
+// ../compiler/src/services/_namespaces/ts.MapCode.ts
 var ts_MapCode_exports = {};
 __export(ts_MapCode_exports, {
   mapCode: () => mapCode
 });
 
-// ../../src/services/mapCode.ts
+// ../compiler/src/services/mapCode.ts
 function mapCode(sourceFile, contents, focusLocations, host, formatContext, preferences) {
   return ts_textChanges_exports.ChangeTracker.with(
     { host, formatContext, preferences },
@@ -184154,7 +184157,7 @@ function resetNodePositions(node) {
   node.forEachChild(resetNodePositions);
 }
 
-// ../../src/services/_namespaces/ts.OrganizeImports.ts
+// ../compiler/src/services/_namespaces/ts.OrganizeImports.ts
 var ts_OrganizeImports_exports = {};
 __export(ts_OrganizeImports_exports, {
   compareImportsOrRequireStatements: () => compareImportsOrRequireStatements,
@@ -184168,7 +184171,7 @@ __export(ts_OrganizeImports_exports, {
   testCoalesceImports: () => testCoalesceImports
 });
 
-// ../../src/services/organizeImports.ts
+// ../compiler/src/services/organizeImports.ts
 function organizeImports(sourceFile, formatContext, host, program, preferences, mode) {
   const changeTracker = ts_textChanges_exports.ChangeTracker.fromContext({ host, formatContext, preferences });
   const shouldSort = mode === "SortAndCombine" /* SortAndCombine */ || mode === "All" /* All */;
@@ -184805,13 +184808,13 @@ function compareModuleSpecifiers2(m1, m2, ignoreCase) {
   return compareModuleSpecifiersWorker(m1, m2, comparer);
 }
 
-// ../../src/services/_namespaces/ts.OutliningElementsCollector.ts
+// ../compiler/src/services/_namespaces/ts.OutliningElementsCollector.ts
 var ts_OutliningElementsCollector_exports = {};
 __export(ts_OutliningElementsCollector_exports, {
   collectElements: () => collectElements
 });
 
-// ../../src/services/outliningElementsCollector.ts
+// ../compiler/src/services/outliningElementsCollector.ts
 function collectElements(sourceFile, cancellationToken) {
   const res = [];
   addNodeOutliningSpans(sourceFile, cancellationToken, res);
@@ -185187,14 +185190,14 @@ function tryGetFunctionOpenToken(node, body, sourceFile) {
   return findChildOfKind(body, 19 /* OpenBraceToken */, sourceFile);
 }
 
-// ../../src/services/_namespaces/ts.Rename.ts
+// ../compiler/src/services/_namespaces/ts.Rename.ts
 var ts_Rename_exports = {};
 __export(ts_Rename_exports, {
   getRenameInfo: () => getRenameInfo,
   nodeIsEligibleForRename: () => nodeIsEligibleForRename
 });
 
-// ../../src/services/rename.ts
+// ../compiler/src/services/rename.ts
 function getRenameInfo(program, sourceFile, position, preferences) {
   const node = getAdjustedRenameLocation(getTouchingPropertyName(sourceFile, position));
   if (nodeIsEligibleForRename(node)) {
@@ -185343,14 +185346,14 @@ function nodeIsEligibleForRename(node) {
   }
 }
 
-// ../../src/services/_namespaces/ts.SignatureHelp.ts
+// ../compiler/src/services/_namespaces/ts.SignatureHelp.ts
 var ts_SignatureHelp_exports = {};
 __export(ts_SignatureHelp_exports, {
   getArgumentInfoForCompletions: () => getArgumentInfoForCompletions,
   getSignatureHelpItems: () => getSignatureHelpItems
 });
 
-// ../../src/services/signatureHelp.ts
+// ../compiler/src/services/signatureHelp.ts
 function getSignatureHelpItems(program, sourceFile, position, triggerReason, cancellationToken) {
   const typeChecker = program.getTypeChecker();
   const startingToken = findTokenOnLeftOfPosition(sourceFile, position);
@@ -185862,13 +185865,13 @@ function createSignatureHelpParameterForTypeParameter(typeParameter, checker, en
   return { name: typeParameter.symbol.name, documentation: typeParameter.symbol.getDocumentationComment(checker), displayParts, isOptional: false, isRest: false };
 }
 
-// ../../src/services/_namespaces/ts.SmartSelectionRange.ts
+// ../compiler/src/services/_namespaces/ts.SmartSelectionRange.ts
 var ts_SmartSelectionRange_exports = {};
 __export(ts_SmartSelectionRange_exports, {
   getSmartSelectionRange: () => getSmartSelectionRange
 });
 
-// ../../src/services/smartSelection.ts
+// ../compiler/src/services/smartSelection.ts
 function getSmartSelectionRange(pos, sourceFile) {
   let selectionRange = {
     textSpan: createTextSpanFromBounds(sourceFile.getFullStart(), sourceFile.getEnd())
@@ -186063,7 +186066,7 @@ function getEndPos(sourceFile, node) {
   }
 }
 
-// ../../src/services/_namespaces/ts.SymbolDisplay.ts
+// ../compiler/src/services/_namespaces/ts.SymbolDisplay.ts
 var ts_SymbolDisplay_exports = {};
 __export(ts_SymbolDisplay_exports, {
   getSymbolDisplayPartsDocumentationAndSymbolKind: () => getSymbolDisplayPartsDocumentationAndSymbolKind,
@@ -186071,7 +186074,7 @@ __export(ts_SymbolDisplay_exports, {
   getSymbolModifiers: () => getSymbolModifiers
 });
 
-// ../../src/services/symbolDisplay.ts
+// ../compiler/src/services/symbolDisplay.ts
 var symbolDisplayNodeBuilderFlags = 8192 /* OmitParameterModifiers */ | 70221824 /* IgnoreErrors */ | 16384 /* UseAliasDefinedOutsideCurrentScope */;
 function getSymbolKind(typeChecker, symbol, location) {
   const result = getSymbolKindOfConstructorPropertyMethodAccessorFunctionOrVar(typeChecker, symbol, location);
@@ -186932,7 +186935,7 @@ function getDisplayedAliasedType(typeChecker, symbol) {
   return newtype ? typeChecker.getTypeFromTypeNode(newtype.type) : typeChecker.getDeclaredTypeOfSymbol(symbol);
 }
 
-// ../../src/services/_namespaces/ts.textChanges.ts
+// ../compiler/src/services/_namespaces/ts.textChanges.ts
 var ts_textChanges_exports = {};
 __export(ts_textChanges_exports, {
   ChangeTracker: () => ChangeTracker,
@@ -186947,7 +186950,7 @@ __export(ts_textChanges_exports, {
   isValidLocationToAddComment: () => isValidLocationToAddComment
 });
 
-// ../../src/services/textChanges.ts
+// ../compiler/src/services/textChanges.ts
 function getPos2(n) {
   const result = n.__pos;
   Debug.assert(typeof result === "number");
@@ -188290,7 +188293,7 @@ function deleteNodeInList(changes, deletedNodesInLists, sourceFile, node) {
   });
 }
 
-// ../../src/services/_namespaces/ts.formatting.ts
+// ../compiler/src/services/_namespaces/ts.formatting.ts
 var ts_formatting_exports = {};
 __export(ts_formatting_exports, {
   FormattingContext: () => FormattingContext,
@@ -188314,7 +188317,7 @@ __export(ts_formatting_exports, {
   getRangeOfEnclosingComment: () => getRangeOfEnclosingComment
 });
 
-// ../../src/services/formatting/formattingContext.ts
+// ../compiler/src/services/formatting/formattingContext.ts
 var FormattingRequestKind = /* @__PURE__ */ ((FormattingRequestKind2) => {
   FormattingRequestKind2[FormattingRequestKind2["FormatDocument"] = 0] = "FormatDocument";
   FormattingRequestKind2[FormattingRequestKind2["FormatSelection"] = 1] = "FormatSelection";
@@ -188391,7 +188394,7 @@ var FormattingContext = class {
   }
 };
 
-// ../../src/services/formatting/formattingScanner.ts
+// ../compiler/src/services/formatting/formattingScanner.ts
 var standardScanner = createScanner(
   99 /* Latest */,
   /*skipTrivia*/
@@ -188632,7 +188635,7 @@ function getFormattingScanner(text, languageVariant, startPos, endPos, cb) {
   }
 }
 
-// ../../src/services/formatting/rule.ts
+// ../compiler/src/services/formatting/rule.ts
 var anyContext = emptyArray;
 var RuleAction = /* @__PURE__ */ ((RuleAction2) => {
   RuleAction2[RuleAction2["None"] = 0] = "None";
@@ -188654,7 +188657,7 @@ var RuleFlags = /* @__PURE__ */ ((RuleFlags2) => {
   return RuleFlags2;
 })(RuleFlags || {});
 
-// ../../src/services/formatting/rules.ts
+// ../compiler/src/services/formatting/rules.ts
 function getAllRules() {
   const allTokens = [];
   for (let token = 0 /* FirstToken */; token <= 170 /* LastToken */; token++) {
@@ -189399,7 +189402,7 @@ function isTypeLambdaDoubleArrowContext(context) {
   return false;
 }
 
-// ../../src/services/formatting/rulesMap.ts
+// ../compiler/src/services/formatting/rulesMap.ts
 function getFormatContext(options, host) {
   return { options, getRules: getRulesMap(), host };
 }
@@ -189500,7 +189503,7 @@ function increaseInsertionIndex(indexBitmap, maskPosition) {
   return indexBitmap & ~(mask << maskPosition) | value << maskPosition;
 }
 
-// ../../src/services/formatting/formatting.ts
+// ../compiler/src/services/formatting/formatting.ts
 function createTextRangeWithKind(pos, end, kind) {
   const textRangeWithKind = { pos, end, kind };
   if (Debug.isDebugging) {
@@ -190524,7 +190527,7 @@ function getIndentationString(indentation, options) {
   }
 }
 
-// ../../src/services/formatting/smartIndenter.ts
+// ../compiler/src/services/formatting/smartIndenter.ts
 var SmartIndenter;
 ((SmartIndenter2) => {
   let Value;
@@ -191050,13 +191053,13 @@ var SmartIndenter;
   }
 })(SmartIndenter || (SmartIndenter = {}));
 
-// ../../src/services/_namespaces/ts.preparePasteEdits.ts
+// ../compiler/src/services/_namespaces/ts.preparePasteEdits.ts
 var ts_preparePasteEdits_exports = {};
 __export(ts_preparePasteEdits_exports, {
   preparePasteEdits: () => preparePasteEdits
 });
 
-// ../../src/services/preparePasteEdits.ts
+// ../compiler/src/services/preparePasteEdits.ts
 function preparePasteEdits(sourceFile, copiedFromRange, checker) {
   let shouldProvidePasteEdits = false;
   copiedFromRange.forEach((range) => {
@@ -191091,13 +191094,13 @@ function preparePasteEdits(sourceFile, copiedFromRange, checker) {
   return shouldProvidePasteEdits;
 }
 
-// ../../src/services/_namespaces/ts.PasteEdits.ts
+// ../compiler/src/services/_namespaces/ts.PasteEdits.ts
 var ts_PasteEdits_exports = {};
 __export(ts_PasteEdits_exports, {
   pasteEditsProvider: () => pasteEditsProvider
 });
 
-// ../../src/services/pasteEdits.ts
+// ../compiler/src/services/pasteEdits.ts
 var fixId57 = "providePostPasteEdits";
 function pasteEditsProvider(targetFile, pastedText, pasteLocations, copiedFrom, host, preferences, formatContext, cancellationToken) {
   const changes = ts_textChanges_exports.ChangeTracker.with({ host, formatContext, preferences }, (changeTracker) => pasteEdits(targetFile, pastedText, pasteLocations, copiedFrom, host, preferences, formatContext, cancellationToken, changeTracker));
@@ -191202,7 +191205,7 @@ function getUsageInfoRangeForPasteEdits({ file: sourceFile, range }) {
   };
 }
 
-// ../../src/server/_namespaces/ts.ts
+// ../compiler/src/server/_namespaces/ts.ts
 var ts_exports2 = {};
 __export(ts_exports2, {
   ANONYMOUS: () => ANONYMOUS,
@@ -193483,7 +193486,7 @@ __export(ts_exports2, {
   zipWith: () => zipWith
 });
 
-// ../../src/deprecatedCompat/deprecate.ts
+// ../compiler/src/deprecatedCompat/deprecate.ts
 var enableDeprecationWarnings = true;
 var typeScriptVersion2;
 function getTypeScriptVersion() {
@@ -193546,7 +193549,7 @@ function deprecate(func, options) {
   return wrapFunction(deprecation, func);
 }
 
-// ../../src/deprecatedCompat/deprecations.ts
+// ../compiler/src/deprecatedCompat/deprecations.ts
 function createOverload(name, overloads, binder2, deprecations) {
   Object.defineProperty(call, "name", { ...Object.getOwnPropertyDescriptor(call, "name"), value: name });
   if (deprecations) {
@@ -193591,7 +193594,7 @@ function buildOverload(name) {
   };
 }
 
-// ../../src/server/_namespaces/ts.server.ts
+// ../compiler/src/server/_namespaces/ts.server.ts
 var ts_server_exports3 = {};
 __export(ts_server_exports3, {
   ActionInvalidate: () => ActionInvalidate,
@@ -193691,7 +193694,7 @@ __export(ts_server_exports3, {
   updateProjectIfDirty: () => updateProjectIfDirty
 });
 
-// ../../src/typingsInstallerCore/_namespaces/ts.server.typingsInstaller.ts
+// ../compiler/src/typingsInstallerCore/_namespaces/ts.server.typingsInstaller.ts
 var ts_server_typingsInstaller_exports = {};
 __export(ts_server_typingsInstaller_exports, {
   TypingsInstaller: () => TypingsInstaller,
@@ -193700,7 +193703,7 @@ __export(ts_server_typingsInstaller_exports, {
   typingsName: () => typingsName
 });
 
-// ../../src/typingsInstallerCore/typingsInstaller.ts
+// ../compiler/src/typingsInstallerCore/typingsInstaller.ts
 var nullLog = {
   isEnabled: () => false,
   writeLine: noop
@@ -194119,7 +194122,7 @@ function typingsName(packageName) {
   return `@types/${packageName}@ts${versionMajorMinor}`;
 }
 
-// ../../src/server/utilitiesPublic.ts
+// ../compiler/src/server/utilitiesPublic.ts
 var LogLevel2 = /* @__PURE__ */ ((LogLevel3) => {
   LogLevel3[LogLevel3["terse"] = 0] = "terse";
   LogLevel3[LogLevel3["normal"] = 1] = "normal";
@@ -194209,7 +194212,7 @@ function createSortedArray2() {
   return [];
 }
 
-// ../../src/server/utilities.ts
+// ../compiler/src/server/utilities.ts
 var ThrottledOperations = class _ThrottledOperations {
   constructor(host, logger) {
     this.host = host;
@@ -194274,7 +194277,7 @@ function getBaseConfigFileName(configFilePath) {
   return base === "tsppconfig.json" || base === "tsconfig.json" || base === "jsconfig.json" ? base : void 0;
 }
 
-// ../../src/server/_namespaces/ts.server.protocol.ts
+// ../compiler/src/server/_namespaces/ts.server.protocol.ts
 var ts_server_protocol_exports = {};
 __export(ts_server_protocol_exports, {
   ClassificationType: () => ClassificationType,
@@ -194293,7 +194296,7 @@ __export(ts_server_protocol_exports, {
   WatchFileKind: () => WatchFileKind2
 });
 
-// ../../src/server/protocol.ts
+// ../compiler/src/server/protocol.ts
 var CommandTypes = /* @__PURE__ */ ((CommandTypes2) => {
   CommandTypes2["JsxClosingTag"] = "jsxClosingTag";
   CommandTypes2["LinkedEditingRange"] = "linkedEditingRange";
@@ -194506,7 +194509,7 @@ var ScriptTarget11 = /* @__PURE__ */ ((ScriptTarget12) => {
 {
 }
 
-// ../../src/server/scriptInfo.ts
+// ../compiler/src/server/scriptInfo.ts
 var TextStorage = class {
   constructor(host, info, initialVersion) {
     this.host = host;
@@ -194991,7 +194994,7 @@ function scriptInfoIsContainedByDeferredClosedProject(info) {
   );
 }
 
-// ../../src/server/project.ts
+// ../compiler/src/server/project.ts
 var ProjectKind = /* @__PURE__ */ ((ProjectKind2) => {
   ProjectKind2[ProjectKind2["Inferred"] = 0] = "Inferred";
   ProjectKind2[ProjectKind2["Configured"] = 1] = "Configured";
@@ -197379,7 +197382,7 @@ function isProjectDeferredClose(project) {
   return isConfiguredProject(project) && !!project.deferredClose;
 }
 
-// ../../src/server/editorServices.ts
+// ../compiler/src/server/editorServices.ts
 var maxProgramSizeForNonTsFiles = 20 * 1024 * 1024;
 var maxFileSize = 4 * 1024 * 1024;
 var ProjectsUpdatedInBackgroundEvent = "projectsUpdatedInBackground";
@@ -201316,7 +201319,7 @@ function printProjectWithoutFileNames(project) {
   );
 }
 
-// ../../src/server/moduleSpecifierCache.ts
+// ../compiler/src/server/moduleSpecifierCache.ts
 function createModuleSpecifierCache(host) {
   let containedNodeModulesWatchers;
   let cache;
@@ -201419,7 +201422,7 @@ function createModuleSpecifierCache(host) {
   }
 }
 
-// ../../src/server/packageJsonCache.ts
+// ../compiler/src/server/packageJsonCache.ts
 function createPackageJsonCache(host) {
   const packageJsons = /* @__PURE__ */ new Map();
   const directoriesWithoutPackageJson = /* @__PURE__ */ new Map();
@@ -201467,7 +201470,7 @@ function createPackageJsonCache(host) {
   }
 }
 
-// ../../src/server/session.ts
+// ../compiler/src/server/session.ts
 var nullCancellationToken = {
   isCancellationRequested: () => false,
   setRequest: () => void 0,
@@ -204969,7 +204972,7 @@ function isCompletionEntryData(data) {
   return data === void 0 || data && typeof data === "object" && typeof data.exportName === "string" && (data.fileName === void 0 || typeof data.fileName === "string") && (data.ambientModuleName === void 0 || typeof data.ambientModuleName === "string" && (data.isPackageJsonImport === void 0 || typeof data.isPackageJsonImport === "boolean"));
 }
 
-// ../../src/server/scriptVersionCache.ts
+// ../compiler/src/server/scriptVersionCache.ts
 var lineCollectionCapacity = 4;
 var CharRangeSection = /* @__PURE__ */ ((CharRangeSection2) => {
   CharRangeSection2[CharRangeSection2["PreStart"] = 0] = "PreStart";
@@ -205664,7 +205667,7 @@ var LineLeaf = class {
   }
 };
 
-// ../../src/server/typingInstallerAdapter.ts
+// ../compiler/src/server/typingInstallerAdapter.ts
 var _TypingsInstallerAdapter = class _TypingsInstallerAdapter {
   constructor(telemetryEnabled, logger, host, globalTypingsCacheLocation, event, maxActiveRequestCount) {
     this.telemetryEnabled = telemetryEnabled;
@@ -205840,7 +205843,7 @@ var _TypingsInstallerAdapter = class _TypingsInstallerAdapter {
 _TypingsInstallerAdapter.requestDelayMillis = 100;
 var TypingsInstallerAdapter = _TypingsInstallerAdapter;
 
-// ../../src/typescript/_namespaces/ts.server.ts
+// ../compiler/src/typescript/_namespaces/ts.server.ts
 var ts_server_exports4 = {};
 __export(ts_server_exports4, {
   ActionInvalidate: () => ActionInvalidate,
@@ -205940,7 +205943,7 @@ __export(ts_server_exports4, {
   updateProjectIfDirty: () => updateProjectIfDirty
 });
 
-// ../../src/typescript/typescript.ts
+// ../compiler/src/typescript/typescript.ts
 if (typeof console !== "undefined") {
   Debug.loggingHost = {
     log(level, s) {

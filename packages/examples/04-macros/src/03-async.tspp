@@ -1,4 +1,4 @@
-import * as ts from "../../../compiler/built/local/typescript";
+import * as ts from "ts-plus-plus";
 
 /**
  * 异步宏使用 Promise 返回最终的 AST。这里故意等待一个计时器，用来证明编译器不是

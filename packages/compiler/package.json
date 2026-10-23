@@ -22,8 +22,19 @@
     "url": "https://github.com/tspp-lang/tspp.git",
     "directory": "packages/compiler"
   },
-  "main": "./lib/typescript.js",
-  "typings": "./lib/typescript.d.ts",
+  "main": "./built/local/typescript.js",
+  "typings": "./built/local/typescript.d.ts",
+  "exports": {
+    ".": {
+      "types": "./built/local/typescript.d.ts",
+      "default": "./built/local/typescript.js"
+    },
+    "./source": "./src/typescript/typescript.ts",
+    "./tsc": "./built/local/tsc.js",
+    "./tsserver": "./built/local/tsserver.js",
+    "./sdk": "./built/local/lib/tsserver.js",
+    "./package.json": "./package.json"
+  },
   "bin": {
     "tspp": "./bin/tsc",
     "tsppserver": "./bin/tsserver"
@@ -33,8 +44,8 @@
   },
   "files": [
     "bin",
-    "lib",
-    "!lib/enu",
+    "built/local",
+    "src",
     "LICENSE.txt",
     "README.md",
     "SECURITY.md",

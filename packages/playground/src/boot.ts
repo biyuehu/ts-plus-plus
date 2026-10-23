@@ -305,6 +305,19 @@ async function boot() {
     localStorage.setItem("tsppFeatures", JSON.stringify([...enabledFeatures]))
   }
 
+  const declarationUrl = new URL(
+    useDevCompiler ? "typescript.dev.d.ts" : "vendor/typescript.d.ts",
+    document.baseURI,
+  ).href
+  const declarationResponse = await fetch(declarationUrl)
+  if (!declarationResponse.ok) {
+    throw new Error(`HTTP ${declarationResponse.status} ${declarationResponse.statusText} fetching ${declarationUrl}`)
+  }
+  monaco.languages.typescript.typescriptDefaults.addExtraLib(
+    await declarationResponse.text(),
+    "file:///node_modules/ts-plus-plus/index.d.ts",
+  )
+
   const sandboxEnv = await createTypeScriptSandbox(
     {
       text: overrideExample?.code ?? examples[2].code,

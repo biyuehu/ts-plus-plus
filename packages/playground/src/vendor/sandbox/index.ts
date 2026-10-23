@@ -178,6 +178,10 @@ export const createTypeScriptSandbox = (
   defaults.setDiagnosticsOptions({
     ...defaults.getDiagnosticsOptions(),
     noSemanticValidation: false,
+    // The TS++ checker currently cannot compute suggestion diagnostics for the
+    // compiler package's self-declaration module. Syntax and semantic diagnostics
+    // remain enabled; skip only this optional pass to keep package imports stable.
+    noSuggestionDiagnostics: true,
     // This is when tslib is not found
     diagnosticCodesToIgnore: [2354],
   })

@@ -1668,21 +1668,24 @@ function expandCompileTimeMacros(program: Program, host: CompilerHost, allowAsyn
       .filter((name): name is string => !!name);
     javascript += `\nmodule.exports.__tsppLocalMacros = {${names.map(name => `${JSON.stringify(name)}: typeof ${name} === "function" ? ${name} : undefined`).join(",")}};`;
 
-    const nativeRequire = (require("module") as typeof import("module")).createRequire(sourceFile.fileName);
+    let nativeRequire: NodeRequire | undefined;
     const moduleRecord: { exports: Record<string, unknown>; } = { exports: {} };
     moduleCache.set(cacheKey, moduleRecord.exports);
     const macroRequire = (specifier: string) => {
+      const hostModule = macroHost!.resolveMacroModule?.(specifier, sourceFile.fileName);
+      if (hostModule !== undefined) return hostModule;
       const resolved = resolveModuleName(specifier, sourceFile.fileName, buildProgram.getCompilerOptions(), macroHost!).resolvedModule;
       const dependency = resolved && buildProgram.getSourceFile(resolved.resolvedFileName);
       if (dependency && !dependency.isDeclarationFile && !fileExtensionIs(dependency.fileName, Extension.Json)) {
         return evaluateMacroModule(dependency, /*macroEntry*/ false);
       }
+      nativeRequire ??= (require("module") as typeof import("module")).createRequire(sourceFile.fileName);
       return nativeRequire(specifier);
     };
     // eslint-disable-next-line no-new-func -- The macro module is compiler-generated JavaScript and requires a CommonJS wrapper.
     const execute = new Function("require", "exports", "module", "__filename", "__dirname", javascript);
     try {
-      execute(macroRequire, moduleRecord.exports, moduleRecord, sourceFile.fileName, (require("path") as typeof import("path")).dirname(sourceFile.fileName));
+      execute(macroRequire, moduleRecord.exports, moduleRecord, sourceFile.fileName, getDirectoryPath(sourceFile.fileName));
     }
     catch (e) {
       moduleCache.delete(cacheKey);

@@ -94,14 +94,7 @@ jobs:
       - name: Build compiler
         run: npm run build:compiler
       - name: Check examples
-        run: |
-          status=0
-          for config in packages/examples/*/tsppconfig.json; do
-            dir=$(dirname "$config")
-            echo "Checking $dir"
-            (cd "$dir" && node ../../compiler/built/local/tsc.js --project tsppconfig.json) || status=1
-          done
-          exit $status
+        run: npm run check:examples
 
   language-server:
     runs-on: ubuntu-latest

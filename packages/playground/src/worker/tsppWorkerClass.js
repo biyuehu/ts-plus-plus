@@ -65,5 +65,6 @@ export class TsppWorker extends TypeScriptWorker {
    */
   setCompilerHost(compilerHost) {
     compilerHost.solveVerificationQueries = (inputs, cancellationToken) => solveZ3Batch(inputs, cancellationToken);
+    compilerHost.resolveMacroModule = specifier => specifier === "ts-plus-plus" ? this.tspp : undefined;
   }
 }

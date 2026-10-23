@@ -10,6 +10,10 @@
     "directory": "packages/language-server"
   },
   "type": "module",
+  "exports": {
+    ".": "./lib/cli.mjs",
+    "./package.json": "./package.json"
+  },
   "engines": {
     "node": ">=22.22.2"
   },

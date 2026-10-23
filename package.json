@@ -37,7 +37,8 @@
     "format:root": "dprint fmt --config packages/compiler/.dprint.jsonc package.json lefthook.yml .github .vscode",
     "format:root:check": "dprint check --config packages/compiler/.dprint.jsonc package.json lefthook.yml .github .vscode",
     "contributors": "node packages/compiler/scripts/generate-contributors.mjs",
-    "setup-hooks": "node packages/compiler/scripts/link-hooks.mjs && node packages/compiler/scripts/install-lefthook.mjs"
+    "setup-hooks": "node packages/compiler/scripts/link-hooks.mjs && node packages/compiler/scripts/install-lefthook.mjs",
+    "check:examples": "npm run check --workspace=@tspp/examples"
   },
   "packageManager": "npm@8.19.4",
   "volta": {

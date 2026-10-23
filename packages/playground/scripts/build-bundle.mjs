@@ -1,18 +1,19 @@
 /**
- * Builds the browser ESM bundle of the ts-plus-plus compiler from the main repo sources.
+ * Builds the browser ESM bundle from the ts-plus-plus package's public source entry.
  *
  * The main repo's own lib bundle (built/local/typescript.js) is CJS for Node; the worker
  * needs an ES module, so we bundle the public API surface (src/typescript/typescript.ts)
- * with esbuild (borrowed from the main repo's node_modules) directly.
+ * with esbuild directly.
  */
 import { createRequire } from "node:module";
-import { existsSync, mkdirSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const compilerRoot = process.env.TSPP_REPO ?? join(root, "..", "compiler");
-const entry = join(compilerRoot, "src", "typescript", "typescript.ts");
+const require = createRequire(import.meta.url);
+const entry = require.resolve("ts-plus-plus/source");
+const compilerDeclaration = require.resolve("ts-plus-plus").replace(/\.js$/, ".d.ts");
 // --dev: write typescript.dev.js into public/ (git-ignored) for the ?ts=dev
 // local-compiler workflow; default: the deployed public/vendor/typescript.js
 // (public/ so `vite build` copies it verbatim into dist/)
@@ -21,12 +22,11 @@ const outDir = join(root, "public", dev ? "" : "vendor");
 const outfile = join(outDir, dev ? "typescript.dev.js" : "typescript.js");
 
 if (!existsSync(entry)) {
-  console.error(`Entry not found at ${entry} (set TSPP_REPO to the main repo checkout)`);
+  console.error(`Compiler package entry not found at ${entry}`);
   process.exit(1);
 }
 
-const requireFromCompiler = createRequire(join(compilerRoot, "package.json"));
-const esbuild = requireFromCompiler("esbuild");
+const esbuild = require("esbuild");
 
 mkdirSync(outDir, { recursive: true });
 
@@ -53,6 +53,8 @@ await esbuild.build({
   ],
   logLevel: "info",
 });
+
+copyFileSync(compilerDeclaration, join(outDir, dev ? "typescript.dev.d.ts" : "typescript.d.ts"));
 
 const kb = Math.round(statSync(outfile).size / 1024);
 console.log(`Bundled ${kb} KB -> ${dev ? "public/typescript.dev.js (serve with `npm run dev`, open ?ts=dev)" : "public/vendor/typescript.js"}`);
