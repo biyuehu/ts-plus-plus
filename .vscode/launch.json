@@ -12,7 +12,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
         "${workspaceFolder}/packages/examples"
       ],
-      "preLaunchTask": "npm: build:editor"
+      "preLaunchTask": "pnpm: build:editor"
     },
     {
       "name": "TS++: Playground",
@@ -20,7 +20,7 @@
       "request": "launch",
       "url": "http://localhost:5173/?ts=dev",
       "webRoot": "${workspaceFolder}/packages/playground",
-      "preLaunchTask": "npm: playground:debug"
+      "preLaunchTask": "pnpm: playground:debug"
     }
   ]
 }

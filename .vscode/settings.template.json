@@ -1,7 +1,7 @@
 // Rename this file 'settings.json' or merge its
 // contents into your existing settings.
 {
-  // To use the locally built compiler, after 'npm run build':
+  // To use the locally built compiler, after 'pnpm build':
   // "typescript.tsdk": "packages/compiler/built/local/lib"
 
   // Enables dprint formatting on all supported files. We explicitly list

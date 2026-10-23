@@ -14,13 +14,9 @@
 import { createRequire } from "node:module";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const here = dirname(fileURLToPath(import.meta.url));
-
-const bundlePath = process.env.TSPP_BUNDLE
-  ?? join(here, "..", "..", "compiler", "built", "local", "typescript.js");
+const bundlePath = process.env.TSPP_BUNDLE ?? require.resolve("ts-plus-plus");
 if (!existsSync(bundlePath)) {
   console.error(`FAIL: compiler bundle not found at ${bundlePath}`);
   console.error("Build the main repo first (stock tsc -b src/typescript --emitDeclarationOnly false).");
@@ -38,8 +34,8 @@ function check(name, ok, detail = "") {
 check("bundle loads", typeof ts.createLanguageService === "function");
 check("bundle is the fork", ts.version === "6.0.3", `version=${ts.version}`);
 
-// lib texts for the in-memory FS (basename -> text), resolved from the main repo build output
-const libDir = join(here, "..", "..", "compiler", "built", "local");
+// lib texts for the in-memory FS (basename -> text), resolved from the compiler package
+const libDir = dirname(bundlePath);
 const libTexts = new Map();
 for (const entry of existsSync(libDir) ? readFileSync(join(libDir, "lib.es5.d.ts"), "utf8") && [0] : []) void entry;
 for (const name of ["lib.es5.d.ts", "lib.es2015.d.ts", "lib.es2015.core.d.ts", "lib.es2015.collection.d.ts", "lib.es2015.generator.d.ts", "lib.es2015.iterable.d.ts", "lib.es2015.promise.d.ts", "lib.es2015.proxy.d.ts", "lib.es2015.reflect.d.ts", "lib.es2015.symbol.d.ts", "lib.es2015.symbol.wellknown.d.ts", "lib.es2016.d.ts", "lib.es2017.d.ts", "lib.es2018.d.ts", "lib.es2019.d.ts", "lib.es2020.d.ts", "lib.es2020.bigint.d.ts", "lib.es2020.promise.d.ts", "lib.es2020.sharedmemory.d.ts", "lib.es2020.string.d.ts", "lib.es2020.symbol.wellknown.d.ts", "lib.es2021.d.ts", "lib.es2021.promise.d.ts", "lib.es2021.string.d.ts", "lib.es2021.weakref.d.ts", "lib.es2022.d.ts", "lib.es2022.error.d.ts", "lib.es2022.object.d.ts", "lib.es2022.string.d.ts", "lib.es2023.d.ts", "lib.es2023.collection.d.ts"]) {

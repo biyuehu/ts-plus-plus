@@ -1,4 +1,4 @@
-import * as ts from "../../../compiler/built/local/typescript";
+import * as ts from "ts-plus-plus";
 
 // 宏实现运行在编译器的 Node.js 进程中，并没有沙箱。这里显式声明 require 只是为了
 // 获得类型；执行时拿到的是真正的 Node.js require，拥有与编译器相同的文件和模块权限。
@@ -39,7 +39,7 @@ macro exposePackageName();
 const checkedPackageName: "tspp-example-04-macros" = MacroExamplePackageName;
 console.log(checkedPackageName);
 
-// 下面这个宏永不完成；取消注释定义和调用后执行 npm run check，编译器会按这条调用
+// 下面这个宏永不完成；取消注释定义和调用后执行 pnpm check，编译器会按这条调用
 // 声明的固定 50ms 预算报告超时，而不是永久等待。
 //
 // export macro function neverFinishes() with {

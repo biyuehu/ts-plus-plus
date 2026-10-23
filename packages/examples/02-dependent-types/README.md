@@ -109,8 +109,8 @@ TS++ 是在 TypeScript 中嵌入一小块 MLTT，而不是替换 TypeScript 类�
 先在仓库根目录构建 compiler，再进入本目录运行：
 
 ```powershell
-npm run check
-npm run emit-declarations
+pnpm check
+pnpm emit-declarations
 ```
 
 `check` 也会验证 [`07-boundaries.tspp`](./src/07-boundaries.tspp) 中由 `@ts-expect-error` 保护的反例。`emit-declarations` 会在 `dist` 中按章节生成 `.d.tspp`，依赖函数语法会被保留。

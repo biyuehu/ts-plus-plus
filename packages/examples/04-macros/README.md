@@ -79,7 +79,7 @@ const hasReturn = target.node.body?.statements.some(ts.isReturnStatement) ?? fal
 - 检查失败时返回 `context.fail(message)`，错误会出现在宏调用位置。
 
 成功的宏调用只在编译期有意义，不会进入最终 JavaScript。文件末尾提供了一个注释掉的
-失败案例，取消注释后运行 `npm run check` 即可观察诊断。
+失败案例，取消注释后运行 `pnpm check` 即可观察诊断。
 
 ## 能力二：替换 AST
 
@@ -130,7 +130,7 @@ const checkedName: "User" = UserTypeName;
   这类调用会被擦除。
 
 悬浮窗和只读预览都不会修改源文件。修改编译器或 development extension 后，需要
-重新执行 `npm run build:compiler` 并重载 Extension Development Host。
+重新执行 `pnpm build:compiler` 并重载 Extension Development Host。
 
 ## 异步宏
 
@@ -285,19 +285,19 @@ beginRecursiveExpansion
 先在仓库根目录构建 compiler：
 
 ```powershell
-npm run build:compiler
+pnpm build:compiler
 ```
 
 然后进入本目录：
 
 ```powershell
 cd packages/examples/04-macros
-npm run check
-npm run build
-npm start
+pnpm check
+pnpm build
+pnpm start
 ```
 
-`npm start` 的预期输出为：
+`pnpm start` 的预期输出为：
 
 ```text
 User

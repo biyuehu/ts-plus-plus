@@ -10,14 +10,16 @@
  * The replacement (src/worker/tspp.worker.js) keeps the exact same protocol:
  * editor.worker.initialize((ctx, createData) => new TypeScriptWorker(...)), but the
  * language service inside is the tspp compiler bundle. Re-run after every
- * `npm install` (wired as the postinstall script) and after upgrading monaco.
+ * `pnpm install` (wired as the postinstall script) and after upgrading monaco.
  */
 import { copyFileSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const target = join(root, "node_modules", "monaco-editor", "esm", "vs", "languages", "features", "typescript", "ts.worker.js");
+const require = createRequire(import.meta.url);
+const target = require.resolve("monaco-editor/languages/features/typescript/ts.worker.js");
 
 const sourceText = readFileSync(join(root, "src", "worker", "tspp.worker.js"), "utf8");
 const before = readFileSync(target, "utf8");

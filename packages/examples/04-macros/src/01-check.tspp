@@ -1,9 +1,9 @@
 /**
  * 展示：宏读取目标 AST，并在编译期检查代码规则。
- * 运行：npm run check
+ * 运行：pnpm check
  * 预期：检查通过，不生成额外代码。
  */
-import * as ts from "../../../compiler/built/local/typescript";
+import * as ts from "ts-plus-plus";
 
 // 宏函数在编译期执行。targets 是调用处传入的声明，context 提供诊断等能力。
 export macro function requireReturnStatement(
@@ -33,7 +33,7 @@ export function readAnswer(): number {
 macro requireReturnStatement(readAnswer);
 
 /*
- * 失败实验：取消下面代码的注释，再运行 npm run check。
+ * 失败实验：取消下面代码的注释，再运行 pnpm check。
  * 编译器会在宏调用处报告 “doNothing must contain a return statement”。
  */
 

@@ -40,10 +40,10 @@ Key facts that are easy to get wrong again:
   transform cannot hoist it and the build fails with a bogus "await is only allowed within
   async functions" PARSE_ERROR.
 - **monaco 0.57 ESM gotchas** (all hard-won, all still true):
-  - import `monaco-editor/esm/vs/editor/editor.main.js` — plain `editor.api.js` has no
+  - import `monaco-editor/editor/editor.main.js` — plain `editor.api.js` has no
     contributions (no hover/suggest/find/goto-definition).
   - the TS language-mode namespace must be attached manually:
-    `monaco.languages.typescript = import("monaco-editor/esm/vs/language/typescript/monaco.contribution.js")`.
+    `monaco.languages.typescript = import("monaco-editor/language/typescript/monaco.contribution.js")`.
   - language ids come from `esm/vs/languages/definitions/<lang>/register.js`.
   - monaco's exports map double-prefixes deep `esm/vs/...` specifiers; `vite.config.ts`
     aliases them onto disk paths, and Node code (spikes) imports the files by disk path.
@@ -91,27 +91,26 @@ supplies the bootstrap-reboot `box-sizing: border-box` the official styles assum
 
 ## The monaco worker patch (`scripts/patch-monaco-worker.mjs`)
 
-Copies `src/worker/tspp.worker.js` over
-`node_modules/monaco-editor/esm/vs/languages/features/typescript/ts.worker.js`, because that
-literal file is what `workerManager.js` spawns. It compares full content (not a keyword) so
-it re-copies whenever the entry changes, and it runs automatically before `npm run dev` /
-`npm run build` and on every `npm install` (postinstall). If you upgrade monaco and the
+Copies `src/worker/tspp.worker.js` over the installed
+`monaco-editor/languages/features/typescript/ts.worker.js` package entry, because that is
+what `workerManager.js` spawns. It compares full content (not a keyword) so
+it re-copies whenever the entry changes, and it runs automatically before `pnpm dev` /
+`pnpm build` and on every `pnpm install` (postinstall). If you upgrade monaco and the
 worker starts answering with stock-TS diagnostics, this patch is the first suspect.
 
 ## Development
 
 ```pwsh
-npm run spike        # phase 0 feasibility spike (expects packages/compiler/built/local)
-npm run worker-spike # drives TsppWorker with a mock worker context, no browser (expects public/vendor/typescript.js)
-npm run bundle       # build the browser ESM compiler bundle from the main repo sources -> public/vendor/typescript.js
-npm run bundle:dev   # same, but -> public/typescript.dev.js (git-ignored) for ?ts=dev
-npm run dev          # vite dev server (auto-repairs the monaco worker patch first)
-npm run build        # production build into dist/ (auto-repairs the patch first)
+pnpm spike        # phase 0 feasibility spike (loads the ts-plus-plus package)
+pnpm worker-spike # drives TsppWorker with a mock worker context, no browser (expects public/vendor/typescript.js)
+pnpm bundle       # build the browser ESM compiler bundle from the main repo sources -> public/vendor/typescript.js
+pnpm bundle:dev   # same, but -> public/typescript.dev.js (git-ignored) for ?ts=dev
+pnpm dev          # vite dev server (auto-repairs the monaco worker patch first)
+pnpm build        # production build into dist/ (auto-repairs the patch first)
 ```
 
-The bundle steps take compiler sources from the sibling compiler package (`../compiler`); override it with
-`TSPP_REPO=<path>`, and the load spike's
-bundle with `TSPP_BUNDLE=<path to typescript.js>`.
+The bundle steps resolve compiler sources through the `ts-plus-plus` dependency. The load spike's
+bundle can be overridden with `TSPP_BUNDLE=<path to typescript.js>`.
 
 ### Editing the compiler without a site deploy (`?ts=dev`)
 
@@ -119,14 +118,14 @@ The deployed site always runs the committed `public/vendor/typescript.js`, which
 from `tspp-lang/tspp` main on every push. To test a local compiler change in the playground:
 
 ```pwsh
-# in packages/playground; TSPP_REPO defaults to ../compiler
-npm run bundle:dev   # ~30s: esbuild straight from the main repo's TypeScript sources
-npm run dev          # then open http://localhost:5173/?ts=dev
+# in packages/playground
+pnpm bundle:dev   # ~30s: esbuild straight from the main repo's TypeScript sources
+pnpm dev          # then open http://localhost:5173/?ts=dev
 ```
 
 `?ts=dev` switches both the main thread and the worker to `public/typescript.dev.js`.
 Re-run `bundle:dev` after each compiler edit and reload. Forgetting the build shows an
-explicit "Run `npm run bundle:dev` …" message in the loader area instead of a hang.
+explicit "Run `pnpm bundle:dev` …" message in the loader area instead of a hang.
 Production builds ignore the query param; the committed bundle always ships.
 
 ## Deployment

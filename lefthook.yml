@@ -3,10 +3,10 @@ pre-commit:
   commands:
     dprint:
       glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,yml,yaml}'
-      run: npm run format
+      run: pnpm format
       stage_fixed: true
     lint:
       glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
-      run: npm run lint --workspace=ts-plus-plus
+      run: pnpm --filter ts-plus-plus lint
     knip:
-      run: npm run knip
+      run: pnpm knip

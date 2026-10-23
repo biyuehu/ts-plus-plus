@@ -5,10 +5,7 @@
  * The class extends the TypeScriptWorker vendored inside monaco-editor, so the worker
  * protocol always matches the monaco version the client uses.
  */
-// NOTE: imported by disk-relative path, not by the "monaco-editor/esm/vs/..." package
-// specifier: monaco 0.57's exports map ("./esm/vs/*.js") double-prefixes such deep
-// imports both in Node and (without the vite alias) at build time.
-import { TypeScriptWorker } from "../../node_modules/monaco-editor/esm/vs/languages/features/typescript/tsWorker.js";
+import { TypeScriptWorker } from "monaco-editor/languages/features/typescript/tsWorker.js";
 import { solveBatch as solveZ3Batch } from "./z3Bridge.js";
 
 export class TsppWorker extends TypeScriptWorker {
@@ -65,5 +62,6 @@ export class TsppWorker extends TypeScriptWorker {
    */
   setCompilerHost(compilerHost) {
     compilerHost.solveVerificationQueries = (inputs, cancellationToken) => solveZ3Batch(inputs, cancellationToken);
+    compilerHost.resolveMacroModule = specifier => specifier === "ts-plus-plus" ? this.tspp : undefined;
   }
 }

@@ -23,7 +23,7 @@
  * every message is buffered, the compiler is awaited, then the stock pipeline is
  * installed and the buffer is replayed (skipping "ignore").
  */
-import * as editorWorker from "monaco-editor/esm/vs/editor/editor.worker.js";
+import * as editorWorker from "monaco-editor/editor/editor.worker.js";
 import { TsppWorker } from "/src/worker/tsppWorkerClass.js";
 
 const earlyMessages = [];

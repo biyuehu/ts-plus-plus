@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('../lib/tsserver.js')
+require('../built/local/tsserver.js')

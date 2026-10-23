@@ -8644,6 +8644,10 @@ export interface CompilerHost extends ModuleResolutionHost {
    *  browser language worker) supply their own solver backend. Results use the
    *  same VerificationSolverResult shape as the Node worker. */
   solveVerificationQueries?(inputs: readonly string[], cancellationToken?: CancellationToken): Promise<readonly VerificationSolverResult[]>;
+  /** @internal Resolves a runtime dependency imported by a compile-time macro.
+   *  Browser hosts use this to expose packages that already exist in the host
+   *  runtime without relying on Node's module loader. */
+  resolveMacroModule?(specifier: string, containingFile: string): unknown;
   /** @internal Overrides the default Promise wait limit for compile-time macros. */
   macroTimeoutMs?: number;
   /** @internal Overrides the measured local benchmark duration for tests and specialized hosts. */

@@ -98,9 +98,9 @@ function handleRequest(): string do {
 
 ```bash
 # 类型检查
-pnpm run check
+pnpm check
 
 # 生成降级 JavaScript
-pnpm run build
+pnpm build
 ```
 

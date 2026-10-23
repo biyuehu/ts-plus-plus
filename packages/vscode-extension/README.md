@@ -11,7 +11,8 @@ The status-bar item opens a quick picker, so users can switch examples without r
 
 Hovering a `macro fn(Target);` statement previews the formatted statements returned by that macro. The preview button in the editor title opens a read-only `*.expanded.tspp` document beside the source, showing the complete file after all macro calls have been replaced. Validation-only macros report that they emit no statements and disappear from the full-file preview.
 
-The extension registers `.tspp` as the independent `tspp` language and starts the repository's
-`tspp-language-server`, which in turn uses the TS++ SDK in `packages/compiler/built/local/lib`. Ordinary `.ts` and
+The extension registers `.tspp` as the independent `tspp` language and starts the
+`tspp-language-server` package through its exported entry point, which in turn uses the SDK exported by the
+`ts-plus-plus` package. Ordinary `.ts` and
 `.tsx` files remain owned by VS Code's built-in TypeScript extension and keep their configured
 TypeScript SDK.

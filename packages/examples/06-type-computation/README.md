@@ -81,6 +81,6 @@ type Boxed = Apply<<T> =>> T[], number>; // number[]
 在本目录运行：
 
 ```powershell
-npm run check
-npm run emit-declarations
+pnpm check
+pnpm emit-declarations
 ```

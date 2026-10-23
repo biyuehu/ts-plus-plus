@@ -89,7 +89,7 @@ export class LspClientImpl implements LspClient {
     }
 
     async rename(args: lsp.TextDocumentPositionParams): Promise<any> {
-        return this.connection.sendRequest(TypeScriptRenameRequest.type, args);
+        return this.connection.sendRequest(TypeScriptRenameRequest.type.method, args);
     }
 
     async codeLensRefresh(): Promise<void> {
