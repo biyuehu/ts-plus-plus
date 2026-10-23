@@ -20,9 +20,9 @@ Language extensions are opt-in and are selected individually in `tsppconfig.json
 
 ## Monorepo layout
 
-The repository root is the `ts-plus-plus` compiler package so its paths stay aligned with the
-TypeScript upstream tree. Supporting packages live under `packages/`:
+The repository root coordinates the monorepo. Each product lives under `packages/`:
 
+- `compiler` — the `ts-plus-plus` compiler, language services, build system, and test suite;
 - `language-server` — the TS++ Language Server Protocol implementation;
 - `vscode-extension` — the repository-local VS Code development extension;
 - `examples` — runnable compiler and editor examples;

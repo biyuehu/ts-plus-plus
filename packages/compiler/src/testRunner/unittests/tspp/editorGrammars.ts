@@ -45,21 +45,21 @@ describe("unittests:: tspp:: editor grammars", () => {
   ];
 
   function readGrammar(fileName: string): Grammar {
-    const path = `packages/vscode-extension/syntaxes/${fileName}`;
+    const path = `../vscode-extension/syntaxes/${fileName}`;
     const text = Harness.IO.readFile(path);
     assert.isDefined(text, `Expected to find ${path}`);
     return JSON.parse(text) as Grammar;
   }
 
   function readLanguageConfiguration(): LanguageConfiguration {
-    const path = "packages/vscode-extension/language-configuration.json";
+    const path = "../vscode-extension/language-configuration.json";
     const text = Harness.IO.readFile(path);
     assert.isDefined(text, `Expected to find ${path}`);
     return JSON.parse(text) as LanguageConfiguration;
   }
 
   function readExtensionManifest(): ExtensionManifest {
-    const path = "packages/vscode-extension/package.json";
+    const path = "../vscode-extension/package.json";
     const text = Harness.IO.readFile(path);
     assert.isDefined(text, `Expected to find ${path}`);
     return JSON.parse(text) as ExtensionManifest;

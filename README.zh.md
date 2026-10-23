@@ -20,8 +20,9 @@ TS++ 以 [TypeScript 6.0.3 的 `050880ce` 源码快照](https://github.com/micro
 
 ## Monorepo 结构
 
-仓库根目录本身就是 `ts-plus-plus` 编译器包，以便目录结构继续与 TypeScript 上游保持一致。配套包位于 `packages/`：
+仓库根目录负责统一编排 monorepo，各产品包均位于 `packages/`：
 
+- `compiler`：`ts-plus-plus` 编译器、语言服务、构建系统和测试套件；
 - `language-server`：TS++ 的 Language Server Protocol 实现；
 - `vscode-extension`：仓库内使用的 VS Code 开发扩展；
 - `examples`：编译器和编辑器示例；

@@ -79,7 +79,7 @@ The pre-commit hook (powered by `lefthook`) automatically formats staged files w
 
 1. **Focused Changes**: Keep pull requests focused on a single feature, bug fix, or documentation improvement.
 2. **Commit Messages**: Follow [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat: ...`, `fix: ...`, `docs: ...`, `chore: ...`).
-3. **Tests**: Add unit tests for any new language features, checker rules, or syntax transformations under `src/testRunner/unittests/tspp/`.
+3. **Tests**: Add unit tests for any new language features, checker rules, or syntax transformations under `packages/compiler/src/testRunner/unittests/tspp/`.
 4. **Clean Diffs**: Always ensure files are formatted via `npx dprint fmt` and avoid accidental line ending conversions.
 
 ## Contributor Wall

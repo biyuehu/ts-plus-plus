@@ -57,7 +57,7 @@
         "bdd",
         "--no-timeouts",
         "--colors",
-        "built/local/run.js",
+        "packages/compiler/built/local/run.js",
         "-f",
         "${fileBasenameNoExtension}",
         "--skip-percent",
@@ -67,9 +67,9 @@
         "NODE_ENV": "development"
       },
       "outFiles": [
-        "${workspaceFolder}/built/**/*.js",
-        "${workspaceFolder}/built/**/*.mjs",
-        "${workspaceFolder}/built/**/*.cjs",
+        "${workspaceFolder}/packages/compiler/built/**/*.js",
+        "${workspaceFolder}/packages/compiler/built/**/*.mjs",
+        "${workspaceFolder}/packages/compiler/built/**/*.cjs",
         "!**/node_modules/**"
       ],
       "sourceMaps": true,

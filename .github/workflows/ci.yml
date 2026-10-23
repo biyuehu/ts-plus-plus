@@ -24,7 +24,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Check formatting
-        run: npx dprint check
+        run: npm run format:check
       - name: Lint
         run: npm run lint
 
@@ -50,7 +50,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build src
-        run: npx hereby build-src
+        run: npm run build:src --workspace=ts-plus-plus
 
   self-check:
     runs-on: ubuntu-latest
@@ -62,11 +62,11 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build tsc
-        run: npx hereby tsc
+        run: npm run build:tsc --workspace=ts-plus-plus
       - name: Clean
-        run: npx hereby clean-src
+        run: npm run clean:src --workspace=ts-plus-plus
       - name: Self build
-        run: npx hereby build-src --built
+        run: npm run build:src:built --workspace=ts-plus-plus
 
   tspp-tests:
     runs-on: ubuntu-latest
@@ -78,9 +78,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build compiler for macro workers
-        run: npx hereby local
+        run: npm run build:compiler
       - name: TS++ unit tests
-        run: "npx hereby runtests --tests 'unittests:: (MLTT|tspp::)' --lint=false"
+        run: npm run test:tspp --workspace=ts-plus-plus
 
   examples:
     runs-on: ubuntu-latest
@@ -92,14 +92,14 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build compiler
-        run: npx hereby local
+        run: npm run build:compiler
       - name: Check examples
         run: |
           status=0
           for config in packages/examples/*/tsppconfig.json; do
             dir=$(dirname "$config")
             echo "Checking $dir"
-            (cd "$dir" && node ../../../built/local/tsc.js --project tsppconfig.json) || status=1
+            (cd "$dir" && node ../../compiler/built/local/tsc.js --project tsppconfig.json) || status=1
           done
           exit $status
 

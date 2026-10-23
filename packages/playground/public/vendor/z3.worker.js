@@ -45,24 +45,6 @@
     }
   });
 
-  // (disabled):fs
-  var require_fs = __commonJS({
-    "(disabled):fs"() {
-    }
-  });
-
-  // (disabled):path
-  var require_path = __commonJS({
-    "(disabled):path"() {
-    }
-  });
-
-  // (disabled):crypto
-  var require_crypto = __commonJS({
-    "(disabled):crypto"() {
-    }
-  });
-
   // ../../node_modules/z3-solver/build/z3-built.js
   var require_z3_built = __commonJS({
     "../../node_modules/z3-solver/build/z3-built.js"(exports, module) {
@@ -155,8 +137,8 @@
             if (numericVersion < 16e4) {
               throw new Error("This emscripten-generated code requires node v16.0.0 (detected v" + nodeVersion + ")");
             }
-            var fs = require_fs();
-            var nodePath = require_path();
+            var fs = (init_empty_worker_threads(), __toCommonJS(empty_worker_threads_exports));
+            var nodePath = (init_empty_worker_threads(), __toCommonJS(empty_worker_threads_exports));
             scriptDirectory = __dirname + "/";
             readBinary = (filename) => {
               filename = isFileURI(filename) ? new URL(filename) : nodePath.normalize(filename);
@@ -1712,7 +1694,7 @@
               view);
             } else if (ENVIRONMENT_IS_NODE) {
               try {
-                var crypto_module = require_crypto();
+                var crypto_module = __require("crypto");
                 var randomFillSync = crypto_module["randomFillSync"];
                 if (randomFillSync) {
                   return (view) => crypto_module["randomFillSync"](view);

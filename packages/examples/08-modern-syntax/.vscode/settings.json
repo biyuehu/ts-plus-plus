@@ -1,3 +1,3 @@
 {
-  "typescript.tsdk": "../../built/local"
+  "typescript.tsdk": "../../compiler/built/local"
 }

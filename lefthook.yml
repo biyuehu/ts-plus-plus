@@ -3,10 +3,10 @@ pre-commit:
   commands:
     dprint:
       glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,yml,yaml}'
-      run: npx dprint fmt --allow-no-files {staged_files}
+      run: npm run format --workspace=ts-plus-plus
       stage_fixed: true
     lint:
       glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
-      run: npx eslint --cache --cache-location ./.eslintcache --report-unused-disable-directives --max-warnings 0 {staged_files}
+      run: npm run lint --workspace=ts-plus-plus
     knip:
       run: npm run knip

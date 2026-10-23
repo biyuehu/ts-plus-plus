@@ -5,6 +5,9 @@
   "version": "0.0.1",
   "publisher": "tspp-local",
   "private": true,
+  "dependencies": {
+    "vscode-languageclient": "9.0.1"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },

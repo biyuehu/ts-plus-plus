@@ -1,6 +1,6 @@
 {
-  "typescript.tsdk": "../../built/local/lib",
+  "typescript.tsdk": "../../compiler/built/local/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "js/ts.tsdk.path": "../../built/local/lib",
+  "js/ts.tsdk.path": "../../compiler/built/local/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true
 }

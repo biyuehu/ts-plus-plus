@@ -2,7 +2,7 @@
 // contents into your existing settings.
 {
   // To use the locally built compiler, after 'npm run build':
-  // "typescript.tsdk": "built/local/lib"
+  // "typescript.tsdk": "packages/compiler/built/local/lib"
 
   // Enables dprint formatting on all supported files. We explicitly list
   // languages here to ensure that these are more specific than those in a

@@ -101,7 +101,7 @@ worker starts answering with stock-TS diagnostics, this patch is the first suspe
 ## Development
 
 ```pwsh
-npm run spike        # phase 0 feasibility spike (expects the root compiler in ../../built/local)
+npm run spike        # phase 0 feasibility spike (expects packages/compiler/built/local)
 npm run worker-spike # drives TsppWorker with a mock worker context, no browser (expects public/vendor/typescript.js)
 npm run bundle       # build the browser ESM compiler bundle from the main repo sources -> public/vendor/typescript.js
 npm run bundle:dev   # same, but -> public/typescript.dev.js (git-ignored) for ?ts=dev
@@ -109,7 +109,7 @@ npm run dev          # vite dev server (auto-repairs the monaco worker patch fir
 npm run build        # production build into dist/ (auto-repairs the patch first)
 ```
 
-The bundle steps take compiler sources from the monorepo root (`../..`); override it with
+The bundle steps take compiler sources from the sibling compiler package (`../compiler`); override it with
 `TSPP_REPO=<path>`, and the load spike's
 bundle with `TSPP_BUNDLE=<path to typescript.js>`.
 
@@ -119,7 +119,7 @@ The deployed site always runs the committed `public/vendor/typescript.js`, which
 from `tspp-lang/tspp` main on every push. To test a local compiler change in the playground:
 
 ```pwsh
-# in packages/playground; TSPP_REPO defaults to the monorepo root
+# in packages/playground; TSPP_REPO defaults to ../compiler
 npm run bundle:dev   # ~30s: esbuild straight from the main repo's TypeScript sources
 npm run dev          # then open http://localhost:5173/?ts=dev
 ```
@@ -133,7 +133,7 @@ Production builds ignore the query param; the committed bundle always ships.
 
 Push to `main` or `master` runs the root
 `.github/workflows/playground.yml`: install the compiler and playground dependencies,
-build the root compiler, regenerate the compiler bundle and examples from this checkout,
+build the compiler package, regenerate the compiler bundle and examples from this checkout,
 build the Vite app, and publish `packages/playground/dist` to Pages. Pages CDN propagation
 can lag a few minutes after a green run—a 404 on a freshly renamed chunk is propagation,
 not breakage; retry with a cache-bust query and verify new behavior by marker strings

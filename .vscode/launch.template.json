@@ -82,7 +82,7 @@
         "bdd",
         "--no-timeouts",
         "--colors",
-        "built/local/run.js",
+        "packages/compiler/built/local/run.js",
         "-f",
         // You can change this to be the name of a specific test file (without the file extension)
         // to consistently launch the same test
@@ -94,9 +94,9 @@
         "NODE_ENV": "development"
       },
       "outFiles": [
-        "${workspaceFolder}/built/**/*.js",
-        "${workspaceFolder}/built/**/*.mjs",
-        "${workspaceFolder}/built/**/*.cjs",
+        "${workspaceFolder}/packages/compiler/built/**/*.js",
+        "${workspaceFolder}/packages/compiler/built/**/*.mjs",
+        "${workspaceFolder}/packages/compiler/built/**/*.cjs",
         "!**/node_modules/**"
       ],
       "sourceMaps": true,

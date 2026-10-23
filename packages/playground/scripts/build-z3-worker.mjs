@@ -14,8 +14,8 @@
  * The wasm binary is fetched at init time from z3WasmUrl and handed to emscripten
  * via moduleOverrides.instantiateWasm (no XHR path, no cross-origin script load).
  *
- * Source: the tspp compiler checkout's node_modules/z3-solver (TSPP_REPO env or
- * the monorepo root), written to public/vendor/z3.worker.js.
+ * Source: the TS++ compiler package's z3-solver dependency (TSPP_REPO env or
+ * packages/compiler), written to public/vendor/z3.worker.js.
  */
 import { createRequire } from "node:module";
 import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
@@ -23,8 +23,9 @@ import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const mainRepo = process.env.TSPP_REPO ? resolve(process.env.TSPP_REPO) : join(root, "..", "..");
-const z3Build = join(mainRepo, "node_modules", "z3-solver", "build");
+const compilerRoot = process.env.TSPP_REPO ? resolve(process.env.TSPP_REPO) : join(root, "..", "compiler");
+const requireFromCompiler = createRequire(join(compilerRoot, "package.json"));
+const z3Build = dirname(requireFromCompiler.resolve("z3-solver"));
 const vendorDir = join(root, "public", "vendor");
 const outfile = join(vendorDir, "z3.worker.js");
 
@@ -33,8 +34,7 @@ if (!existsSync(join(z3Build, "browser.js"))) {
   process.exit(1);
 }
 
-const requireFromMain = createRequire(join(mainRepo, "package.json"));
-const esbuild = requireFromMain("esbuild");
+const esbuild = requireFromCompiler("esbuild");
 
 mkdirSync(vendorDir, { recursive: true });
 // The wasm binary ships next to the worker; the worker fetches it at init time
@@ -167,11 +167,13 @@ await esbuild.build({
   sourcemap: false,
   sourcesContent: false,
   legalComments: "none",
-  // z3-built.js's Node tail requires worker_threads, but its own isNode guard
+  // z3-built.js's Node tail requires these modules, but its own isNode guard
   // (`typeof process.versions.node == "string"`) is dead in a web worker — the
   // require call sits inside `if (isNode)`. Stub the module to keep esbuild happy.
   alias: {
-    worker_threads: "./scripts/empty-worker-threads.js",
+    fs: join(root, "scripts", "empty-worker-threads.js"),
+    path: join(root, "scripts", "empty-worker-threads.js"),
+    worker_threads: join(root, "scripts", "empty-worker-threads.js"),
   },
   logLevel: "info",
 });

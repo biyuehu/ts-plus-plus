@@ -11,8 +11,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const mainRepo = process.env.TSPP_REPO ?? join(root, "..", "..");
-const entry = join(mainRepo, "src", "typescript", "typescript.ts");
+const compilerRoot = process.env.TSPP_REPO ?? join(root, "..", "compiler");
+const entry = join(compilerRoot, "src", "typescript", "typescript.ts");
 // --dev: write typescript.dev.js into public/ (git-ignored) for the ?ts=dev
 // local-compiler workflow; default: the deployed public/vendor/typescript.js
 // (public/ so `vite build` copies it verbatim into dist/)
@@ -25,8 +25,8 @@ if (!existsSync(entry)) {
   process.exit(1);
 }
 
-const requireFromMain = createRequire(join(mainRepo, "package.json"));
-const esbuild = requireFromMain("esbuild");
+const requireFromCompiler = createRequire(join(compilerRoot, "package.json"));
+const esbuild = requireFromCompiler("esbuild");
 
 mkdirSync(outDir, { recursive: true });
 

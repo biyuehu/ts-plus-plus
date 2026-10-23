@@ -5,8 +5,8 @@ on:
   push:
     branches: [master]
     paths:
-      - 'src/**'
-      - 'scripts/**'
+      - 'packages/compiler/src/**'
+      - 'packages/compiler/scripts/**'
   schedule:
     - cron: '0 0 * * 1'
 
@@ -30,7 +30,7 @@ jobs:
       - name: Generate contributors
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/generate-contributors.mjs
+        run: node packages/compiler/scripts/generate-contributors.mjs
 
       - name: Commit and push changes
         run: |
