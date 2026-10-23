@@ -55,9 +55,15 @@ export function getDefaultSandboxCompilerOptions(
     emitDecoratorMetadata: true,
     moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
 
-    target: monaco.languages.typescript.ScriptTarget.ES2017,
-    jsx: monaco.languages.typescript.JsxEmit.React,
-    module: monaco.languages.typescript.ModuleKind.ESNext,
+    // tspp fork: upstream defaults target to ES2017; TS++ examples lean on features
+    // down to ES2020 (nullish coalescing, optional chaining, BigInt literals)
+    target: monaco.languages.typescript.ScriptTarget.ES2020,
+    // tspp fork: upstream defaults jsx to React; TS++ is a language playground where
+    // JSX is off-topic, so start from None (users can still switch in TS Config)
+    jsx: monaco.languages.typescript.JsxEmit.None,
+    // tspp fork: upstream defaults module to ESNext; CommonJS makes Run work out of
+    // the box (see the Run wrapper in sidebar/runtime.ts)
+    module: monaco.languages.typescript.ModuleKind.CommonJS,
   }
 
   if (major >= 5) {
@@ -97,9 +103,14 @@ export const getCompilerOptionsFromParams = (
       // @ts-ignore
       const flagExists = ts.optionDeclarations.find(opt => opt.name === key)
       if (flagExists) {
-        let realValue: number | boolean = true
-        if (val === "false") realValue = false
-        if (!isNaN(parseInt(val, 10))) realValue = parseInt(val, 10)
+        let realValue: any = true
+        if (flagExists.type === "list" || Array.isArray(playgroundDefaults[key])) {
+          realValue = val.split(",").map(s => s.trim()).filter(Boolean)
+        } else if (val === "false") {
+          realValue = false
+        } else if (!isNaN(parseInt(val, 10))) {
+          realValue = parseInt(val, 10)
+        }
         returnedOptions[key] = realValue
       }
     }
@@ -118,9 +129,13 @@ export const createURLQueryWithCompilerOptions = (_sandbox: any, paramOverrides?
   const compilerOptions = sandbox.getCompilerOptions()
   const compilerDefaults = sandbox.compilerDefaults
   const diff = Object.entries(compilerOptions).reduce((acc, [key, value]) => {
-    if (value !== compilerDefaults[key]) {
+    const isArr = Array.isArray(value) || Array.isArray(compilerDefaults[key])
+    const isDifferent = isArr
+      ? JSON.stringify(value ?? []) !== JSON.stringify(compilerDefaults[key] ?? [])
+      : value !== compilerDefaults[key]
+    if (isDifferent) {
       // @ts-ignore
-      acc[key] = compilerOptions[key]
+      acc[key] = Array.isArray(value) ? value.join(",") : compilerOptions[key]
     }
 
     return acc

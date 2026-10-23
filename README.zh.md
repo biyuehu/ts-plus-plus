@@ -18,6 +18,17 @@ TS++ 以 [TypeScript 6.0.3 的 `050880ce` 源码快照](https://github.com/micro
 
 所有扩展都需要在 `tsppconfig.json` 中逐项手工开启。没有 `tsppconfig.json` 时，全部 TS++ 特性关闭，编译器行为与 TypeScript 一致；`.tspp` 和 `.d.tspp` 文件也不会参与项目发现或模块解析。
 
+## Monorepo 结构
+
+仓库根目录本身就是 `ts-plus-plus` 编译器包，以便目录结构继续与 TypeScript 上游保持一致。配套包位于 `packages/`：
+
+- `language-server`：TS++ 的 Language Server Protocol 实现；
+- `vscode-extension`：仓库内使用的 VS Code 开发扩展；
+- `examples`：编译器和编辑器示例；
+- `playground`：浏览器游乐场及其 TypeScript Playground 上游基线。
+
+在根目录运行 `npm ci` 可安装编译器和 npm workspaces 的依赖。语言服务器保留上游的 pnpm 锁文件，`npm run build:language-server` 会负责调用它；游乐场保留自己的应用锁文件，可用 `npm --prefix packages/playground ci` 安装。运行 `npm run build:all` 可构建编译器、语言服务器、测试和游乐场。
+
 ## 贡献者
 
 <!-- markdownlint-disable -->

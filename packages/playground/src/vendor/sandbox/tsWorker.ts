@@ -1,4 +1,6 @@
-import ts from "typescript"
+// tspp fork: type-only import; the worker implementation is our TsppWorker
+// (src/worker/tsppWorkerClass.js), wired through MonacoEnvironment.getWorker.
+import type ts from "typescript"
 
 export declare class TypeScriptWorker implements ts.LanguageServiceHost {
   private _ctx

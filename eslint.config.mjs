@@ -34,6 +34,7 @@ export default tseslint.config(
       "coverage/**",
       "packages/examples/**/dist/**",
       "packages/language-server/**",
+      "packages/playground/**",
     ],
   },
   eslint.configs.recommended,

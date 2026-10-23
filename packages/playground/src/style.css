@@ -1,0 +1,223 @@
+/* tspp playground: minimal additions on top of the vendored official CSS
+   (src/vendor/playground.css, compiled from TypeScript-Website's play.scss). */
+
+/* the official site loads bootstrap's reboot, which the vendored play.scss
+   assumes (padding-inside-width boxes, e.g. .dropdown-dialog width:800px + padding) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --code-font: Consolas, Monaco, "Courier New", monospace;
+  --brand-primary: #2bcbd6;
+  --brand-primary-dark: #1eaeb9;
+  --brand-primary-light: #5debf4;
+  --brand-surface-dark: #121f24;
+  --brand-header-dark: #0d171b;
+  --brand-sidebar-dark: #132227;
+  --brand-border-dark: #1d333a;
+
+  --brand-surface-light: #f0f7f8;
+  --brand-header-light: #e4f2f4;
+  --brand-sidebar-light: #ecf6f8;
+  --brand-border-light: #d0e7eb;
+}
+
+/* Playground brand accent: Teal (#2BCBD6) & Custom Chrome Backgrounds */
+.dark-theme {
+  --link-color: #2bcbd6 !important;
+  --blue-tinged-bg: #162c2f !important;
+  --blue-tinged-strong: #1e3f43 !important;
+  --sidebar-list-active-background-color: #1a3539 !important;
+  --playground-dragbar-bg: var(--brand-sidebar-dark) !important;
+  --playground-dragbar-border: var(--brand-border-dark) !important;
+  --playground-dropdown-bg: var(--brand-sidebar-dark) !important;
+  --playground-dropdown-border: var(--brand-border-dark) !important;
+  --playground-toolbar-hover-bg: #192d34 !important;
+  --raised-background-color: var(--brand-surface-dark) !important;
+}
+
+html,
+html.light-theme {
+  --link-color: #148b94 !important;
+  --blue-tinged-bg: #e6f8f9 !important;
+  --blue-tinged-strong: #cbf0f3 !important;
+  --sidebar-list-active-background-color: #daf3f5 !important;
+  --playground-dragbar-bg: var(--brand-sidebar-light) !important;
+  --playground-dragbar-border: var(--brand-border-light) !important;
+  --playground-dropdown-bg: var(--brand-sidebar-light) !important;
+  --playground-dropdown-border: var(--brand-border-light) !important;
+  --playground-toolbar-hover-bg: #d7ebed !important;
+  --raised-background-color: var(--brand-surface-light) !important;
+}
+
+html,
+body {
+  background: #0d171b;
+  color: #d4d4d4;
+}
+
+/* Top Header Bar */
+main > nav.navbar-sub {
+  background-color: var(--brand-header-dark);
+  border-bottom: 1px solid var(--brand-border-dark);
+  padding: 0 0.5rem;
+}
+
+/* Editor toolbar (below top nav, above Monaco) */
+#playground-container #editor-container #editor-toolbar {
+  background-color: var(--brand-header-dark);
+  border-bottom: 1px solid var(--brand-border-dark);
+}
+
+#playground-container #editor-container #editor-toolbar ul.right {
+  background-color: var(--brand-header-dark) !important;
+}
+
+/* Right Sidebar Background & Border */
+#playground-container .playground-sidebar {
+  background-color: var(--brand-sidebar-dark) !important;
+  border-left: 1px solid var(--brand-border-dark);
+}
+
+/* Header & brand title styling */
+.navbar-sub li.name {
+  display: flex;
+  align-items: center;
+  width: auto !important;
+  padding-right: 1rem;
+}
+.navbar-sub li.name .brand-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  margin-left: 0.5rem;
+  object-fit: cover;
+}
+.navbar-sub li.name span {
+  padding-top: 0 !important;
+  padding-left: 0.6rem !important;
+  color: var(--brand-primary);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Navbar links hover & interactive accents */
+.navbar-sub li a {
+  color: #c5d3d7;
+}
+
+.navbar-sub li a:hover {
+  color: var(--brand-primary);
+}
+
+.navbar-sub li.dropdown ul.dropdown-menu.versions li.beta {
+  color: var(--brand-primary) !important;
+}
+
+/* Dropdown menus & dialogs */
+.navbar-sub li.dropdown ul.dropdown-menu {
+  background-color: var(--brand-sidebar-dark);
+  border: 1px solid var(--brand-border-dark);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.navbar-sub li.dropdown ul.dropdown-menu a {
+  color: #d4d4d4;
+}
+
+.navbar-sub li.dropdown ul.dropdown-menu li:hover {
+  background-color: rgba(43, 203, 214, 0.12);
+  color: var(--brand-primary);
+}
+
+/* Loader animation */
+#loader .lds-grid div {
+  background: var(--brand-primary) !important;
+}
+
+/* Restart required notification & loaders */
+#playground-container .playground-sidebar .playground-plugin-container #restart-required {
+  border-color: var(--brand-primary) !important;
+  color: var(--brand-primary) !important;
+}
+
+/* Active sidebar tab underline and text */
+#playground-container .playground-sidebar .playground-plugin-tabview {
+  border-bottom: 1px solid var(--brand-border-dark);
+  padding-bottom: 8px;
+}
+
+#playground-container .playground-sidebar .playground-plugin-tabview button {
+  color: #9ab1b7;
+}
+
+#playground-container .playground-sidebar .playground-plugin-tabview button.active {
+  border-bottom: 2px solid var(--brand-primary) !important;
+  color: var(--brand-primary) !important;
+}
+
+#playground-container .playground-sidebar .playground-plugin-tabview button:hover {
+  color: var(--brand-primary-light);
+}
+
+/* Sidebar navigation selection */
+#playground-container #navigation-container ul li.selectable.selected {
+  background-color: var(--blue-tinged-strong) !important;
+  border-left: 3px solid var(--brand-primary);
+}
+
+/* Config dialog links and close button */
+.navbar-sub li.dropdown .dropdown-dialog {
+  background-color: var(--brand-sidebar-dark) !important;
+  border: 1px solid var(--brand-border-dark);
+}
+
+.navbar-sub li.dropdown .dropdown-dialog a {
+  color: var(--brand-primary) !important;
+}
+
+button.examples-close {
+  background-color: var(--brand-primary) !important;
+  color: #0b1a1c !important;
+  font-weight: 700;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* the TS++ Features sidebar plugin */
+.tspp-feature-option {
+  cursor: pointer;
+}
+.tspp-feature-option input {
+  margin-right: 4px;
+  vertical-align: middle;
+  accent-color: var(--brand-primary);
+}
+/* dependency-enabled (not hand-checked): grayed, not directly toggleable */
+.tspp-feature-option.tspp-feature-implicit {
+  color: #6d858b;
+  cursor: help;
+}
+.tspp-feature-option.tspp-feature-implicit span {
+  font-style: italic;
+}
+
+/* example links inside the examples dropdown */
+#examples-list {
+  display: block;
+  padding: 1rem;
+}
+#examples-list a.example-link {
+  display: block;
+  padding: 6px 10px;
+  color: var(--link-color, #2bcbd6);
+}
+#examples-list a.example-link:hover {
+  background: rgba(43, 203, 214, 0.12);
+  color: var(--brand-primary-light);
+}

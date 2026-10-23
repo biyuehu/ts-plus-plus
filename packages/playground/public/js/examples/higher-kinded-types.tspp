@@ -1,0 +1,82 @@
+// 本示例从普通类型开始，逐步展示 TS++ 的 kind、高阶类型和类型宇宙。
+
+// 1. Type 是 Type0 的兼容写法。
+// number、string、数组和元组等普通 TypeScript 类型都位于 Type0。
+type NumberAtType0: Type0 = number;
+type StringAtType: Type = string;
+
+// 2. 普通泛型别名会从类型参数推导出自己的 kind。
+// Pair 接受两个 Type0，最后产生一个 Type0，因此它的 kind 是：
+//     (Type0, Type0) => Type0
+type Pair<A, B> = [A, B];
+
+// 高阶类型参数可以接收 Pair 这样的“类型构造器”。
+type Apply2<F: (Type0, Type0) => Type0, A, B> = F<A, B>;
+type NamedAge = Apply2<Pair, string, number>;
+
+const namedAge: NamedAge = ["Ada", 36];
+
+// 3. 非泛型别名若要把类型构造器保存为一等类型值，需要手动标注 kind。
+// Arrays 不是具体的数组类型；它是一个等待类型参数的类型构造器。
+type Arrays: Type0 => Type0 = Array;
+type StringArray = Arrays<string>;
+
+// 4. 高阶类型参数让 Functor 可以抽象于 Array、Promise 等类型构造器。
+// 当前示例为 Array 提供一个 Functor 实现。
+interface Functor<F: Type0 => Type0> {
+    map<A, B>(fa: F<A>, fn: (value: A) => B): F<B>;
+}
+
+const arrayFunctor: Functor<Arrays> = {
+    map: (values, fn) => values.map(fn),
+};
+
+// map 从 number[] 和 number => string 推导出 labels 为 string[]。
+const labels = arrayFunctor.map<number, string>([1, 2, 3], value => `item-${value}`);
+const checkedLabels: StringArray = labels;
+
+labels.push("item-4");
+
+// 5. 类型宇宙本身也有类型：Type0 : Type1、Type1 : Type2，以此类推。
+// TypeN 没有固定的最大层级；编译器按需识别任意非负整数 N。
+type UniverseZero: Type1 = Type0;
+type UniverseOne: Type2 = Type1;
+
+// 宇宙别名在 kind 中会透明展开，所以下面等价于 Type0 => Type0。
+type ArraysThroughUniverseAlias: UniverseZero => UniverseZero = Array;
+type NumberArrayThroughUniverseAlias = ArraysThroughUniverseAlias<number>;
+
+// 类型宇宙可以作为受更高宇宙约束的类型参数传递。
+type IdentityAtOne<K: Type1>: Type1 = K;
+type PreservedType0: Type1 = IdentityAtOne<Type0>;
+
+// 6. 当前采用非累积宇宙：Type0 与 Type1 不会自动互相提升或兼容。
+// 以下是由 @ts-expect-error 保护的反例：它们必须持续产生预期错误。
+type LocalArray<T> = T[];
+// @ts-expect-error -- 缺少保存类型构造器所需的 kind 标注
+type MissingConstructorKind = LocalArray;
+type HigherKindedBox<F: Type0 => Type0> = F<string>;
+// @ts-expect-error -- string 的 kind 不是 Type0 => Type0
+type InvalidHigherKindedBox = HigherKindedBox<string>;
+// @ts-expect-error -- Type0 本身位于 Type1
+type InvalidUniverse: Type0 = Type0;
+// @ts-expect-error -- labels 的元素是 string
+labels.push(4);
+
+export { arrayFunctor, checkedLabels, labels, namedAge };
+export type {
+    Apply2,
+    Arrays,
+    ArraysThroughUniverseAlias,
+    Functor,
+    IdentityAtOne,
+    NamedAge,
+    NumberArrayThroughUniverseAlias,
+    NumberAtType0,
+    Pair,
+    PreservedType0,
+    StringArray,
+    StringAtType,
+    UniverseOne,
+    UniverseZero,
+};

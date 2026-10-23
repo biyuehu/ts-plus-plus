@@ -1,5 +1,8 @@
 import { PlaygroundPlugin, PluginFactory } from ".."
 import { showDTSPlugin } from "./showDTS"
+// tspp fork:
+import { showDTSPPPlugin } from "./showDTSPP"
+import { showVerificationPlugin } from "./showVerification"
 import { compiledJSPlugin } from "./showJS"
 import { showErrors } from "./showErrors"
 import { optionsPlugin } from "./plugins"
@@ -11,6 +14,9 @@ export const getPlaygroundPlugins = (): PluginFactory[] => {
   const defaults = []
   if (!localStorage.getItem("disable-sidebar-js")) defaults.push(compiledJSPlugin)
   if (!localStorage.getItem("disable-sidebar-dts")) defaults.push(showDTSPlugin)
+  // tspp fork:
+  if (!localStorage.getItem("disable-sidebar-dtspp")) defaults.push(showDTSPPPlugin)
+  if (!localStorage.getItem("disable-sidebar-verify")) defaults.push(showVerificationPlugin)
   if (!localStorage.getItem("disable-sidebar-err")) defaults.push(showErrors)
   if (!localStorage.getItem("disable-sidebar-run")) defaults.push(runPlugin)
   if (!localStorage.getItem("disable-sidebar-plugins")) defaults.push(optionsPlugin)
@@ -56,6 +62,19 @@ export const settingsPlugin: PluginFactory = (i, utils) => {
       display: i("play_sidebar_dts_title"),
       blurb: i("play_sidebar_dts_blurb"),
       flag: "disable-sidebar-dts",
+      emptyImpliesEnabled: true,
+    },
+    // tspp fork:
+    {
+      display: i("play_sidebar_dtspp_title"),
+      blurb: i("play_sidebar_dtspp_blurb"),
+      flag: "disable-sidebar-dtspp",
+      emptyImpliesEnabled: true,
+    },
+    {
+      display: "Verification Panel",
+      blurb: "Shows formal proof obligations (contracts, invariants) and their SMT-LIB",
+      flag: "disable-sidebar-verify",
       emptyImpliesEnabled: true,
     },
     {

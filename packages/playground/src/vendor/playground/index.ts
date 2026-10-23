@@ -26,7 +26,7 @@ import { settingsPlugin, getPlaygroundPlugins } from "./sidebar/settings"
 import { hideNavForHandbook, showNavForHandbook } from "./navigation"
 import { createTwoslashInlayProvider } from "./twoslashInlays"
 
-export { PluginUtils } from "./pluginUtils"
+export type { PluginUtils } from "./pluginUtils"
 
 export type PluginFactory = {
   (i: (key: string, components?: any) => string, utils: PluginUtils): PlaygroundPlugin
@@ -294,11 +294,11 @@ export const setupPlayground = (
   // Enable all submenus
   document.querySelectorAll("nav ul li").forEach(e => e.classList.add("active"))
 
-  const notWorkingInPlayground = ["3.1.6", "3.0.1", "2.8.1", "2.7.2", "2.4.1"]
+  // tspp fork: with a single bundled compiler there is nothing to list, so the
+  // version menu stays empty (the version label above still shows the real version)
+  const allVersions: string[] = []
 
-  const allVersions = ["Nightly", ...sandbox.supportedVersions.filter(f => !notWorkingInPlayground.includes(f))]
-
-  allVersions.forEach((v: string) => {
+  if (versionsMenu) allVersions.forEach((v: string) => {
     const li = document.createElement("li")
     const a = document.createElement("a")
     a.textContent = v

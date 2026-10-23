@@ -1,0 +1,173 @@
+// =============================================================================
+// 基础篇：从 TypeScript 类型到依赖函数
+// =============================================================================
+//
+// 本篇不要求了解类型论。请按顺序阅读，只需建立四个概念：
+//
+//   1. 值有类型，类型自己也有“类型”；
+//   2. `->` 声明一个可被右侧引用的名字；
+//   3. 类型族是“输入一个类型，输出另一个类型”的函数；
+//   4. 依赖函数类型可以连接普通 TypeScript 泛型函数。
+
+// -----------------------------------------------------------------------------
+// 1. 先区分“值”、“类型”和“宇宙”
+// -----------------------------------------------------------------------------
+//
+// 普通 TypeScript 中："hello" : string。左边是值，右边是类型。
+// MLTT 继续追问：`string` 这个类型属于什么？
+//
+//   普通值   : 普通类型
+//   普通类型 : Type0
+//   Type0    : Type1
+//   Type1    : Type2
+
+export type UniverseZero: Type1 = Type0;
+export type UniverseOne: Type2 = Type1;
+
+// 在 kind 标注中，旧写法 Type 等价于 Type0。
+export type LegacyKindAnnotation: Type = string;
+
+// 宇宙分层用来避免“包含自己的类型集合”引发矛盾。
+// 入门时只需记住：普通 TS 类型位于 Type0。
+
+// -----------------------------------------------------------------------------
+// 2. 在编辑器里观察规范形（Normalized）
+// -----------------------------------------------------------------------------
+//
+// TS++ Development Extension 可以把“源码中写出的类型”与“checker 计算完成后的
+// 规范形”放在一起看。请把鼠标悬停在下面的 `HoverToSeeNormalized` 类型名上：
+//
+//   Normalized: `string` · Kind: `Type0`
+//
+// 这里源码右侧写的是别名 `TextAlias`，checker 展开别名后得到 `string`，两段文本
+// 不同，因此扩展显示 Normalized 提示。以后遇到 `If`、`NatAdd`、`NatElim`、
+// `match mltt`、类型应用或其他可归约类型时，也可以用同样方法观察计算结果。
+type TextAlias = string;
+export type HoverToSeeNormalized: Type0 = TextAlias;
+
+// 再把鼠标悬停在 `AlreadyNormalized` 上。这里不会出现额外的 Normalized 提示：
+// 源码已经直接写成 `string`，与 checker 给出的规范形相同。扩展会主动隐藏重复信息，
+// 但语言服务器原有的普通 TypeScript 类型悬浮仍然存在。
+export type AlreadyNormalized: Type0 = string;
+
+// 出现 Normalized 提示需要同时满足：
+//
+//   1. 当前文件是已启用 TS++ 的 `.tspp` 文件，并且扩展能成功建立项目程序；
+//   2. 光标位于类型别名名称或一个可以独立查询的类型表达式上；
+//   3. 去掉无关空白后，源码文本与计算所得的规范形确实不同。
+//
+// 以下情况不会出现额外提示：类型已经处于规范形、光标位于普通值表达式上、源码
+// 尚未完整到足以类型检查，或者相关实验特性没有在 tsppconfig.json 中启用。
+
+// -----------------------------------------------------------------------------
+// 3. `=>` 和 `->` 是两种不同的箭头
+// -----------------------------------------------------------------------------
+
+// 原有 TypeScript 函数类型使用 `=>`。
+export type OrdinaryStringFunction = (value: string) => string;
+
+// TS++ 依赖函数类型（Pi 类型）使用 `->`。
+export type PolymorphicIdentity: Type1 =
+  {A: Type0} -> (value: A) -> A;
+
+// 从左到右读：
+//
+//   1. 编译器推断一个普通类型，将它命名为 A；
+//   2. 再接收一个 A 类型的值；
+//   3. 结果仍然是 A。
+//
+// 右侧能引用左侧刚刚引入的 A，这就是“依赖”。
+// binder 是被引入的名字，例如这里的 A 和 value。`{A: Type0}` 是隐式
+// binder，`(value: A)` 是显式 binder；隐式参数使用 `{}`，显式参数使用 `()`。
+// `->` 从右向左结合，因此上面等价于：
+//
+//   {A: Type0} -> ((value: A) -> A)
+
+// 右侧不引用 binder 时，它退化成非依赖形式。
+export type ConstantTypeFunction: Type1 =
+  (A: Type0) -> (B: Type0) -> A;
+
+// -----------------------------------------------------------------------------
+// 4. 类型族与类型应用
+// -----------------------------------------------------------------------------
+//
+// 类型族可以理解为类型层的函数。
+// `(A: Type0) -> Type0` 接收一个普通类型，并产生一个普通类型。
+export type TypeFamilyShape: Type1 =
+  (A: Type0) -> Type0;
+
+// F<A> 是类型应用：把类型 A 交给类型族 F。
+export type ApplyTypeFamily: Type1 =
+  (F: (A: Type0) -> Type0) ->
+  (A: Type0) ->
+  F<A>;
+
+export type ApplyFamilyToString: Type1 =
+  (F: (A: Type0) -> Type0) ->
+  F<string>;
+
+// -----------------------------------------------------------------------------
+// 5. 它如何和运行时 TypeScript 连接
+// -----------------------------------------------------------------------------
+
+// 实现仍然是普通 TypeScript，不需要新的 JavaScript 语法。
+const ordinaryIdentity = <A>(value: A): A => value;
+
+// 显式注解的 TS 泛型函数可赋给等价的 Pi 类型。
+export const identity: PolymorphicIdentity = ordinaryIdentity;
+
+// A 是编译期类型参数，运行时只传入 value。
+// 不写显式类型参数时，仍使用 TypeScript 原有的推断。
+export const explicitResult = identity<string>("explicit");
+export const inferredResult = identity("inferred");
+
+// 隐式 binder 可以和显式 binder 交替书写；调用边界会把所有 `{}` binder
+// 收集为泛型，把所有 `()` binder 保持为实际参数。
+export type SelectRight: Type1 =
+  {A: Type0} -> (left: A) -> {B: Type0} -> (right: B) -> B;
+export declare const selectRight: SelectRight;
+
+// `auto` 只在调用的类型实参列表中表示“这一项继续推断”。这里固定 B=string，
+// A 仍从第一个实际参数推断。
+export const partiallyExplicitResult = selectRight<auto, string>(1, "right");
+
+// `()` 中的 Type0 binder 是运行时参数。`reify T` 把类型 T 变成可传递的
+// descriptor，同时保留 T 的静态信息，因此后续 value 仍会按 T 检查。
+export type RuntimeTypedIdentity: Type1 =
+  (A: Type0) -> (value: A) -> A;
+export declare const runtimeTypedIdentity: RuntimeTypedIdentity;
+
+export const stringRuntimeType = reify string;
+export const runtimeTypedResult = runtimeTypedIdentity(stringRuntimeType, "runtime");
+
+// reify 也接受尚未应用的类型构造器；这里得到的是 Array 本身的 descriptor，
+// 而不是 Array<unknown> 或某个具体数组类型。
+export const arrayRuntimeConstructor = reify Array;
+export const stringArrayRuntimeType = reify Array<string>;
+
+// 具体 descriptor 可以直接参与表达式级 MLTT 匹配。infer E 既控制分支选择，
+// 也能在命中分支的类型位置使用；这里的结果类型是 string[]。
+export const matchedRuntimeArray = match mltt stringArrayRuntimeType {
+  Array<infer E> => [] as E[],
+  _ => [] as never[]
+};
+
+// -----------------------------------------------------------------------------
+// 6. MLTT binder 可以包住普通 TypeScript 类型
+// -----------------------------------------------------------------------------
+//
+// TS++ 没有抛弃 TypeScript 的类型系统。object、union、keyof、mapped type
+// 仍由原来的 TS checker 解释；MLTT 只负责外层 binder、应用、归约和宇宙。
+
+type Box<T> = { value: T };
+export type BoxFamily: Type1 = (A: Type0) -> Box<A>;
+export type UnionFamily: Type1 = (A: Type0) -> A | undefined;
+export type KeyFamily: Type1 = (A: Type0) -> keyof A;
+
+// binder 名只是给人看的。下面两种写法绑定关系相同，因此定义相等。
+export type IdentityWithA: Type1 = (A: Type0) -> (value: A) -> A;
+export type IdentityWithT: Type1 = (T: Type0) -> (item: T) -> T;
+
+// “定义相等”不是一个需要手写证明的命题；它是 checker 判断两个表达式
+// 经过改名和计算后是否为同一类型的规则。下一篇会用 Bool 的计算规则
+// 给出第一个可以直接观察的例子。

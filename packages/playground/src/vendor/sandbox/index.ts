@@ -10,9 +10,9 @@ import lzstring from "./vendor/lzstring.min"
 import { supportedReleases } from "./release_data"
 import { getInitialCode } from "./getInitialCode"
 import { extractTwoSlashCompilerOptions, twoslashCompletions } from "./twoslashSupport"
-import * as tsvfs from "./vendor/typescript-vfs"
-import { setupTypeAcquisition } from "./vendor/ata/index"
-
+// tspp fork: @typescript/vfs and typescript-ata (type acquisition) are dropped.
+// tspp playgrounds don't use npm @types (the compiler bundle carries its own libs),
+// and the AST sidebar plugin is disabled, so the main-thread VFS program isn't needed.
 type CompilerOptions = import("monaco-editor").languages.typescript.CompilerOptions
 type Monaco = typeof import("monaco-editor")
 
@@ -26,7 +26,7 @@ export type SandboxConfig = {
   /** @deprecated */
   useJavaScript?: boolean
   /** The default file for the playground  */
-  filetype: "js" | "ts" | "d.ts"
+  filetype: "js" | "ts" | "d.ts" | "tspp"
   /** Compiler options which are automatically just forwarded on */
   compilerOptions: CompilerOptions
   /** Optional monaco settings overrides */
@@ -99,7 +99,8 @@ export function defaultPlaygroundSettings() {
 
 function defaultFilePath(config: SandboxConfig, compilerOptions: CompilerOptions, monaco: Monaco) {
   const isJSX = compilerOptions.jsx !== monaco.languages.typescript.JsxEmit.None
-  const ext = isJSX && config.filetype !== "d.ts" ? config.filetype + "x" : config.filetype
+  // tspp fork: ".tspp" files never get the "x" (JSX) suffix
+  const ext = isJSX && config.filetype !== "d.ts" && config.filetype !== "tspp" ? config.filetype + "x" : config.filetype
   return "input." + ext
 }
 
@@ -181,6 +182,16 @@ export const createTypeScriptSandbox = (
     diagnosticCodesToIgnore: [2354],
   })
 
+  // tspp fork: formal-contract diagnostics (18090) are owned by the playground's
+  // verification sync loop (see boot.ts), which writes markers from the same worker
+  // the Verify tab reads. The ts DiagnosticsAdapter here must not duplicate them
+  // from its own worker instance, so its validation filters the code out. 18090 is
+  // a TS++-specific code — the stock compiler never emits it.
+  defaults.setDiagnosticsOptions({
+    ...defaults.getDiagnosticsOptions(),
+    diagnosticCodesToIgnore: [2354, 18090],
+  })
+
   // In the future it'd be good to add support for an 'add many files'
   const addLibraryToRuntime = (code: string, _path: string) => {
     const path = "file://" + _path
@@ -205,23 +216,8 @@ export const createTypeScriptSandbox = (
     )
   }
 
-  const ata = setupTypeAcquisition({
-    projectName: "TypeScript Playground",
-    typescript: ts,
-    logger: console,
-    delegate: {
-      receivedFile: addLibraryToRuntime,
-      progress: (downloaded: number, total: number) => {
-        // console.log({ dl, ttl })
-      },
-      started: () => {
-        console.log("ATA start")
-      },
-      finished: f => {
-        console.log("ATA done")
-      },
-    },
-  })
+  // tspp fork: ATA removed — no-op
+  const ata = (_code: string) => {}
 
   const textUpdated = () => {
     const code = editor.getModel()!.getValue()
@@ -326,6 +322,14 @@ export const createTypeScriptSandbox = (
     return result.outputFiles.find((o: any) => isDtsFile(o.name))?.text || ""
   }
 
+  // tspp fork: the compiler emits TS++ declarations as .d.tspp (never .d.ts), which
+  // isDtsFile does not match — expose the raw .d.tspp output for its own sidebar tab
+  /** Gets the .d.tspp declaration output for the TS++ code in the editor */
+  const getDTSPPForCode = async () => {
+    const result = await getEmitResult(/*emitOnlyDtsFiles*/ undefined, /*forceDtsEmit*/ true)
+    return result.outputFiles.find((o: any) => o.name.endsWith(".d.tspp"))?.text || ""
+  }
+
 
   const getWorkerProcess = async (): Promise<TypeScriptWorker> => {
     const worker = await getWorker()
@@ -338,28 +342,11 @@ export const createTypeScriptSandbox = (
   const getText = () => getModel().getValue() || ""
   const setText = (text: string) => getModel().setValue(text)
 
-  const setupTSVFS = async (fsMapAdditions?: Map<string, string>) => {
-    const fsMap = await tsvfs.createDefaultMapFromCDN(compilerOptions, ts.version, true, ts, lzstring)
-    fsMap.set(filePath.path, getText())
-    if (fsMapAdditions) {
-      fsMapAdditions.forEach((v, k) => fsMap.set(k, v))
-    }
-
-    const system = tsvfs.createSystem(fsMap)
-    const host = tsvfs.createVirtualCompilerHost(system, compilerOptions, ts)
-
-    const program = ts.createProgram({
-      rootNames: [...fsMap.keys()],
-      options: compilerOptions,
-      host: host.compilerHost,
-    })
-
-    return {
-      program,
-      system,
-      host,
-      fsMap,
-    }
+  // tspp fork: the main-thread VFS/program helpers were removed with @typescript/vfs.
+  // The worker-based APIs (getEmitResult / getRunnableJS / getDTSForCode) cover the
+  // sidebar plugins; the AST plugin is not registered in this fork.
+  const setupTSVFS = async (_fsMapAdditions?: Map<string, string>) => {
+    throw new Error("setupTSVFS is not available in the tspp playground (vfs removed)")
   }
 
   /**
@@ -398,13 +385,15 @@ export const createTypeScriptSandbox = (
     /** Gets a monaco-typescript worker, this will give you access to a language server. Note: prefer this for language server work because it happens on a webworker . */
     getWorkerProcess,
     /** A copy of require("@typescript/vfs") this can be used to quickly set up an in-memory compiler runs for ASTs, or to get complex language server results (anything above has to be serialized when passed)*/
-    tsvfs,
+    // tspp fork: removed with the vfs
     /** Get all the different emitted files after TypeScript is run */
     getEmitResult,
     /** Gets just the JavaScript for your sandbox, will transpile if in TS only */
     getRunnableJS,
     /** Gets the DTS output of the main code in the editor */
     getDTSForCode,
+    /** tspp fork: Gets the .d.tspp declaration output of the main code in the editor */
+    getDTSPPForCode,
     /** The monaco-editor dom node, used for showing/hiding the editor */
     getDomNode,
     /** The model is an object which monaco uses to keep track of text in the editor. Use this to directly modify the text in the editor */

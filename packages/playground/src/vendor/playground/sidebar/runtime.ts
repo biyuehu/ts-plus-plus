@@ -175,7 +175,18 @@ function rewireLoggingToElement(
     const console = Object.assign({}, rawConsole, replace)
     try {
       const safeJS = sanitizeJS(js)
-      eval(safeJS)
+      // The upstream site compiles to AMD, where every module factory is
+      // define(["require","exports",...], function (require, exports, ...) — direct
+      // eval inside it resolves user code's `exports`/`require` to those factory
+      // params, so CommonJS-compiled samples "just work" there. This fork bundles
+      // with vite as ES modules, whose scope has neither binding, so provide them
+      // explicitly. Direct eval is deliberate: user code must see the shadowed
+      // `console` above. `require` is passed as a parameter (not a const) so user
+      // code declaring `var require` still parses; `module = { exports }` restores
+      // the real CommonJS invariant module.exports === exports.
+      eval(
+        `(function (exports, module, require) {\nmodule = { exports: exports };\n${safeJS}\nreturn module.exports;\n})({}, void 0, name => { throw new Error("require(" + JSON.stringify(name) + ") is not supported in the playground runtime") })`,
+      )
     } catch (error) {
       console.error(i("play_run_js_fail"))
       console.error(error)

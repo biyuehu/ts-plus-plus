@@ -22,8 +22,10 @@ export const getInitialCode = (fallback: string, location: Location) => {
     return userCode
   }
 
-  // Local copy fallback
-  if (localStorage.getItem("sandbox-history")) {
+  // Local copy fallback. An ?example=<id> URL must win over the history: it is
+  // an explicit request to see a specific example (see boot.ts), while the
+  // history is just the last thing the user had open.
+  if (!new URLSearchParams(location.search).get("example") && localStorage.getItem("sandbox-history")) {
     return localStorage.getItem("sandbox-history")!
   }
 

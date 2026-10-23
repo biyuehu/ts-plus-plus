@@ -1,0 +1,181 @@
+/**
+ * Builds public/vendor/z3.worker.js — a single-file classic-worker script that
+ * loads the z3-solver browser build and answers SMT-LIB queries over postMessage.
+ *
+ * Why a separate worker: the tspp language worker is an ES-module worker and the
+ * compiler bundle is runtime-fetched; Z3 is a 35 MB wasm + emscripten module that
+ * must not block the editor. A classic worker can also spawn Z3's pthread workers
+ * from its own blob URL. The main worker talks to it over postMessage:
+ *   -> { z3WasmUrl }                        (first message: where z3-built.wasm lives)
+ *   -> { id, inputs: string[] }             (inputs are raw SMT-LIB solverInput texts)
+ *   <- { kind: "ready" | "init-error" }
+ *   <- { id, ok, results | error }          (mirrors VerificationSolverResult shape)
+ *
+ * The wasm binary is fetched at init time from z3WasmUrl and handed to emscripten
+ * via moduleOverrides.instantiateWasm (no XHR path, no cross-origin script load).
+ *
+ * Source: the tspp compiler checkout's node_modules/z3-solver (TSPP_REPO env or
+ * the monorepo root), written to public/vendor/z3.worker.js.
+ */
+import { createRequire } from "node:module";
+import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
+import { join, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const mainRepo = process.env.TSPP_REPO ? resolve(process.env.TSPP_REPO) : join(root, "..", "..");
+const z3Build = join(mainRepo, "node_modules", "z3-solver", "build");
+const vendorDir = join(root, "public", "vendor");
+const outfile = join(vendorDir, "z3.worker.js");
+
+if (!existsSync(join(z3Build, "browser.js"))) {
+  console.error(`z3-solver not found at ${z3Build} (set TSPP_REPO to the main repo checkout)`);
+  process.exit(1);
+}
+
+const requireFromMain = createRequire(join(mainRepo, "package.json"));
+const esbuild = requireFromMain("esbuild");
+
+mkdirSync(vendorDir, { recursive: true });
+// The wasm binary ships next to the worker; the worker fetches it at init time
+// (see instantiateWasm below) instead of emscripten's XHR path.
+copyFileSync(join(z3Build, "z3-built.wasm"), join(vendorDir, "z3-built.wasm"));
+
+const entryText = `
+// ---- z3 query worker (classic worker script) --------------------------------
+// z3-solver's browser entry reads the bare Node global "global"; define it on
+// the worker global first (real web workers lack it).
+if (typeof global === "undefined") globalThis.global = globalThis;
+// The main bridge spawns this script from an object URL, but pthread workers
+// must re-enter the REAL same-origin script (emscripten pthreadMainJs comes
+// from _scriptName, which is undefined inside a blob worker). The bridge hands
+// the real URL over before the wasm init runs.
+self.z3WorkerUrl = self.z3WorkerUrl || null;
+
+const initZ3Module = require("./z3-built.js");
+globalThis.initZ3 = initZ3Module;
+
+// Pthread reentry: the emscripten module's own tail has already run its worker
+// bootstrap for this "em-pthread" worker synchronously above (initZ3 sets
+// self.onmessage = handleMessage2 and waits for the main worker's
+// {cmd:"load"}). Nothing else from this entry may run here — in particular the
+// query onmessage below would overwrite the pthread handler and deadlock the
+// pool. Everything after this guard is main-worker-only.
+const IS_EM_PTHREAD = typeof WorkerGlobalScope !== "undefined" && String(self.name || "").startsWith("em-pthread");
+
+const browserEntry = IS_EM_PTHREAD ? {} : require("./browser.js");
+const init = browserEntry.init;
+
+let apiPromise = null;
+let wasmUrl = null;
+
+function initApi() {
+  if (apiPromise) return apiPromise;
+  apiPromise = (async () => {
+    const response = await fetch(wasmUrl);
+    if (!response.ok) throw new Error("HTTP " + response.status + " fetching z3-built.wasm");
+    const wasmBytes = new Uint8Array(await response.arrayBuffer());
+    return init({
+      // emscripten derives the pthread entry from Module["mainScriptUrlOrBlob"]
+      // (pthreadMainJs = _scriptName would be undefined inside a blob worker,
+      // and new Worker(undefined) throws "not a valid URL"). This script runs
+      // from an object URL, so the bridge posts the real same-origin script
+      // URL and we hand it to emscripten here — pthread mains then re-run this
+      // bundle as classic workers, where the "em-pthread" name short-circuits
+      // them into emscripten's worker bootstrap before any of this runs.
+      mainScriptUrlOrBlob: self.z3WorkerUrl || undefined,
+      instantiateWasm(info, receiveInstance) {
+        WebAssembly.instantiate(wasmBytes, info).then(
+          pair => receiveInstance(pair.instance, pair.module),
+          error => { self.postMessage({ kind: "init-error", error: String((error && error.message) || error) }); },
+        );
+        // undefined return: emscripten waits for receiveInstance.
+      },
+    });
+  })();
+  return apiPromise;
+}
+
+// High-level Solver: long-running check() runs on pthread workers spawned from
+// this script's real URL (via the _scriptName override in initApi), which
+// requires cross-origin isolation. The playground boots coi-serviceworker
+// (see index.html) so SharedArrayBuffer is available even on GitHub Pages; the
+// high-level API also serializes concurrent checks through its async mutex.
+async function runQueries(inputs) {
+  const api = await initApi();
+  const context = new api.Context("tspp-verification");
+  const results = [];
+  for (const input of inputs) {
+    try {
+      const solver = new context.Solver();
+      solver.fromString(input);
+      const answer = await solver.check();
+      if (answer === "unsat") results.push({ status: "proved", message: "Z3 proved the obligation (negation unsat)." });
+      else if (answer === "sat") {
+        const model = solver.model().toString();
+        results.push({ status: "failed", message: "Z3 found a counterexample.", model });
+      }
+      else results.push({ status: "unknown", message: "Z3 returned unknown: " + solver.reasonUnknown() });
+    }
+    catch (error) {
+      results.push({ status: "error", message: (error && error.message) || String(error) });
+    }
+  }
+  return results;
+}
+
+if (!IS_EM_PTHREAD) {
+
+self.onmessage = async event => {
+  const data = event.data;
+  if (data && typeof data === "object" && typeof data.z3WasmUrl === "string") {
+    wasmUrl = data.z3WasmUrl;
+    if (typeof data.workerUrl === "string") self.z3WorkerUrl = data.workerUrl;
+    try {
+      await initApi();
+      self.postMessage({ kind: "ready" });
+    }
+    catch (error) {
+      self.postMessage({ kind: "init-error", error: String((error && error.message) || error) });
+    }
+    return;
+  }
+  if (!data || typeof data.id !== "number" || !Array.isArray(data.inputs)) return;
+  try {
+    const results = await runQueries(data.inputs);
+    self.postMessage({ id: data.id, ok: true, results });
+  }
+  catch (error) {
+    self.postMessage({ id: data.id, ok: false, error: String((error && error.message) || error) });
+  }
+};
+
+}
+`;
+
+await esbuild.build({
+  stdin: {
+    contents: entryText,
+    resolveDir: z3Build,
+    sourcefile: "z3-worker-entry.js",
+  },
+  outfile,
+  bundle: true,
+  format: "iife",
+  platform: "browser",
+  target: "es2020",
+  sourcemap: false,
+  sourcesContent: false,
+  legalComments: "none",
+  // z3-built.js's Node tail requires worker_threads, but its own isNode guard
+  // (`typeof process.versions.node == "string"`) is dead in a web worker — the
+  // require call sits inside `if (isNode)`. Stub the module to keep esbuild happy.
+  alias: {
+    worker_threads: "./scripts/empty-worker-threads.js",
+  },
+  logLevel: "info",
+});
+
+const kb = Math.round(statSync(outfile).size / 1024);
+const wasmMb = Math.round(statSync(join(vendorDir, "z3-built.wasm")).size / (1024 * 1024));
+console.log(`Bundled z3 worker -> public/vendor/z3.worker.js (${kb} KB) + z3-built.wasm (${wasmMb} MB, fetched at runtime)`);

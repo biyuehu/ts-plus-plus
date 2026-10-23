@@ -1,4 +1,5 @@
-import { getEffectiveConstraintOfTypeParameter } from "typescript"
+// tspp fork: a dead import of an internal compiler API was removed (the identifier
+// was unused here, and the tspp bundle doesn't ship it)
 import { PlaygroundPlugin } from "."
 
 type Sandbox = import("@typescript/sandbox").Sandbox

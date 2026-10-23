@@ -18,6 +18,21 @@ TS++ starts from the [TypeScript 6.0.3 source snapshot at `050880ce`](https://gi
 
 Language extensions are opt-in and are selected individually in `tsppconfig.json`. Without `tsppconfig.json`, every TS++ feature is disabled and the compiler behaves like TypeScript; `.tspp` and `.d.tspp` files do not participate in project discovery or module resolution.
 
+## Monorepo layout
+
+The repository root is the `ts-plus-plus` compiler package so its paths stay aligned with the
+TypeScript upstream tree. Supporting packages live under `packages/`:
+
+- `language-server` — the TS++ Language Server Protocol implementation;
+- `vscode-extension` — the repository-local VS Code development extension;
+- `examples` — runnable compiler and editor examples;
+- `playground` — the browser playground and its vendored TypeScript Playground baseline.
+
+Run `npm ci` at the root for the compiler and npm workspaces. The language server keeps its
+upstream pnpm lock (`npm run build:language-server` handles it), while the playground keeps its
+own application lock (`npm --prefix packages/playground ci`). Use `npm run build:all` to build
+the compiler, language server, tests, and playground.
+
 ## Contributors
 
 <!-- markdownlint-disable -->
