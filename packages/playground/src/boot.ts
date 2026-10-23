@@ -76,7 +76,7 @@ async function importFromUrl(url: string): Promise<TsppModule> {
   // compute the object URL in its own statement: vite's __vitePreload transform
   // cannot hoist an `await` that sits inside a dynamic import's argument
   const blobUrl = URL.createObjectURL(new Blob([await res.text()], { type: "text/javascript" }))
-  return import(blobUrl) as Promise<TsppModule>
+  return import(/* @vite-ignore */ blobUrl) as Promise<TsppModule>
 }
 let tspp: TsppModule
 try {

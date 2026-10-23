@@ -58,7 +58,9 @@ const compilerReady = (async () => {
   }
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} fetching ${url}`);
-  return import(URL.createObjectURL(new Blob([await res.text()], { type: "text/javascript" })));
+  return import(
+    /* @vite-ignore */ URL.createObjectURL(new Blob([await res.text()], { type: "text/javascript" })),
+  );
 })();
 
 compilerReady.then(tspp => {
