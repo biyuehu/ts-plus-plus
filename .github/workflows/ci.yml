@@ -18,83 +18,107 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: 22.22.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Check formatting
-        run: npm run format:check
+        run: pnpm format:check
       - name: Lint
-        run: npm run lint
+        run: pnpm lint
 
   knip:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: 22.22.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Unused exports
-        run: npm run knip
+        run: pnpm knip
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: 22.22.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Build src
-        run: npm run build:src --workspace=ts-plus-plus
+        run: pnpm --filter ts-plus-plus build:src
 
   self-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: 22.22.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Build tsc
-        run: npm run build:tsc --workspace=ts-plus-plus
+        run: pnpm --filter ts-plus-plus build:tsc
       - name: Clean
-        run: npm run clean:src --workspace=ts-plus-plus
+        run: pnpm --filter ts-plus-plus clean:src
       - name: Self build
-        run: npm run build:src:built --workspace=ts-plus-plus
+        run: pnpm --filter ts-plus-plus build:src:built
 
   tspp-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: 22.22.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Build compiler for macro workers
-        run: npm run build:compiler
+        run: pnpm build:compiler
       - name: TS++ unit tests
-        run: npm run test:tspp --workspace=ts-plus-plus
+        run: pnpm --filter ts-plus-plus test:tspp
 
   examples:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
+          node-version: 22.22.2
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - name: Build compiler
-        run: npm run build:compiler
+        run: pnpm build:compiler
       - name: Check examples
-        run: npm run check:examples
+        run: pnpm check:examples
 
   language-server:
     runs-on: ubuntu-latest
@@ -106,40 +130,41 @@ jobs:
           run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.22.2
           cache: pnpm
-          cache-dependency-path: packages/language-server/pnpm-lock.yaml
-      - run: pnpm --dir packages/language-server install --frozen-lockfile
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       - name: Typecheck
-        run: pnpm --dir packages/language-server typecheck
+        run: pnpm --filter tspp-language-server typecheck
       - name: Lint
-        run: pnpm --dir packages/language-server lint
+        run: pnpm --filter tspp-language-server lint
       - name: Tests
-        run: pnpm --dir packages/language-server test:commit
+        run: pnpm --filter tspp-language-server test:commit
       - name: Build
-        run: pnpm --dir packages/language-server build
+        run: pnpm --filter tspp-language-server build
 
   playground:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            packages/playground/package-lock.json
-      - run: npm ci
-      - run: npm --prefix packages/playground ci
+          node-version: 22.22.2
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       - name: Build compiler
-        run: npm run build:compiler
+        run: pnpm build:compiler
       - name: Generate compiler bundle and examples
         run: |
-          npm run playground:bundle
-          npm run playground:examples
+          pnpm playground:bundle
+          pnpm playground:examples
       - name: Build playground
-        run: npm run build:playground
+        run: pnpm build:playground
 
   # baselines:
   #   runs-on: ubuntu-latest
@@ -147,16 +172,16 @@ jobs:
   #     - uses: actions/checkout@v4
   #     - uses: actions/setup-node@v4
   #       with:
-  #         node-version: 22
-  #         cache: npm
-  #     - run: npm ci
+  #         node-version: 22.22.2
+  #         cache: pnpm
+  #     - run: pnpm install --frozen-lockfile
   #     - name: Remove all baselines
   #       run: rm -rf tests/baselines/reference
   #     - name: Run tests
-  #       run: npm test &> /dev/null || exit 0
+  #       run: pnpm test &> /dev/null || exit 0
   #     - name: Accept baselines
   #       run: |
-  #         npx hereby baseline-accept
+  #         pnpm exec hereby baseline-accept
   #         git add tests/baselines/reference
   #     - name: Check baselines
   #       run: git diff --staged --exit-code
@@ -179,12 +204,12 @@ jobs:
   #     - uses: actions/setup-node@v4
   #       with:
   #         node-version: ${{ matrix.config.node-version }}
-  #         cache: npm
-  #     - run: npm ci
+  #         cache: pnpm
+  #     - run: pnpm install --frozen-lockfile
   #     - name: Tests
   #       env:
   #         BUNDLE: ${{ matrix.config.bundle }}
-  #       run: npm run test -- --no-lint --bundle="$BUNDLE"
+  #       run: pnpm test -- --no-lint --bundle="$BUNDLE"
 
   required:
     runs-on: ubuntu-latest

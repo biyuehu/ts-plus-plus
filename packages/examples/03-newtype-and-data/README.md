@@ -123,8 +123,8 @@ const stolen: UserId = 1 as UserId;
 也可以在仓库根目录构建 compiler 后，进入本目录运行：
 
 ```powershell
-npm run check
-npm run emit-declarations
+pnpm check
+pnpm emit-declarations
 ```
 
 `index.tspp` 中的反例由 `// @ts-expect-error` 保护：它们会触发语言服务的诊断，同时仍能让整个示例通过检查。如果某个反例不再报错，编译器会报告该指令未使用。

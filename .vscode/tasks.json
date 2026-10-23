@@ -15,25 +15,28 @@
       ]
     },
     {
-      "label": "npm: build:compiler",
-      "type": "npm",
-      "script": "build:compiler",
+      "label": "pnpm: build:compiler",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["build:compiler"],
       "group": "build",
       "problemMatcher": [
         "$tsc"
       ]
     },
     {
-      "label": "npm: build:editor",
-      "type": "npm",
-      "script": "build:editor",
+      "label": "pnpm: build:editor",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["build:editor"],
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "npm: playground:debug",
-      "type": "npm",
-      "script": "playground:debug",
+      "label": "pnpm: playground:debug",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["playground:debug"],
       "isBackground": true,
       "problemMatcher": {
         "owner": "vite",
@@ -48,9 +51,10 @@
       }
     },
     {
-      "label": "npm: build:tests",
-      "type": "npm",
-      "script": "build:tests:notypecheck",
+      "label": "pnpm: build:tests",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["build:tests:notypecheck"],
       "group": "build",
       "problemMatcher": [
         "$tsc"

@@ -12,8 +12,8 @@ Because conditional export keys are order-sensitive, `tspp-types` appears before
 Run from this directory:
 
 ```powershell
-npm run build
-npm run check-ts-consumer
+pnpm build
+pnpm check-ts-consumer
 ```
 
 The consumer is compiled with the upstream TypeScript compiler. It sees the projected `UserId`, the discriminated `Lookup<T>` union, and the runtime constructors, but not TS++-only syntax.

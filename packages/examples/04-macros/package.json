@@ -5,7 +5,7 @@
   "scripts": {
     "check": "tspp --project tsppconfig.json",
     "clean": "node scripts/clean-dist.mjs",
-    "build": "npm run clean && tspp --project tsppconfig.json --noEmit false --declaration --rootDir src --outDir dist",
+    "build": "pnpm clean && tspp --project tsppconfig.json --noEmit false --declaration --rootDir src --outDir dist",
     "start": "node dist/02-transform.js && node dist/03-async.js && node dist/04-security-boundary.js && node dist/05-recursive-expansion.js"
   }
 }

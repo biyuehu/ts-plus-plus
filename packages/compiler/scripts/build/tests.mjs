@@ -151,7 +151,7 @@ export async function runConsoleTests(runJs, defaultReporter, runInParallel, opt
     finally {
       // Calculate coverage even if tests failed.
       if (coverage) {
-        await exec("npm", ["--prefer-offline", "exec", "--", "c8", "report", "--experimental-monocart"], { token: options.token });
+        await exec("pnpm", ["--prefer-offline", "exec", "c8", "report", "--experimental-monocart"], { token: options.token });
       }
     }
   }

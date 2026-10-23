@@ -5,9 +5,9 @@ This package contains the TS++ compiler, language services, build system, and co
 Run its commands from the repository root through the monorepo scripts:
 
 ```sh
-npm run build:compiler
-npm run build:tests
-npm test
+pnpm build:compiler
+pnpm build:tests
+pnpm test
 ```
 
 See the [repository README](../../README.md) for the language overview, examples, editor support, and playground.

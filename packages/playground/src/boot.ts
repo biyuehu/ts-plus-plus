@@ -10,7 +10,7 @@ import "./style.css"
 // find, ...). The official playground loads "vs/editor/editor.main"; importing plain
 // editor.api yields an editor without those features, and the sandbox's own lazy
 // imports of the contributions happen only after the editor was already created.
-import * as monaco from "monaco-editor/esm/vs/editor/editor.main.js"
+import * as monaco from "monaco-editor/editor/editor.main.js"
 
 // ---- compiler module selection -------------------------------------------------------------------------------
 // The compiler bundle is NOT bundled into the app: it is fetched at runtime (like the
@@ -19,7 +19,7 @@ import * as monaco from "monaco-editor/esm/vs/editor/editor.main.js"
 //   default       vendor/typescript.js (public/vendor/, committed, rebuilt by CI from
 //                 tspp-lang/tspp main on every site deploy)
 //   ?ts=dev       typescript.dev.js (public/typescript.dev.js, git-ignored; rebuild it
-//                 with `npm run bundle:dev` after editing the compiler, then reload)
+//                 with `pnpm bundle:dev` after editing the compiler, then reload)
 // This must run before MonacoEnvironment is installed: getWorker's closure below hands
 // the URL to each tspp worker. Resolved to an absolute URL because the worker would
 // otherwise resolve a relative specifier against its own chunk's location (assets/).
@@ -50,11 +50,11 @@ const compilerUrl = new URL(
 }
 // Register the "typescript" language id (monaco 0.57 moved basic-language
 // registrations under esm/vs/languages/definitions/<lang>/register.js).
-import "monaco-editor/esm/vs/languages/definitions/typescript/register.js"
+import "monaco-editor/languages/definitions/typescript/register.js"
 // The TypeScript language-mode contribution (monaco 0.57): importing it registers the
 // onLanguage hooks; its namespace (defaults/ModuleKind/getTypeScriptWorker...) must be
 // attached to monaco.languages manually in ESM — nothing in the ESM tree does it.
-import * as typescriptNamespace from "monaco-editor/esm/vs/language/typescript/monaco.contribution.js"
+import * as typescriptNamespace from "monaco-editor/language/typescript/monaco.contribution.js"
 ;(monaco.languages as unknown as Record<string, unknown>).typescript = typescriptNamespace
 
 // ---- compiler module loading -------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ try {
   tspp = await importFromUrl(compilerUrl)
 } catch (err) {
   const hint = useDevCompiler
-    ? "Run `npm run bundle:dev` in the playground repo first (it writes public/typescript.dev.js), then reload."
+    ? "Run `pnpm bundle:dev` in the playground package first (it writes public/typescript.dev.js), then reload."
     : "The deployed compiler bundle could not be fetched — check the network or the deployment."
   const msg = `Failed to load the tspp compiler from ${compilerUrl}. ${hint}`
   ;(document.getElementById("loading-message") ?? document.body).textContent = msg
@@ -106,7 +106,7 @@ import { examples } from "./examples"
 // matches the deployed compiler. initComments carries the feature's Chinese summary.
 const tsppFeatureDefinitions = tspp.tsppFeatureDefinitions
 if (!tsppFeatureDefinitions?.length) {
-  throw new Error("Compiler bundle exports no tsppFeatureDefinitions — rebuild the bundle (`npm run bundle`)")
+  throw new Error("Compiler bundle exports no tsppFeatureDefinitions — rebuild the bundle (`pnpm bundle`)")
 }
 
 // Extend the built-in TypeScript grammar with tspp keywords (data/newtype/match/reify/...)

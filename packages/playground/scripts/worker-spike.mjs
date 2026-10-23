@@ -21,9 +21,7 @@ const nodeProcess = process; // captured before the browser-worker simulation sh
 // isNodeLikeSystem() returns false and it never touches Node builtins — exactly
 // what happens inside a real web worker, where `process` does not exist at all.
 globalThis.process = { browser: true };
-// deep "monaco-editor/esm/vs/..." imports hit monaco 0.57's exports-map double-prefix bug
-// (resolved at build time by a vite alias); in Node we import the file by disk path
-const { TypeScriptWorker } = await import("../node_modules/monaco-editor/esm/vs/languages/features/typescript/tsWorker.js");
+const { TypeScriptWorker } = await import("monaco-editor/languages/features/typescript/tsWorker.js");
 const { TsppWorker } = await import("../src/worker/tsppWorkerClass.js").then(m => ({ TsppWorker: m.TsppWorker }));
 void TypeScriptWorker;
 

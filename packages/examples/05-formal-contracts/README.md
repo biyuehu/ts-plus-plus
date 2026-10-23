@@ -148,16 +148,16 @@ SMT-LIB 标注对应的源码行号、状态和说明。编译器 API 也可以�
 先在仓库根目录构建编译器：
 
 ```powershell
-npm run build:compiler
+pnpm build:compiler
 ```
 
 然后运行：
 
 ```powershell
 cd packages/examples/05-formal-contracts
-npm run check
-npm run build
-npm start
+pnpm check
+pnpm build
+pnpm start
 ```
 
 预期输出：

@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const script = process.argv[2] ?? "check";
-const npmExecPath = process.env.npm_execpath;
-if (!npmExecPath) throw new Error("npm_execpath is unavailable; run this script through npm");
+const packageManagerExecPath = process.env.npm_execpath;
+if (!packageManagerExecPath) throw new Error("npm_execpath is unavailable; run this script through pnpm");
 const projects = readdirSync(root, { withFileTypes: true })
   .filter(entry => entry.isDirectory() && /^\d{2}-/.test(entry.name))
   .map(entry => entry.name)
@@ -14,7 +14,7 @@ const projects = readdirSync(root, { withFileTypes: true })
 
 for (const project of projects) {
   console.log(`\n> ${project}: ${script}`);
-  const result = spawnSync(process.execPath, [npmExecPath, "run", script, "--if-present"], {
+  const result = spawnSync(packageManagerExecPath, ["run", "--if-present", script], {
     cwd: join(root, project),
     stdio: "inherit",
   });

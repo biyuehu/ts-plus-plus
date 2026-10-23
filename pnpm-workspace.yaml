@@ -1,0 +1,28 @@
+packages:
+  - packages/compiler
+  - packages/examples
+  - packages/language-server
+  - packages/language-server/test-data/jsx
+  - packages/playground
+  - packages/vscode-extension
+
+nodeLinker: hoisted
+
+minimumReleaseAgeExclude:
+  - semver@7.8.1
+
+overrides:
+  vscode-jsonrpc: ^9.0.2
+
+blockExoticSubdeps: true
+
+# Match the 3-day minimum release age enforced by the Renovate preset
+# (security:minimumReleaseAgeNpm). Value is in minutes.
+minimumReleaseAge: 4320
+
+allowBuilds:
+  '@parcel/watcher': true
+  dprint: true
+  esbuild: true
+  # The root prepare script installs hooks after checking Git and CI explicitly.
+  lefthook: false

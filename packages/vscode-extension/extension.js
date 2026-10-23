@@ -1,5 +1,4 @@
 const fs = require("fs");
-const { createRequire } = require("module");
 const path = require("path");
 const vscode = require("vscode");
 const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
@@ -10,8 +9,7 @@ async function activate(context) {
   const compilerPath = require.resolve("ts-plus-plus/tsserver");
   const typescriptPath = require.resolve("ts-plus-plus");
   const defaultSdkPath = path.dirname(require.resolve("ts-plus-plus/sdk"));
-  const languageServerRequire = createRequire(path.resolve(context.extensionPath, "..", "language-server", "package.json"));
-  const languageServerModule = languageServerRequire.resolve("tspp-language-server");
+  const languageServerModule = require.resolve("tspp-language-server");
   const examplesRoot = path.dirname(require.resolve("@tspp/examples/package.json"));
   const examples = [
     {
@@ -71,14 +69,14 @@ async function activate(context) {
 
   if (!fs.existsSync(compilerPath)) {
     status.text = "$(error) TS++ compiler not built";
-    status.tooltip = "Run npm run build:compiler in the repository, then restart this development host.";
+    status.tooltip = "Run pnpm build:compiler in the repository, then restart this development host.";
     status.show();
     return;
   }
 
   if (!fs.existsSync(languageServerModule)) {
     status.text = "$(error) TS++ language server not built";
-    status.tooltip = "Run npm run build:language-server in the repository, then restart this development host.";
+    status.tooltip = "Run pnpm build:language-server in the repository, then restart this development host.";
     status.show();
     return;
   }

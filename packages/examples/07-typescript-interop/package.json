@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "tspp --project tsppconfig.json",
-    "check-ts-consumer": "npm run build && tsc --project consumer/tsconfig.json",
+    "check-ts-consumer": "pnpm build && tsc --project consumer/tsconfig.json",
     "check": "tspp --project tsppconfig.json --noEmit"
   }
 }

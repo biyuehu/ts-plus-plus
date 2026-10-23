@@ -2,6 +2,7 @@
   "name": "tspp-playground",
   "version": "0.0.0",
   "private": true,
+  "packageManager": "pnpm@12.4.2",
   "description": "Online playground for ts-plus-plus (TS++) — Monaco editor + forked language-service worker over the tspp compiler bundle.",
   "type": "module",
   "scripts": {
@@ -19,7 +20,7 @@
   },
   "dependencies": {
     "monaco-editor": "^0.57.0",
-    "ts-plus-plus": "file:../compiler"
+    "ts-plus-plus": "workspace:*"
   },
   "devDependencies": {
     "lz-string": "^1.5.0",

@@ -6,8 +6,9 @@
   "publisher": "tspp-local",
   "private": true,
   "dependencies": {
-    "@tspp/examples": "0.0.0",
-    "ts-plus-plus": "0.0.1",
+    "@tspp/examples": "workspace:*",
+    "ts-plus-plus": "workspace:*",
+    "tspp-language-server": "workspace:*",
     "vscode-languageclient": "9.0.1"
   },
   "engines": {

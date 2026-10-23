@@ -58,8 +58,8 @@ type Arrays: UniverseZero => UniverseZero = Array;
 在本目录运行：
 
 ```powershell
-npm run check
-npm run emit-declarations
+pnpm check
+pnpm emit-declarations
 ```
 
 声明输出位于 `dist/index.d.tspp`。普通 `.ts` 输入仍然输出 `.d.ts`。

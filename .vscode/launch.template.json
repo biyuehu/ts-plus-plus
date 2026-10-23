@@ -18,7 +18,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
         "${workspaceFolder}/packages/examples"
       ],
-      "preLaunchTask": "npm: build:editor"
+      "preLaunchTask": "pnpm: build:editor"
     },
     {
       // Builds the current compiler bundle, starts Vite, and opens the playground.
@@ -27,7 +27,7 @@
       "request": "launch",
       "url": "http://localhost:5173/?ts=dev",
       "webRoot": "${workspaceFolder}/packages/playground",
-      "preLaunchTask": "npm: playground:debug"
+      "preLaunchTask": "pnpm: playground:debug"
     }
   ]
 }

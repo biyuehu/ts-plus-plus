@@ -1,6 +1,6 @@
 /**
  * 展示：宏返回 TypeScript AST，用生成的语句替换宏调用。
- * 运行：npm run build && npm start
+ * 运行：pnpm build && pnpm start
  * 预期：输出 User。
  */
 import * as ts from "ts-plus-plus";

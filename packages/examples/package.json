@@ -4,7 +4,7 @@
   "private": true,
   "description": "Examples for the TS++ compiler and editor tooling",
   "dependencies": {
-    "ts-plus-plus": "0.0.1"
+    "ts-plus-plus": "workspace:*"
   },
   "exports": {
     "./package.json": "./package.json"

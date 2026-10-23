@@ -57,4 +57,4 @@ await esbuild.build({
 copyFileSync(compilerDeclaration, join(outDir, dev ? "typescript.dev.d.ts" : "typescript.d.ts"));
 
 const kb = Math.round(statSync(outfile).size / 1024);
-console.log(`Bundled ${kb} KB -> ${dev ? "public/typescript.dev.js (serve with `npm run dev`, open ?ts=dev)" : "public/vendor/typescript.js"}`);
+console.log(`Bundled ${kb} KB -> ${dev ? "public/typescript.dev.js (serve with `pnpm dev`, open ?ts=dev)" : "public/vendor/typescript.js"}`);
