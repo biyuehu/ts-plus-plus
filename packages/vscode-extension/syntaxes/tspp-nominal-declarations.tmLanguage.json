@@ -4,6 +4,32 @@
   "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string",
   "patterns": [
     {
+      "comment": "Newtype declaration: newtype Name<...> = Type;",
+      "name": "meta.type.declaration.ts",
+      "begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?(?:(\\bdeclare)\\s+)?\\b(newtype)\\b\\s+([_$[:alpha:]][_$[:alnum:]]*)\\s*",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.export.ts" },
+        "2": { "name": "storage.modifier.ts" },
+        "3": { "name": "storage.type.ts" },
+        "4": { "name": "entity.name.type.alias.ts" }
+      },
+      "end": "(?=\\}|;|^\\s*$|(?:^\\s*(?:abstract|async|(?:\\bawait\\s+(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)\\b)|break|case|catch|class|const|continue|declare|do|else|enum|export|finally|function|for|goto|if|import|interface|let|module|namespace|switch|return|throw|try|type|(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)|var|while)\\b))",
+      "patterns": [
+        { "include": "source.ts#comment" },
+        { "include": "source.ts#type-parameters" },
+        {
+          "begin": "(=)\\s*",
+          "beginCaptures": {
+            "1": { "name": "keyword.operator.assignment.ts" }
+          },
+          "end": "(?=\\}|;|^\\s*$|(?:^\\s*(?:abstract|async|(?:\\bawait\\s+(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)\\b)|break|case|catch|class|const|continue|declare|do|else|enum|export|finally|function|for|goto|if|import|interface|let|module|namespace|switch|return|throw|try|type|(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)|var|while)\\b))",
+          "patterns": [
+            { "include": "source.ts#type" }
+          ]
+        }
+      ]
+    },
+    {
       "comment": "Data type declaration with variant constructors",
       "begin": "(?:\\b(export)\\s+)?(?:\\b(declare)\\s+)?\\b(data)\\s+([A-Za-z_$][\\w$]*)(?:<[^>]*>)?\\s*(=)",
       "beginCaptures": {
