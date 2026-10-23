@@ -1,8 +1,50 @@
 {
   "name": "TS++ Newtype and Data Declarations",
   "scopeName": "tspp.nominal-declarations",
-  "injectionSelector": "L:source.tspp -comment -string -meta.type, L:source.ts -comment -string -meta.type",
+  "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string",
   "patterns": [
+    {
+      "comment": "Data type declaration with variant constructors",
+      "begin": "(?:\\b(export)\\s+)?(?:\\b(declare)\\s+)?\\b(data)\\s+([A-Za-z_$][\\w$]*)(?:<[^>]*>)?\\s*(=)",
+      "beginCaptures": {
+        "1": { "name": "storage.modifier.ts" },
+        "2": { "name": "storage.modifier.ts" },
+        "3": { "name": "storage.type.ts" },
+        "4": { "name": "entity.name.type.alias.ts" },
+        "5": { "name": "keyword.operator.assignment.ts" }
+      },
+      "end": "(;)|(?=[\\r\\n])",
+      "endCaptures": {
+        "1": { "name": "punctuation.terminator.statement.ts" }
+      },
+      "patterns": [
+        {
+          "name": "keyword.operator.logical.ts",
+          "match": "\\|"
+        },
+        {
+          "comment": "Variant constructor parameters: (field: Type)",
+          "begin": "(\\()",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.parameters.begin.ts" }
+          },
+          "end": "(\\))",
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.parameters.end.ts" }
+          },
+          "patterns": [
+            { "include": "source.ts#type-annotation" },
+            { "name": "variable.parameter.ts", "match": "\\b[a-z_$][\\w$]*\\b" },
+            { "include": "source.ts#type" }
+          ]
+        },
+        {
+          "comment": "Variant constructor name",
+          "name": "entity.name.type.ts",
+          "match": "\\b[A-Z][\\w$]*\\b"
+        }
+      ]
+    },
     {
       "match": "^\\s*(?:(export)\\s+)?(?:(declare)\\s+)?(newtype|data)\\s+([A-Za-z_$][\\w$]*)",
       "captures": {
@@ -13,29 +55,85 @@
       }
     },
     {
+      "comment": "Value-level match expression with pattern arms",
+      "name": "meta.match.expr.tspp",
+      "begin": "\\b(match)\\b(?!\\s+mltt\\b)\\s*([^{;\\r\\n]+?)\\s*(\\{)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.flow.ts" },
+        "2": {
+          "patterns": [{ "include": "source.ts#expression" }]
+        },
+        "3": { "name": "punctuation.definition.block.begin.ts" }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.block.end.ts" }
+      },
+      "patterns": [
+        { "include": "source.ts#comment" },
+        {
+          "comment": "Match guard: if <expr>",
+          "begin": "\\b(if)\\b(?=[^;\\r\\n]*?(?:->|=>))",
+          "beginCaptures": {
+            "1": { "name": "keyword.control.conditional.ts" }
+          },
+          "end": "(?=\\s*(?:->|=>))",
+          "patterns": [{ "include": "source.ts#expression" }]
+        },
+        {
+          "comment": "Match arm arrow -> or =>",
+          "name": "meta.embedded.inline.tspp-operator storage.type.function.arrow.ts",
+          "match": "->|=>"
+        },
+        {
+          "comment": "Wildcard pattern _ before arrow",
+          "name": "constant.language.wildcard.ts",
+          "match": "\\b_\\b(?=[^;\\r\\n]*?(?:->|=>))"
+        },
+        {
+          "comment": "Or-pattern separator | before arrow",
+          "name": "keyword.operator.logical.ts",
+          "match": "\\|(?=[^;\\r\\n]*?(?:->|=>))"
+        },
+        {
+          "comment": "Variant constructor name before arrow",
+          "name": "entity.name.type.ts",
+          "match": "\\b([A-Z][\\w$]*)\\b(?=[^;\\r\\n]*?(?:->|=>))"
+        },
+        {
+          "comment": "Constructor pattern bindings in parens",
+          "begin": "\\((?=[^;\\r\\n]*?(?:->|=>))",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.parameters.begin.ts" }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.parameters.end.ts" }
+          },
+          "patterns": [
+            { "name": "constant.language.wildcard.ts", "match": "\\b_\\b" },
+            { "name": "entity.name.type.ts", "match": "\\b[A-Z][\\w$]*\\b" },
+            { "name": "variable.parameter.ts", "match": "\\b[a-z_$][\\w$]*\\b" },
+            { "name": "punctuation.separator.comma.ts", "match": "," },
+            { "include": "$self" }
+          ]
+        },
+        {
+          "comment": "Expression after arrow",
+          "begin": "(?<=->|=>)",
+          "end": "(?=,|;|\\}|$)",
+          "patterns": [{ "include": "source.ts#expression" }]
+        },
+        {
+          "name": "punctuation.separator.comma.ts",
+          "match": ","
+        }
+      ]
+    },
+    {
       "comment": "Value-level match expression keyword",
       "name": "keyword.control.flow.ts",
       "match": "\\bmatch\\b"
-    },
-    {
-      "comment": "Match guard keyword: if <guard> =>",
-      "name": "keyword.control.conditional.ts",
-      "match": "\\b(if)\\b(?=[^;\\r\\n]*?=>)"
-    },
-    {
-      "comment": "Or-pattern separator | before arrow =>",
-      "name": "keyword.operator.logical.ts",
-      "match": "\\|(?=[^;\\r\\n]*?=>)"
-    },
-    {
-      "comment": "Variant constructor name before arrow =>",
-      "name": "entity.name.type.ts",
-      "match": "\\b([A-Z][\\w$]*)\\b(?=[^;\\r\\n]*?=>)"
-    },
-    {
-      "comment": "Wildcard pattern _ before arrow =>",
-      "name": "constant.language.wildcard.ts",
-      "match": "\\b_\\b(?=[^;\\r\\n]*?=>)"
     }
   ]
 }

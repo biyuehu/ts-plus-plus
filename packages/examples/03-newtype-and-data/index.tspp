@@ -79,7 +79,7 @@ declare const screen: ScreenState;
 const score: number = match screen {
   Idle | Loading => 0,
   Finished(Success(value)) if value > 0 => value,
-  Finished(Success(_)) => 0,
+  Finished(Success(_)) => 0 + 0,
   Finished(Failure(code)) => -code,
 };
 

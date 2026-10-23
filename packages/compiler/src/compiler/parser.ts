@@ -4701,9 +4701,15 @@ namespace Parser {
       if (token() === SyntaxKind.ColonToken) {
         nextToken();
       }
+      // else {
+      //   if (token() === SyntaxKind.MinusToken) {
+      //   parseExpected(SyntaxKind.MinusToken);
+      //   parseExpected(SyntaxKind.GreaterThanToken);
+      // }
       else {
         parseExpected(SyntaxKind.EqualsGreaterThanToken);
       }
+      // }
       const result = parseType();
       arms.push(finishNode(factory.createMatchTypeArm(pattern, result), armPos));
       if (!parseOptional(SyntaxKind.CommaToken) && !parseOptional(SyntaxKind.SemicolonToken)) break;
