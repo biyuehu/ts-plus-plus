@@ -154,7 +154,7 @@ npm run build:compiler
 然后运行：
 
 ```powershell
-cd example/05-formal-contracts
+cd packages/examples/05-formal-contracts
 npm run check
 npm run build
 npm start

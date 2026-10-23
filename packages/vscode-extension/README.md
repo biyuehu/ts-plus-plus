@@ -4,7 +4,7 @@ This repository-local extension powers the TS++ example experience in an Extensi
 
 The root launch configuration offers three F5 targets:
 
-- `TS++: Run All Examples` opens the `example` directory and shows both examples side by side;
+- `TS++: Run All Examples` opens the `packages/examples` directory and shows the examples side by side;
 - `TS++: Run Example 01 — Higher-Kinded Types` opens only the HKT example;
 - `TS++: Run Example 02 — Dependent Types` opens only the dependent-types tutorial.
 

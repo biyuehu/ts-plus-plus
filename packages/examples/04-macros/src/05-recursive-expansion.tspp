@@ -2,7 +2,7 @@
  * 宏可以返回另一个宏调用。编译器会持续展开返回的宏调用，
  * 直到最终结果仅包含普通语句为止。
  */
-import * as ts from "../../../built/local/typescript";
+import * as ts from "../../../../built/local/typescript";
 
 interface RecursiveUser {
   id: number;

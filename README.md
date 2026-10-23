@@ -11,7 +11,7 @@ TS++ starts from the [TypeScript 6.0.3 source snapshot at `050880ce`](https://gi
 <!-- markdownlint-disable -->
 
 <div align="center">
-<img width="180px" src="./vscode-extension/tspp.svg" />
+<img width="180px" src="./packages/vscode-extension/tspp.svg" />
 </div>
 
 <!-- markdownlint-enable -->
@@ -85,7 +85,7 @@ Conditional export keys are order-sensitive, so place `tspp-types` before `types
 
 The compatibility declaration is a conservative projection, not a textual rename. `newtype` becomes its underlying TypeScript type plus a constructor signature, `data` becomes a discriminated union plus variant declarations, contracts and macro-only declarations are omitted, dependent functions keep their callable domain but use an `unknown` result, and TS++ type computations or higher-kinded operations that TypeScript cannot express become `unknown`. The `.d.ts` output is required to form a closed graph that never references `.d.tspp`.
 
-See [`example/07-typescript-interop`](./example/07-typescript-interop) for a mixed-source library and an upstream TypeScript consumer.
+See [`packages/examples/07-typescript-interop`](./packages/examples/07-typescript-interop) for a mixed-source library and an upstream TypeScript consumer.
 
 ## What a feature can change
 

@@ -96,10 +96,10 @@ jobs:
       - name: Check examples
         run: |
           status=0
-          for config in example/*/tsppconfig.json; do
+          for config in packages/examples/*/tsppconfig.json; do
             dir=$(dirname "$config")
             echo "Checking $dir"
-            (cd "$dir" && node ../../built/local/tsc.js --project tsppconfig.json) || status=1
+            (cd "$dir" && node ../../../built/local/tsc.js --project tsppconfig.json) || status=1
           done
           exit $status
 

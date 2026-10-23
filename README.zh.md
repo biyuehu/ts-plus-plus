@@ -11,7 +11,7 @@ TS++ 以 [TypeScript 6.0.3 的 `050880ce` 源码快照](https://github.com/micro
 <!-- markdownlint-disable -->
 
 <div align="center">
-<img width="180px" src="./vscode-extension/tspp.svg" />
+<img width="180px" src="./packages/vscode-extension/tspp.svg" />
 </div>
 
 <!-- markdownlint-enable -->
@@ -85,7 +85,7 @@ TS++ 把 TypeScript 作为稳定的兼容层与 FFI 边界：
 
 兼容声明是保守投影，而不是简单改扩展名：`newtype` 会变成底层 TypeScript 类型与构造函数签名，`data` 会变成可辨识联合及变体声明，契约和仅供宏系统使用的声明会被省略；依赖函数保留可调用参数域但将结果降级为 `unknown`，TypeScript 无法表达的类型计算和高阶类型操作也会降级为 `unknown`。生成的 `.d.ts` 必须形成封闭依赖图，绝不能引用 `.d.tspp`。
 
-混合源码库和原生 TypeScript 消费者示例见 [`example/07-typescript-interop`](./example/07-typescript-interop)。
+混合源码库和原生 TypeScript 消费者示例见 [`packages/examples/07-typescript-interop`](./packages/examples/07-typescript-interop)。
 
 ## 特性可能带来的影响
 

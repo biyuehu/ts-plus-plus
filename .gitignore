@@ -51,7 +51,7 @@ internal/
 !**/.vscode/launch.template.json
 !**/.vscode/extensions.json
 !/.vscode/launch.json
-!/example/**/.vscode/settings.json
+!/packages/examples/**/.vscode/settings.json
 !tests/cases/projects/projectOption/**/node_modules
 !tests/cases/projects/NodeModulesSearch/**/*
 !tests/baselines/reference/project/nodeModules*/**/*
@@ -66,5 +66,5 @@ package-lock.json
 .eslintcache
 *v8.log
 /lib/
-example/**/dist/
+packages/examples/**/dist/
 AGENT.md

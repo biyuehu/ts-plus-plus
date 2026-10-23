@@ -7,8 +7,8 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
-        "${workspaceFolder}/example"
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
+        "${workspaceFolder}/packages/examples"
       ],
       "preLaunchTask": "npm: build:editor"
     },
@@ -18,8 +18,8 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
-        "${workspaceFolder}/example/01-higher-kinded-types"
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
+        "${workspaceFolder}/packages/examples/01-higher-kinded-types"
       ],
       "preLaunchTask": "npm: build:editor"
     },
@@ -29,8 +29,8 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
-        "${workspaceFolder}/example/02-dependent-types"
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
+        "${workspaceFolder}/packages/examples/02-dependent-types"
       ],
       "preLaunchTask": "npm: build:editor"
     },
@@ -41,8 +41,8 @@
       "runtimeExecutable": "${execPath}",
       "args": [
         "--new-window",
-        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension",
-        "${workspaceFolder}/example/03-newtype-and-data"
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
+        "${workspaceFolder}/packages/examples/03-newtype-and-data"
       ],
       "preLaunchTask": "npm: build:editor"
     },

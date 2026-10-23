@@ -291,7 +291,7 @@ npm run build:compiler
 然后进入本目录：
 
 ```powershell
-cd example/04-macros
+cd packages/examples/04-macros
 npm run check
 npm run build
 npm start

@@ -1,4 +1,4 @@
-import * as ts from "../../../built/local/typescript";
+import * as ts from "../../../../built/local/typescript";
 
 // 宏实现运行在编译器的 Node.js 进程中，并没有沙箱。这里显式声明 require 只是为了
 // 获得类型；执行时拿到的是真正的 Node.js require，拥有与编译器相同的文件和模块权限。

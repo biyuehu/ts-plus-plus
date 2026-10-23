@@ -1,0 +1,9 @@
+{
+  "name": "tspp-example-08-modern-syntax",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "check": "node ../../../built/local/tsc.js --project tsppconfig.json",
+    "build": "node ../../../built/local/tsc.js --project tsppconfig.json --noEmit false --outDir dist"
+  }
+}

@@ -1,5 +1,9 @@
 {
   "name": "ts-plus-plus",
+  "workspaces": [
+    "packages/vscode-extension",
+    "packages/examples"
+  ],
   "author": "",
   "homepage": "https://github.com/tspp-lang/tspp#readme",
   "version": "0.0.1",
@@ -87,19 +91,16 @@
     "vscode-languageclient": "9.0.1",
     "which": "^3.0.1"
   },
-  "overrides": {
-    "typescript@*": "$typescript"
-  },
   "scripts": {
     "prepare": "npm run setup-hooks",
     "test": "hereby runtests-parallel --light=false",
     "test:eslint-rules": "hereby run-eslint-rules-tests",
     "build": "npm run build:compiler && npm run build:language-server && npm run build:tests",
     "build:compiler": "hereby local",
-    "build:language-server": "npx --yes pnpm@12.4.2 --dir packages/tspp-language-server build",
+    "build:language-server": "npx --yes pnpm@12.4.2 --dir packages/language-server build",
     "build:editor": "npm run build:compiler && npm run build:language-server",
-    "example": "npm run build:editor && code --new-window --disable-extension=shalldie.background --disable-extension=rbuckton.tsserver-live-reload --disable-extension=wakatime.vscode-wakatime --disable-extension=fittentech.fitten-code --disable-extension=biomejs.biome --extensionDevelopmentPath=./vscode-extension ./example",
-    "example:open": "code --new-window --disable-extension=shalldie.background --disable-extension=rbuckton.tsserver-live-reload --disable-extension=wakatime.vscode-wakatime --disable-extension=fittentech.fitten-code --disable-extension=biomejs.biome --extensionDevelopmentPath=./vscode-extension ./example",
+    "example": "npm run build:editor && code --new-window --disable-extension=shalldie.background --disable-extension=rbuckton.tsserver-live-reload --disable-extension=wakatime.vscode-wakatime --disable-extension=fittentech.fitten-code --disable-extension=biomejs.biome --extensionDevelopmentPath=./packages/vscode-extension ./packages/examples",
+    "example:open": "code --new-window --disable-extension=shalldie.background --disable-extension=rbuckton.tsserver-live-reload --disable-extension=wakatime.vscode-wakatime --disable-extension=fittentech.fitten-code --disable-extension=biomejs.biome --extensionDevelopmentPath=./packages/vscode-extension ./packages/examples",
     "build:tests": "hereby tests",
     "build:tests:notypecheck": "hereby tests --no-typecheck",
     "clean": "hereby clean",

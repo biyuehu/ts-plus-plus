@@ -3,7 +3,7 @@
  * 运行：npm run check
  * 预期：检查通过，不生成额外代码。
  */
-import * as ts from "../../../built/local/typescript";
+import * as ts from "../../../../built/local/typescript";
 
 // 宏函数在编译期执行。targets 是调用处传入的声明，context 提供诊断等能力。
 export macro function requireReturnStatement(

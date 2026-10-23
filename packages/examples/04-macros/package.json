@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "check": "node ../../built/local/tsc.js --project tsppconfig.json",
+    "check": "node ../../../built/local/tsc.js --project tsppconfig.json",
     "clean": "node scripts/clean-dist.mjs",
-    "build": "npm run clean && node ../../built/local/tsc.js --project tsppconfig.json --noEmit false --declaration --rootDir src --outDir dist",
+    "build": "npm run clean && node ../../../built/local/tsc.js --project tsppconfig.json --noEmit false --declaration --rootDir src --outDir dist",
     "start": "node dist/02-transform.js && node dist/03-async.js && node dist/04-security-boundary.js && node dist/05-recursive-expansion.js"
   }
 }

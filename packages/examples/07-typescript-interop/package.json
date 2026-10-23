@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "node ../../built/local/tsc.js --project tsppconfig.json",
+    "build": "node ../../../built/local/tsc.js --project tsppconfig.json",
     "check-ts-consumer": "npm run build && tsc --project consumer/tsconfig.json"
   }
 }

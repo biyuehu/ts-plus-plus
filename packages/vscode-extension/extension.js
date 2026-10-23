@@ -6,12 +6,12 @@ const { LanguageClient, TransportKind } = require("vscode-languageclient/node");
 let languageClient;
 
 async function activate(context) {
-  const repositoryRoot = path.resolve(context.extensionPath, "..");
+  const repositoryRoot = path.resolve(context.extensionPath, "..", "..");
   const compilerPath = path.join(repositoryRoot, "built", "local", "tsserver.js");
   const typescriptPath = path.join(repositoryRoot, "built", "local", "typescript.js");
   const defaultSdkPath = path.join(repositoryRoot, "built", "local", "lib");
-  const languageServerModule = path.join(repositoryRoot, "packages", "tspp-language-server", "lib", "cli.mjs");
-  const examplesRoot = path.join(repositoryRoot, "example");
+  const languageServerModule = path.join(repositoryRoot, "packages", "language-server", "lib", "cli.mjs");
+  const examplesRoot = path.join(repositoryRoot, "packages", "examples");
   const examples = [
     {
       label: "01 — Higher-Kinded Types",

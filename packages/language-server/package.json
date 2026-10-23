@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tspp-lang/tspp.git",
-    "directory": "packages/tspp-language-server"
+    "directory": "packages/language-server"
   },
   "type": "module",
   "engines": {
