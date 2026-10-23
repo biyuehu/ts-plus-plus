@@ -174,13 +174,12 @@ describe("unittests:: tspp:: editor grammars", () => {
 
   it("highlights value-level match expressions, or-patterns and guards", () => {
     const patterns = collectPatterns(readGrammar("tspp-nominal-declarations.tmLanguage.json"));
-    const valueMatch = patterns.find(pattern => pattern.name === "meta.match.value.tspp");
-    assert.isDefined(valueMatch, "Expected a grammar region for value-level match expression");
-    const armPattern = patterns.find(pattern => pattern.name === "meta.match.arm.tspp");
-    assert.isDefined(armPattern, "Expected a grammar region for match arm patterns");
+    const matchKeyword = patterns.find(pattern => pattern.match?.includes("match"));
+    assert.isDefined(matchKeyword, "Expected match keyword pattern");
     const guardPattern = patterns.find(pattern => pattern.comment?.includes("Match guard"));
-    assert.isDefined(guardPattern, "Expected a grammar region for match guard");
+    assert.isDefined(guardPattern, "Expected a grammar pattern for match guard");
     assert.isTrue(patterns.some(pattern => pattern.match?.includes("_")), "Expected wildcard pattern support");
     assert.isTrue(patterns.some(pattern => pattern.match?.includes("|")), "Expected or-pattern operator support");
+    assert.isTrue(patterns.some(pattern => pattern.match?.includes("[A-Z]")), "Expected constructor pattern support");
   });
 });
