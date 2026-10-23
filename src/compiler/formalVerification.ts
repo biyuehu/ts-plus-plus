@@ -39,6 +39,7 @@ import {
   Block,
   CallExpression,
   CancellationToken,
+  CompilerHost,
   DataVariant,
   Diagnostic,
   Expression,
@@ -124,7 +125,7 @@ export interface FormalVerificationResult {
 
 const maximumPaths = 64;
 
-export async function verifyFormalContracts(program: Program, cancellationToken?: CancellationToken): Promise<FormalVerificationResult> {
+export async function verifyFormalContracts(program: Program, host?: CompilerHost, cancellationToken?: CancellationToken): Promise<FormalVerificationResult> {
   cancellationToken?.throwIfCancellationRequested();
   const checker = program.getTypeChecker();
   const pending: PendingVerificationTask[] = [];
@@ -141,7 +142,7 @@ export async function verifyFormalContracts(program: Program, cancellationToken?
 
   const queries = pending.filter(item => item.query !== undefined);
   if (queries.length) {
-    const results = await runVerificationQueries(queries.map(item => item.query!), /*budget*/ undefined, cancellationToken);
+    const results = await runVerificationQueries(queries.map(item => item.query!), /*budget*/ undefined, cancellationToken, host);
     for (let i = 0; i < queries.length; i++) {
       const item = queries[i];
       const result = results[i];

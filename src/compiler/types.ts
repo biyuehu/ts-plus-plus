@@ -18,6 +18,7 @@ import {
   ThisContainer,
 } from "./_namespaces/ts.js";
 import type { MlttTerm } from "./mlttCore.js";
+import type { VerificationSolverResult } from "./verificationWorker.js";
 
 // branded string type used to store absolute, normalized and canonicalized paths
 // arbitrary file name can be converted to Path via toPath function
@@ -8637,6 +8638,12 @@ export interface CompilerHost extends ModuleResolutionHost {
   isAsyncFormalVerificationPending?(key: string): boolean;
   /** @internal */
   scheduleAsyncFormalVerification?(key: string, evaluation: Promise<AsyncFormalVerification>): void;
+  /** @internal Solves SMT-LIB verification queries in the host runtime. When
+   *  provided, runVerificationQueries delegates to this instead of spawning the
+   *  node:worker_threads Z3 worker, letting non-Node hosts (the playground's
+   *  browser language worker) supply their own solver backend. Results use the
+   *  same VerificationSolverResult shape as the Node worker. */
+  solveVerificationQueries?(inputs: readonly string[], cancellationToken?: CancellationToken): Promise<readonly VerificationSolverResult[]>;
   /** @internal Overrides the default Promise wait limit for compile-time macros. */
   macroTimeoutMs?: number;
   /** @internal Overrides the measured local benchmark duration for tests and specialized hosts. */

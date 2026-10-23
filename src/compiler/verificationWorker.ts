@@ -7,6 +7,7 @@ import { isNodeLikeSystem } from "./core.js";
 import {
   AnalysisTaskReason,
   CancellationToken,
+  CompilerHost,
   VerificationStatus,
 } from "./types.js";
 import { VerificationQueryCache } from "./verificationIncremental.js";
@@ -48,6 +49,7 @@ export async function runVerificationQueries(
   inputs: readonly string[],
   budget: VerificationWorkerBudget = defaultVerificationWorkerBudget,
   cancellationToken?: CancellationToken,
+  host?: CompilerHost,
 ): Promise<readonly VerificationSolverResult[]> {
   cancellationToken?.throwIfCancellationRequested();
   const results: (VerificationSolverResult | undefined)[] = new Array(inputs.length);
@@ -69,11 +71,16 @@ export async function runVerificationQueries(
     indexes.push(index);
   }
   if (missingInputs.length) {
-    const missingResults = await scheduleAnalysisWorker(
-      "compiler-analysis",
-      () => runVerificationQueriesWorker(missingInputs, budget, cancellationToken),
-      cancellationToken,
-    );
+    // Host-supplied solver first (a browser language worker injects its own Z3
+    // backend); fall back to the node:worker_threads worker. Both produce the
+    // same VerificationSolverResult shape, so the cache and callers are shared.
+    const missingResults = host?.solveVerificationQueries
+      ? await withHostSolverBudget(host.solveVerificationQueries(missingInputs, cancellationToken), budget, missingInputs.length)
+      : await scheduleAnalysisWorker(
+        "compiler-analysis",
+        () => runVerificationQueriesWorker(missingInputs, budget, cancellationToken),
+        cancellationToken,
+      );
     for (let index = 0; index < missingInputs.length; index++) {
       const input = missingInputs[index];
       const result = missingResults[index];
@@ -82,6 +89,34 @@ export async function runVerificationQueries(
     }
   }
   return results as VerificationSolverResult[];
+}
+
+/** Guards a host solver against hanging forever: the host's Z3 (for example the
+ *  playground's browser worker) may be slow to warm up or wedged, and the
+ *  compiler's own budget should still apply. Timed-out queries become the same
+ *  "unknown: timeout" results the Node path produces; rejections become the
+ *  same "unknown: unavailable" results, so callers never see a throw. */
+function withHostSolverBudget(
+  solving: Promise<readonly VerificationSolverResult[]>,
+  budget: VerificationWorkerBudget,
+  inputCount: number,
+): Promise<readonly VerificationSolverResult[]> {
+  return new Promise<readonly VerificationSolverResult[]>(resolve => {
+    const timer = globalThis.setTimeout(() => {
+      resolve(Array.from({ length: inputCount }, () => timedOutResult("Z3 verification worker timed out.")));
+    }, Math.max(budget.minimumTimeoutMs, inputCount * budget.timeoutPerQueryMs));
+    solving.then(
+      results => {
+        globalThis.clearTimeout(timer);
+        resolve(results.map(withStructuredReason));
+      },
+      error => {
+        globalThis.clearTimeout(timer);
+        const message = error instanceof Error ? error.message : String(error);
+        resolve(Array.from({ length: inputCount }, () => unavailableResult(`Z3 could not run: ${message}`)));
+      },
+    );
+  });
 }
 
 /** @internal */

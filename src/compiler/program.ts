@@ -2333,10 +2333,10 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
   return attachFormalVerification(expandedProgram, host, cancellationToken);
 }
 
-async function attachFormalVerification(program: Program, host: CompilerHost, cancellationToken?: CancellationToken): Promise<Program> {
-  if (!hasTsppFeature(program.getCompilerOptions(), "formalContracts")) return program;
-  const verification = await verifyFormalContracts(program, cancellationToken);
-  return attachFormalVerificationArtifacts(program, verification.artifacts, host);
+function attachFormalVerification(program: Program, host: CompilerHost, cancellationToken?: CancellationToken): Promise<Program> {
+  if (!hasTsppFeature(program.getCompilerOptions(), "formalContracts")) return Promise.resolve(program);
+  const verification = verifyFormalContracts(program, host, cancellationToken);
+  return verification.then(result => attachFormalVerificationArtifacts(program, result.artifacts, host));
 }
 
 function attachFormalVerificationArtifacts(program: Program, artifacts: readonly VerificationArtifact[], host?: CompilerHost): Program {
@@ -5821,7 +5821,7 @@ function attachSynchronousFormalVerification(program: Program, host: CompilerHos
 
   if (host.scheduleAsyncFormalVerification) {
     if (!host.isAsyncFormalVerificationPending?.(key)) {
-      const evaluation = verifyFormalContracts(program, cancellationToken).then(
+      const evaluation = verifyFormalContracts(program, host, cancellationToken).then(
         result => result.artifacts,
         error =>
           error instanceof OperationCanceledException
