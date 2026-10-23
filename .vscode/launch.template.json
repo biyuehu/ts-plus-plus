@@ -1,117 +1,33 @@
 /*
-
   Copy this file into '.vscode/launch.json' or merge its
   contents into your existing configurations.
-
-  If you want to remove the errors in comments for all JSON
-  files, add this to your settings in ~/.vscode/User/settings.json
-
-  "files.associations": {
-      "*.json": "jsonc"
-  },
-
 */
 
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
     {
-      // Builds TS++ and opens both examples in an Extension Development Host.
-      "name": "TS++: Run All Examples",
+      // Builds the compiler and language server, then opens the extension host.
+      "name": "TS++: VS Code Extension",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
+        "--new-window",
+        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
         "${workspaceFolder}/packages/examples"
       ],
       "preLaunchTask": "npm: build:editor"
     },
     {
-      // Builds TS++ and opens the first example in an Extension Development Host.
-      "name": "TS++: Run Example 01 — Higher-Kinded Types",
-      "type": "extensionHost",
+      // Builds the current compiler bundle, starts Vite, and opens the playground.
+      "name": "TS++: Playground",
+      "type": "pwa-chrome",
       "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
-        "${workspaceFolder}/packages/examples/01-higher-kinded-types"
-      ],
-      "preLaunchTask": "npm: build:editor"
-    },
-    {
-      // Builds TS++ and opens the dependent-types tutorial.
-      "name": "TS++: Run Example 02 — Dependent Types",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
-        "${workspaceFolder}/packages/examples/02-dependent-types"
-      ],
-      "preLaunchTask": "npm: build:editor"
-    },
-    {
-      // Builds TS++ and opens the newtype and data example.
-      "name": "TS++: Run Example 03 — Newtype and Data",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--new-window",
-        "--disable-extension=shalldie.background",
-        "--disable-extension=rbuckton.tsserver-live-reload",
-        "--disable-extension=wakatime.vscode-wakatime",
-        "--disable-extension=fittentech.fitten-code",
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
-        "${workspaceFolder}/packages/examples/03-newtype-and-data"
-      ],
-      "preLaunchTask": "npm: build:editor"
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Mocha Tests (currently opened test)",
-      "runtimeArgs": ["--nolazy"],
-      "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
-      "args": [
-        "-u",
-        "bdd",
-        "--no-timeouts",
-        "--colors",
-        "packages/compiler/built/local/run.js",
-        "-f",
-        // You can change this to be the name of a specific test file (without the file extension)
-        // to consistently launch the same test
-        "${fileBasenameNoExtension}",
-        "--skip-percent",
-        "0"
-      ],
-      "env": {
-        "NODE_ENV": "development"
-      },
-      "outFiles": [
-        "${workspaceFolder}/packages/compiler/built/**/*.js",
-        "${workspaceFolder}/packages/compiler/built/**/*.mjs",
-        "${workspaceFolder}/packages/compiler/built/**/*.cjs",
-        "!**/node_modules/**"
-      ],
-      "sourceMaps": true,
-      "smartStep": true,
-      "preLaunchTask": "npm: build:tests",
-      "console": "integratedTerminal",
-      "customDescriptionGenerator": "'__tsDebuggerDisplay' in this ? this.__tsDebuggerDisplay(defaultValue) : defaultValue"
-    },
-    {
-      // See: https://github.com/microsoft/TypeScript/wiki/Debugging-Language-Service-in-VS-Code
-      "type": "node",
-      "request": "attach",
-      "name": "Attach to VS Code TS Server via Port",
-      "processId": "${command:PickProcess}",
-      "customDescriptionGenerator": "'__tsDebuggerDisplay' in this ? this.__tsDebuggerDisplay(defaultValue) : defaultValue"
+      "url": "http://localhost:5173/?ts=dev",
+      "webRoot": "${workspaceFolder}/packages/playground",
+      "preLaunchTask": "npm: playground:debug"
     }
   ]
 }

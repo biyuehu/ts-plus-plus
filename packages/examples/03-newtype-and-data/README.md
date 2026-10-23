@@ -118,7 +118,7 @@ const stolen: UserId = 1 as UserId;
 
 ## 运行与实验
 
-在仓库根目录按 `F5`，选择 **TS++: Run Example 03 — Newtype and Data**。
+在仓库根目录按 `F5`，选择 **TS++: VS Code Extension**，再通过窗口左下角的 **TS++ Examples** 状态栏按钮选择本例。
 
 也可以在仓库根目录构建 compiler 后，进入本目录运行：
 

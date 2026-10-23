@@ -2,11 +2,10 @@
 
 This repository-local extension powers the TS++ example experience in an Extension Development Host.
 
-The root launch configuration offers three F5 targets:
+The root launch configuration offers two F5 targets:
 
-- `TS++: Run All Examples` opens the `packages/examples` directory and shows the examples side by side;
-- `TS++: Run Example 01 — Higher-Kinded Types` opens only the HKT example;
-- `TS++: Run Example 02 — Dependent Types` opens only the dependent-types tutorial.
+- `TS++: VS Code Extension` builds the compiler and language server, then opens `packages/examples` in an Extension Development Host;
+- `TS++: Playground` builds the browser compiler bundle, starts Vite, and opens the playground.
 
 The status-bar item opens a quick picker, so users can switch examples without restarting the development host. The extension also verifies that the repository compiler exists and highlights TS++ `=>` kind arrows, `->` dependent-function arrows, and compile-time macro syntax.
 

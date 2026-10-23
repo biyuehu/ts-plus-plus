@@ -22,6 +22,7 @@
     "build:tests:notypecheck": "npm run build:tests:notypecheck --workspace=ts-plus-plus",
     "build:editor": "npm run build:compiler && npm run build:language-server",
     "playground:bundle": "npm --prefix packages/playground run bundle",
+    "playground:debug": "npm run build:compiler && npm --prefix packages/playground run bundle:dev && npm --prefix packages/playground run dev",
     "playground:examples": "npm --prefix packages/playground run examples",
     "playground:dev": "npm --prefix packages/playground run dev",
     "example": "npm run build:editor && code --new-window --disable-extension=shalldie.background --disable-extension=rbuckton.tsserver-live-reload --disable-extension=wakatime.vscode-wakatime --disable-extension=fittentech.fitten-code --disable-extension=biomejs.biome --extensionDevelopmentPath=./packages/vscode-extension ./packages/examples",

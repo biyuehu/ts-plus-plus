@@ -115,7 +115,7 @@ npm run emit-declarations
 
 `check` 也会验证 [`07-boundaries.tspp`](./src/07-boundaries.tspp) 中由 `@ts-expect-error` 保护的反例。`emit-declarations` 会在 `dist` 中按章节生成 `.d.tspp`，依赖函数语法会被保留。
 
-在仓库根目录按 `F5`，选择 **TS++: Run Example 02 — Dependent Types**，可以在 VS Code Extension Development Host 中阅读悬停结果。若 VS Code 询问是否允许工作区版本的 TypeScript，请选择 **Allow**。
+在仓库根目录按 `F5`，选择 **TS++: VS Code Extension**，再通过窗口左下角的 **TS++ Examples** 状态栏按钮选择本例，即可在 Extension Development Host 中阅读悬停结果。若 VS Code 询问是否允许工作区版本的 TypeScript，请选择 **Allow**。
 
 ### 用悬浮窗查看规范形
 

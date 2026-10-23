@@ -24,6 +24,30 @@
       ]
     },
     {
+      "label": "npm: build:editor",
+      "type": "npm",
+      "script": "build:editor",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: playground:debug",
+      "type": "npm",
+      "script": "playground:debug",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:\\s+http://localhost:5173/"
+        }
+      }
+    },
+    {
       "label": "npm: build:tests",
       "type": "npm",
       "script": "build:tests:notypecheck",

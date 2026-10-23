@@ -2,88 +2,25 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "TS++: Run All Examples",
+      "name": "TS++: VS Code Extension",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
+        "--new-window",
+        "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
         "${workspaceFolder}/packages/examples"
       ],
       "preLaunchTask": "npm: build:editor"
     },
     {
-      "name": "TS++: Run Example 01 — Higher-Kinded Types",
-      "type": "extensionHost",
+      "name": "TS++: Playground",
+      "type": "pwa-chrome",
       "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
-        "${workspaceFolder}/packages/examples/01-higher-kinded-types"
-      ],
-      "preLaunchTask": "npm: build:editor"
-    },
-    {
-      "name": "TS++: Run Example 02 — Dependent Types",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
-        "${workspaceFolder}/packages/examples/02-dependent-types"
-      ],
-      "preLaunchTask": "npm: build:editor"
-    },
-    {
-      "name": "TS++: Run Example 03 — Newtype and Data",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--new-window",
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension",
-        "${workspaceFolder}/packages/examples/03-newtype-and-data"
-      ],
-      "preLaunchTask": "npm: build:editor"
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Mocha Tests (currently opened test)",
-      "runtimeArgs": ["--nolazy"],
-      "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
-      "args": [
-        "-u",
-        "bdd",
-        "--no-timeouts",
-        "--colors",
-        "packages/compiler/built/local/run.js",
-        "-f",
-        "${fileBasenameNoExtension}",
-        "--skip-percent",
-        "0"
-      ],
-      "env": {
-        "NODE_ENV": "development"
-      },
-      "outFiles": [
-        "${workspaceFolder}/packages/compiler/built/**/*.js",
-        "${workspaceFolder}/packages/compiler/built/**/*.mjs",
-        "${workspaceFolder}/packages/compiler/built/**/*.cjs",
-        "!**/node_modules/**"
-      ],
-      "sourceMaps": true,
-      "smartStep": true,
-      "preLaunchTask": "npm: build:tests",
-      "console": "integratedTerminal",
-      "customDescriptionGenerator": "'__tsDebuggerDisplay' in this ? this.__tsDebuggerDisplay(defaultValue) : defaultValue"
-    },
-    {
-      "type": "node",
-      "request": "attach",
-      "name": "Attach to VS Code TS Server via Port",
-      "processId": "${command:PickProcess}",
-      "customDescriptionGenerator": "'__tsDebuggerDisplay' in this ? this.__tsDebuggerDisplay(defaultValue) : defaultValue"
+      "url": "http://localhost:5173/?ts=dev",
+      "webRoot": "${workspaceFolder}/packages/playground",
+      "preLaunchTask": "npm: playground:debug"
     }
   ]
 }
