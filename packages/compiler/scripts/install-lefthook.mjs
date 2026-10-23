@@ -1,4 +1,5 @@
 import { spawnSync } from "child_process";
+import { createRequire } from "module";
 
 if (process.env.CI) {
   console.log("Skipping Git hook installation in CI.");
@@ -21,8 +22,9 @@ if (major < 2 || (major === 2 && minor < 31)) {
   process.exit(0);
 }
 
-const command = process.platform === "win32" ? "lefthook.cmd" : "lefthook";
-const lefthook = spawnSync(command, ["install"], { stdio: "inherit" });
+const require = createRequire(import.meta.url);
+const lefthookBin = require.resolve("lefthook");
+const lefthook = spawnSync(process.execPath, [lefthookBin, "install"], { stdio: "inherit" });
 
 if (lefthook.error) {
   console.error(`Failed to start Lefthook: ${lefthook.error.message}`);
