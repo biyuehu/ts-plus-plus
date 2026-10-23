@@ -4,6 +4,12 @@ import { defineConfig } from "vite";
 export default defineConfig({
   // relative base so the site works from a GitHub Pages project subpath
   base: "./",
+  server: {
+    // launch.json opens this exact URL; fail clearly instead of moving to a
+    // different port while the debugger opens an unrelated or stale server.
+    port: 5173,
+    strictPort: true,
+  },
   resolve: {
     alias: [
       // monaco 0.57's exports map ("./esm/vs/*.js") double-prefixes deep "esm/vs/..."
