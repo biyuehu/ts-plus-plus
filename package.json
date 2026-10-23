@@ -30,10 +30,14 @@
     "clean": "npm run clean --workspace=ts-plus-plus",
     "lint": "npm run lint --workspace=ts-plus-plus",
     "knip": "npm run knip --workspace=ts-plus-plus",
-    "format": "npm run format --workspace=ts-plus-plus",
-    "format:check": "npm run format:check --workspace=ts-plus-plus",
+    "format": "npm run format:compiler && npm run format:root",
+    "format:check": "npm run format:compiler:check && npm run format:root:check",
+    "format:compiler": "npm run format --workspace=ts-plus-plus",
+    "format:compiler:check": "npm run format:check --workspace=ts-plus-plus",
+    "format:root": "dprint fmt --config packages/compiler/.dprint.jsonc package.json lefthook.yml .github .vscode",
+    "format:root:check": "dprint check --config packages/compiler/.dprint.jsonc package.json lefthook.yml .github .vscode",
     "contributors": "node packages/compiler/scripts/generate-contributors.mjs",
-    "setup-hooks": "node packages/compiler/scripts/link-hooks.mjs && lefthook install"
+    "setup-hooks": "node packages/compiler/scripts/link-hooks.mjs && node packages/compiler/scripts/install-lefthook.mjs"
   },
   "packageManager": "npm@8.19.4",
   "volta": {

@@ -103,6 +103,51 @@ jobs:
           done
           exit $status
 
+  language-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.2
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: packages/language-server/pnpm-lock.yaml
+      - run: pnpm --dir packages/language-server install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm --dir packages/language-server typecheck
+      - name: Lint
+        run: pnpm --dir packages/language-server lint
+      - name: Tests
+        run: pnpm --dir packages/language-server test:commit
+      - name: Build
+        run: pnpm --dir packages/language-server build
+
+  playground:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/playground/package-lock.json
+      - run: npm ci
+      - run: npm --prefix packages/playground ci
+      - name: Build compiler
+        run: npm run build:compiler
+      - name: Generate compiler bundle and examples
+        run: |
+          npm run playground:bundle
+          npm run playground:examples
+      - name: Build playground
+        run: npm run build:playground
+
   # baselines:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -157,6 +202,9 @@ jobs:
       - typecheck
       - self-check
       - tspp-tests
+      - examples
+      - language-server
+      - playground
       # - baselines
       # - test
     steps:
