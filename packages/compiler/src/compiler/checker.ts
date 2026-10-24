@@ -48091,7 +48091,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function checkVariableStatement(node: VariableStatement) {
     // Grammar checking
     if (!checkGrammarModifiers(node) && !checkGrammarVariableDeclarationList(node.declarationList)) checkGrammarForDisallowedBlockScopedVariableStatement(node);
-    if ((getCombinedNodeFlags(node.declarationList) & NodeFlags.BlockScoped) === NodeFlags.Def) { requireTsppFeature(node, 'modernSyntax'); }
+    if ((getCombinedNodeFlags(node.declarationList) & NodeFlags.BlockScoped) === NodeFlags.Def) requireTsppFeature(node, "modernSyntax");
     checkVariableDeclarationList(node.declarationList);
   }
 

@@ -8,7 +8,6 @@
     "src/testRunner/_namespaces/Harness.ts",
     "src/tsc/tsc.ts",
     "src/tsserver/server.ts",
-    "src/typescript/typescript.ts",
     "src/typingsInstaller/nodeTypingsInstaller.ts",
     "src/watchGuard/watchGuard.ts",
 
@@ -27,7 +26,7 @@
   "ignore": [
     "scripts/failed-tests.d.cts"
   ],
-  "ignoreDependencies": ["c8", "dprint", "eslint", "mocha-fivemat-progress-reporter", "monocart-coverage-reports"],
+  "ignoreDependencies": ["c8", "dprint", "eslint", "lefthook", "mocha-fivemat-progress-reporter", "monocart-coverage-reports"],
   "ignoreBinaries": ["dprint", "hereby"],
   "ignoreExportsUsedInFile": {
     "enum": true,
