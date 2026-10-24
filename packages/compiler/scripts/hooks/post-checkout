@@ -1,2 +1,2 @@
 #!/bin/sh
-npm exec --workspace=ts-plus-plus -- hereby generate-diagnostics || true
+pnpm --filter ts-plus-plus exec hereby generate-diagnostics || true
