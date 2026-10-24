@@ -4,6 +4,42 @@
   "injectionSelector": "L:source.tspp -comment -string, L:source.ts -comment -string",
   "patterns": [
     {
+      "comment": "def variable declaration and hover display",
+      "name": "meta.var.expr.tspp",
+      "begin": "\\b(def)\\b\\s+([_$[:alpha:]][_$[:alnum:]]*)",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.type.ts"
+        },
+        "2": {
+          "name": "variable.other.readwrite.ts"
+        }
+      },
+      "end": "(?=[;\\r\\n])",
+      "patterns": [
+        {
+          "include": "source.ts#type-annotation"
+        },
+        {
+          "include": "source.ts#comment"
+        },
+        {
+          "begin": "(=)\\s*",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.operator.assignment.ts"
+            }
+          },
+          "end": "(?=[;\\r\\n])",
+          "patterns": [
+            {
+              "include": "source.ts"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "meta.do.expression.tspp",
       "begin": "\\b(do)\\s*(\\{)",
       "beginCaptures": {

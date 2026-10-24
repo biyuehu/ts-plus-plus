@@ -10,7 +10,8 @@
 2. **`do { ... }` 语句块表达式**：将多条语句与分支逻辑封装为求值表达式；
 3. **`do` 函数与方法隐式返回**：在函数体前显式标注 `do` 开启尾表达式隐式返回；
 4. **与既有普通函数的 100% 隔离**：未标注 `do` 的函数保持标准 TS/JS 行为，绝不自动隐式返回；
-5. **`use pattern <- expr` 尾随回调解糖**：在 `do` 块与 `do` 函数中消除嵌套回调金字塔。
+5. **`use pattern <- expr` 尾随回调解糖**：在 `do` 块与 `do` 函数中消除嵌套回调金字塔；
+6. **`def` 深度不可变常量声明**：加强版 `const`，深度递归只读，零运行时开销。
 
 ## 语法概览
 
@@ -92,6 +93,26 @@ function handleRequest(): string do {
   use db <- withDatabase();
   db.query(userId, role);
 }
+```
+
+
+### 5. def 深度不可变常量声明 (Deep Readonly)
+
+解决标准 JS/TS 中 `const` 仅浅层只读、内部嵌套属性与数组依然可变痛点的原生声明方案：
+
+```tspp
+def config = {
+  host: "127.0.0.1",
+  server: { port: 8080 },
+  items: [1, 2],
+};
+
+// 编译期拦截一切深层修改：
+// config.server.port = 3000; // ❌ 报错：read-only property
+// config.items.push(3);      // ❌ 报错：push 不存在于 readonly 数组
+
+// 编译产物零运行时开销（直接输出为 const）：
+// const config = { host: "127.0.0.1", server: { port: 8080 }, items: [1, 2] };
 ```
 
 ## 运行与编译

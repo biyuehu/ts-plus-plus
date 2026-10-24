@@ -7896,6 +7896,7 @@ namespace Parser {
         return parseEmptyStatement();
       case SyntaxKind.OpenBraceToken:
         return parseBlock(/*ignoreMissingOpenBrace*/ false);
+      case SyntaxKind.DefKeyword:
       case SyntaxKind.VarKeyword:
         return parseVariableStatement(getNodePos(), hasPrecedingJSDocComment(), /*modifiers*/ undefined);
       case SyntaxKind.LetKeyword:
@@ -8088,6 +8089,7 @@ namespace Parser {
       case SyntaxKind.VarKeyword:
       case SyntaxKind.LetKeyword:
       case SyntaxKind.ConstKeyword:
+      case SyntaxKind.DefKeyword:
       case SyntaxKind.UsingKeyword:
         return parseVariableStatement(pos, hasJSDoc, modifiersIn);
       case SyntaxKind.AwaitKeyword:
@@ -8277,6 +8279,9 @@ namespace Parser {
         break;
       case SyntaxKind.ConstKeyword:
         flags |= NodeFlags.Const;
+        break;
+      case SyntaxKind.DefKeyword:
+        flags |= NodeFlags.Def;
         break;
       case SyntaxKind.UsingKeyword:
         flags |= NodeFlags.Using;

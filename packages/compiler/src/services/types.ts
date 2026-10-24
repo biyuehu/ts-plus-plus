@@ -1792,6 +1792,7 @@ export const enum ScriptElementKind {
   alias = "alias",
 
   constElement = "const",
+  defElement = "def",
 
   letElement = "let",
 

@@ -2684,8 +2684,12 @@ export function isVarUsing(node: VariableDeclaration | VariableDeclarationList):
  * Gets whether a bound `VariableDeclaration` or `VariableDeclarationList` is part of a `const` declaration.
  * @internal
  */
+export function isVarDef(node: VariableDeclaration | VariableDeclarationList): boolean {
+  return (getCombinedNodeFlags(node) & NodeFlags.BlockScoped) === NodeFlags.Def;
+}
+
 export function isVarConst(node: VariableDeclaration | VariableDeclarationList): boolean {
-  return (getCombinedNodeFlags(node) & NodeFlags.BlockScoped) === NodeFlags.Const;
+  return (getCombinedNodeFlags(node) & NodeFlags.BlockScoped) === NodeFlags.Const || isVarDef(node);
 }
 
 /**
@@ -2695,6 +2699,7 @@ export function isVarConst(node: VariableDeclaration | VariableDeclarationList):
 export function isVarConstLike(node: VariableDeclaration | VariableDeclarationList): boolean {
   const blockScopeKind = getCombinedNodeFlags(node) & NodeFlags.BlockScoped;
   return blockScopeKind === NodeFlags.Const ||
+    blockScopeKind === NodeFlags.Def ||
     blockScopeKind === NodeFlags.Using ||
     blockScopeKind === NodeFlags.AwaitUsing;
 }

@@ -108,9 +108,33 @@ console.log("resourceResult:", resourceResult);
 // 2) 链式 use 嵌套平铺与解构模式绑定
 function runPipeline(): string do {
   use token <- withAuth("admin");
-  use [code, status] <- withPair();
+  use[code, status]<- withPair();
   use res <- withResource();
   `${res.name}: [${code}] ${status} for ${token}`;
 }
 
 console.log("pipeline result:", runPipeline());
+
+// -------------------------------------------------------------
+// 6. def 深度不可变常量 (Deep Readonly Immutable Binding)
+// -------------------------------------------------------------
+
+// def 是 TS++ 加强的深度不可变 const 声明：
+// 1. 引用与所有递归嵌套对象、数组、属性在编译期深度锁定为 readonly
+// 2. 运行时零开销，直接无损编译为标准原生 JavaScript const
+def appConfig = {
+  appName: "TS++ System",
+  network: {
+    host: "127.0.0.1",
+    port: 8080,
+  },
+  tags: ["backend", "types"],
+};
+
+console.log("appConfig name:", appConfig.appName);
+console.log("network host:", appConfig.network.host);
+
+// 以下深浅层修改均会在编译期被彻底拦截报错：
+// appConfig.appName = "Modified";       // ❌ Cannot assign to 'appName' because it is a read-only property.
+// appConfig.network.port = 9090;        // ❌ Cannot assign to 'port' because it is a read-only property.
+// appConfig.tags.push("new");           // ❌ Property 'push' does not exist on type 'readonly ["backend", "types"]'.

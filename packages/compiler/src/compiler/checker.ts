@@ -44008,6 +44008,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
 
   function isConstContext(node: Expression): boolean {
     const parent = node.parent;
+    if (isVariableDeclaration(parent) && parent.initializer === node && (getCombinedNodeFlags(parent) & NodeFlags.BlockScoped) === NodeFlags.Def) return true;
     return isAssertionExpression(parent) && isConstTypeReference(parent.type) ||
       isJSDocTypeAssertion(parent) && isConstTypeReference(getJSDocTypeAssertionType(parent)) ||
       isValidConstAssertionArgument(node) && isConstTypeVariable(getContextualType(node, ContextFlags.None)) ||
@@ -48090,6 +48091,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   function checkVariableStatement(node: VariableStatement) {
     // Grammar checking
     if (!checkGrammarModifiers(node) && !checkGrammarVariableDeclarationList(node.declarationList)) checkGrammarForDisallowedBlockScopedVariableStatement(node);
+    if ((getCombinedNodeFlags(node.declarationList) & NodeFlags.BlockScoped) === NodeFlags.Def) { requireTsppFeature(node, 'modernSyntax'); }
     checkVariableDeclarationList(node.declarationList);
   }
 

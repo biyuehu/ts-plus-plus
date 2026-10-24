@@ -70,6 +70,7 @@ import {
   isTypeAliasDeclaration,
   isVarAwaitUsing,
   isVarConst,
+  isVarDef,
   isVarUsing,
   JSDocTagInfo,
   JsxOpeningLikeElement,
@@ -170,6 +171,9 @@ function getSymbolKindOfConstructorPropertyMethodAccessorFunctionOrVar(typeCheck
   if (flags & SymbolFlags.Variable) {
     if (isFirstDeclarationOfSymbolParameter(symbol)) {
       return ScriptElementKind.parameterElement;
+    }
+    else if (symbol.valueDeclaration && isVarDef(symbol.valueDeclaration as VariableDeclaration)) {
+      return ScriptElementKind.defElement;
     }
     else if (symbol.valueDeclaration && isVarConst(symbol.valueDeclaration as VariableDeclaration)) {
       return ScriptElementKind.constElement;
@@ -396,6 +400,7 @@ function getSymbolDisplayPartsDocumentationAndSymbolKindWorker(
           case ScriptElementKind.memberVariableElement:
           case ScriptElementKind.variableElement:
           case ScriptElementKind.constElement:
+          case ScriptElementKind.defElement:
           case ScriptElementKind.letElement:
           case ScriptElementKind.parameterElement:
           case ScriptElementKind.localVariableElement:
@@ -1065,6 +1070,7 @@ function getSymbolDisplayPartsDocumentationAndSymbolKindWorker(
       case ScriptElementKind.functionElement:
       case ScriptElementKind.letElement:
       case ScriptElementKind.constElement:
+      case ScriptElementKind.defElement:
       case ScriptElementKind.constructorImplementationElement:
       case ScriptElementKind.variableUsingElement:
       case ScriptElementKind.variableAwaitUsingElement:

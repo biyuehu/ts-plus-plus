@@ -227,6 +227,7 @@ export const enum SyntaxKind {
   OfKeyword,
   NewtypeKeyword,
   DataKeyword,
+  DefKeyword,
   DeferKeyword,
   MacroKeyword,
   MatchKeyword, // LastKeyword and LastToken and LastContextualKeyword
@@ -667,6 +668,7 @@ export type KeywordSyntaxKind =
   | SyntaxKind.OfKeyword
   | SyntaxKind.NewtypeKeyword
   | SyntaxKind.DataKeyword
+  | SyntaxKind.DefKeyword
   | SyntaxKind.PackageKeyword
   | SyntaxKind.PrivateKeyword
   | SyntaxKind.ProtectedKeyword
@@ -823,7 +825,8 @@ export const enum NodeFlags {
     Let                = 1 << 0,  // Variable declaration
     Const              = 1 << 1,  // Variable declaration
     Using              = 1 << 2,  // Variable declaration
-    AwaitUsing         = Const | Using, // Variable declaration (NOTE: on a single node these flags would otherwise be mutually exclusive)
+    AwaitUsing         = Const | Using,
+    Def                = 1 << 31, // Variable declaration (NOTE: on a single node these flags would otherwise be mutually exclusive)
     NestedNamespace    = 1 << 3,  // Namespace declaration
     Synthesized        = 1 << 4,  // Node was synthesized during transformation
     Namespace          = 1 << 5,  // Namespace declaration
@@ -864,8 +867,8 @@ export const enum NodeFlags {
     /** @internal */ Deprecated                    = 1 << 29, // If has '@deprecated' JSDoc tag
     /** @internal */ Unreachable                   = 1 << 30, // If node is unreachable according to the binder
 
-    BlockScoped = Let | Const | Using,
-    Constant = Const | Using,
+    BlockScoped = Let | Const | Using | Def,
+    Constant = Const | Using | Def,
 
     ReachabilityCheckFlags = HasImplicitReturn | HasExplicitReturn,
     ReachabilityAndEmitFlags = ReachabilityCheckFlags | HasAsyncFunctions,
