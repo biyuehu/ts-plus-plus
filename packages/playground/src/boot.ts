@@ -191,8 +191,9 @@ function applyFeatures() {
   refreshFeatureChecks()
 }
 
-// Wired up by the features plugin once mounted; lets non-plugin code (the examples
-// loader) change the feature set and keep the checkboxes in sync.
+// Set as soon as the sandbox exists (not when the features plugin mounts: plugins
+// mount lazily when their tab is first opened, and the examples loader must reach
+// the compiler before that). The checkbox refresher is wired up by the plugin.
 let sandboxForFeatures: import("./vendor/sandbox").Sandbox | null = null
 let refreshFeatureChecks: () => void = () => {}
 
@@ -207,8 +208,7 @@ const featuresPlugin: PluginFactory = () => {
   const plugin: PlaygroundPlugin = {
     id: "tspp-features",
     displayName: "TS++ Features",
-    didMount(sandbox, container) {
-      sandboxForFeatures = sandbox
+    didMount(_sandbox, container) {
       const intro = document.createElement("p")
       intro.innerHTML =
         "Enable TS++ language features for this session.<br>Dependencies are enabled automatically."
@@ -382,6 +382,8 @@ async function boot() {
     i,
     undefined as never,
   )
+
+  sandboxForFeatures = sandboxEnv
 
   monaco.editor.setTheme("sandbox-dark")
   sandboxEnv.editor.focus()
