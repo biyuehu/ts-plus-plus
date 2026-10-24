@@ -63,5 +63,27 @@ export class TsppWorker extends TypeScriptWorker {
   setCompilerHost(compilerHost) {
     compilerHost.solveVerificationQueries = (inputs, cancellationToken) => solveZ3Batch(inputs, cancellationToken);
     compilerHost.resolveMacroModule = specifier => specifier === "ts-plus-plus" ? this.tspp : undefined;
+    compilerHost.evaluateMacroModule = (javascript, fileName, requireLocal, module) => evaluateMacroModule(javascript, fileName, requireLocal, module);
   }
+}
+
+/**
+ * The compiler's macro execution seam (CompilerHost.evaluateMacroModule,
+ * @internal): runs the emitted CommonJS macro module inside this worker. Local
+ * macro sources and the "ts-plus-plus" binding come from requireLocal; there
+ * is no module loader behind it, so any other specifier is reported as missing.
+ *
+ * @param {string} javascript
+ * @param {string} fileName
+ * @param {(specifier: string) => unknown} requireLocal
+ * @param {{ exports: Record<string, unknown> }} module
+ */
+function evaluateMacroModule(javascript, fileName, requireLocal, module) {
+  const require = specifier => {
+    const local = requireLocal(specifier);
+    if (local !== undefined) return local;
+    throw new Error(`Cannot find module '${specifier}': the playground only provides local macro sources and 'ts-plus-plus'.`);
+  };
+  const directoryName = fileName.slice(0, Math.max(0, fileName.lastIndexOf("/"))) || "/";
+  new Function("require", "exports", "module", "__filename", "__dirname", javascript)(require, module.exports, module, fileName, directoryName);
 }

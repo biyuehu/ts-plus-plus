@@ -1531,6 +1531,21 @@ let macroExpansionDepth = 0;
 const defaultMacroTimeoutMs = 10_000;
 const maximumMacroTimeoutMs = 2_147_483_647;
 const maximumNestedMacroExpansionDepth = 32;
+
+/** Default CompilerHost.evaluateMacroModule: runs the CommonJS module in this
+ *  process and serves non-local specifiers through Node's module loader. */
+function evaluateMacroModuleInNode(javascript: string, fileName: string, requireLocal: (specifier: string) => unknown, moduleRecord: { exports: Record<string, unknown>; }) {
+  let nativeRequire: NodeRequire | undefined;
+  const macroRequire = (specifier: string) => {
+    const local = requireLocal(specifier);
+    if (local !== undefined) return local;
+    nativeRequire ??= (require("module") as typeof import("module")).createRequire(fileName);
+    return nativeRequire(specifier);
+  };
+  // eslint-disable-next-line no-new-func -- The macro module is compiler-generated JavaScript and requires a CommonJS wrapper.
+  const execute = new Function("require", "exports", "module", "__filename", "__dirname", javascript);
+  execute(macroRequire, moduleRecord.exports, moduleRecord, fileName, getDirectoryPath(fileName));
+}
 let cachedMacroBenchmarkMs: number | undefined;
 
 interface MacroTimeoutBudget {
@@ -1668,10 +1683,9 @@ function expandCompileTimeMacros(program: Program, host: CompilerHost, allowAsyn
       .filter((name): name is string => !!name);
     javascript += `\nmodule.exports.__tsppLocalMacros = {${names.map(name => `${JSON.stringify(name)}: typeof ${name} === "function" ? ${name} : undefined`).join(",")}};`;
 
-    let nativeRequire: NodeRequire | undefined;
     const moduleRecord: { exports: Record<string, unknown>; } = { exports: {} };
     moduleCache.set(cacheKey, moduleRecord.exports);
-    const macroRequire = (specifier: string) => {
+    const requireLocal = (specifier: string) => {
       const hostModule = macroHost!.resolveMacroModule?.(specifier, sourceFile.fileName);
       if (hostModule !== undefined) return hostModule;
       const resolved = resolveModuleName(specifier, sourceFile.fileName, buildProgram.getCompilerOptions(), macroHost!).resolvedModule;
@@ -1679,13 +1693,10 @@ function expandCompileTimeMacros(program: Program, host: CompilerHost, allowAsyn
       if (dependency && !dependency.isDeclarationFile && !fileExtensionIs(dependency.fileName, Extension.Json)) {
         return evaluateMacroModule(dependency, /*macroEntry*/ false);
       }
-      nativeRequire ??= (require("module") as typeof import("module")).createRequire(sourceFile.fileName);
-      return nativeRequire(specifier);
+      return undefined;
     };
-    // eslint-disable-next-line no-new-func -- The macro module is compiler-generated JavaScript and requires a CommonJS wrapper.
-    const execute = new Function("require", "exports", "module", "__filename", "__dirname", javascript);
     try {
-      execute(macroRequire, moduleRecord.exports, moduleRecord, sourceFile.fileName, getDirectoryPath(sourceFile.fileName));
+      evaluateHostMacroModule(javascript, sourceFile.fileName, requireLocal, moduleRecord);
     }
     catch (e) {
       moduleCache.delete(cacheKey);
@@ -1693,6 +1704,10 @@ function expandCompileTimeMacros(program: Program, host: CompilerHost, allowAsyn
     }
     moduleCache.set(cacheKey, moduleRecord.exports);
     return moduleRecord.exports;
+  }
+
+  function evaluateHostMacroModule(javascript: string, fileName: string, requireLocal: (specifier: string) => unknown, moduleRecord: { exports: Record<string, unknown>; }) {
+    (host.evaluateMacroModule ?? evaluateMacroModuleInNode)(javascript, fileName, requireLocal, moduleRecord);
   }
 
   function getMacroDependencyStatements(sourceFile: SourceFile): Set<string> {
@@ -1765,8 +1780,15 @@ function expandCompileTimeMacros(program: Program, host: CompilerHost, allowAsyn
     if (!current || current.kind !== SyntaxKind.ImportDeclaration) throw new Error(`The import for macro '${getMacroEntityNameText(invocation.macro)}' could not be determined.`);
     const importDeclaration = current as ImportDeclaration;
     if (!isStringLiteral(importDeclaration.moduleSpecifier)) return undefined;
-    const nativeRequire = (require("module") as typeof import("module")).createRequire(invocationSource.fileName);
-    let value: any = nativeRequire(importDeclaration.moduleSpecifier.text);
+    const moduleSpecifier = importDeclaration.moduleSpecifier.text;
+    const moduleRecord: { exports: Record<string, unknown>; } = { exports: {} };
+    evaluateHostMacroModule(
+      `module.exports = require(${JSON.stringify(moduleSpecifier)});`,
+      invocationSource.fileName,
+      specifier => host.resolveMacroModule?.(specifier, invocationSource.fileName),
+      moduleRecord,
+    );
+    let value: any = moduleRecord.exports;
     if (aliasDeclaration?.kind === SyntaxKind.ImportSpecifier) {
       const specifier = aliasDeclaration as ImportSpecifier;
       value = value[getTextOfIdentifierOrLiteral(specifier.propertyName ?? specifier.name)];
@@ -1781,7 +1803,7 @@ function expandCompileTimeMacros(program: Program, host: CompilerHost, allowAsyn
       name = name.left;
     }
     for (const part of suffix) value = value?.[part];
-    if (value === undefined) throw new Error(`Module '${importDeclaration.moduleSpecifier.text}' does not export macro '${getMacroEntityNameText(invocation.macro)}'.`);
+    if (value === undefined) throw new Error(`Module '${moduleSpecifier}' does not export macro '${getMacroEntityNameText(invocation.macro)}'.`);
     return value;
   }
 
@@ -2255,7 +2277,7 @@ export async function createProgramAsync(createProgramOptions: CreateProgramOpti
   let expansionPromise: Promise<MacroExpansionResult>;
   macroExpansionDepth++;
   try {
-    expansionPromise = !host.disableMacroWorkers && canUseMacroWorkers()
+    expansionPromise = !host.disableMacroWorkers && !host.evaluateMacroModule && canUseMacroWorkers()
       ? runMacroExpansionWorker(initialProgram, options, projectReferences, host.macroTimeoutMs, host.macroBenchmarkMs, /*options*/ undefined, cancellationToken).then(
         result => restoreMacroWorkerResult(initialProgram, result),
         error => error instanceof MacroWorkerError ? macroWorkerFailureResult(initialProgram, error) : Promise.reject(error),

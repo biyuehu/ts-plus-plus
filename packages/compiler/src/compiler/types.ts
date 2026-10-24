@@ -8651,6 +8651,23 @@ export interface CompilerHost extends ModuleResolutionHost {
    *  Browser hosts use this to expose packages that already exist in the host
    *  runtime without relying on Node's module loader. */
   resolveMacroModule?(specifier: string, containingFile: string): unknown;
+  /** @internal Evaluates an emitted CommonJS macro module in the host runtime.
+   *  `javascript` is the module source the compiler emitted (or synthesized,
+   *  for external macro packages); the host runs it with `require`, `exports`,
+   *  `module`, `__filename` and `__dirname` bound and fills `module.exports`.
+   *  `requireLocal` returns the exports of compiler-resolved dependencies
+   *  (local macro sources and `resolveMacroModule` bindings) or `undefined`
+   *  when the specifier must be supplied by the host itself. When absent, the
+   *  compiler falls back to a Node.js `createRequire` implementation and may
+   *  run macros in a `node:worker_threads` worker; when provided, macros are
+   *  always expanded in-process through this hook. Hosts that refuse to run
+   *  macro code can throw, which surfaces as a macro diagnostic. */
+  evaluateMacroModule?(
+    javascript: string,
+    fileName: string,
+    requireLocal: (specifier: string) => unknown,
+    module: { exports: Record<string, unknown>; },
+  ): void;
   /** @internal Overrides the default Promise wait limit for compile-time macros. */
   macroTimeoutMs?: number;
   /** @internal Overrides the measured local benchmark duration for tests and specialized hosts. */

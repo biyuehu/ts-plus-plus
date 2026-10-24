@@ -603,6 +603,118 @@ describe("unittests:: tspp:: macros", () => {
     assert.isEmpty(diagnostics, diagnostics.map(d => ts.flattenDiagnosticMessageText(d.messageText, "\n")).join("\n"));
   });
 
+  describe("host macro evaluation seam", () => {
+    const compilerOptions: ts.CompilerOptions = {
+      noLib: true,
+      noImplicitAny: false,
+      module: ts.ModuleKind.CommonJS,
+      moduleResolution: ts.ModuleResolutionKind.Node10,
+      target: ts.ScriptTarget.ES2022,
+      tsppFeatures: ["macros"],
+    };
+    const exposeSource = (name: string, valueExpression: string) => `
+      export macro function expose(_targets, context) {
+        const literal = context.factory.createStringLiteral(${valueExpression});
+        return context.factory.createVariableStatement(
+          undefined,
+          context.factory.createVariableDeclarationList([
+            context.factory.createVariableDeclaration("${name}", undefined, context.factory.createLiteralTypeNode(literal), literal),
+          ]),
+        );
+      }
+    `;
+
+    function createHost(files: Record<string, string>) {
+      const fs = vfs.createFromFileSystem(
+        Harness.IO,
+        /*ignoreCase*/ true,
+        { documents: Object.entries(files).map(([fileName, content]) => new documents.TextDocument(fileName, content)), cwd: "/" },
+      );
+      const host = new fakes.CompilerHost(fs, compilerOptions);
+      const evaluated: string[] = [];
+      const hostRequired: string[] = [];
+      const hostModules: Record<string, unknown> = {
+        "virtual-dependency": { prefix: "FromHost" },
+        "virtual-macros": {
+          expose: (_targets: readonly unknown[], context: { factory: ts.NodeFactory; }) => {
+            const literal = context.factory.createStringLiteral("External");
+            return context.factory.createVariableStatement(
+              /*modifiers*/ undefined,
+              context.factory.createVariableDeclarationList([
+                context.factory.createVariableDeclaration("ExternalName", /*exclamationToken*/ undefined, context.factory.createLiteralTypeNode(literal), literal),
+              ]),
+            );
+          },
+        },
+      };
+      (host as ts.CompilerHost).evaluateMacroModule = (javascript, fileName, requireLocal, module) => {
+        evaluated.push(fileName);
+        const require = (specifier: string) => {
+          const local = requireLocal(specifier);
+          if (local !== undefined) return local;
+          hostRequired.push(specifier);
+          if (ts.hasProperty(hostModules, specifier)) return hostModules[specifier];
+          throw new Error(`Host does not provide '${specifier}'.`);
+        };
+        // eslint-disable-next-line no-new-func -- Mirrors a non-Node host evaluating the emitted CommonJS module.
+        new Function("require", "exports", "module", "__filename", "__dirname", javascript)(require, module.exports, module, fileName, "/");
+      };
+      return { host, evaluated, hostRequired };
+    }
+
+    function messages(program: ts.Program) {
+      return program.getSemanticDiagnostics().map(d => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+    }
+
+    it("evaluates local macro modules and their dependencies through the host", async () => {
+      const { host, evaluated, hostRequired } = createHost({
+        "/helper.tspp": 'export const suffix = "Local";',
+        "/macros.tspp": `
+          import { suffix } from "./helper";
+          declare function require(name: string): any;
+          ${exposeSource("SeamName", 'require("virtual-dependency").prefix + suffix')}
+        `,
+        "/index.tspp": `
+          import { expose } from "./macros";
+          macro expose();
+          const checked: "FromHostLocal" = SeamName;
+        `,
+      });
+      const program = await ts.createProgramAsync({ host, rootNames: ["/index.tspp"], options: compilerOptions });
+      assert.deepEqual(messages(program), []);
+      assert.deepEqual(evaluated, ["/macros.tspp", "/helper.tspp"]);
+      assert.deepEqual(hostRequired, ["virtual-dependency"]);
+    });
+
+    it("loads external macro packages through the host", () => {
+      const { host, evaluated, hostRequired } = createHost({
+        "/node_modules/virtual-macros/package.json": JSON.stringify({ name: "virtual-macros", tsppTypes: "index.d.tspp" }),
+        "/node_modules/virtual-macros/index.d.tspp": "export declare macro function expose(targets: readonly unknown[], context: unknown): unknown;",
+        "/index.tspp": `
+          import { expose } from "virtual-macros";
+          macro expose();
+          const checked: "External" = ExternalName;
+        `,
+      });
+      const program = ts.createProgram({ host, rootNames: ["/index.tspp"], options: compilerOptions });
+      assert.deepEqual(messages(program), []);
+      assert.deepEqual(evaluated, ["/index.tspp"]);
+      assert.deepEqual(hostRequired, ["virtual-macros"]);
+    });
+
+    it("reports host refusals as macro diagnostics without falling back to Node", () => {
+      const { host } = createHost({
+        "/index.tspp": `
+          declare function require(name: string): any;
+          ${exposeSource("PathName", 'require("path").basename("/a/b.tspp")')}
+          macro expose();
+        `,
+      });
+      const program = ts.createProgram({ host, rootNames: ["/index.tspp"], options: compilerOptions });
+      assert.include(messages(program).join("\n"), "Host does not provide 'path'.");
+    });
+  });
+
   it("refreshes the language-service program after an asynchronous macro settles", async () => {
     const content = `
       macro function exposeLater([target], context) {
