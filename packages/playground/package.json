@@ -14,8 +14,9 @@
     "bundle": "node scripts/build-bundle.mjs",
     "bundle:dev": "node scripts/build-bundle.mjs --dev",
     "examples": "node scripts/generate-examples.mjs",
-    "dev": "node scripts/patch-monaco-worker.mjs && vite",
-    "build": "node scripts/build-z3-worker.mjs && node scripts/patch-monaco-worker.mjs && vite build",
+    "generate": "pnpm --filter ts-plus-plus build:compiler && pnpm bundle && pnpm z3:worker && pnpm examples",
+    "dev": "pnpm generate && node scripts/patch-monaco-worker.mjs && vite",
+    "build": "pnpm generate && node scripts/patch-monaco-worker.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

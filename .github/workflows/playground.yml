@@ -29,12 +29,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - name: Build compiler
-        run: pnpm build:compiler
-      - name: Build compiler bundle
-        run: |
-          pnpm playground:bundle
-          pnpm playground:examples
+      # builds the compiler, its browser bundle and the examples before vite build
       - run: pnpm build:playground
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -16,8 +16,8 @@ import * as monaco from "monaco-editor/editor/editor.main.js"
 // The compiler bundle is NOT bundled into the app: it is fetched at runtime (like the
 // official playground loads its typescript.js) so the main thread and the worker share
 // one compiler instance, and so ?ts=dev can swap in a locally built compiler.
-//   default       vendor/typescript.js (public/vendor/, committed, rebuilt by CI from
-//                 tspp-lang/tspp main on every site deploy)
+//   default       vendor/typescript.js (public/vendor/, git-ignored, regenerated from the
+//                 compiler sources by `pnpm generate` before every `pnpm dev` / `pnpm build`)
 //   ?ts=dev       typescript.dev.js (public/typescript.dev.js, git-ignored; rebuild it
 //                 with `pnpm bundle:dev` after editing the compiler, then reload)
 // This must run before MonacoEnvironment is installed: getWorker's closure below hands

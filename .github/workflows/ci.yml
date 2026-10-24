@@ -157,12 +157,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - name: Build compiler
-        run: pnpm build:compiler
-      - name: Generate compiler bundle and examples
-        run: |
-          pnpm playground:bundle
-          pnpm playground:examples
+      # builds the compiler, its browser bundle and the examples before vite build
       - name: Build playground
         run: pnpm build:playground
 
