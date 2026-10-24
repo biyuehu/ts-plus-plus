@@ -256,6 +256,7 @@ export const enum SyntaxKind {
   // Type
   TypePredicate,
   TypeReference,
+  TypeApplication,
   FunctionType,
   ConstructorType,
   TypeQuery,
@@ -738,6 +739,7 @@ export type TypeNodeSyntaxKind =
   | KeywordTypeSyntaxKind
   | SyntaxKind.TypePredicate
   | SyntaxKind.TypeReference
+  | SyntaxKind.TypeApplication
   | SyntaxKind.FunctionType
   | SyntaxKind.ConstructorType
   | SyntaxKind.TypeQuery
@@ -1122,6 +1124,7 @@ export type HasChildren =
   | IndexSignatureDeclaration
   | TypePredicateNode
   | TypeReferenceNode
+  | TypeApplicationNode
   | FunctionTypeNode
   | ConstructorTypeNode
   | TypeQueryNode
@@ -2357,6 +2360,13 @@ export type TypeReferenceType = TypeReferenceNode | ExpressionWithTypeArguments;
 export interface TypeReferenceNode extends NodeWithTypeArguments {
   readonly kind: SyntaxKind.TypeReference;
   readonly typeName: EntityName;
+}
+
+/** A higher-kinded type application whose target is itself a type expression. */
+export interface TypeApplicationNode extends NodeWithTypeArguments {
+  readonly kind: SyntaxKind.TypeApplication;
+  readonly target: TypeNode;
+  readonly typeArguments: NodeArray<TypeNode>;
 }
 
 export interface TypePredicateNode extends TypeNode {
@@ -9365,6 +9375,8 @@ export interface NodeFactory {
   updateTypePredicateNode(node: TypePredicateNode, assertsModifier: AssertsKeyword | undefined, parameterName: Identifier | ThisTypeNode, type: TypeNode | undefined): TypePredicateNode;
   createTypeReferenceNode(typeName: string | EntityName, typeArguments?: readonly TypeNode[]): TypeReferenceNode;
   updateTypeReferenceNode(node: TypeReferenceNode, typeName: EntityName, typeArguments: NodeArray<TypeNode> | undefined): TypeReferenceNode;
+  createTypeApplicationNode(target: TypeNode, typeArguments: readonly TypeNode[]): TypeApplicationNode;
+  updateTypeApplicationNode(node: TypeApplicationNode, target: TypeNode, typeArguments: NodeArray<TypeNode>): TypeApplicationNode;
   createFunctionTypeNode(typeParameters: readonly TypeParameterDeclaration[] | undefined, parameters: readonly ParameterDeclaration[], type: TypeNode): FunctionTypeNode;
   updateFunctionTypeNode(node: FunctionTypeNode, typeParameters: NodeArray<TypeParameterDeclaration> | undefined, parameters: NodeArray<ParameterDeclaration>, type: TypeNode): FunctionTypeNode;
   createConstructorTypeNode(modifiers: readonly Modifier[] | undefined, typeParameters: readonly TypeParameterDeclaration[] | undefined, parameters: readonly ParameterDeclaration[], type: TypeNode): ConstructorTypeNode;

@@ -1119,6 +1119,7 @@ import {
   TupleTypeReference,
   Type,
   TypeAliasDeclaration,
+  TypeApplicationNode,
   TypeAssertion,
   TypeChecker,
   TypeCheckerHost,
@@ -11756,6 +11757,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         case SyntaxKind.ConstructorType:
         case SyntaxKind.TypeLiteral:
         case SyntaxKind.TypeReference:
+        case SyntaxKind.TypeApplication:
         case SyntaxKind.ArrayType:
         case SyntaxKind.TupleType:
         case SyntaxKind.UnionType:
@@ -14282,6 +14284,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return isThislessType((node as ArrayTypeNode).elementType);
       case SyntaxKind.TypeReference:
         return !(node as TypeReferenceNode).typeArguments || (node as TypeReferenceNode).typeArguments!.every(isThislessType);
+      case SyntaxKind.TypeApplication:
+        const application = node as TypeApplicationNode;
+        return isThislessType(application.target) && application.typeArguments.every(isThislessType);
     }
     return false;
   }
@@ -18204,6 +18209,22 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     return links.resolvedType;
   }
 
+  function getTypeFromTypeApplication(node: TypeApplicationNode): Type {
+    const links = getNodeLinks(node);
+    if (!links.resolvedType) {
+      if (!requireTsppFeature(node, "higherKindedTypes")) {
+        return links.resolvedType = errorType;
+      }
+      const target = getTypeFromTypeNode(node.target);
+      const kind = getKindOfType(target);
+      const typeArguments = kind.flags === KindFlags.Function
+        ? getTypeArgumentsFromNodesForKinds(node.typeArguments, kind.parameters)
+        : map(node.typeArguments, getTypeFromTypeNode);
+      links.resolvedType = applyHigherKindedType(target, typeArguments, node);
+    }
+    return links.resolvedType;
+  }
+
   function typeArgumentsFromTypeReferenceNode(node: NodeWithTypeArguments): Type[] | undefined {
     return map(node.typeArguments, getTypeFromTypeNode);
   }
@@ -18576,6 +18597,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
       case SyntaxKind.ParenthesizedType:
       case SyntaxKind.NamedTupleMember:
       case SyntaxKind.TypeReference:
+      case SyntaxKind.TypeApplication:
       case SyntaxKind.UnionType:
       case SyntaxKind.IntersectionType:
       case SyntaxKind.IndexedAccessType:
@@ -18596,6 +18618,9 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     switch (node.kind) {
       case SyntaxKind.TypeReference:
         return isJSDocTypeReference(node) || !!(resolveTypeReferenceName(node as TypeReferenceNode, SymbolFlags.Type).flags & SymbolFlags.TypeAlias);
+      case SyntaxKind.TypeApplication:
+        const application = node as TypeApplicationNode;
+        return mayResolveTypeAlias(application.target) || some(application.typeArguments, mayResolveTypeAlias);
       case SyntaxKind.TypeQuery:
         return true;
       case SyntaxKind.TypeOperator:
@@ -22431,6 +22456,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return getTypeFromLiteralTypeNode(node as LiteralTypeNode);
       case SyntaxKind.TypeReference:
         return isAutoTypeArgumentNode(node) ? unknownType : getTypeFromTypeReference(node as TypeReferenceNode);
+      case SyntaxKind.TypeApplication:
+        return getTypeFromTypeApplication(node as TypeApplicationNode);
       case SyntaxKind.DependentFunctionType:
         return getTypeFromMlttTypeNode(node as DependentFunctionTypeNode);
       case SyntaxKind.TypePredicate:
@@ -45362,6 +45389,32 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
     checkTypeReferenceOrImport(node);
   }
 
+  function checkTypeApplicationNode(node: TypeApplicationNode) {
+    requireTsppFeature(node, "higherKindedTypes");
+    checkGrammarTypeArguments(node, node.typeArguments);
+    const target = getTypeFromTypeNode(node.target);
+    const kind = getKindOfType(target);
+    checkSourceElement(node.target);
+    forEach(node.typeArguments, (typeArgument, index) => {
+      if (kind.flags === KindFlags.Function && kind.parameters[index]) {
+        const expectedKind = kind.parameters[index];
+        getTypeArgumentFromNodeForKind(typeArgument, expectedKind);
+        const isBareConstructor = expectedKind.flags === KindFlags.Function && isTypeReferenceNode(typeArgument) && !typeArgument.typeArguments;
+        if (!isBareConstructor && getUniverseLevelFromTypeNode(typeArgument) === undefined) {
+          checkSourceElement(typeArgument);
+        }
+      }
+      else {
+        checkSourceElement(typeArgument);
+      }
+    });
+    getTypeFromTypeApplication(node);
+    if (target.higherKindedSymbol) {
+      const typeParameters = getTypeParametersForTypeAndSymbol(target, target.higherKindedSymbol);
+      if (typeParameters) checkTypeArgumentConstraints(node, typeParameters);
+    }
+  }
+
   function checkTypeReferenceOrImport(node: TypeReferenceNode | ExpressionWithTypeArguments | ImportTypeNode) {
     const type = getTypeFromTypeNode(node);
     if (!isErrorType(type)) {
@@ -52226,6 +52279,8 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
         return checkAccessorDeclaration(node as AccessorDeclaration);
       case SyntaxKind.TypeReference:
         return checkTypeReferenceNode(node as TypeReferenceNode);
+      case SyntaxKind.TypeApplication:
+        return checkTypeApplicationNode(node as TypeApplicationNode);
       case SyntaxKind.TypePredicate:
         return checkTypePredicate(node as TypePredicateNode);
       case SyntaxKind.TypeQuery:
