@@ -2,8 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "tsppFeatures": [
-      "newtypeDeclarations",
-      "dataDeclarations",
+      "nominalTypes",
       "higherKindedTypes",
       "typeUniverses"
     ]

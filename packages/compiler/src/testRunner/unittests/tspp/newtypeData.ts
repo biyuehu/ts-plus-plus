@@ -246,9 +246,9 @@ describe("unittests:: tspp:: newtype and data", () => {
         {},
       );
 
-      assert.strictEqual(fixes[0]?.description, "Enable TS++ feature 'dataDeclarations' and its required dependencies");
+      assert.strictEqual(fixes[0]?.description, "Enable TS++ feature 'nominalTypes' and its required dependencies");
       assert.strictEqual(fixes[0]?.changes[0].fileName, "/tsppconfig.json");
-      assert.include(fixes[0]?.changes[0].textChanges[0].newText, '"dataDeclarations"');
+      assert.include(fixes[0]?.changes[0].textChanges[0].newText, '"nominalTypes"');
     });
 
     it("enables missing TS++ feature dependencies in dependency-first order", () => {
@@ -781,7 +781,7 @@ describe("unittests:: tspp:: newtype and data", () => {
       assert.match(messages[0], /not assignable/);
     });
 
-    it("requires newtypeDeclarations to be enabled", () => {
+    it("requires nominalTypes to be enabled for newtype", () => {
       const program = createProgram(
         "/file.tspp",
         `
@@ -791,10 +791,10 @@ describe("unittests:: tspp:: newtype and data", () => {
       );
       const messages = semanticMessages(program);
       assert.isNotEmpty(messages, messages.join("\n"));
-      assert.match(messages.join("\n"), /newtypeDeclarations/);
+      assert.match(messages.join("\n"), /nominalTypes/);
     });
 
-    it("requires dataDeclarations to be enabled", () => {
+    it("requires nominalTypes to be enabled for data", () => {
       const program = createProgram(
         "/file.tspp",
         `
@@ -804,7 +804,7 @@ describe("unittests:: tspp:: newtype and data", () => {
       );
       const messages = semanticMessages(program);
       assert.isNotEmpty(messages, messages.join("\n"));
-      assert.match(messages.join("\n"), /dataDeclarations/);
+      assert.match(messages.join("\n"), /nominalTypes/);
     });
 
     it("does not expose the nominal brand in hover", () => {

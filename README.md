@@ -59,8 +59,7 @@ Enable features manually:
   "compilerOptions": {
     "tsppFeatures": [
       "higherKindedTypes",
-      "newtypeDeclarations",
-      "dataDeclarations",
+      "nominalTypes",
       "macros",
       "formalContracts",
       "refinementTypes",
@@ -116,8 +115,7 @@ Current features:
 | Feature | Provides | Explicit dependencies | TS superset | Transparent erasure |
 | --- | --- | --- | --- | --- |
 | `higherKindedTypes` | Higher-kinded parameters and first-class type constructors; kind annotations such as `F: Type => Type` additionally require `typeUniverses` | — | Yes | Yes |
-| `newtypeDeclarations` | `newtype` nominal type declarations and their constructors | — | Yes | No (emits runtime constructors) |
-| `dataDeclarations` | `data` discriminated unions, variant constructors, and exhaustive value-level `match` | — | Yes | No (emits runtime variant values, constructors, and match dispatch) |
+| `nominalTypes` | `newtype` nominal declarations, `data` ADT discriminated unions, variant constructors, and exhaustive value-level `match` | — | Yes | No (emits runtime constructors, variant values, and match dispatch) |
 | `macros` | `macro function` declarations and compile-time `macro f(Target);` statement expansion | — | Yes | No (macro calls can replace emitted statements) |
 | `formalContracts` | Z3-backed `requires`, `ensures`, and `while` invariants | — | Yes | Yes |
 | `standardLibraryPredicates` | Built-in numeric predicates `isEven`, `isOdd`, `isPositive`, `isNegative`, `isNonNegative`, `isZero`, `divides`, and `between`; `number` requires `numberModel: "mathematical-real"` | `formalContracts` | Yes | Yes |
@@ -173,7 +171,7 @@ Use `assert: condition;` inside a verified function to create a local proof obli
 
 ## Exhaustive value matching
 
-`dataDeclarations` also enables expression-level matching over `data` values and compatible closed `_tag` unions:
+`nominalTypes` also enables expression-level matching over `data` values and compatible closed `_tag` unions:
 
 ```ts
 data Result<T> = Ok(value: T) | Err(error: string);

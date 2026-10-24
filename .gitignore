@@ -68,4 +68,3 @@ package-lock.json
 /lib/
 packages/examples/**/dist/
 AGENT.md
-packages/tspp-language-server/lib

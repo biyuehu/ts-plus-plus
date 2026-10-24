@@ -62,8 +62,7 @@ export const examples = [
     "id": "newtype-and-data",
     "title": "Newtype And Data",
     "features": [
-      "newtypeDeclarations",
-      "dataDeclarations",
+      "nominalTypes",
       "higherKindedTypes",
       "typeUniverses"
     ],
@@ -103,8 +102,7 @@ export const examples = [
     "id": "formal-contracts",
     "title": "Formal Contracts",
     "features": [
-      "newtypeDeclarations",
-      "dataDeclarations",
+      "nominalTypes",
       "formalContracts",
       "refinementTypes",
       "standardLibraryPredicates"
@@ -156,7 +154,7 @@ export const examples = [
       "typeComputation",
       "higherKindedTypes",
       "typeUniverses",
-      "dataDeclarations"
+      "nominalTypes"
     ],
     "code": "// ─────────────────────────────────────────────────────────────────\n// TS++ Type Computation: let ... in 局部类型绑定\n// ─────────────────────────────────────────────────────────────────\nexport { };\n\n// 语法：let X = Expression in Body\n// 允许在类型层引入局部名称，避免深层嵌套或重复计算昂贵的复杂类型表达式。\n// 绑定的作用域被严格限制在 in 之后，绝不污染外层作用域。\n\n// 1. 基础用法：避免复杂类型重复书写\ntype UserResponse<T> = let Payload = {\n    data: T;\n    timestamp: number;\n    status: \"ok\";\n} in {\n    response: Payload;\n    backup: Payload;\n};\n/*\n} in let x = [Payload,Payload] in {\n  response: Payload;\n  backup: x;\n};\n*/\n\ntype Resp = UserResponse<string>;\nconst okResp: Resp = {\n    response: { data: \"hello\", timestamp: 123456, status: \"ok\" },\n    backup: { data: \"hello\", timestamp: 123456, status: \"ok\" },\n};\n\n// 2. 连续与嵌套绑定：管线化类型推导\ntype Normalized<T> =\n    let Step1 = { raw: T } in\n    let Step2 = { wrapped: Step1 } in\n    [Step1, Step2];\n\ntype Norm = Normalized<number>;\nconst normVal: Norm = [\n    { raw: 42 },\n    { wrapped: { raw: 42 } }\n];\n\n// 3. 词法作用域与遮蔽（Shadowing）\n// 内层绑定可以合法遮蔽外层同名类型，且在解析绑定右侧时解析自外层环境。\ntype Outer = number;\ntype ShadowDemo =\n    let Outer = string in\n    let Outer = boolean in\n    Outer; // 解析为最内层的 boolean\n\nconst boolVal: ShadowDemo = true;\n\n// 4. 局部绑定不会泄漏到外部\n// 尝试在作用域外访问绑定名称会触发编译器错误\ntype Scoped = let Internal = number in[Internal, Internal];\n// @ts-expect-error Internal 是 let 内部名称，外部无法访问\ntype Leaked = Internal;\n\n// 5. 与泛型参数协同：未绑定的变量会正确报错\n// 正确绑定泛型参数：\ntype SafeIdentity<T> = let Cached = T in Cached;\nconst safeNum: SafeIdentity<number> = 123;\n",
     "files": [
@@ -182,8 +180,7 @@ export const examples = [
     "id": "typescript-interop",
     "title": "Typescript Interop",
     "features": [
-      "newtypeDeclarations",
-      "dataDeclarations"
+      "nominalTypes"
     ],
     "code": "import { loadLegacyUser } from \"./legacy.js\";\n\nexport newtype UserId = number;\nexport data Lookup<T> = Missing | Found(value: T);\n\nexport function loadUser(): Lookup<{ id: UserId; name: string }> {\n  const legacy = loadLegacyUser();\n  // TS++ may explicitly assert or construct a stronger type at the TS boundary.\n  const id = legacy.id as UserId;\n  return Found({ id, name: legacy.name });\n}\n"
   },

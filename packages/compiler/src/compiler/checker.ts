@@ -42247,7 +42247,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function checkValueMatchExpression(node: MlttMatchExpression, checkMode: CheckMode | undefined): Type {
-    if (!requireTsppFeature(node, "dataDeclarations")) return errorType;
+    if (!requireTsppFeature(node, "nominalTypes")) return errorType;
     const scrutineeType = checkExpression(node.scrutinee, checkMode);
     const variants = getValueMatchVariants(scrutineeType);
     if (!variants.size) {
@@ -50902,7 +50902,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function checkNewtypeDeclaration(node: NewtypeDeclaration) {
-    requireTsppFeature(node, "newtypeDeclarations");
+    requireTsppFeature(node, "nominalTypes");
     // TODO(diagnostics): grammar checks for modifiers, the new node kinds are not part of HasModifiers yet.
     checkTypeNameIsReserved(node.name, Diagnostics.Type_alias_name_cannot_be_0);
     checkExportsOnMergedDeclarations(node);
@@ -50959,7 +50959,7 @@ export function createTypeChecker(host: TypeCheckerHost): TypeChecker {
   }
 
   function checkDataDeclaration(node: DataDeclaration) {
-    requireTsppFeature(node, "dataDeclarations");
+    requireTsppFeature(node, "nominalTypes");
     checkTypeNameIsReserved(node.name, Diagnostics.Type_alias_name_cannot_be_0);
     checkExportsOnMergedDeclarations(node);
     if (node.kindType) checkKindFeatures(node.kindType);

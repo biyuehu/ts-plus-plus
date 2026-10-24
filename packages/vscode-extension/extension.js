@@ -201,6 +201,8 @@ async function activate(context) {
     if (!typeNode) return undefined;
 
     const type = checker.getTypeAtLocation(typeNode);
+    const isNominal = !!type.aliasSymbol?.declarations?.some(d => ts.isDataDeclaration(d) || ts.isNewtypeDeclaration(d));
+    if (isNominal) return undefined;
     const normalized = checker.getNormalizedTypeAtLocation?.(typeNode)
       ?? checker.typeToString(type, typeNode, ts.TypeFormatFlags.NoTruncation | ts.TypeFormatFlags.InTypeAlias);
     const source = typeNode.getText(sourceFile);

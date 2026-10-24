@@ -5,7 +5,7 @@
       "typeComputation",
       "higherKindedTypes",
       "typeUniverses",
-      "dataDeclarations"
+      "nominalTypes"
     ]
   }
 }

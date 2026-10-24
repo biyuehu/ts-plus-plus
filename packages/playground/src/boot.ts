@@ -132,8 +132,8 @@ const i = (key: string, _components?: unknown) => (playCopy as Record<string, st
 // ---- tspp feature state --------------------------------------------------------------------
 export const defaultFeatures = [
   "higherKindedTypes",
-  "newtypeDeclarations",
-  "dataDeclarations",
+  "nominalTypes",
+  
   "typeUniverses",
 ]
 

@@ -131,4 +131,4 @@ pnpm emit-declarations
 
 ## 特性开关
 
-`tsppconfig.json` 必须显式开启 `newtypeDeclarations` 与 `dataDeclarations`，编译器不会自动开启。
+`tsppconfig.json` 必须显式开启 `nominalTypes`，编译器不会自动开启。
